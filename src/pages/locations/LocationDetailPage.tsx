@@ -242,13 +242,11 @@ const LocationDetailPage: React.FC = () => {
     [location]
   );
 
-  // Every write re-reads this page's own store rather than patching state
-  // locally: if another player changed the same record first, the refetch is
-  // where that becomes visible.
+  // Nothing is patched locally after a write: the page shows the listener's
+  // copy, which carries both this write and any other player's (T032).
   const save = async (patch: Partial<Location>) => {
     if (!location) return;
     await updateLocation(location.id, patch);
-    await refreshLocations();
   };
 
   const picture = useImageAttachment({
@@ -272,7 +270,6 @@ const LocationDetailPage: React.FC = () => {
       text,
       ...(author ? { author } : {}),
     });
-    await refreshLocations();
   };
 
   // Through `save`, like every other field. The stored array is searched, not

@@ -3,6 +3,7 @@ import React from 'react';
 import { render, act, waitFor } from '@testing-library/react';
 import { NoteProvider, useNotes } from '../NoteContext';
 import { Note, ExtractedEntity, EntityType, NoteStatus } from '../../types';
+import { createFakeCollectionListener } from '@/test-utils/fake-collection-listener';
 
 // Mock Firebase dependencies (NOT the context being tested)
 const mockUseAuth = jest.fn();
@@ -37,9 +38,17 @@ jest.mock('firebase/firestore', () => ({
   where: (field: string, op: string, value: unknown) => ({ field, op, value })
 }));
 
+/*
+  The notes listener (T032). Its first snapshot comes from
+  `notesListener.firstSnapshot`, which a test resolves, rejects or holds the
+  way it once configured `getCollection`; the write fakes installed below
+  deliver every write to the open listener, as the SDK does.
+*/
+const notesListener = createFakeCollectionListener<Note>();
+
 // Mock DocumentService
 const mockDocumentService = {
-  getCollection: jest.fn(),
+  subscribeToCollection: notesListener.subscribe,
   createDocument: jest.fn(),
   updateDocument: jest.fn(),
   updateDocumentWithAttribution: jest.fn(),
@@ -108,12 +117,15 @@ describe('NoteContext Behavioral Tests', () => {
     getUserName.mockReturnValue('Test User');
     getActiveCharacterName.mockReturnValue('Test Character');
 
-    // Default empty collection
-    mockDocumentService.getCollection.mockResolvedValue([]);
+    // Default empty collection, and writes that reach the listener.
+    notesListener.reset();
+    mockDocumentService.createDocument.mockImplementation(notesListener.create);
+    mockDocumentService.updateDocumentWithAttribution.mockImplementation(notesListener.update);
+    mockDocumentService.deleteDocument.mockImplementation(notesListener.remove);
   });
 
   // T029: the provider is mounted on every route, so what it reads is paid
-  // on every page load.
+  // on every page load. Since T032 that is one listener, not a fetch.
   describe('What is read', () => {
     const renderProvider = () => {
       let capturedContext: any;
@@ -128,9 +140,11 @@ describe('NoteContext Behavioral Tests', () => {
     test("reads only the active campaign's notes", async () => {
       renderProvider();
 
-      await waitFor(() => expect(mockDocumentService.getCollection).toHaveBeenCalled());
-      expect(mockDocumentService.getCollection).toHaveBeenCalledWith(
+      await waitFor(() => expect(notesListener.subscribe).toHaveBeenCalled());
+      expect(notesListener.subscribe).toHaveBeenCalledWith(
         'groups/test-group/users/test-user/notes',
+        expect.any(Function),
+        expect.any(Function),
         [{ field: 'campaignId', op: '==', value: 'test-campaign' }]
       );
     });
@@ -140,7 +154,7 @@ describe('NoteContext Behavioral Tests', () => {
       const { context } = renderProvider();
 
       await waitFor(() => expect(context().isLoading).toBe(false));
-      expect(mockDocumentService.getCollection).not.toHaveBeenCalled();
+      expect(notesListener.subscribe).not.toHaveBeenCalled();
       expect(context().notes).toEqual([]);
     });
 
@@ -155,8 +169,8 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
-      await waitFor(() => expect(mockDocumentService.getCollection).toHaveBeenCalled());
-      expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(notesListener.subscribe).toHaveBeenCalled());
+      expect(notesListener.subscribe).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -212,13 +226,8 @@ describe('NoteContext Behavioral Tests', () => {
 
   describe('Note Creation (createNote)', () => {
     test('should create note with a note- id and metadata', async () => {
-      // NOTE: The mount-time fetchNotes() call is asynchronous (mocked
-      // getCollection resolves on a later microtask). If we act on the
-      // context before that initial fetch settles, fetchNotes' own
-      // setNotes(sortedNotes) call resolves afterwards and silently
-      // overwrites whatever createNote() just added. Waiting for
-      // isLoading to go false first avoids that race -- see the bug
-      // report on this test suite's diagnosis for detail.
+      // Wait for the listener's first snapshot before acting, so every test
+      // starts from a loaded list.
       let capturedContext: any;
       render(
         <NoteProvider>
@@ -272,7 +281,7 @@ describe('NoteContext Behavioral Tests', () => {
           modifiedByCharacterName: 'Test Character'
         }
       ];
-      mockDocumentService.getCollection.mockResolvedValue(existingNotes);
+      notesListener.firstSnapshot.mockResolvedValue(existingNotes);
 
       let capturedContext: any;
       render(
@@ -481,7 +490,7 @@ describe('NoteContext Behavioral Tests', () => {
         modifiedByUsername: 'Test User',
         modifiedByCharacterName: 'Test Character'
       };
-      mockDocumentService.getCollection.mockResolvedValue([existingNote]);
+      notesListener.firstSnapshot.mockResolvedValue([existingNote]);
 
       let capturedContext: any;
       render(
@@ -1111,7 +1120,7 @@ describe('NoteContext Behavioral Tests', () => {
   });
 
   describe('Note Deletion (deleteNote)', () => {
-    test('should delete note from Firebase and refresh list', async () => {
+    test('should delete note from Firebase, and the list follows without a re-read', async () => {
       let capturedContext: any;
       render(
         <NoteProvider>
@@ -1136,7 +1145,9 @@ describe('NoteContext Behavioral Tests', () => {
         'groups/test-group/users/test-user/notes',
         createdId
       );
-      expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(2); // Initial fetch + refresh
+      // The listener carries the delete (T032): one first snapshot, no second read.
+      expect(notesListener.firstSnapshot).toHaveBeenCalledTimes(1);
+      expect(capturedContext.notes.find((note: Note) => note.id === createdId)).toBeUndefined();
     });
 
     test('should throw error when deleting without authentication', async () => {
@@ -1199,7 +1210,7 @@ describe('NoteContext Behavioral Tests', () => {
           modifiedByCharacterName: 'Test Character'
         }
       ];
-      mockDocumentService.getCollection.mockResolvedValue(mockNotes);
+      notesListener.firstSnapshot.mockResolvedValue(mockNotes);
 
       let capturedContext: any;
       render(
@@ -1239,7 +1250,7 @@ describe('NoteContext Behavioral Tests', () => {
           modifiedByCharacterName: 'Test Character'
         }
       ];
-      mockDocumentService.getCollection.mockResolvedValue(mockNotes);
+      notesListener.firstSnapshot.mockResolvedValue(mockNotes);
 
       let capturedContext: any;
       render(
@@ -1265,17 +1276,16 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
-      // isLoading starts true and only becomes false once the mocked
-      // getCollection() promise resolves and the fetch's `finally` block
-      // runs -- that takes at least one microtask tick, so this must be
-      // awaited rather than checked synchronously right after render().
+      // isLoading starts true and only becomes false once the listener's
+      // first snapshot arrives -- at least one microtask tick later, so this
+      // must be awaited rather than checked synchronously after render().
       await waitFor(() => {
         expect(capturedContext.isLoading).toBe(false);
       });
     });
 
     test('should handle errors gracefully', async () => {
-      mockDocumentService.getCollection.mockRejectedValue(new Error('Firebase error'));
+      notesListener.firstSnapshot.mockRejectedValue(new Error('Firebase error'));
 
       let capturedContext: any;
       render(
@@ -1284,8 +1294,8 @@ describe('NoteContext Behavioral Tests', () => {
         </NoteProvider>
       );
 
-      // The rejection is only reflected in state after the fetch's catch
-      // block runs, which is asynchronous relative to render().
+      // The listener's error is only reflected in state once it is delivered,
+      // which is asynchronous relative to render().
       await waitFor(() => {
         expect(capturedContext.error).toBe('Failed to fetch notes');
       });
@@ -1295,10 +1305,9 @@ describe('NoteContext Behavioral Tests', () => {
 
   describe('isLoading means "nothing to show yet", not "a fetch is in flight" (T044)', () => {
     // `NotesPage` and `NotePage` pass `isLoading` to `usePageGate`. Deleting a
-    // note ends in a refetch, and that refetch used to raise `isLoading`
-    // again, so the gate re-entered `resolving` and `GatedContent` swapped the
-    // page for its skeleton. The same rule already holds for the four entity
-    // hooks (see `useQuestData.test.ts`).
+    // note used to end in a refetch that raised `isLoading` again, so the gate
+    // re-entered `resolving` and `GatedContent` swapped the page for its
+    // skeleton. Since T032 a delete reads nothing at all.
     const makeNote = (id: string, campaignId = 'test-campaign'): Note => ({
       id,
       title: `Note ${id}`,
@@ -1313,50 +1322,39 @@ describe('NoteContext Behavioral Tests', () => {
       dateAdded: '2025-06-15T00:00:00.000Z',
     });
 
-    /** A getCollection result the test resolves by hand. */
+    /** A first snapshot the test delivers by hand. */
     const deferred = () => {
       let resolve: (notes: Note[]) => void = () => {};
       const promise = new Promise<Note[]>((r) => { resolve = r; });
       return { promise, resolve };
     };
 
-    test('a refetch behind notes already on screen is not loading', async () => {
+    test('a delete behind notes already on screen is never loading', async () => {
       const kept = makeNote('note-1');
-      mockDocumentService.getCollection.mockResolvedValue([kept, makeNote('note-2')]);
-      mockDocumentService.deleteDocument.mockResolvedValue(undefined);
+      notesListener.firstSnapshot.mockResolvedValue([kept, makeNote('note-2')]);
 
       let capturedContext: any;
+      const states: boolean[] = [];
       render(
         <NoteProvider>
-          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+          <TestComponent onRender={(ctx) => { capturedContext = ctx; states.push(ctx.isLoading); }} />
         </NoteProvider>
       );
       await waitFor(() => expect(capturedContext.notes).toHaveLength(2));
-
-      // Deleting refetches; hold that refetch open.
-      const refetch = deferred();
-      mockDocumentService.getCollection.mockReturnValue(refetch.promise);
-      let deletion: Promise<void> = Promise.resolve();
-      act(() => {
-        deletion = capturedContext.deleteNote('note-2');
-      });
-      await waitFor(() =>
-        expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(2)
-      );
-
-      expect(capturedContext.notes).toHaveLength(2);
-      expect(capturedContext.isLoading).toBe(false);
+      states.length = 0;
 
       await act(async () => {
-        refetch.resolve([kept]);
-        await deletion;
+        await capturedContext.deleteNote('note-2');
       });
-      expect(capturedContext.notes).toHaveLength(1);
+
+      expect(capturedContext.notes.map((note: Note) => note.id)).toEqual([kept.id]);
+      expect(states).not.toContain(true);
+      expect(notesListener.firstSnapshot).toHaveBeenCalledTimes(1);
     });
 
     test('a first read with nothing on screen is loading', async () => {
       const firstRead = deferred();
-      mockDocumentService.getCollection.mockReturnValue(firstRead.promise);
+      notesListener.firstSnapshot.mockReturnValue(firstRead.promise);
 
       let capturedContext: any;
       render(
@@ -1375,8 +1373,8 @@ describe('NoteContext Behavioral Tests', () => {
     test('switching campaign empties the list rather than showing the last one', async () => {
       // Otherwise the rule above would keep the previous campaign's notes on
       // screen -- no longer behind a skeleton -- for the whole window between
-      // the switch and the new fetch resolving.
-      mockDocumentService.getCollection.mockResolvedValue([makeNote('note-1')]);
+      // the switch and the new listener's first snapshot.
+      notesListener.firstSnapshot.mockResolvedValue([makeNote('note-1')]);
 
       let capturedContext: any;
       const { rerender } = render(
@@ -1387,7 +1385,7 @@ describe('NoteContext Behavioral Tests', () => {
       await waitFor(() => expect(capturedContext.notes).toHaveLength(1));
 
       const secondRead = deferred();
-      mockDocumentService.getCollection.mockReturnValue(secondRead.promise);
+      notesListener.firstSnapshot.mockReturnValue(secondRead.promise);
       mockUseCampaigns.mockReturnValue({ activeCampaignId: 'other-campaign' });
       rerender(
         <NoteProvider>
@@ -1396,7 +1394,7 @@ describe('NoteContext Behavioral Tests', () => {
       );
 
       await waitFor(() =>
-        expect(mockDocumentService.getCollection).toHaveBeenCalledTimes(2)
+        expect(notesListener.subscribe).toHaveBeenCalledTimes(2)
       );
       expect(capturedContext.notes).toEqual([]);
       expect(capturedContext.isLoading).toBe(true);

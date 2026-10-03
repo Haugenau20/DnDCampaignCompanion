@@ -1,103 +1,26 @@
 // src/features/campaign-entities/rumors/hooks/useRumorData.ts
-import { useState, useEffect, useCallback } from 'react';
 import { Rumor } from '../types';
-import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { campaignCollectionPath } from 'core/services/firebase/data/campaignCollectionPath';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
-import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
+import { useCampaignCollection } from 'shared/hooks/useCampaignCollection';
+
+/** Rumours are shown in the order Firestore returns them. */
+const asStored = (rumors: Rumor[]): Rumor[] => rumors;
 
 /**
- * Hook for managing rumor data fetching and state with proper group/campaign context
- * @returns Object containing rumors data, loading state, error state, and refresh function
+ * The active campaign's rumors, kept current by a Firestore listener (T032).
+ * See `useCampaignCollection` for how the list, `loading` and the refresh behave.
+ * @param options.enabled Whether anything reads the list right now; see
+ *   `useListenerDemand`. Defaults to `true`.
+ * @returns The rumors, loading and error state, a retry, and the campaign context status
  */
-export const useRumorData = () => {
-  const [rumors, setRumors] = useState<Rumor[]>([]);
-  const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  // A listener on the active campaign's collection (T032), or none while
-  // signed out or unscoped. The list follows every change, a player's own
-  // writes included, so the refresh each write ends with reads nothing.
-  const { getData, loading, error, data } = useFirebaseData<Rumor>({
-    collection: 'rumors',
-    subscribeTo: campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, 'rumors')
-  });
-  const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
-
-  /**
-   * Fetch rumors from Firebase with appropriate group/campaign context
-   */
-  const fetchRumors = useCallback(async () => {
-    try {
-      if (!activeGroupId) {
-        setRumors([]);
-        return [];
-      }
-      
-      if (!activeCampaignId) {
-        // If group is selected but no campaign, return empty array
-        setRumors([]);
-        return [];
-      }
-      
-      const data = await getData();
-      setRumors(data || []);
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching rumors:', err);
-      setRumors([]);
-      return [];
-    }
-  }, [getData, activeGroupId, activeCampaignId]);
-
-  // Load rumors on mount and when group/campaign changes
-  useEffect(() => {
-    fetchRumors();
-  }, [fetchRumors, activeGroupId, activeCampaignId]);
-
-  /*
-    Switching campaign must not leave the previous campaign's rumors on
-    screen while the new ones load -- `loading` above stops counting once
-    there is something to show, so the list is emptied the moment the
-    context it belongs to changes.
-  */
-  useEffect(() => {
-    setRumors([]);
-  }, [activeGroupId, activeCampaignId]);
-
-  // Update rumors when Firebase data changes.
-  //
-  // Signed out, or no group/campaign selected, is checked FIRST and returns:
-  // `data` may still hold the previous user's or previous campaign's records,
-  // until the listener above has closed and emptied it a render later, and stale
-  // records must never outrank "you are signed out".
-  useEffect(() => {
-    if (!user || !activeGroupId || !activeCampaignId) {
-      setRumors([]);
-      return;
-    }
-
-    if (data.length > 0) {
-      setRumors(data);
-    }
-  }, [data, user, activeGroupId, activeCampaignId]);
+export const useRumorData = ({ enabled = true }: { enabled?: boolean } = {}) => {
+  const { items, loading, error, refresh, hasRequiredContext, missingContext } =
+    useCampaignCollection<Rumor>('rumors', asStored, enabled);
 
   return {
-    rumors,
-    /*
-      `loading` means **"there is nothing to show yet"**, never "a fetch is in
-      flight" -- see `useQuestData` for the measurement behind that. The
-      in-flight flag only counts while there is nothing on screen, so the
-      refresh every write ends with happens behind content someone is
-      already reading instead of unmounting it.
-
-      Folds in `isResolving` (bug #1413) unconditionally, since while auth
-      and the campaign are still restoring, the list is empty for a
-      reason no reader can distinguish from "none recorded".
-    */
-    loading: (Boolean(loading) && rumors.length === 0) || isResolving,
+    rumors: items,
+    loading,
     error,
-    refreshRumors: fetchRumors,
+    refreshRumors: refresh,
     hasRequiredContext,
     missingContext
   };

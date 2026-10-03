@@ -44,6 +44,8 @@ jest.mock("@/core/services/firebase", () => ({
 // ---------------------------------------------------------------------------
 const mockSetError = jest.fn();
 const mockRefreshUserProfile = jest.fn();
+const mockApplyUserProfileChanges = jest.fn();
+const mockApplyGroupUserProfileChanges = jest.fn();
 
 let mockContextValue: any = {};
 
@@ -69,6 +71,8 @@ function makeContext(overrides: Record<string, any> = {}) {
     refreshGroups: jest.fn().mockResolvedValue([]),
     refreshCampaigns: jest.fn().mockResolvedValue([]),
     refreshUserProfile: mockRefreshUserProfile,
+    applyUserProfileChanges: mockApplyUserProfileChanges,
+    applyGroupUserProfileChanges: mockApplyGroupUserProfileChanges,
     ...overrides,
   };
 }
@@ -140,17 +144,36 @@ describe("useUser Behavioral Testing", () => {
       expect(mockSetError).toHaveBeenCalledWith(null);
     });
 
-    test("should call refreshUserProfile when uid matches current user", async () => {
+    // REWRITTEN (T032, PERF-13): an edit used to end in `refreshUserProfile()`,
+    // about four requests to read back what was just written. The write's
+    // own fields are applied to state instead.
+    test("applies the write to the current user's profile without reading it back", async () => {
+      mockUpdateUserProfile.mockResolvedValue(undefined);
+      mockContextValue = makeContext({ user: { uid: "u1" } as any });
+
+      const { result } = renderHook(() => useUser());
+
+      const changes = { preferences: { theme: "parchment" } } as any;
+      await act(async () => {
+        await result.current.updateUserProfile("u1", changes);
+      });
+
+      expect(mockApplyUserProfileChanges).toHaveBeenCalledWith(changes);
+      expect(mockRefreshUserProfile).not.toHaveBeenCalled();
+    });
+
+    test("still refreshes when the write moves the active group, which needs switching to", async () => {
       mockUpdateUserProfile.mockResolvedValue(undefined);
       mockContextValue = makeContext({ user: { uid: "u1" } as any });
 
       const { result } = renderHook(() => useUser());
 
       await act(async () => {
-        await result.current.updateUserProfile("u1", {});
+        await result.current.updateUserProfile("u1", { activeGroupId: "g2" } as any);
       });
 
       expect(mockRefreshUserProfile).toHaveBeenCalledTimes(1);
+      expect(mockApplyUserProfileChanges).not.toHaveBeenCalled();
     });
 
     test("should NOT call refreshUserProfile when uid does not match current user", async () => {
@@ -220,7 +243,26 @@ describe("useUser Behavioral Testing", () => {
       expect(mockUpdateGroupUserProfile).toHaveBeenCalledWith("g1", "u1", { username: "bob" });
     });
 
-    test("should call refreshUserProfile when uid matches current user", async () => {
+    test("applies the group write to the current user's profile without reading it back", async () => {
+      mockUpdateGroupUserProfile.mockResolvedValue(undefined);
+      mockContextValue = makeContext({
+        user: { uid: "u1" } as any,
+        activeGroupId: "g1",
+      });
+
+      const { result } = renderHook(() => useUser());
+
+      const changes = { activeCharacterId: "char-2" } as any;
+      await act(async () => {
+        await result.current.updateGroupUserProfile("u1", changes);
+      });
+
+      // REWRITTEN (T032, PERF-13): applied, not read back.
+      expect(mockApplyGroupUserProfileChanges).toHaveBeenCalledWith(changes);
+      expect(mockRefreshUserProfile).not.toHaveBeenCalled();
+    });
+
+    test("still refreshes when the group write moves the active campaign", async () => {
       mockUpdateGroupUserProfile.mockResolvedValue(undefined);
       mockContextValue = makeContext({
         user: { uid: "u1" } as any,
@@ -230,10 +272,11 @@ describe("useUser Behavioral Testing", () => {
       const { result } = renderHook(() => useUser());
 
       await act(async () => {
-        await result.current.updateGroupUserProfile("u1", {});
+        await result.current.updateGroupUserProfile("u1", { activeCampaignId: "c2" } as any);
       });
 
       expect(mockRefreshUserProfile).toHaveBeenCalledTimes(1);
+      expect(mockApplyGroupUserProfileChanges).not.toHaveBeenCalled();
     });
 
     test("should call setError and re-throw on failure", async () => {
@@ -337,7 +380,7 @@ describe("useUser Behavioral Testing", () => {
       expect(mockChangeGroupUsername).toHaveBeenCalledWith("g1", "u1", "newname");
     });
 
-    test("should call refreshUserProfile when uid matches current user", async () => {
+    test("applies the new username without reading the profile back", async () => {
       mockChangeGroupUsername.mockResolvedValue(undefined);
       mockContextValue = makeContext({
         user: { uid: "u1" } as any,
@@ -350,7 +393,9 @@ describe("useUser Behavioral Testing", () => {
         await result.current.changeUsername("u1", "newname");
       });
 
-      expect(mockRefreshUserProfile).toHaveBeenCalledTimes(1);
+      // REWRITTEN (T032, PERF-13): the new name is applied, not read back.
+      expect(mockApplyGroupUserProfileChanges).toHaveBeenCalledWith({ username: "newname" });
+      expect(mockRefreshUserProfile).not.toHaveBeenCalled();
     });
 
     test("should call setError and re-throw on failure", async () => {

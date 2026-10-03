@@ -1,12 +1,15 @@
 import React from "react";
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor, act } from "@testing-library/react";
 
 /**
- * One listener per collection, per provider, and no fetch at all.
+ * One listener per collection, per provider, only while something reads it,
+ * and no fetch at all.
  *
  * Since T032 the read hooks listen (`onSnapshot`) instead of fetching, so the
- * budget is stricter than it was: mounting a provider opens exactly one
- * listener on its campaign's collection and performs no collection read.
+ * budget is stricter than it was: a provider whose list is read opens exactly
+ * one listener on its campaign's collection and performs no collection read.
+ * And since `PERF-03`, a provider whose list nobody reads opens nothing --
+ * the providers sit above the router, so "mounted" means "every route".
  *
  * Each entity context mounts two `useFirebaseData` instances: one for reads,
  * one for writes (the write instance's `error` is bound separately as
@@ -57,7 +60,26 @@ import { NPCProvider } from "@/features/campaign-entities/npcs/context/NPCContex
 import { QuestProvider } from "@/features/campaign-entities/quests/context/QuestContext";
 import { LocationProvider } from "@/features/campaign-entities/locations/context/LocationContext";
 import { RumorProvider } from "@/features/campaign-entities/rumors/context/RumorContext";
-import { StoryProvider } from "@/features/storytelling/chapters/context/StoryContext";
+import { useNPCs } from "@/features/campaign-entities/npcs/context/NPCContext";
+import { useQuests } from "@/features/campaign-entities/quests/context/QuestContext";
+import { useLocations } from "@/features/campaign-entities/locations/context/LocationContext";
+import { useRumors } from "@/features/campaign-entities/rumors/context/RumorContext";
+import { StoryProvider, useStory } from "@/features/storytelling/chapters/context/StoryContext";
+import { LISTENER_LINGER_MS } from "@/shared/hooks/useListenerDemand";
+
+/** Components that read each provider's list, as a page does. */
+const readers = {
+  npcs: () => { useNPCs(); return null; },
+  quests: () => { useQuests(); return null; },
+  locations: () => { useLocations(); return null; },
+  rumors: () => { useRumors(); return null; },
+} as const;
+
+/** A component that only writes: it holds nothing open. */
+const RumorWriter = () => { useRumors({ subscribe: false }); return null; };
+
+/** Reads the story, as a story page does. */
+const StoryReader = () => { useStory(); return null; };
 
 /** How many times the given collection was fetched. */
 const fetchCountFor = (collection: string) =>
@@ -83,10 +105,12 @@ describe("provider fetch counts", () => {
     ["quests", QuestProvider],
     ["locations", LocationProvider],
     ["rumors", RumorProvider],
-  ])("%s gets one listener and no fetch when its provider mounts", async (collection, Provider) => {
+  ] as const)("%s gets one listener and no fetch when its list is read, by two readers at once", async (collection, Provider) => {
+    const Reader = readers[collection];
     render(
       <Provider>
-        <div>child</div>
+        <Reader />
+        <Reader />
       </Provider>
     );
 
@@ -97,10 +121,88 @@ describe("provider fetch counts", () => {
     expect(fetchCountFor(collection)).toBe(0);
   });
 
-  test("StoryProvider listens to chapters once, and reads the reader's progress once", async () => {
+  test.each([
+    ["npcs", NPCProvider],
+    ["quests", QuestProvider],
+    ["locations", LocationProvider],
+    ["rumors", RumorProvider],
+  ] as const)("%s opens nothing while nothing reads its list (PERF-03)", async (_collection, Provider) => {
+    render(
+      <Provider>
+        <div>child</div>
+      </Provider>
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(listenedPaths()).toEqual([]);
+  });
+
+  test("a caller that only writes holds nothing open", async () => {
+    render(
+      <RumorProvider>
+        <RumorWriter />
+      </RumorProvider>
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(listenedPaths()).toEqual([]);
+  });
+
+  test("the listener outlives its last reader for the linger, then closes", async () => {
+    jest.useFakeTimers();
+    try {
+      const unsubscribe = jest.fn();
+      mockSubscribeToCollection.mockImplementation(() => unsubscribe);
+      const Reader = readers.npcs;
+      const { rerender } = render(
+        <NPCProvider>
+          <Reader />
+        </NPCProvider>
+      );
+      expect(listenedPaths()).toHaveLength(1);
+
+      // The reader leaves -- a page change.
+      rerender(<NPCProvider><div /></NPCProvider>);
+      act(() => {
+        jest.advanceTimersByTime(LISTENER_LINGER_MS - 1);
+      });
+      expect(unsubscribe).not.toHaveBeenCalled();
+
+      // Back within the linger: the same listener, not a second read.
+      rerender(<NPCProvider><Reader /></NPCProvider>);
+      rerender(<NPCProvider><div /></NPCProvider>);
+      act(() => {
+        jest.advanceTimersByTime(LISTENER_LINGER_MS);
+      });
+      expect(listenedPaths()).toHaveLength(1);
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("StoryProvider reads nothing while nothing reads the story (PERF-03)", async () => {
     render(
       <StoryProvider>
         <div>child</div>
+      </StoryProvider>
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(listenedPaths()).toEqual([]);
+    expect(mockGetDocument).not.toHaveBeenCalled();
+  });
+
+  test("StoryProvider listens to chapters once, and reads the reader's progress once", async () => {
+    render(
+      <StoryProvider>
+        <StoryReader />
       </StoryProvider>
     );
 

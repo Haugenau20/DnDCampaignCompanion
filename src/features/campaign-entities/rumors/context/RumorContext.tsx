@@ -8,11 +8,23 @@ import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { rumorParagraph } from '../utils/rumor-title';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
+
+/** Firestore commits at most 500 writes in one batch. */
+const MAX_BATCH_WRITES = 500;
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useRumors()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: RumorDemandProvider, useDemand: useRumorDemand } = createListenerDemandContext();
+
 export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { rumors, loading, error, refreshRumors } = useRumorData();
+  const demand = useListenerDemand();
+  const { rumors, loading, error } = useRumorData({ enabled: demand.wanted });
   // This second `useFirebaseData` instance is the one whose writes (addData/updateData/
   // deleteData) can actually fail; its `error` is renamed on destructure (`writeError`)
   // because the read instance above already binds the name `error`. Previously this
@@ -26,7 +38,24 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
-  const { createDocument } = useFirestore();
+  const { createDocument, batchOperations } = useFirestore();
+
+  /**
+   * Writes to several rumours, committed as one batch (T032, `PERF-06`): one
+   * round trip instead of one per rumour, and all or nothing, so a batch
+   * action can never stop halfway through the selection.
+   */
+  const commitRumorWrites = useCallback(async (writes: Array<{
+    type: 'update' | 'delete';
+    id: string;
+    data?: Partial<Rumor>;
+  }>) => {
+    if (writes.length === 0) return;
+    if (writes.length > MAX_BATCH_WRITES) {
+      throw new Error(`One action can change at most ${MAX_BATCH_WRITES} rumours at once.`);
+    }
+    await batchOperations(writes.map(write => ({ ...write, collection: 'rumors' })));
+  }, [batchOperations]);
 
   // Get rumor by ID
   const getRumorById = useCallback((id: string) => {
@@ -82,8 +111,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(rumorId, updatedRumor);
-    refreshRumors();
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Update rumor note
   const updateRumorNote = useCallback(async (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => {
@@ -111,13 +139,12 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(rumorId, updatedRumor);
-    refreshRumors();
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Ids issued during this session but not yet reflected in `rumors` (loaded
   // state). Two rumors can be created back-to-back within a single `act()` /
-  // event handler before the first create's write has round-tripped through
-  // `refreshRumors()` and re-rendered this provider -- a collision check
+  // event handler before the first create's write has come back through
+  // the listener and re-rendered this provider -- a collision check
   // against `getRumorById` alone would miss that first id and silently let
   // the second create overwrite it. This ref is the second source of truth
   // `isTaken` below consults, alongside already-loaded data. Shared across
@@ -154,7 +181,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Generate ID from title, disambiguating on collision -- including with a
-    // rumor another session wrote since our last refresh (#1402) -- and add the
+    // rumor another session wrote that the listener has not delivered yet (#1402) -- and add the
     // document with the explicit ID
     const id = await createWithUniqueEntityId({
       name: rumorData.title,
@@ -162,9 +189,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isLoaded: isRumorLoaded,
       write: (candidateId) => addData(buildRumor(candidateId), candidateId)
     });
-    refreshRumors();
     return id;
-  }, [user, userProfile, activeGroupUserProfile, addData, refreshRumors, isRumorLoaded]);
+  }, [user, userProfile, activeGroupUserProfile, addData, isRumorLoaded]);
 
   // Update existing rumor
   const updateRumor = useCallback(async (rumor: Rumor) => {
@@ -180,8 +206,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(rumor.id, updatedRumor);
-    refreshRumors();
-  }, [user, userProfile, activeGroupUserProfile, updateData, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, updateData]);
 
   // Delete rumor
   const deleteRumor = useCallback(async (rumorId: string) => {
@@ -190,8 +215,33 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     await deleteData(rumorId);
-    refreshRumors();
-  }, [user, deleteData, refreshRumors]);
+  }, [user, deleteData]);
+
+  /** Set the status of several rumours at once, in one batch. */
+  const updateRumorsStatus = useCallback(async (rumorIds: string[], status: RumorStatus) => {
+    if (!user || !userProfile) {
+      throw new Error('User must be authenticated to update rumor status');
+    }
+    if (rumorIds.some(id => !getRumorById(id))) {
+      throw new Error('One or more rumors not found');
+    }
+
+    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+    await commitRumorWrites(rumorIds.map(id => ({
+      type: 'update' as const,
+      id,
+      data: { status, ...modificationAttribution }
+    })));
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, commitRumorWrites]);
+
+  /** Delete several rumours at once, in one batch. */
+  const deleteRumors = useCallback(async (rumorIds: string[]) => {
+    if (!user) {
+      throw new Error('User must be authenticated to delete rumors');
+    }
+
+    await commitRumorWrites(rumorIds.map(id => ({ type: 'delete' as const, id })));
+  }, [user, commitRumorWrites]);
 
   // Combine multiple rumors into one
   const combineRumors = useCallback(async (rumorIds: string[], newRumorData: Partial<Rumor>) => {
@@ -253,7 +303,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Generate ID from title, disambiguating on collision -- including with a
-    // rumor another session wrote since our last refresh (#1402) -- and add the
+    // rumor another session wrote that the listener has not delivered yet (#1402) -- and add the
     // new combined rumor with the explicit ID
     const id = await createWithUniqueEntityId({
       name: title,
@@ -262,35 +312,29 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       write: (candidateId) => addData(buildCombinedRumor(candidateId), candidateId)
     });
 
-    // Mark original rumors as confirmed and linked to the new rumor
-    for (const rumorId of rumorIds) {
-      const rumor = getRumorById(rumorId);
-      if (rumor) {
-        // Make sure the notes array is defined before trying to spread it
-        const existingNotes = Array.isArray(rumor.notes) ? rumor.notes : [];
-
-        // Explicitly set status as a RumorStatus type
-        const updatedRumor: Partial<Rumor> = {
-          ...rumor,
-          status: 'confirmed' as RumorStatus, // Explicitly cast to RumorStatus
-          ...modificationAttribution,
-          notes: [
-            ...existingNotes,
-            {
-              id: crypto.randomUUID(),
-              content: `Combined into rumor: ${id}`,
-              ...creationAttribution
-            }
-          ]
-        };
-
-        await updateData(rumorId, updatedRumor);
+    // Mark the original rumours as confirmed and linked to the new one -- all
+    // of them in one batch, so a failure cannot leave some marked and some
+    // not (T032, PERF-06). Only the fields that change are written.
+    await commitRumorWrites(rumorsToMerge.map(rumor => ({
+      type: 'update' as const,
+      id: rumor.id,
+      data: {
+        status: 'confirmed' as RumorStatus,
+        ...modificationAttribution,
+        notes: [
+          // Make sure the notes array is defined before trying to spread it
+          ...(Array.isArray(rumor.notes) ? rumor.notes : []),
+          {
+            id: crypto.randomUUID(),
+            content: `Combined into rumor: ${id}`,
+            ...creationAttribution
+          }
+        ]
       }
-    }
+    })));
 
-    refreshRumors();
     return id;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, addData, updateData, refreshRumors, isRumorLoaded]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, addData, commitRumorWrites, isRumorLoaded]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
@@ -329,29 +373,27 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }, candidateId)
     });
 
-    // Update all rumors to mark them as converted
-    for (const rumorId of rumorIds) {
-      const rumor = getRumorById(rumorId);
-      if (rumor) {
-        await updateData(rumorId, {
-          ...rumor,
-          convertedToQuestId: questId,
-          ...modificationAttribution,
-          notes: [
-            ...rumor.notes,
-            {
-              id: crypto.randomUUID(),
-              content: `Converted to quest: ${questId}`,
-              ...creationAttribution
-            }
-          ]
-        });
+    // Mark every rumour as converted, in one batch (T032, PERF-06). Only the
+    // fields that change are written.
+    await commitRumorWrites(rumorsToConvert.map(rumor => ({
+      type: 'update' as const,
+      id: rumor.id,
+      data: {
+        convertedToQuestId: questId,
+        ...modificationAttribution,
+        notes: [
+          ...(Array.isArray(rumor.notes) ? rumor.notes : []),
+          {
+            id: crypto.randomUUID(),
+            content: `Converted to quest: ${questId}`,
+            ...creationAttribution
+          }
+        ]
       }
-    }
+    })));
 
-    refreshRumors();
     return questId;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, createDocument, refreshRumors]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocument, commitRumorWrites]);
 
   const value: RumorContextValue = {
     rumors,
@@ -372,18 +414,23 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addRumor,
     updateRumor,
     deleteRumor,
+    updateRumorsStatus,
+    deleteRumors,
     combineRumors,
     convertToQuest
   };
 
   return (
-    <RumorContext.Provider value={value}>
-      {children}
-    </RumorContext.Provider>
+    <RumorDemandProvider value={demand.retain}>
+      <RumorContext.Provider value={value}>
+        {children}
+      </RumorContext.Provider>
+    </RumorDemandProvider>
   );
 };
 
-export const useRumors = () => {
+export const useRumors = (options: ListReaderOptions = {}) => {
+  useRumorDemand(options.subscribe ?? true);
   const context = useContext(RumorContext);
   if (context === undefined) {
     throw new Error('useRumors must be used within a RumorProvider');

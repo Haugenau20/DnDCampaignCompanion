@@ -14,6 +14,12 @@ interface UsageContextValue {
     prefilledSubject: string;
   } | null;
   refreshUsageStatus: () => Promise<void>;
+  /**
+   * Ask for the signed-in user's usage to be loaded, once per user. Called by
+   * the component that shows it (`UsageMeter`), so the callable runs only
+   * where the meter renders rather than on every page load (T032, `PERF-03`).
+   */
+  requestUsageStatus: () => void;
   updateUsageStatus: (status: UsageStatus) => void;
   setUsageLimitExceededWithInfo: (status: UsageStatus, info: { message: string; contactUrl: string; prefilledSubject: string; }) => void;  // ← Add this line
   clearUsageStatus: () => void;
@@ -39,6 +45,9 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { user } = useAuth();
   /** uid whose usage has already been fetched -- see the load effect below. */
   const loadedForUid = useRef<string | null>(null);
+  /** Whether anything has asked to see usage yet; see `requestUsageStatus`. */
+  const [requested, setRequested] = useState(false);
+  const requestUsageStatus = useCallback(() => setRequested(true), []);
 
   /**
    * Refresh usage status from server
@@ -121,14 +130,17 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * Keying on the uid fixes that and is still loop-proof: the ref is set
    * BEFORE the call, so a response of null cannot retrigger it (bug #650).
    * A different uid — a genuine account switch — legitimately refetches.
+   *
+   * Nothing loads until something asks (`requestUsageStatus`): the callable
+   * is only worth its round trip where the meter is on screen.
    */
   useEffect(() => {
     const uid = user?.uid ?? null;
-    if (!uid || loadedForUid.current === uid) return;
+    if (!uid || !requested || loadedForUid.current === uid) return;
 
     loadedForUid.current = uid;
     refreshUsageStatus();
-  }, [user?.uid, refreshUsageStatus]);
+  }, [user?.uid, requested, refreshUsageStatus]);
 
     const value: UsageContextValue = {
     usageStatus,
@@ -136,6 +148,7 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isUsageLimitExceeded,
     contactInfo,
     refreshUsageStatus,
+    requestUsageStatus,
     updateUsageStatus,
     setUsageLimitExceededWithInfo,
     clearUsageStatus,

@@ -78,13 +78,12 @@ export interface QuestContextValue extends QuestContextState {
   markQuestCompleted: (questId: string, dateCompleted?: string) => Promise<void>;
   markQuestFailed: (questId: string) => Promise<void>;
   /**
-   * Re-read the quest collection.
+   * Retry after a failed load: reopens the quest listener if Firestore closed
+   * it after an error (T032). Writes never need it -- the listener already
+   * carries them -- and a healthy listener answers without a read.
    *
-   * Resolves once the refresh completes. Unlike `useQuestData().refreshQuests`
-   * (which is `fetchQuests` and resolves to the refreshed array), the provider
-   * wraps it in a callback that awaits the fetch and returns nothing, so this
-   * is `Promise<void>` rather than `Promise<Quest[]>` -- verified against the
-   * `const value` object the provider actually returns.
+   * `Promise<void>`, unlike `useQuestData().refreshQuests`: the provider wraps
+   * it in a callback that awaits it and returns nothing.
    */
   refreshQuests: () => Promise<void>;
   /** Whether a group and a campaign are both selected. */

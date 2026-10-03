@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/rumors/context/__tests__/RumorContext.behavioral.test.tsx
+// src/features/campaign-entities/rumors/context/__tests__/RumorContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -22,6 +22,8 @@ import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
 const mockUseFirestore = jest.fn();
+/** One commit for every multi-rumour write (T032, PERF-06). */
+const mockBatchOperations = jest.fn().mockResolvedValue(undefined);
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
@@ -94,7 +96,7 @@ describe('RumorContext Behavioral Testing', () => {
       activeGroupUserProfile: null,
     });
 
-    mockUseFirestore.mockReturnValue({
+    mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations,
       setDocument: mockSetDocument,
     });
 
@@ -820,7 +822,8 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should delete rumor from database
       expect(mockDeleteData).toHaveBeenCalledWith('test-rumor');
-      expect(mockRefreshRumors).toHaveBeenCalled();
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshRumors).not.toHaveBeenCalled();
     });
   });
 
@@ -889,6 +892,86 @@ describe('RumorContext Behavioral Testing', () => {
     });
   });
 
+  describe('Batch actions are one write (T032, PERF-06)', () => {
+    const rumorWith = (id: string): Rumor => ({
+      id,
+      title: `Rumor ${id}`,
+      content: 'Heard in the tavern',
+      status: 'unconfirmed' as RumorStatus,
+      sourceType: 'tavern' as SourceType,
+      sourceName: 'Barliman',
+      relatedNPCs: [],
+      relatedLocations: [],
+      notes: [],
+      createdBy: 'author',
+      createdByUsername: 'Author',
+      dateAdded: '2025-06-15T00:00:00.000Z'
+    });
+
+    beforeEach(() => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'test-user' } });
+      mockUseUser.mockReturnValue({
+        userProfile: { name: 'Test User' },
+        activeGroupUserProfile: { userId: 'test-user', username: 'Test User', activeCharacterId: null, characters: [] },
+      });
+      mockUseRumorData.mockReturnValue({
+        rumors: [rumorWith('r1'), rumorWith('r2'), rumorWith('r3')],
+        loading: false,
+        error: null,
+        refreshRumors: mockRefreshRumors,
+      });
+      mockBatchOperations.mockClear();
+      mockBatchOperations.mockResolvedValue(undefined);
+    });
+
+    test('marking several rumours commits one batch, writing status and modification only', async () => {
+      renderRumorContext();
+      await waitFor(() => expect(rumorContext).toBeDefined());
+
+      await act(async () => {
+        await rumorContext.updateRumorsStatus(['r1', 'r3'], 'confirmed');
+      });
+
+      expect(mockBatchOperations).toHaveBeenCalledTimes(1);
+      const [writes] = mockBatchOperations.mock.calls[0];
+      expect(writes.map((write: any) => [write.type, write.collection, write.id])).toEqual([
+        ['update', 'rumors', 'r1'],
+        ['update', 'rumors', 'r3'],
+      ]);
+      writes.forEach((write: any) => {
+        expect(write.data).toEqual(expect.objectContaining({ status: 'confirmed', modifiedBy: 'test-user' }));
+        // The author's created* fields are not part of the write.
+        expect(write.data.createdBy).toBeUndefined();
+      });
+      expect(mockUpdateData).not.toHaveBeenCalled();
+    });
+
+    test('marking a rumour that is not loaded writes nothing', async () => {
+      renderRumorContext();
+      await waitFor(() => expect(rumorContext).toBeDefined());
+
+      await expect(rumorContext.updateRumorsStatus(['r1', 'gone'], 'confirmed')).rejects.toThrow(
+        'One or more rumors not found'
+      );
+      expect(mockBatchOperations).not.toHaveBeenCalled();
+    });
+
+    test('deleting several rumours commits one batch', async () => {
+      renderRumorContext();
+      await waitFor(() => expect(rumorContext).toBeDefined());
+
+      await act(async () => {
+        await rumorContext.deleteRumors(['r1', 'r2']);
+      });
+
+      expect(mockBatchOperations).toHaveBeenCalledWith([
+        { type: 'delete', collection: 'rumors', id: 'r1' },
+        { type: 'delete', collection: 'rumors', id: 'r2' },
+      ]);
+      expect(mockDeleteData).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Rumor Convert To Quest Behavior', () => {
     let mockCreateDocument: jest.Mock;
 
@@ -938,7 +1021,7 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       mockCreateDocument = jest.fn().mockResolvedValue('investigate-dragon-rumors');
-      mockUseFirestore.mockReturnValue({
+      mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations,
         setDocument: mockSetDocument,
         createDocument: mockCreateDocument,
       });
@@ -1003,20 +1086,25 @@ describe('RumorContext Behavioral Testing', () => {
       // document, not a document of its own. DocumentService only attributes
       // the top-level document it writes, so this nested note must keep
       // carrying its own creation attribution built by the context.
-      expect(mockUpdateData).toHaveBeenCalledWith(
-        'rumor-to-convert',
+      // Since T032 (PERF-06) the converted rumours are marked in one batch.
+      expect(mockBatchOperations).toHaveBeenCalledWith([
         expect.objectContaining({
-          convertedToQuestId: 'investigate-dragon-rumors',
-          notes: expect.arrayContaining([
-            expect.objectContaining({
-              content: 'Converted to quest: investigate-dragon-rumors',
-              createdBy: 'test-user',
-              createdByUsername: 'Test User',
-              createdByCharacterName: 'Test Character'
-            })
-          ])
+          type: 'update',
+          collection: 'rumors',
+          id: 'rumor-to-convert',
+          data: expect.objectContaining({
+            convertedToQuestId: 'investigate-dragon-rumors',
+            notes: expect.arrayContaining([
+              expect.objectContaining({
+                content: 'Converted to quest: investigate-dragon-rumors',
+                createdBy: 'test-user',
+                createdByUsername: 'Test User',
+                createdByCharacterName: 'Test Character'
+              })
+            ])
+          })
         })
-      );
+      ]);
     });
   });
 

@@ -52,14 +52,10 @@ const NPCsPage: React.FC = () => {
     >
       <GatedContent gate={gate}>
         {/*
-          No `onNPCUpdate`: the directory's only update is the stance ladder,
-          which goes through `updateNPCRelationship`, and that already
-          refreshes this same provider copy (PERF-06). Passing `refreshNPCs`
-          here fetched the collection a second time for every stance change.
-          `onNPCDelete` stays: the directory's Delete button never calls the
-          provider's `deleteNPC`, so this refresh is the only one that follows.
+          No `onNPCUpdate` or `onNPCDelete`: the list is the provider's
+          listener copy (T032), which follows every write without being asked.
         */}
-        <NPCDirectory npcs={npcs} onNPCDelete={refreshNPCs} />
+        <NPCDirectory npcs={npcs} />
       </GatedContent>
     </PageShell>
   );

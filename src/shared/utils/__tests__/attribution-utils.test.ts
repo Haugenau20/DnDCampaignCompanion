@@ -225,6 +225,11 @@ describe('attribution-utils', () => {
     });
   });
 
+  // REWRITTEN (T032, PERF-09): the lookup now goes through
+  // `getCachedGroupUserProfile`, the services' cache, instead of
+  // `getGroupUserProfile`, which always reads. A name beside content does not
+  // need a fresh read per card; the cache itself is pinned by
+  // `groupProfileCache.test.ts`.
   describe('fetchAttributionUsernames', () => {
     test('should return empty object when groupId is empty', async () => {
       const result = await fetchAttributionUsernames('', ['u1'], {});
@@ -242,7 +247,7 @@ describe('attribution-utils', () => {
         .mockResolvedValueOnce({ username: 'alice' })
         .mockResolvedValueOnce({ username: 'bob' });
       const firebaseServices = {
-        user: { getGroupUserProfile: mockGetGroupUserProfile },
+        user: { getCachedGroupUserProfile: mockGetGroupUserProfile },
       };
 
       const result = await fetchAttributionUsernames(
@@ -262,7 +267,7 @@ describe('attribution-utils', () => {
         .fn()
         .mockResolvedValue({ username: 'alice' });
       const firebaseServices = {
-        user: { getGroupUserProfile: mockGetGroupUserProfile },
+        user: { getCachedGroupUserProfile: mockGetGroupUserProfile },
       };
 
       await fetchAttributionUsernames('group-1', ['u1', 'u1', 'u1'], firebaseServices);
@@ -277,7 +282,7 @@ describe('attribution-utils', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({});
       const firebaseServices = {
-        user: { getGroupUserProfile: mockGetGroupUserProfile },
+        user: { getCachedGroupUserProfile: mockGetGroupUserProfile },
       };
 
       const result = await fetchAttributionUsernames(
@@ -297,7 +302,7 @@ describe('attribution-utils', () => {
         .mockRejectedValueOnce(new Error('lookup failed'))
         .mockResolvedValueOnce({ username: 'carol' });
       const firebaseServices = {
-        user: { getGroupUserProfile: mockGetGroupUserProfile },
+        user: { getCachedGroupUserProfile: mockGetGroupUserProfile },
       };
 
       const result = await fetchAttributionUsernames(

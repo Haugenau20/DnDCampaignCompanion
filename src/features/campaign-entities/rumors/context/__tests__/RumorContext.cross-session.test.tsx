@@ -18,6 +18,8 @@ import { DocumentAlreadyExistsError } from 'core/services/firebase/data/Document
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
 const mockUseFirestore = jest.fn();
+/** One commit for every multi-rumour write (T032, PERF-06). */
+const mockBatchOperations = jest.fn().mockResolvedValue(undefined);
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
@@ -85,7 +87,7 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
       userProfile: { uid: 'u1' },
       activeGroupUserProfile: { username: 'Pip', activeCharacterId: null, characters: [] },
     });
-    mockUseFirestore.mockReturnValue({ createDocument: mockCreateDocument });
+    mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations, createDocument: mockCreateDocument });
     mockUseRumorData.mockReturnValue({
       rumors: [existingRumor('rumor-a'), existingRumor('rumor-b')],
       loading: false,

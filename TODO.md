@@ -20,12 +20,11 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T076 | May the site use "D&D"? | M | needs investigation | Public site, no trademark notice anywhere; T075's rename waits on it |
-| medium | T032 | Performance remediation programme | L | in progress | 2.5–7.6 s to ready is the biggest felt slowness; plan drafted 2026-10-02, phases 1–2 landed, the rest waits on its review |
 | medium | T026 | Mobile layout on story pages | M | needs investigation | List, reader and form; overlapping text, drawer won't touch-scroll |
 | medium | T061 | `test` check not required; test files unlinted | M | open | Every suite is gated in CI now, but branch protection must list the check; test-file lint to be ratcheted (decided 2026-10-02) |
 | medium | T070 | CI functions deploy needs setting up | S | blocked | The job exists; merging it without its service account and cleanup policy holds back Hosting deploys too |
 | medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
-| low | T017 | Batch actions for other entities | L | open | Convenience; must follow T032's write-amplification fix |
+| low | T017 | Batch actions for other entities | L | open | Convenience; the rumour batch actions are the pattern, one commit per action |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -141,15 +140,11 @@ Select several rows, then delete or change status in one go.
   the actions per-entity, rather than generalising the whole component. `RosterGroup`
   already grew an opt-in `collapsible` / `defaultCollapsed` pair for the quest
   directory — **grow that primitive again, do not fork it**.
-- **Do not copy the rumor pattern as it stands.** The performance review found it
-  is the **worst write amplification in the app** (`PERF-06`): `RumorBatchActions`
-  updates and deletes sequentially, and every selected rumor costs an
-  attribution-profile read, a write, **and a full re-query of the rumors
-  collection**. Selecting twenty rumors runs that twenty times over. Extending it
-  to four more entities multiplies a known defect by four. Fix the amplification
-  first — batch the writes, update the cache in place, reserve full reloads for
-  recovery — then generalise. That is T032's territory, so the two should be
-  sequenced rather than run in parallel.
+- **Each action is one write.** `RumorContext`'s `updateRumorsStatus` and
+  `deleteRumors` commit the whole selection as one batch (`batchOperations`),
+  and the list follows through its listener with no re-read. Give each entity
+  the same pair rather than looping its single-record methods: a loop is a
+  round trip per row, and a failure partway leaves half the selection changed.
 - **Source**: todo.txt, 2026-09-16
 
 ### T054 — Sign in with Discord
@@ -504,78 +499,6 @@ its own service account, read from the GitHub secret
 - **Out of scope**: rules stay manual; `firebase.json` has no rules keys on
   purpose. PR previews share production's functions and deploy none.
 - **Source**: maintainer, 2026-09-25; the deploy job 2026-09-28
-
----
-
-## Performance
-
-A full audit exists and is the source of truth for evidence, measurements and
-remediation order: **`docs/performance/performance-review-2026-08-30.md`**, with
-runtime traces in `runtime-evidence-2026-08-30.md`. Fifteen findings, `PERF-01`
-to `PERF-15`, each with severity, affected line links, a recommended direction
-and a suggested budget. The entries below **track** what is still open; they do
-not restate it. Read the review before acting on any of them.
-
-**It audits commit `b73232a` (2026-08-30) and `main` has moved since.** The
-review says so itself. Every finding has now been re-checked against the tree,
-located by symbol: six on 2026-09-16 at `ebc0a28`, `PERF-02` on 2026-09-25,
-`PERF-11` during Phase 15, and the last seven on 2026-09-28 at `ed477e6`.
-
-| Finding | Severity | Re-checked 2026-09-16 |
-|---|---|---|
-| `PERF-01` search never terminates on whitespace | Critical | **Fixed.** All three split sites are now `split(/\s+/).filter(Boolean)`, and `findWordMatches` (`SearchService.ts:294`) guards `if (!word) return []`. `SearchBar.tsx` is gone, replaced by `shared/components/command-palette/`. The regression test that did not ship with the fix landed as T031 (2026-09-23), pinning each guard separately. |
-| `PERF-07` context switch refreshes then reloads | High | **Fixed.** The only `window.location.reload()` left in `src/` is `ErrorBoundary.tsx:62`. |
-| `PERF-10` all routes + full Lodash in one bundle | Medium | **Fixed** 2026-09-28 (T030). Zero `lodash` imports remain in `src/`, routes load on first visit (`main.js` 341 → 264 kB gzip), and `npm run check:bundle` holds `main.js` under a ceiling in CI. |
-| `PERF-04` notes loaded twice, unbounded | High | **Fixed** 2026-09-24 — `NoteContext` reads once, constrained to the active campaign, and reads nothing before one is selected. New note ids are random, so nothing needs the other campaigns' notes. |
-| `PERF-08` duplicate collection owners | Medium | **Fixed** 2026-09-22 — one owner per collection; since 2026-10-02 one listener and no fetch, pinned by `shared/hooks/__tests__/provider-fetch-counts.test.tsx`. |
-| `PERF-15` duplicate `NavigationProvider` | Low | **Fixed** 2026-09-24 — `index.tsx` mounts no provider of its own; `App`'s is the only one. |
-| `PERF-02` auth restore waterfall | High | **Confirmed, mostly fixed** 2026-09-25 — see T032. The restore is 3 round trips deep instead of 5 + one per group, and since 2026-10-02 two identical group-profile reads in flight share one request. |
-| `PERF-11` location walk loops on a cycle | Medium | **Fixed** in Phase 15. `15-3` put the walk behind a visited set and a depth cap (`shared/hooks/useHighlightTarget`); `15-4` routed every other walk over the tree through `locations/utils/location-tree.ts`, with the same guards, and made the cycle tests hang the suite if a guard is removed. |
-| `PERF-03` every provider above the router | High | **Confirmed** 2026-09-28 — see T032. `App.tsx` still wraps `<Routes>` in the NPC, Location, Story, Rumor, Quest, Note, Usage and Search providers. `UsageProvider` calls `getUsageStatus` once per signed-in uid on every route, though only `NotePage`'s `UsageMeter` and `CampaignLinksPanel` read it. `SearchProvider` no longer fetches (it indexes the providers' copies since `PERF-08`), but it keeps all six collections subscribed. T030's lazy routes split the code, not the data. |
-| `PERF-05` chapter order costs O(N) serial round trips | High | **Confirmed** 2026-09-28 — see T032. In `StoryContext`, `createChapter`, `deleteChapter`, `reorderChapters` and `updateChapter`'s order-change path still shift each chapter with `setDocument` → verifying `getDocument` → delete inside an awaited `for` loop. `updateChapter` still awaits `refreshChapters()` before the write. `DocumentService.batchOperations` has one caller, `useFirestore`, and none of these paths. |
-| `PERF-06` writes re-read attribution and reload collections | High | **Mostly fixed** 2026-10-02 — see T032. The five entity collections are listeners, so the refresh each context makes after a write reads nothing (`pages/__tests__/redundant-refreshes.test.tsx`), and attribution reuses a group profile read in the last five minutes. **Left**: `RumorBatchActions` still awaits one update or delete per selected id, and the rumour combine/convert flows loop the same way — each wants one batch. |
-| `PERF-09` Home refetches attribution profiles | Medium | **Confirmed** 2026-09-28 — see T032. `HomePage` (still `/`) re-runs its effect whenever quests, rumours, NPCs, locations or chapters change. It collects every `createdBy`/`modifiedBy` uid and `fetchAttributionUsernames` reads each group profile afresh: there is no cache across runs, and uids whose items already carry the `*Username`/`*CharacterName` fields that `determineAttributionActor` prefers are fetched anyway. |
-| `PERF-12` progress rewrites a growing document | Medium | **Fixed** 2026-09-30. Progress is one document per reader per campaign (2026-09-28), and each write is now a merging `setDocument` of only what changed: one chapter's entry, or the current chapter. A read that resolves after the reader has already made progress keeps it. |
-| `PERF-13` profile/admin mutations reload held data | Medium | **Confirmed** 2026-09-28 — see T032. Each `useUser` update awaits `refreshUserProfile`, which re-reads the global profile and re-runs `setActiveGroupContext` (group profile and campaign list, in parallel since `PERF-02`). The cited `CampaignManagementView` is no longer mounted, and the live `/admin/campaigns` (`AdminCampaignsPage`) no longer loads `getCampaigns` itself or reloads after a write: it renders the context's list, which `useCampaigns` refreshes after each create, update and delete, and shows the skeleton while the context is loading (`useCampaigns().loading`). What is left is the `useUser` half above |
-| `PERF-14` note autosaves can overlap | Low | **Fixed** 2026-09-30. `NoteEditor` holds one save in flight; a save due during it waits, and every request made while it waits joins one follow-up that writes the newest text. Overlap was worse than duplicate writes: the older text could land last after the newer save marked the note clean, and a new note's second create was refused as "already exists". `NoteContext` now records a create the moment it resolves, so a save from a context captured before then updates instead. |
-
-Nine of fifteen are fixed; the other six hold. The review's own prioritized
-list opens with a finding that is already fixed, so do not work straight down
-it. Re-check a finding by symbol before acting on its line links: they are
-`b73232a` line numbers, and several files have moved or been deleted.
-
-### T032 — Performance remediation programme
-**Type** debt · **Size** L · **Status** in progress · **Verified** 2026-10-02 ·
-`PERF-02` `PERF-03` `PERF-05` `PERF-06`
-
-The plan is [`docs/performance/t032-plan.md`](docs/performance/t032-plan.md),
-drafted 2026-10-02 and **not yet reviewed by the maintainer**. Its phases 1–2
-landed with it: the five entity collections are Firestore listeners (no
-collection read after a write, and another player's edits appear without a
-reload), and attribution reuses a cached group profile. What is left, by the
-plan's phases:
-
-- **Phase 3** — notes move to the same listener.
-- **Phase 4, needs a decision** — the `refresh*()` calls after writes are now
-  free but still read like round trips. About 20 assertions pin "a refresh
-  follows a write"; removing the calls means rewriting those to the listener
-  requirement, which is the maintainer's call.
-- **Phase 5, `PERF-03`** — every provider still sits above the router and
-  listens on every signed-in route. Subscriptions should open only while
-  something reads the list; `SearchContext` only once the search opens;
-  `UsageProvider`'s callable only where the meter renders.
-- **Phase 6, `PERF-05`** — chapter order is still the document id, and
-  inserting at the front of 32 chapters is still ~**102** serial operations.
-  First one `writeBatch` per structural change; then, if the maintainer
-  accepts a data migration, stable ids plus an `order` field.
-- **Phase 7, `PERF-02`** — no test measures restore's request count yet; write
-  it, then decide whether a restore orchestrator is still worth building.
-- **Also left**: the rumour batch and combine/convert loops (`PERF-06`, see the
-  table); `PERF-09`, Home's `fetchAttributionUsernames`, still reads each
-  profile through `getGroupUserProfile`, which always reads — it should use the
-  cache, but `attribution-utils.test.ts` pins that exact call; and `PERF-13`,
-  each `useUser` update still awaits `refreshUserProfile`.
-- **Source**: performance review
 
 ---
 

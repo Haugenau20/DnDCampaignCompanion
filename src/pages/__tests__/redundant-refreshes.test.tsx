@@ -108,7 +108,7 @@ jest.mock("react-router-dom", () => ({
   useParams: () => ({ questId: mockQuestId }),
 }));
 
-import { NPCProvider } from "@/features/campaign-entities/npcs/context/NPCContext";
+import { NPCProvider, useNPCs } from "@/features/campaign-entities/npcs/context/NPCContext";
 import { QuestProvider } from "@/features/campaign-entities/quests/context/QuestContext";
 import { LocationProvider } from "@/features/campaign-entities/locations/context/LocationContext";
 import { RumorProvider } from "@/features/campaign-entities/rumors/context/RumorContext";
@@ -156,6 +156,21 @@ const settle = () =>
   act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
+
+/** Lists the provider's NPCs, and deletes one -- the provider, not a page. */
+const NPCRoster: React.FC = () => {
+  const { npcs, deleteNPC } = useNPCs();
+  return (
+    <div>
+      <ul aria-label="NPCs">
+        {npcs.map((npc) => (
+          <li key={npc.id}>{npc.name}</li>
+        ))}
+      </ul>
+      <button onClick={() => void deleteNPC("aldric")}>Delete Aldric</button>
+    </div>
+  );
+};
 
 const Providers: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <MemoryRouter>
@@ -237,5 +252,47 @@ describe("no collection read after a write", () => {
     expect(fetchCountFor("quests") - before).toBe(0);
     expect(listenerCountFor("quests")).toBe(1);
     expect(await screen.findByText("Ask Balin")).toBeInTheDocument();
+  });
+
+  test("deleting the only NPC empties the list, with no re-read", async () => {
+    // The list used to ignore an empty snapshot and rely on a re-read to clear
+    // it; with the re-reads gone, the last record would have stayed on screen.
+    mockDeleteDocument.mockImplementation(async (collection: string, id: string) => {
+      store[collection] = (store[collection] ?? []).filter((d) => d.id !== id);
+      emit(collection);
+    });
+    render(
+      <Providers>
+        <NPCRoster />
+      </Providers>
+    );
+    expect(await screen.findByText("Aldric")).toBeInTheDocument();
+    await settle();
+    const before = fetchCountFor("npcs");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Aldric" }));
+    await waitFor(() => expect(mockDeleteDocument).toHaveBeenCalledWith("npcs", "aldric"));
+    await settle();
+
+    expect(screen.queryByText("Aldric")).not.toBeInTheDocument();
+    expect(fetchCountFor("npcs") - before).toBe(0);
+  });
+
+  test("another player's edit reaches the page without a read", async () => {
+    render(
+      <Providers>
+        <NPCRoster />
+      </Providers>
+    );
+    expect(await screen.findByText("Aldric")).toBeInTheDocument();
+    await settle();
+    const before = fetchCountFor("npcs");
+
+    // Written elsewhere: only the listener hears about it.
+    store.npcs = [{ ...NPC_DOC, name: "Aldric the Grey" }];
+    act(() => emit("npcs"));
+
+    expect(await screen.findByText("Aldric the Grey")).toBeInTheDocument();
+    expect(fetchCountFor("npcs") - before).toBe(0);
   });
 });

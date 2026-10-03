@@ -2,7 +2,6 @@
 
 // Note context and hooks
 export { NoteProvider, useNotes } from './notes/context/NoteContext';
-export { useNoteData } from './notes/hooks/useNoteData';
 export { useCreateNote } from './notes/hooks/useCreateNote';
 // Note presentation helpers — pure, no Firebase, safe for any consumer.
 export { deriveTitle, displayTitle, MAX_DERIVED_TITLE_LENGTH, LEGACY_DEFAULT_TITLE } from './notes/utils/note-title';

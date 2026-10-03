@@ -157,8 +157,10 @@ export const fetchAttributionUsernames = async (
   await Promise.all(
     uniqueUserIds.map(async (uid) => {
       try {
-        // Get the user's group profile
-        const userProfile = await firebaseServices.user.getGroupUserProfile(groupId, uid);
+        // Get the user's group profile. Only a name for display, so a copy
+        // read in the last few minutes will do: every card that shows one
+        // used to read the profile again (PERF-09).
+        const userProfile = await firebaseServices.user.getCachedGroupUserProfile(groupId, uid);
         
         if (userProfile?.username) {
           // Store basic username

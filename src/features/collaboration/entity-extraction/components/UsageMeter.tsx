@@ -1,5 +1,5 @@
 // src/features/collaboration/entity-extraction/components/UsageMeter.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import Typography from "../../../../core/components/Typography";
 import { useUsageContext } from "../context/UsageContext";
 import { UsagePeriod } from "../types";
@@ -71,7 +71,12 @@ const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const UsageMeter: React.FC = () => {
-  const { usageStatus, isLoadingUsage } = useUsageContext();
+  const { usageStatus, isLoadingUsage, requestUsageStatus } = useUsageContext();
+
+  // Usage is loaded on request, and this is where it is shown (PERF-03).
+  useEffect(() => {
+    requestUsageStatus();
+  }, [requestUsageStatus]);
 
   // The block is ALWAYS rendered. It used to return null until usage data
   // arrived, which meant it was invisible until the user's first scan --

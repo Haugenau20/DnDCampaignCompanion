@@ -19,7 +19,9 @@ import { useNavigation } from "shared/hooks/useNavigation";
  * would be worse than doing nothing.
  */
 export function useCreateNote(): { createAndOpen: () => Promise<void> } {
-  const { createNote } = useNotes();
+  // Write-only, and mounted on every route through the header's create
+  // actions: it must not hold the notes listener open (T032, PERF-03).
+  const { createNote } = useNotes({ subscribe: false });
   const { activeCampaignId } = useCampaigns();
   const { navigateToPage } = useNavigation();
 

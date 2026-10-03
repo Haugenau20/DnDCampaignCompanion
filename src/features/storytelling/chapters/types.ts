@@ -56,6 +56,7 @@ export interface StoryContextValue extends StoryContextState {
   addChapter: (chapter: Omit<Chapter, 'id'>) => Promise<string>;
   updateChapter: (id: string, updates: Partial<Chapter>) => Promise<void>;
   deleteChapter: (id: string) => Promise<void>;
+  /** Retry after a failed load: reopens the listener if it failed (T032). Writes never need it. */
   refreshChapters: () => Promise<Chapter[]>;
   setCurrentChapter: (chapter: Chapter) => void;
   hasRequiredContext: boolean;

@@ -9,12 +9,21 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { discardImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
 
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useNPCs()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: NPCDemandProvider, useDemand: useNPCDemand } = createListenerDemandContext();
+
 export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the NPCData hook for basic CRUD operations
-  const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData();
+  const demand = useListenerDemand();
+  const { npcs, loading, error, refreshNPCs, hasRequiredContext } = useNPCData({ enabled: demand.wanted });
   const { user } = useAuth();
   const { userProfile } = useUser();
   
@@ -86,8 +95,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: [...(npc.notes || []), note]
     };
     await updateData(npcId, updatedNPC);
-    refreshNPCs(); // Refresh to get updated data
-  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile]);
+  }, [getNPCById, updateData, hasRequiredContext, user, userProfile]);
 
   // Update NPC relationship
   const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
@@ -109,13 +117,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       relationship
     };
     await updateData(npcId, updatedNPC);
-    refreshNPCs(); // Refresh to get updated data
-  }, [getNPCById, updateData, refreshNPCs, hasRequiredContext, user, userProfile]);
+  }, [getNPCById, updateData, hasRequiredContext, user, userProfile]);
 
   // Ids issued during this session but not yet reflected in `npcs` (loaded
   // state). Two NPCs can be created back-to-back within a single `act()` /
-  // event handler before the first create's write has round-tripped through
-  // `refreshNPCs()` and re-rendered this provider -- a collision check
+  // event handler before the first create's write has come back through
+  // the listener and re-rendered this provider -- a collision check
   // against `npcs`/`getNPCById` alone would miss that first id and silently
   // let the second create overwrite it. This ref is the second source of
   // truth `isTaken` below consults, alongside already-loaded data.
@@ -143,9 +150,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       write: (candidateId) => addData({ ...npcData, id: candidateId }, candidateId)
     });
 
-    await refreshNPCs();
     return id;
-  }, [hasRequiredContext, user, userProfile, getNPCById, addData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, getNPCById, addData]);
 
   // Update an existing NPC
   const updateNPC = useCallback(async (npc: NPC): Promise<void> => {
@@ -167,8 +173,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     await updateData(npc.id, updatedNPC);
-    await refreshNPCs();
-  }, [hasRequiredContext, user, userProfile, getNPCById, updateData, refreshNPCs]);
+  }, [hasRequiredContext, user, userProfile, getNPCById, updateData]);
 
   // Delete an NPC
   const deleteNPC = useCallback(async (npcId: string): Promise<void> => {
@@ -184,8 +189,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await deleteData(npcId);
     // After the document: a failure can then only orphan the file.
     if (image) discardImage(image.path);
-    await refreshNPCs();
-  }, [hasRequiredContext, user, getNPCById, deleteData, refreshNPCs]);
+  }, [hasRequiredContext, user, getNPCById, deleteData]);
 
   const value: NPCContextValue = {
     npcs,
@@ -217,13 +221,16 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   return (
-    <NPCContext.Provider value={value}>
-      {children}
-    </NPCContext.Provider>
+    <NPCDemandProvider value={demand.retain}>
+      <NPCContext.Provider value={value}>
+        {children}
+      </NPCContext.Provider>
+    </NPCDemandProvider>
   );
 };
 
-export const useNPCs = () => {
+export const useNPCs = (options: ListReaderOptions = {}) => {
+  useNPCDemand(options.subscribe ?? true);
   const context = useContext(NPCContext);
   if (context === undefined) {
     throw new Error('useNPCs must be used within an NPCProvider');

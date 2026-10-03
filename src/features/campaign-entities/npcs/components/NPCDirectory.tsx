@@ -10,6 +10,7 @@ import { useNavigation } from 'shared/context/NavigationContext';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -28,6 +29,7 @@ interface NPCDirectoryProps {
   npcs: NPC[];
   isLoading?: boolean;
   onNPCUpdate?: (updatedNPC: NPC) => void;
+  /** Called after an NPC has been deleted from the directory. */
   onNPCDelete?: (npcId: string) => void;
 }
 
@@ -122,7 +124,9 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
   const { locations } = useLocations();
-  const { updateNPCRelationship } = useNPCs();
+  const { updateNPCRelationship, deleteNPC } = useNPCs();
+  /** The NPC whose Delete was pressed, awaiting confirmation. */
+  const [confirmingDelete, setConfirmingDelete] = useState<NPC | null>(null);
   const { navigateToPage, createPath } = useNavigation();
 
   const { getCurrentQueryParams } = useNavigation();
@@ -132,15 +136,18 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     setNpcs(initialNpcs);
   }, [initialNpcs]);
 
-  // Handle NPC deletion
-  const handleNPCDelete = (npcId: string) => {
-    // Update local state
-    setNpcs(prev => prev.filter(npc => npc.id !== npcId));
-
-    // Call the parent handler if provided
-    if (onNPCDelete) {
-      onNPCDelete(npcId);
-    }
+  /**
+   * Delete the NPC once confirmed. The row leaves through the provider's
+   * listener, not a local filter: this button once only hid the row and wrote
+   * nothing, so the NPC came back on the next change (T078). A failure stays
+   * in the dialog, which reports it.
+   */
+  const handleConfirmDelete = async () => {
+    if (!confirmingDelete) return;
+    const npcId = confirmingDelete.id;
+    await deleteNPC(npcId);
+    setConfirmingDelete(null);
+    onNPCDelete?.(npcId);
   };
 
   // Handle location click
@@ -392,7 +399,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleNPCDelete(npc.id)}
+                              onClick={() => setConfirmingDelete(npc)}
                             >
                               Delete
                             </Button>
@@ -473,6 +480,16 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
               Add the first NPC
             </Button>
           }
+        />
+      )}
+
+      {confirmingDelete && (
+        <DeleteConfirmationDialog
+          isOpen
+          onClose={() => setConfirmingDelete(null)}
+          onConfirm={handleConfirmDelete}
+          itemName={confirmingDelete.name}
+          itemType="NPC"
         />
       )}
     </div>

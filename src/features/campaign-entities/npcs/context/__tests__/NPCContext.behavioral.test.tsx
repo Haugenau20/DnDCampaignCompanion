@@ -1,4 +1,4 @@
-﻿// src/features/campaign-entities/npcs/context/__tests__/NPCContext.behavioral.test.tsx
+// src/features/campaign-entities/npcs/context/__tests__/NPCContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -408,7 +408,8 @@ describe('NPCContext Behavioral Testing', () => {
       expect(Array.isArray(npcDataSent.notes)).toBe(true);
 
       // BEHAVIOR: Should refresh NPCs after creation
-      expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
   });
 
@@ -824,7 +825,8 @@ describe('NPCContext Behavioral Testing', () => {
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after update
-      expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     test('should update NPC relationship with proper metadata', async () => {
@@ -865,7 +867,8 @@ describe('NPCContext Behavioral Testing', () => {
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after relationship update
-      expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     test('should reject relationship update for nonexistent NPC', async () => {
@@ -944,7 +947,7 @@ describe('NPCContext Behavioral Testing', () => {
       });
     });
 
-    test('should delete NPC and refresh data', async () => {
+    test('should delete NPC without re-reading the collection', async () => {
       renderNPCContext();
 
       await waitFor(() => {
@@ -960,7 +963,8 @@ describe('NPCContext Behavioral Testing', () => {
       expect(mockDeleteData).toHaveBeenCalledWith('test-npc');
 
       // BEHAVIOR: Should refresh NPCs after deletion
-      expect(mockRefreshNPCs).toHaveBeenCalledTimes(1);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
     test('should reject deletion without authentication', async () => {

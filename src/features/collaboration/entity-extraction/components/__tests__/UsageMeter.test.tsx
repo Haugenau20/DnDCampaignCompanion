@@ -10,6 +10,9 @@ const { useUsageContext } = require('../../context/UsageContext');
 
 type Period = { count: number; limit: number };
 
+/** The meter asks for usage on mount (T032, PERF-03). */
+const mockRequestUsageStatus = jest.fn();
+
 function setupUsage(
   periods: { daily?: Period; weekly?: Period; monthly?: Period } | null,
   extra: any = {},
@@ -18,6 +21,7 @@ function setupUsage(
 ) {
   (useUsageContext as jest.Mock).mockReturnValue({
     isLoadingUsage,
+    requestUsageStatus: mockRequestUsageStatus,
     usageStatus: periods
       ? {
           usage: {
@@ -51,6 +55,12 @@ describe('UsageMeter', () => {
     setupUsage({});
     render(<UsageMeter />);
     expect(screen.getByText('Smart detection')).toBeInTheDocument();
+  });
+
+  test('asks for usage when it mounts, since nothing loads it until something shows it', () => {
+    setupUsage(null);
+    render(<UsageMeter />);
+    expect(mockRequestUsageStatus).toHaveBeenCalledTimes(1);
   });
 
   describe('all three periods', () => {

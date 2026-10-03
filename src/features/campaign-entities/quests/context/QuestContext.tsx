@@ -9,13 +9,22 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { Location } from '../../locations/types';
+import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 // Create the context but DON'T export it (to match NPCContext pattern)
 const QuestContext = createContext<QuestContextValue | undefined>(undefined);
 
+/**
+ * Who is reading this provider's list right now (T032, `PERF-03`): the
+ * listener is open only while some component that called `useQuests()` is
+ * mounted, and for a while after. See `useListenerDemand`.
+ */
+const { DemandProvider: QuestDemandProvider, useDemand: useQuestDemand } = createListenerDemandContext();
+
 export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Use the useQuestData hook to handle data fetching
-  const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData();
+  const demand = useListenerDemand();
+  const { quests, loading, error, getQuestById, refreshQuests: fetchQuests, hasRequiredContext } = useQuestData({ enabled: demand.wanted });
   // `autoFetch: false` because nothing renders off this instance's `data`:
   // the list comes from `useQuestData()` above. Its `error` is bound as
   // `writeError` so write failures are not conflated with read failures
@@ -74,8 +83,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Ids issued during this session but not yet reflected in `quests` (loaded
   // state). Two quests can be created back-to-back within a single `act()` /
-  // event handler before the first create's write has round-tripped through
-  // `refreshQuests()` and re-rendered this provider -- a collision check
+  // event handler before the first create's write has come back through
+  // the listener and re-rendered this provider -- a collision check
   // against `getQuestById` alone would miss that first id and silently let
   // the second create overwrite it. This ref is the second source of truth
   // `isTaken` below consults, alongside already-loaded data.
@@ -106,8 +115,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(questId, updatedQuest);
-    await refreshQuests();
-  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
 
   /**
    * The one guard every objective write shares: signed in, a campaign in
@@ -135,9 +143,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const writeObjectives = useCallback(
     async (quest: Quest, objectives: Quest['objectives']) => {
       await updateData(quest.id, { ...quest, objectives });
-      await refreshQuests();
     },
-    [updateData, refreshQuests]
+    [updateData]
   );
 
   /**
@@ -246,7 +253,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Generate the ID from the title, disambiguating on collision -- including
-    // with a quest another session wrote since our last refresh (#1402).
+    // with a quest another session wrote that the listener has not delivered
+    // yet (#1402).
     const id = await createWithUniqueEntityId({
       name: questData.title,
       issuedIds: issuedIds.current,
@@ -254,9 +262,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       write: (candidateId) => addData(buildQuest(candidateId), candidateId)
     });
 
-    await refreshQuests();
     return id;
-  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, addData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, addData]);
 
   // Update existing quest
   const updateQuest = useCallback(async (quest: Quest) => {
@@ -273,8 +280,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(quest.id, updatedQuest);
-    await refreshQuests();
-  }, [user, userProfile, activeGroupId, activeCampaignId, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, updateData]);
 
   // Delete quest
   const deleteQuest = useCallback(async (questId: string) => {
@@ -287,8 +293,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     await deleteData(questId);
-    await refreshQuests();
-  }, [user, activeGroupId, activeCampaignId, deleteData, refreshQuests]);
+  }, [user, activeGroupId, activeCampaignId, deleteData]);
 
   // Mark quest as completed
   const markQuestCompleted = useCallback(async (questId: string, dateCompleted?: string) => {
@@ -322,8 +327,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(questId, updatedQuest);
-    await refreshQuests();
-  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
 
   // Mark quest as failed
   const markQuestFailed = useCallback(async (questId: string) => {
@@ -346,8 +350,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     await updateData(questId, updatedQuest);
-    await refreshQuests();
-  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, refreshQuests]);
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
 
   const value: QuestContextValue = {
     quests,
@@ -378,14 +381,17 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <QuestContext.Provider value={value}>
-      {children}
-    </QuestContext.Provider>
+    <QuestDemandProvider value={demand.retain}>
+      <QuestContext.Provider value={value}>
+        {children}
+      </QuestContext.Provider>
+    </QuestDemandProvider>
   );
 };
 
 // Export the hook directly from the context file
-export const useQuests = () => {
+export const useQuests = (options: ListReaderOptions = {}) => {
+  useQuestDemand(options.subscribe ?? true);
   const context = useContext(QuestContext);
   if (context === undefined) {
     throw new Error('useQuests must be used within a QuestProvider');

@@ -1,4 +1,4 @@
-﻿// src/features/storytelling/chapters/context/__tests__/StoryContext.behavioral.test.tsx
+// src/features/storytelling/chapters/context/__tests__/StoryContext.behavioral.test.tsx
 
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
@@ -55,7 +55,8 @@ jest.mock('core/services/firebase', () => ({
     document: {
       setDocument: jest.fn(),
       createDocument: jest.fn(),
-      getDocument: jest.fn()
+      getDocument: jest.fn(),
+      batchOperations: jest.fn()
     }
   },
 }));
@@ -140,7 +141,25 @@ describe('StoryContext Behavioral Testing', () => {
     mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
     mockFirebaseServices.document.createDocument.mockResolvedValue('mock-id');
     mockFirebaseServices.document.getDocument.mockResolvedValue({});
+    mockFirebaseServices.document.batchOperations.mockResolvedValue(undefined);
   });
+
+  /**
+   * The writes of the one batch the last structural change committed (T032).
+   * Insert, delete and move are each exactly one `batchOperations` call, so a
+   * partial change cannot be left behind.
+   */
+  const committedBatch = (): Array<{ type: string; collection: string; id: string; data?: any }> => {
+    const calls = mockFirebaseServices.document.batchOperations.mock.calls;
+    expect(calls).toHaveLength(1);
+    return calls[0][0];
+  };
+
+  /** The `order` each chapter is moved to by the committed batch, by id. */
+  const movesIn = (batch: Array<{ type: string; id: string; data?: any }>) =>
+    Object.fromEntries(
+      batch.filter((write) => write.type === 'update').map((write) => [write.id, write.data.order])
+    );
 
   const renderStoryContext = () => {
     const handleContextChange = (context: any) => {
@@ -350,9 +369,6 @@ describe('StoryContext Behavioral Testing', () => {
     });
 
     test('should create chapter with basic data structure', async () => {
-      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-01');
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
-
       renderStoryContext();
 
       await waitFor(() => {
@@ -369,67 +385,54 @@ describe('StoryContext Behavioral Testing', () => {
         dateAdded: '2025-06-15T00:00:00.000Z'
       };
 
+      let chapterId = '';
       await act(async () => {
-        const chapterId = await storyContext.createChapter(chapterData);
-        expect(chapterId).toBe('chapter-01');
+        chapterId = await storyContext.createChapter(chapterData);
       });
 
-      // BEHAVIOR: Should create chapter with generated ID via the attribution-aware
-      // create path. Attribution itself (createdBy/modifiedBy/etc.) is now stamped
-      // by DocumentService.createDocument, not by StoryContext, so this test only
-      // verifies the domain data reaches the write call correctly.
-      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
-        'chapters',
-        expect.objectContaining({
-          title: 'The Beginning',
-          content: 'Our adventure starts in the tavern...',
-          order: 1,
-          id: 'chapter-01'
-        }),
-        'chapter-01'
-      );
+      // BEHAVIOR: one batch, writing the chapter under the id it returned.
+      expect(committedBatch()).toEqual([
+        {
+          type: 'set',
+          collection: 'chapters',
+          id: chapterId,
+          data: expect.objectContaining({
+            title: 'The Beginning',
+            content: 'Our adventure starts in the tavern...',
+            order: 1,
+            id: chapterId
+          })
+        }
+      ]);
     });
 
-    test('should generate consistent chapter IDs from order', async () => {
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
-
+    // REWRITTEN (T032, PERF-05). This pinned ids derived from order
+    // (`chapter-05` for order 5), which is what made every insert, delete and
+    // move re-key every chapter after it. A chapter's id is now its identity
+    // alone; its place is the `order` field.
+    test('gives every new chapter its own id, which says nothing about its order', async () => {
       renderStoryContext();
 
       await waitFor(() => {
         expect(storyContext).toBeDefined();
       });
 
-      const testCases = [
-        { order: 1, expectedId: 'chapter-01' },
-        { order: 5, expectedId: 'chapter-05' },
-        { order: 12, expectedId: 'chapter-12' },
-        { order: 100, expectedId: 'chapter-100' }
-      ];
-
-      for (const testCase of testCases) {
-        mockFirebaseServices.document.createDocument.mockClear();
-        mockFirebaseServices.document.createDocument.mockResolvedValue(testCase.expectedId);
-
-        const chapterData: Omit<Chapter, 'id'> = {
-          title: `Chapter ${testCase.order}`,
-          content: 'Test content',
-          order: testCase.order,
-          createdBy: 'test-user',
-          createdByUsername: 'Test User',
-          dateAdded: '2025-06-15T00:00:00.000Z'
-        };
-
+      const ids: string[] = [];
+      for (const order of [1, 5]) {
         await act(async () => {
-          const chapterId = await storyContext.createChapter(chapterData);
-          expect(chapterId).toBe(testCase.expectedId);
+          ids.push(await storyContext.createChapter({
+            title: `Chapter ${order}`,
+            content: 'Test content',
+            order,
+          }));
         });
-
-        expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
-          'chapters',
-          expect.objectContaining({ id: testCase.expectedId, order: testCase.order }),
-          testCase.expectedId
-        );
       }
+
+      expect(ids[0]).not.toBe(ids[1]);
+      ids.forEach((id) => {
+        expect(id).toMatch(/^chapter-[a-z0-9]+$/);
+        expect(id).not.toMatch(/^chapter-\d+$/);
+      });
     });
 
     test('should handle chapter insertion with reordering', async () => {
@@ -462,10 +465,6 @@ describe('StoryContext Behavioral Testing', () => {
         hasRequiredContext: true,
       });
 
-      mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
-      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-02');
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
-
       renderStoryContext();
 
       await waitFor(() => {
@@ -473,83 +472,69 @@ describe('StoryContext Behavioral Testing', () => {
       });
 
       // Insert chapter at order 2 (should shift existing chapter 2 to order 3)
-      const insertChapterData: Omit<Chapter, 'id'> = {
-        title: 'Inserted Chapter',
-        content: 'This chapter is inserted',
-        order: 2,
-        createdBy: 'test-user',
-        createdByUsername: 'Test User',
-        dateAdded: '2025-06-15T00:00:00.000Z'
-      };
-
+      let chapterId = '';
       await act(async () => {
-        const chapterId = await storyContext.createChapter(insertChapterData);
-        expect(chapterId).toBe('chapter-02');
+        chapterId = await storyContext.createChapter({
+          title: 'Inserted Chapter',
+          content: 'This chapter is inserted',
+          order: 2,
+        });
       });
 
-      // BEHAVIOR: Should shift the existing chapter (re-key path, still setDocument)...
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
-        'chapters',
-        'chapter-03',
-        expect.objectContaining({ order: 3 }) // Original chapter 2 shifted to 3
-      );
-
-      // ...and create the genuinely new chapter via the attribution-aware path.
-      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
-        'chapters',
-        expect.objectContaining({
-          title: 'Inserted Chapter',
-          order: 2
-        }),
-        'chapter-02'
-      );
+      // BEHAVIOR: in one batch, chapter-02 keeps its id and moves to order 3,
+      // chapter-01 is untouched, and the new chapter takes order 2.
+      const batch = committedBatch();
+      expect(movesIn(batch)).toEqual({ 'chapter-02': 3 });
+      expect(batch).toContainEqual({
+        type: 'set',
+        collection: 'chapters',
+        id: chapterId,
+        data: expect.objectContaining({ title: 'Inserted Chapter', order: 2 })
+      });
+      expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
+      expect(mockDeleteData).not.toHaveBeenCalled();
     });
 
-    test('should route genuine chapter creation through the attribution-aware create path, not the attribution-free write', async () => {
-      mockFirebaseServices.document.createDocument.mockResolvedValue('chapter-01');
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
-
+    test('stamps a new chapter with creation attribution for the current user, in the same batch', async () => {
       renderStoryContext();
 
       await waitFor(() => {
         expect(storyContext).toBeDefined();
       });
 
-      const chapterData: Omit<Chapter, 'id'> = {
-        title: 'The Beginning',
-        content: 'Our adventure starts in the tavern...',
-        order: 1,
-        createdBy: 'test-user',
-        createdByUsername: 'Test User',
-        dateAdded: '2025-06-15T00:00:00.000Z'
-      };
-
+      let chapterId = '';
       await act(async () => {
-        await storyContext.createChapter(chapterData);
-      });
-
-      // REGRESSION TRIPWIRE: a genuine new chapter must go through
-      // DocumentService.createDocument (the attribution-aware path), carrying the
-      // caller's domain fields, and must NEVER be written via the attribution-free
-      // setDocument path (that path is reserved for the re-key writes in
-      // updateChapter/deleteChapter/reorderChapters, which preserve an EXISTING
-      // chapter's original attribution rather than stamping new attribution).
-      expect(mockFirebaseServices.document.createDocument).toHaveBeenCalledWith(
-        'chapters',
-        expect.objectContaining({
+        chapterId = await storyContext.createChapter({
           title: 'The Beginning',
           content: 'Our adventure starts in the tavern...',
           order: 1,
-          id: 'chapter-01'
-        }),
-        'chapter-01'
-      );
+        });
+      });
+
+      // A genuine new chapter carries the creator's attribution -- the fields
+      // `createDocument` would stamp -- inside the batch, so the write that
+      // creates it is atomic with any shift it causes.
+      const [write] = committedBatch();
+      expect(write).toEqual({
+        type: 'set',
+        collection: 'chapters',
+        id: chapterId,
+        data: expect.objectContaining({
+          title: 'The Beginning',
+          createdBy: 'test-user',
+          createdByUsername: 'Test User',
+          createdByCharacterName: 'Test Character',
+          modifiedBy: 'test-user',
+          dateAdded: expect.any(String)
+        })
+      });
       expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
+      expect(mockFirebaseServices.document.createDocument).not.toHaveBeenCalled();
     });
   });
 
   describe('Attribution Regression Guard — Reorder Must Not Reattribute Existing Chapters', () => {
-    test('reordering a chapter authored by user A, performed by user B, preserves A\'s createdBy/dateAdded on every rewritten chapter and touches only modified* fields', async () => {
+    test('reordering a chapter authored by user A, performed by user B, writes only order to the chapters it passes and only modified* to the one it moves', async () => {
       // The acting user for this reorder is B -- a different person than the
       // original author of every chapter involved.
       mockUseAuth.mockReturnValue({
@@ -573,62 +558,25 @@ describe('StoryContext Behavioral Testing', () => {
       getUserName.mockReturnValue('User B');
       getActiveCharacterName.mockReturnValue('Character B');
 
-      // All three chapters were created (and never since modified) by user A.
-      const chaptersAuthoredByA = [
-        {
-          id: 'chapter-01',
-          title: 'Chapter 1',
-          content: 'First chapter',
-          order: 1,
-          createdBy: 'user-a',
-          createdByUsername: 'User A',
-          dateAdded: '2025-01-01T00:00:00.000Z',
-          modifiedBy: 'user-a',
-          modifiedByUsername: 'User A',
-          dateModified: '2025-01-01T00:00:00.000Z'
-        },
-        {
-          id: 'chapter-02',
-          title: 'Chapter 2',
-          content: 'Second chapter',
-          order: 2,
-          createdBy: 'user-a',
-          createdByUsername: 'User A',
-          dateAdded: '2025-01-01T00:00:00.000Z',
-          modifiedBy: 'user-a',
-          modifiedByUsername: 'User A',
-          dateModified: '2025-01-01T00:00:00.000Z'
-        },
-        {
-          id: 'chapter-03',
-          title: 'Chapter 3',
-          content: 'Third chapter',
-          order: 3,
-          createdBy: 'user-a',
-          createdByUsername: 'User A',
-          dateAdded: '2025-01-01T00:00:00.000Z',
-          modifiedBy: 'user-a',
-          modifiedByUsername: 'User A',
-          dateModified: '2025-01-01T00:00:00.000Z'
-        }
-      ];
-
+      const byA = {
+        createdBy: 'user-a',
+        createdByUsername: 'User A',
+        dateAdded: '2025-01-01T00:00:00.000Z',
+        modifiedBy: 'user-a',
+        modifiedByUsername: 'User A',
+        dateModified: '2025-01-01T00:00:00.000Z'
+      };
       mockUseChapterData.mockReturnValue({
-        chapters: chaptersAuthoredByA,
+        chapters: [
+          { id: 'chapter-01', title: 'Chapter 1', content: 'First chapter', order: 1, ...byA },
+          { id: 'chapter-02', title: 'Chapter 2', content: 'Second chapter', order: 2, ...byA },
+          { id: 'chapter-03', title: 'Chapter 3', content: 'Third chapter', order: 3, ...byA }
+        ],
         loading: false,
         error: null,
         refreshChapters: mockRefreshChapters,
         hasRequiredContext: true,
       });
-
-      mockUseFirebaseData.mockReturnValue({
-        updateData: mockUpdateData,
-        deleteData: mockDeleteData,
-        getData: jest.fn().mockResolvedValue([]),
-      });
-
-      mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
 
       renderStoryContext();
 
@@ -636,74 +584,30 @@ describe('StoryContext Behavioral Testing', () => {
         expect(storyContext).toBeDefined();
       });
 
-      // User B moves chapter-01 from order 1 to order 3. This affects all three
-      // chapters: chapter-01 becomes order 3 (id chapter-03), chapter-02 shifts to
-      // order 1 (id chapter-01), chapter-03 shifts to order 2 (id chapter-02).
+      // User B moves chapter-01 from order 1 to order 3.
       await act(async () => {
         await storyContext.updateChapter('chapter-01', { order: 3 });
       });
 
-      // Every chapter written during this reorder must still carry user A's
-      // original creation attribution -- reordering must never reattribute
-      // creation to whoever performed the reorder.
-      const setDocumentCalls = mockFirebaseServices.document.setDocument.mock.calls;
-      expect(setDocumentCalls.length).toBeGreaterThan(0);
-      setDocumentCalls.forEach(([, , writtenChapter]: [string, string, any]) => {
-        expect(writtenChapter.createdBy).toBe('user-a');
-        expect(writtenChapter.createdByUsername).toBe('User A');
-        expect(writtenChapter.dateAdded).toBe('2025-01-01T00:00:00.000Z');
-      });
+      const batch = committedBatch();
 
-      // The chapter the user actually moved (originally chapter-01, now living at
-      // chapter-03) gets a fresh modification stamp from B -- this is the one
-      // legitimate attribution change in this operation.
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
-        'chapters',
-        'chapter-03',
-        expect.objectContaining({
-          createdBy: 'user-a',
-          createdByUsername: 'User A',
-          dateAdded: '2025-01-01T00:00:00.000Z',
-          modifiedBy: 'user-b',
-          modifiedByUsername: 'User B',
-          dateModified: expect.any(String),
-          order: 3
-        })
-      );
-      const movedChapterCall = setDocumentCalls.find(([, id]: [string, string]) => id === 'chapter-03');
-      expect(movedChapterCall![2].dateModified).not.toBe('2025-01-01T00:00:00.000Z');
+      // The chapters it passes only change place: their documents get
+      // `order` and nothing else, so A's created* and modified* fields
+      // cannot be touched -- reordering never reattributes (#1203).
+      expect(batch).toContainEqual({ type: 'update', collection: 'chapters', id: 'chapter-02', data: { order: 1 } });
+      expect(batch).toContainEqual({ type: 'update', collection: 'chapters', id: 'chapter-03', data: { order: 2 } });
 
-      // The other two chapters were only re-keyed to a new id/order (mechanical
-      // shift, not a content edit by B) -- their modification attribution is left
-      // exactly as it was, untouched by this operation.
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
-        'chapters',
-        'chapter-01',
-        expect.objectContaining({
-          createdBy: 'user-a',
-          dateAdded: '2025-01-01T00:00:00.000Z',
-          modifiedBy: 'user-a',
-          modifiedByUsername: 'User A',
-          dateModified: '2025-01-01T00:00:00.000Z',
-          order: 1
-        })
-      );
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalledWith(
-        'chapters',
-        'chapter-02',
-        expect.objectContaining({
-          createdBy: 'user-a',
-          dateAdded: '2025-01-01T00:00:00.000Z',
-          modifiedBy: 'user-a',
-          modifiedByUsername: 'User A',
-          dateModified: '2025-01-01T00:00:00.000Z',
-          order: 2
-        })
-      );
-
-      // This reorder must never route through the attribution-aware create path --
-      // none of these chapters are new.
-      expect(mockFirebaseServices.document.createDocument).not.toHaveBeenCalled();
+      // The chapter B actually moved gets B's modification stamp, and no
+      // created* field at all -- so A's creation survives.
+      const moved = batch.find((write) => write.id === 'chapter-01')!;
+      expect(moved.data).toEqual(expect.objectContaining({
+        order: 3,
+        modifiedBy: 'user-b',
+        modifiedByUsername: 'User B',
+        dateModified: expect.any(String)
+      }));
+      expect(Object.keys(moved.data).filter((key) => key.startsWith('created') || key === 'dateAdded')).toEqual([]);
+      expect(batch).toHaveLength(3);
     });
   });
 
@@ -929,33 +833,9 @@ describe('StoryContext Behavioral Testing', () => {
 
     test('should handle complex chapter reordering', async () => {
       const multipleChapters = [
-        {
-          id: 'chapter-01',
-          title: 'Chapter 1',
-          content: 'First chapter',
-          order: 1,
-          createdBy: 'test-user',
-          createdByUsername: 'Test User',
-          dateAdded: '2025-06-15T00:00:00.000Z'
-        },
-        {
-          id: 'chapter-02',
-          title: 'Chapter 2',
-          content: 'Second chapter',
-          order: 2,
-          createdBy: 'test-user',
-          createdByUsername: 'Test User',
-          dateAdded: '2025-06-15T00:00:00.000Z'
-        },
-        {
-          id: 'chapter-03',
-          title: 'Chapter 3',
-          content: 'Third chapter',
-          order: 3,
-          createdBy: 'test-user',
-          createdByUsername: 'Test User',
-          dateAdded: '2025-06-15T00:00:00.000Z'
-        }
+        { id: 'chapter-01', title: 'Chapter 1', content: 'First chapter', order: 1, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' },
+        { id: 'chapter-02', title: 'Chapter 2', content: 'Second chapter', order: 2, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' },
+        { id: 'chapter-03', title: 'Chapter 3', content: 'Third chapter', order: 3, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' }
       ];
 
       mockUseChapterData.mockReturnValue({
@@ -965,9 +845,6 @@ describe('StoryContext Behavioral Testing', () => {
         refreshChapters: mockRefreshChapters,
         hasRequiredContext: true,
       });
-
-      mockFirebaseServices.document.setDocument.mockResolvedValue(undefined);
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
 
       renderStoryContext();
 
@@ -980,47 +857,28 @@ describe('StoryContext Behavioral Testing', () => {
         await storyContext.updateChapter('chapter-01', { order: 3 });
       });
 
-      // BEHAVIOR: every affected chapter ends up written at its new position.
-      //
-      // Corrected under explicit authorisation on 2026-07-28, together with the
-      // bug #017 fix. This previously asserted `expect(mockDeleteData).toHaveBeenCalled()`,
-      // which pinned the *mechanism* of the old implementation rather than the
-      // outcome — and no correct implementation can satisfy it. Moving chapter-01
-      // to order 3 rotates orders {1,2,3} -> {3,1,2}; because a chapter's id is
-      // derived from its order, the new id set {chapter-03, chapter-01,
-      // chapter-02} is exactly the old one. Every id is reused, so a reorder that
-      // writes before deleting has nothing left to delete. Asserting that a
-      // delete happened could therefore only ever be satisfied by the
-      // delete-everything-first algorithm that #017 exists to remove.
-      //
-      // Asserting the outcome instead is strictly stronger: this checks the
-      // chapters actually land in the right places, which the old assertion
-      // never did.
-      const writes = mockFirebaseServices.document.setDocument.mock.calls.map(
-        (call: any[]) => [call[1], call[2].order]
-      );
-      expect(writes).toEqual(
-        expect.arrayContaining([
-          ['chapter-03', 3],
-          ['chapter-01', 1],
-          ['chapter-02', 2]
-        ])
-      );
-      expect(mockRefreshChapters).toHaveBeenCalled();
+      // BEHAVIOR: every chapter lands in its new place, under the id it
+      // already had. Rewritten for T032: ids used to encode order, so this
+      // asserted the rotation of documents between ids; now nothing changes
+      // id and the outcome is read straight off the orders.
+      expect(movesIn(committedBatch())).toEqual({
+        'chapter-01': 3,
+        'chapter-02': 1,
+        'chapter-03': 2
+      });
+      expect(mockDeleteData).not.toHaveBeenCalled();
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshChapters).not.toHaveBeenCalled();
     });
 
     test('should not delete any chapter when a reorder write fails partway (bug #017)', async () => {
       // Regression test for the atomicity half of bug #017.
       //
-      // updateChapter's reorder path used to delete EVERY affected chapter and
-      // only then recreate them. A failure in the recreate loop left the
-      // already-deleted chapters with no replacement and no rollback — permanent
-      // data loss. The fix writes and verifies every new position first, and
-      // deletes only afterwards.
-      //
-      // The observable consequence, and what this pins: when a write fails
-      // partway, nothing has been deleted yet. Against the old implementation
-      // all three chapters were already gone by this point.
+      // updateChapter's reorder path once deleted every affected chapter and
+      // only then recreated them, so a failure partway lost chapters for good.
+      // Since T032 a move is one batch: Firestore applies all of it or none of
+      // it. What this pins: when the commit fails, it is the only write that
+      // was attempted -- nothing was deleted or written on the side.
       const multipleChapters = [
         { id: 'chapter-01', title: 'Chapter 1', content: 'First', order: 1, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' },
         { id: 'chapter-02', title: 'Chapter 2', content: 'Second', order: 2, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded: '2025-06-15T00:00:00.000Z' },
@@ -1035,11 +893,7 @@ describe('StoryContext Behavioral Testing', () => {
         hasRequiredContext: true,
       });
 
-      // Succeed on the first write, then fail — a partial batch.
-      mockFirebaseServices.document.setDocument
-        .mockResolvedValueOnce(undefined)
-        .mockRejectedValue(new Error('Firestore write failed'));
-      mockFirebaseServices.document.getDocument.mockResolvedValue({});
+      mockFirebaseServices.document.batchOperations.mockRejectedValue(new Error('Firestore write failed'));
 
       renderStoryContext();
 
@@ -1050,12 +904,79 @@ describe('StoryContext Behavioral Testing', () => {
       await act(async () => {
         await expect(
           storyContext.updateChapter('chapter-01', { order: 3 })
-        ).rejects.toThrow();
+        ).rejects.toThrow('Firestore write failed');
       });
 
-      // BEHAVIOR: no chapter may be deleted while any replacement write is
-      // still outstanding.
+      expect(mockFirebaseServices.document.batchOperations).toHaveBeenCalledTimes(1);
       expect(mockDeleteData).not.toHaveBeenCalled();
+      expect(mockUpdateData).not.toHaveBeenCalled();
+      expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Structural changes are one batch (T032, PERF-05)', () => {
+    const chapterAt = (order: number) => ({
+      id: `chapter-${order}`,
+      title: `Chapter ${order}`,
+      content: 'Text',
+      order,
+      createdBy: 'test-user',
+      createdByUsername: 'Test User',
+      dateAdded: '2025-06-15T00:00:00.000Z'
+    });
+
+    const withChapters = (chapters: ReturnType<typeof chapterAt>[]) => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'test-user' } });
+      mockUseChapterData.mockReturnValue({
+        chapters,
+        loading: false,
+        error: null,
+        refreshChapters: mockRefreshChapters,
+        hasRequiredContext: true,
+      });
+    };
+
+    test('inserting at the front of 32 chapters is one commit, not ~100 serial operations', async () => {
+      withChapters(Array.from({ length: 32 }, (_, index) => chapterAt(index + 1)));
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.createChapter({ title: 'Prologue', content: 'Before it all', order: 1 });
+      });
+
+      const batch = committedBatch();
+      expect(batch).toHaveLength(33);
+      expect(movesIn(batch)['chapter-32']).toBe(33);
+      expect(mockFirebaseServices.document.getDocument).not.toHaveBeenCalled();
+      expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
+      expect(mockDeleteData).not.toHaveBeenCalled();
+    });
+
+    test('a change that would rewrite more than 500 chapters is refused whole, before anything is written', async () => {
+      withChapters(Array.from({ length: 500 }, (_, index) => chapterAt(index + 1)));
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await expect(
+          storyContext.createChapter({ title: 'Prologue', content: 'Before it all', order: 1 })
+        ).rejects.toThrow('one change can rewrite at most 500');
+      });
+
+      expect(mockFirebaseServices.document.batchOperations).not.toHaveBeenCalled();
+    });
+
+    test('renumbering closes gaps by moving only the chapters out of place', async () => {
+      withChapters([chapterAt(1), chapterAt(3), chapterAt(7)]);
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.reorderChapters();
+      });
+
+      expect(movesIn(committedBatch())).toEqual({ 'chapter-3': 2, 'chapter-7': 3 });
     });
   });
 
@@ -1111,10 +1032,14 @@ describe('StoryContext Behavioral Testing', () => {
         await storyContext.deleteChapter('chapter-01');
       });
 
-      // BEHAVIOR: Should delete chapter and reorder remaining ones
-      expect(mockDeleteData).toHaveBeenCalledWith('chapter-01');
-      expect(mockFirebaseServices.document.setDocument).toHaveBeenCalled(); // For reordering
-      expect(mockRefreshChapters).toHaveBeenCalled();
+      // BEHAVIOR: one batch deletes the chapter and moves the later one back
+      // into its place, keeping its id.
+      expect(committedBatch()).toEqual([
+        { type: 'delete', collection: 'chapters', id: 'chapter-01' },
+        { type: 'update', collection: 'chapters', id: 'chapter-02', data: { order: 1 } }
+      ]);
+      // The listener carries the write (T032): nothing re-reads the collection.
+      expect(mockRefreshChapters).not.toHaveBeenCalled();
     });
 
     test('should reject deletion for non-existent chapter', async () => {

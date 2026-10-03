@@ -81,6 +81,20 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   <UsageProvider>{children}</UsageProvider>
 );
 
+/**
+ * A consumer that shows usage, as `UsageMeter` does: it asks for it on mount.
+ * Since T032 (`PERF-03`) nothing is loaded until something asks, so every
+ * test of the loaded state reads through this.
+ */
+function useShownUsage() {
+  const context = useUsageContext();
+  const { requestUsageStatus } = context;
+  React.useEffect(() => {
+    requestUsageStatus();
+  }, [requestUsageStatus]);
+  return context;
+}
+
 /** Wait for the provider to finish its initial load cycle (status is non-null) */
 async function waitForInitialLoad(result: { current: any }) {
   await waitFor(() => expect(result.current.usageStatus).not.toBeNull());
@@ -111,8 +125,21 @@ describe("UsageContext Behavioral Testing", () => {
       }
     });
 
-    test("should call fetchUsageStatus once on mount", async () => {
+    test("loads nothing until something asks to show usage", async () => {
+      // The provider is mounted on every route; the callable is only worth
+      // its round trip where the meter is on screen (T032, PERF-03).
       const { result } = renderHook(() => useUsageContext(), { wrapper });
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(mockFetchUsageStatus).not.toHaveBeenCalled();
+      expect(result.current.usageStatus).toBeNull();
+    });
+
+    test("should call fetchUsageStatus once when a reader asks", async () => {
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       await waitForInitialLoad(result);
 
@@ -121,12 +148,13 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should expose all required API members", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       await waitForInitialLoad(result);
 
       const requiredFunctions = [
         "refreshUsageStatus",
+        "requestUsageStatus",
         "updateUsageStatus",
         "setUsageLimitExceededWithInfo",
         "clearUsageStatus",
@@ -143,14 +171,14 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should initialize isUsageLimitExceeded as false before first load", () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       // Synchronous initial state before the async fetch resolves
       expect(result.current.isUsageLimitExceeded).toBe(false);
     });
 
     test("should initialize contactInfo as null", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       await waitForInitialLoad(result);
 
@@ -164,7 +192,7 @@ describe("UsageContext Behavioral Testing", () => {
       const status = makeUsageStatus();
       mockFetchUsageStatus.mockResolvedValue(status);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.usageStatus).not.toBeNull();
@@ -177,7 +205,7 @@ describe("UsageContext Behavioral Testing", () => {
       const status = makeUsageStatus({ limitExceeded: true });
       mockFetchUsageStatus.mockResolvedValue(status);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isUsageLimitExceeded).toBe(true);
@@ -185,7 +213,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should set isLoadingUsage to false after refresh completes with data", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       await waitForInitialLoad(result);
 
@@ -201,7 +229,7 @@ describe("UsageContext Behavioral Testing", () => {
         return Promise.resolve(makeUsageStatus());
       });
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
 
       // Wait for loading to settle after the error
       await waitFor(() => {
@@ -217,7 +245,7 @@ describe("UsageContext Behavioral Testing", () => {
       const initialStatus = makeUsageStatus();
       mockFetchUsageStatus.mockResolvedValue(initialStatus);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       const updatedStatus = makeUsageStatus({
@@ -241,7 +269,7 @@ describe("UsageContext Behavioral Testing", () => {
   // -------------------------------------------------------------------------
   describe("updateUsageStatus Behavior", () => {
     test("should update usageStatus synchronously", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       const newStatus = makeUsageStatus({
@@ -260,7 +288,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should set isUsageLimitExceeded true when status.limitExceeded is true", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       const exceededStatus = makeUsageStatus({ limitExceeded: true });
@@ -273,7 +301,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should set isUsageLimitExceeded false when limit is no longer exceeded", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       // First exceed it
@@ -292,7 +320,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should clear contactInfo when limit is no longer exceeded", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       // Set contact info via the exceeded path first
@@ -322,7 +350,7 @@ describe("UsageContext Behavioral Testing", () => {
   // -------------------------------------------------------------------------
   describe("setUsageLimitExceededWithInfo Behavior", () => {
     test("should set usageStatus, isUsageLimitExceeded, and contactInfo together", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       const status = makeUsageStatus({ limitExceeded: true });
@@ -342,7 +370,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should always set isUsageLimitExceeded to true regardless of status.limitExceeded", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       // Pass a status with limitExceeded: false but call setUsageLimitExceededWithInfo
@@ -361,7 +389,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should store the contact info message correctly", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       const info = {
@@ -386,7 +414,7 @@ describe("UsageContext Behavioral Testing", () => {
   // -------------------------------------------------------------------------
   describe("clearUsageStatus Behavior", () => {
     test("should reset usageStatus to null", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.usageStatus).not.toBeNull();
@@ -399,7 +427,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should reset isUsageLimitExceeded to false", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       act(() => {
@@ -415,7 +443,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should reset contactInfo to null", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       act(() => {
@@ -433,7 +461,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should call entityService.clearUsageCache", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       act(() => {
@@ -467,14 +495,14 @@ describe("UsageContext Behavioral Testing", () => {
       });
       mockFetchUsageStatus.mockResolvedValue(unlimitedStatus);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.isExtractionAvailable()).toBe(true);
     });
 
     test("should return false when limitExceeded is true for a non-unlimited user", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       act(() => {
@@ -485,7 +513,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should return true when limitExceeded is false for a non-unlimited user", async () => {
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       act(() => {
@@ -513,7 +541,7 @@ describe("UsageContext Behavioral Testing", () => {
     test("hasUsageData should be true when usageStatus is populated", async () => {
       mockFetchUsageStatus.mockResolvedValue(makeUsageStatus());
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.hasUsageData).toBe(true);
@@ -530,7 +558,7 @@ describe("UsageContext Behavioral Testing", () => {
       });
       mockFetchUsageStatus.mockResolvedValue(unlimitedStatus);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.isUnlimited).toBe(true);
@@ -547,7 +575,7 @@ describe("UsageContext Behavioral Testing", () => {
       });
       mockFetchUsageStatus.mockResolvedValue(nonUnlimitedStatus);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.isUnlimited).toBe(false);
@@ -558,7 +586,7 @@ describe("UsageContext Behavioral Testing", () => {
       // makeUsageStatus does not set customLimit
       mockFetchUsageStatus.mockResolvedValue(status);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.hasCustomLimit).toBe(false);
@@ -575,7 +603,7 @@ describe("UsageContext Behavioral Testing", () => {
       });
       mockFetchUsageStatus.mockResolvedValue(status);
 
-      const { result } = renderHook(() => useUsageContext(), { wrapper });
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
       await waitForInitialLoad(result);
 
       expect(result.current.hasCustomLimit).toBe(true);
@@ -585,7 +613,7 @@ describe("UsageContext Behavioral Testing", () => {
     test("should not fetch while there is no authenticated user", () => {
       setUser(null);
 
-      renderHook(() => useUsageContext(), { wrapper });
+      renderHook(() => useShownUsage(), { wrapper });
 
       // fetchUsageStatus bails on a null auth.currentUser WITHOUT calling the
       // server, so a fetch issued now is wasted -- and the old guard then
@@ -595,7 +623,7 @@ describe("UsageContext Behavioral Testing", () => {
 
     test("should fetch once the user arrives", async () => {
       setUser(null);
-      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      const { rerender } = renderHook(() => useShownUsage(), { wrapper });
       expect(mockFetchUsageStatus).not.toHaveBeenCalled();
 
       setUser("user-1");
@@ -605,7 +633,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should fetch exactly once per user, even across re-renders", async () => {
-      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      const { rerender } = renderHook(() => useShownUsage(), { wrapper });
       await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
 
       rerender();
@@ -617,7 +645,7 @@ describe("UsageContext Behavioral Testing", () => {
     test("should not loop when the fetch keeps resolving null (bug #650)", async () => {
       mockFetchUsageStatus.mockResolvedValue(null);
 
-      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      const { rerender } = renderHook(() => useShownUsage(), { wrapper });
       await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
 
       rerender();
@@ -627,7 +655,7 @@ describe("UsageContext Behavioral Testing", () => {
     });
 
     test("should re-fetch when a different user signs in", async () => {
-      const { rerender } = renderHook(() => useUsageContext(), { wrapper });
+      const { rerender } = renderHook(() => useShownUsage(), { wrapper });
       await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1));
 
       setUser("user-2");

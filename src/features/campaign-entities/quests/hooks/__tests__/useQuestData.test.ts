@@ -1,4 +1,4 @@
-﻿// src/hooks/__tests__/useQuestData.test.ts
+// src/hooks/__tests__/useQuestData.test.ts
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useQuestData } from '../useQuestData';
 import { Quest, QuestStatus } from '../../types';
@@ -6,7 +6,7 @@ import { Quest, QuestStatus } from '../../types';
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
-const mockGetData = jest.fn();
+const mockRetry = jest.fn();
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: jest.fn(),
@@ -34,7 +34,7 @@ const makeQuest = (id: string, title: string, status: QuestStatus = 'active'): Q
 
 const setupFirebaseDataMock = (overrides: Record<string, unknown> = {}) => {
   (useFirebaseData as jest.Mock).mockReturnValue({
-    getData: mockGetData,
+    retry: mockRetry,
     loading: false,
     error: null,
     data: [],
@@ -60,7 +60,6 @@ describe('useQuestData', () => {
     jest.clearAllMocks();
     setupContextMocks();
     setupFirebaseDataMock();
-    mockGetData.mockResolvedValue([]);
   });
 
   describe('return shape', () => {
@@ -105,63 +104,71 @@ describe('useQuestData', () => {
     });
   });
 
-  describe('fetchQuests', () => {
-    test('should return empty array when no activeGroupId', async () => {
+  // The list is the listener's latest snapshot, and a refresh is a retry of
+  // the listener rather than a read (T032). These replaced tests that fed the
+  // list through `getData`, which nothing calls any more.
+  describe('listening', () => {
+    test('is empty when no activeGroupId', () => {
       setupContextMocks(null, 'campaign-1');
+      setupFirebaseDataMock({ data: [makeQuest('2', 'Lost Artifact'), makeQuest('1', 'Dragon Hunt')] });
       const { result } = renderHook(() => useQuestData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.quests).toEqual([]);
     });
 
-    test('should return empty array when no activeCampaignId', async () => {
+    test('is empty when no activeCampaignId', () => {
+      setupContextMocks('group-1', null);
+      setupFirebaseDataMock({ data: [makeQuest('2', 'Lost Artifact'), makeQuest('1', 'Dragon Hunt')] });
+      const { result } = renderHook(() => useQuestData());
+      expect(result.current.quests).toEqual([]);
+    });
+
+    test('lists the snapshot in the order Firestore returns them', () => {
+      setupFirebaseDataMock({ data: [makeQuest('2', 'Lost Artifact'), makeQuest('1', 'Dragon Hunt')] });
+      const { result } = renderHook(() => useQuestData());
+      expect(result.current.quests.map((item) => item.title)).toEqual(['Lost Artifact', 'Dragon Hunt']);
+    });
+
+    test('follows a snapshot that empties the collection', () => {
+      setupFirebaseDataMock({ data: [makeQuest('2', 'Lost Artifact'), makeQuest('1', 'Dragon Hunt')] });
+      const { result, rerender } = renderHook(() => useQuestData());
+      expect(result.current.quests).toHaveLength(2);
+
+      // The last record was deleted, here or by another player.
+      setupFirebaseDataMock({ data: [] });
+      rerender();
+
+      expect(result.current.quests).toEqual([]);
+    });
+
+    test('refreshQuests retries the listener and resolves to the list', async () => {
+      mockRetry.mockResolvedValue([makeQuest('2', 'Lost Artifact'), makeQuest('1', 'Dragon Hunt')]);
+      const { result } = renderHook(() => useQuestData());
+
+      let refreshed: Quest[] = [];
+      await act(async () => {
+        refreshed = await result.current.refreshQuests();
+      });
+
+      expect(mockRetry).toHaveBeenCalledTimes(1);
+      expect(refreshed.map((item) => item.title)).toEqual(['Lost Artifact', 'Dragon Hunt']);
+    });
+
+    test('refreshQuests leaves the listener alone while no campaign is selected', async () => {
       setupContextMocks('group-1', null);
       const { result } = renderHook(() => useQuestData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.quests).toEqual([]);
-    });
 
-    test('should set quests from getData result', async () => {
-      const quests = [makeQuest('1', 'Dragon Hunt'), makeQuest('2', 'Lost Artifact')];
-      mockGetData.mockResolvedValue(quests);
-
-      const { result } = renderHook(() => useQuestData());
-      await waitFor(() => expect(result.current.quests.length).toBe(2));
-    });
-
-    test('should handle getData returning null gracefully', async () => {
-      // Covers the `data || []` branch
-      mockGetData.mockResolvedValue(null as any);
-
-      const { result } = renderHook(() => useQuestData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      expect(result.current.quests).toEqual([]);
-    });
-
-    test('should handle getData errors gracefully', async () => {
-      mockGetData.mockRejectedValue(new Error('Firebase error'));
-
-      const { result } = renderHook(() => useQuestData());
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      const refreshResult = await act(async () => result.current.refreshQuests());
-      expect(refreshResult).toEqual([]);
+      await expect(result.current.refreshQuests()).resolves.toEqual([]);
+      expect(mockRetry).not.toHaveBeenCalled();
     });
   });
 
   describe('getQuestById', () => {
     test('should find quest by ID', async () => {
       const quests = [makeQuest('q-1', 'Dragon Hunt'), makeQuest('q-2', 'Lost Artifact')];
-      mockGetData.mockResolvedValue(quests);
       setupFirebaseDataMock({ data: quests, loading: false, error: null });
 
       const { result } = renderHook(() => useQuestData());
       await waitFor(() => expect(result.current.quests.length).toBe(2));
-
-      // Manually trigger refresh to populate quests state
-      await act(async () => {
-        await result.current.refreshQuests();
-      });
 
       const found = result.current.getQuestById('q-1');
       expect(found).toBeDefined();
@@ -169,7 +176,6 @@ describe('useQuestData', () => {
     });
 
     test('should return undefined for non-existent quest ID', async () => {
-      mockGetData.mockResolvedValue([]);
 
       const { result } = renderHook(() => useQuestData());
       await waitFor(() => expect(result.current.loading).toBe(false));
@@ -182,11 +188,10 @@ describe('useQuestData', () => {
   /*
     Documents written before T050 hold `objectives` as bare strings, and one is
     enough to crash `QuestDirectory`'s search on `obj.description.toLowerCase()`.
-    Quests reach state by TWO routes, and the first fix normalised only one --
-    which left the defect fully live, because the effect below is what the
-    directory renders from on a warm load. It was found in Chrome against a
-    seeded pre-fix document, never here, so each route now gets its own case
-    with the other route deliberately returning nothing.
+    Quests used to reach state by two routes, and the first fix normalised only
+    one -- found in Chrome against a seeded pre-fix document, never here. Since
+    T032 there are two ways out of the hook instead: the list, and what a
+    refresh resolves to. Each gets its own case.
   */
   describe('legacy documents with string objectives', () => {
     const legacy = {
@@ -194,25 +199,23 @@ describe('useQuestData', () => {
       objectives: ['Find the old road', 'Cross the marshes'],
     } as unknown as Quest;
 
-    test('are coerced when they arrive through the explicit fetch', async () => {
-      mockGetData.mockResolvedValue([legacy]);
+    test('are coerced in what a refresh resolves to', async () => {
+      mockRetry.mockResolvedValue([legacy]);
       setupFirebaseDataMock({ data: [], loading: false, error: null });
 
       const { result } = renderHook(() => useQuestData());
-      await waitFor(() => expect(result.current.quests).toHaveLength(1));
+      let refreshed: Quest[] = [];
+      await act(async () => {
+        refreshed = await result.current.refreshQuests();
+      });
 
-      expect(result.current.quests[0].objectives).toEqual([
+      expect(refreshed[0].objectives).toEqual([
         { id: 'objective-0', description: 'Find the old road', completed: false },
         { id: 'objective-1', description: 'Cross the marshes', completed: false },
       ]);
     });
 
-    test('are coerced when they arrive through the data effect', async () => {
-      // `getData` never settles, so `fetchQuests` cannot write to state and
-      // only the effect can populate the list. This is the route the first
-      // fix missed. (Returning `[]` instead would race: the effect fills the
-      // list, then the resolved empty fetch clears it again.)
-      mockGetData.mockReturnValue(new Promise(() => {}));
+    test('are coerced when they arrive through the listener', async () => {
       setupFirebaseDataMock({ data: [legacy], loading: false, error: null });
 
       const { result } = renderHook(() => useQuestData());
@@ -225,7 +228,6 @@ describe('useQuestData', () => {
     });
 
     test('survive the expression that crashed the directory', async () => {
-      mockGetData.mockReturnValue(new Promise(() => {}));
       setupFirebaseDataMock({ data: [legacy], loading: false, error: null });
 
       const { result } = renderHook(() => useQuestData());
@@ -244,7 +246,6 @@ describe('useQuestData', () => {
     test('should update quests when Firebase data is non-empty', async () => {
       const quests = [makeQuest('1', 'Quest A'), makeQuest('2', 'Quest B')];
       setupFirebaseDataMock({ data: quests, loading: false, error: null });
-      mockGetData.mockResolvedValue(quests);
 
       const { result } = renderHook(() => useQuestData());
       await waitFor(() => expect(result.current.quests.length).toBe(2));
@@ -270,7 +271,6 @@ describe('useQuestData', () => {
     test('clears the list on sign-out, even though the fetched data is still held', async () => {
       const quests = [makeQuest('1', 'Dragon Hunt'), makeQuest('2', 'Lost Artifact')];
       setupFirebaseDataMock({ data: quests, loading: false, error: null });
-      mockGetData.mockResolvedValue(quests);
 
       const { result, rerender } = renderHook(() => useQuestData());
       await waitFor(() => expect(result.current.quests).toHaveLength(2));
@@ -317,14 +317,11 @@ describe('useQuestData', () => {
     test('a refetch behind quests already on screen is not loading', async () => {
       const quests = [makeQuest('quest-1', 'Defeat Saruman')];
       setupFirebaseDataMock({ data: quests });
-      // The mounting fetch resolves to the same list, so nothing races it
-      // back to empty behind the assertions.
-      mockGetData.mockResolvedValue(quests);
       const { result, rerender } = renderHook(() => useQuestData());
 
       await waitFor(() => expect(result.current.quests).toHaveLength(1));
 
-      // The write's refresh: in flight, with the list still on screen.
+      // In flight again, with the list still on screen.
       setupFirebaseDataMock({ data: quests, loading: true });
       rerender();
 
@@ -342,19 +339,15 @@ describe('useQuestData', () => {
     test('switching campaign empties the list rather than showing the last one', async () => {
       // Otherwise the rule above would keep the previous campaign's quests on
       // screen -- no longer behind a skeleton -- for the whole window between
-      // the switch and the new fetch resolving.
+      // the switch and the new listener's first snapshot.
       const quests = [makeQuest('quest-1', 'Defeat Saruman')];
       setupFirebaseDataMock({ data: quests });
-      // The mounting fetch resolves to the same list, so nothing races it
-      // back to empty behind the assertions.
-      mockGetData.mockResolvedValue(quests);
       const { result, rerender } = renderHook(() => useQuestData());
 
       await waitFor(() => expect(result.current.quests).toHaveLength(1));
 
       setupContextMocks('group-1', 'campaign-2');
       setupFirebaseDataMock({ data: [], loading: true });
-      mockGetData.mockResolvedValue([]);
       rerender();
 
       expect(result.current.quests).toEqual([]);
