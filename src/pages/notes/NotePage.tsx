@@ -258,6 +258,9 @@ const NotePage: React.FC = () => {
               <NoteEditor
                 ref={noteEditorRef}
                 noteId={noteId}
+                // The active campaign's notes cannot supply this one, so the
+                // editor is handed the copy fetched above (FUNC-001).
+                note={isFromDifferentCampaign ? crossCampaignNote ?? undefined : undefined}
                 readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
                 onBack={handleBackClick}
                 onArchive={handleArchiveNote}

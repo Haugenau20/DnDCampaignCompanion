@@ -207,19 +207,18 @@ Authored text is lost or misfiled in several ways. Separate causes, grouped
 because the fix is one idea: a draft belongs to one record and outlives a
 failed write.
 
-- **Failed save loses the draft**: `ChapterForm.tsx:145-149` navigates away in
-  `finally`, success or not (FUNC-005). A rejected entity write sets the
-  provider error (`useFirebaseData.ts:285`) that the page gate reads, which
-  unmounts the editor, and Retry doesn't recover it (REACT-002, TEST-007).
+- **Failed save loses the draft**: a rejected entity write sets the provider
+  error (`useFirebaseData.ts:285`) that the page gate reads, which unmounts
+  the editor, and Retry doesn't recover it (REACT-002, TEST-007).
 - **Wrong record**: going from NPC A to B keeps A's draft and saves it to B
   (REACT-001); an offline-queued note save runs against the next note after
   Search navigation (RECOVERY-001); a cross-campaign note's fallback survives
-  route and campaign changes (RECOVERY-002).
+  route and campaign changes (RECOVERY-002). Seen 2026-10-04 the other way
+  round too: switching campaign with your own note open leaves "Note Not
+  Found" until a reload, though a fresh load of the same URL shows it.
 - **Draft dropped on leaving**: leaving a note before the autosave debounce
   cancels the only pending save; a reload loses an unacknowledged one
   (REACT-003).
-- **Cross-campaign note is blank**: `NotePage.tsx:229-236` passes only `noteId`
-  to the read-only editor, never the fetched note (FUNC-001, TEST-003).
 - **Findings**: 05, 06, 08, 15. **Catch**: the reviewers say these need separate
   regression sequences; consider splitting at pickup. Plan first.
 - **Source**: code review, 2026-10-04

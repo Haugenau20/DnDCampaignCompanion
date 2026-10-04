@@ -248,6 +248,70 @@ describe('ChapterForm', () => {
   });
 
   // -------------------------------------------------------------------------
+  // A failed save keeps the author's draft (FUNC-005)
+  // -------------------------------------------------------------------------
+  describe('a save that fails', () => {
+    const submit = (name: RegExp) => fireEvent.click(screen.getByRole('button', { name }));
+
+    test('stays on a create that was refused, with every field intact, and retries once', async () => {
+      mockCreateChapter.mockRejectedValueOnce(new Error('Permission denied'));
+      render(<ChapterForm mode="create" />);
+      const inputs = screen.getAllByRole('textbox');
+      fireEvent.change(inputs[0], { target: { value: 'The Long Night' } });
+      fireEvent.change(inputs[1], { target: { value: 'Short summary' } });
+      fireEvent.change(inputs[2], { target: { value: 'Three hours of authored prose.' } });
+
+      submit(/Create Chapter/i);
+      expect(await screen.findByText('Permission denied')).toBeInTheDocument();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(inputs[0]).toHaveValue('The Long Night');
+      expect(inputs[1]).toHaveValue('Short summary');
+      expect(inputs[2]).toHaveValue('Three hours of authored prose.');
+
+      submit(/Create Chapter/i);
+      await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledTimes(1));
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/story/chapters');
+      expect(mockCreateChapter).toHaveBeenCalledTimes(2);
+      expect(mockCreateChapter.mock.calls[1][0]).toMatchObject({
+        title: 'The Long Night',
+        content: 'Three hours of authored prose.',
+      });
+    });
+
+    test('stays on an edit that was refused, with every field intact, and retries once', async () => {
+      mockUpdateChapter.mockRejectedValueOnce(new Error('Network unavailable'));
+      render(<ChapterForm mode="edit" chapter={makeChapter()} />);
+      const inputs = screen.getAllByRole('textbox');
+      fireEvent.change(inputs[2], { target: { value: 'A rewritten account.' } });
+
+      submit(/Save Changes/i);
+      expect(await screen.findByText('Network unavailable')).toBeInTheDocument();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(inputs[0]).toHaveValue('The Beginning');
+      expect(inputs[2]).toHaveValue('A rewritten account.');
+
+      submit(/Save Changes/i);
+      await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledTimes(1));
+      expect(mockUpdateChapter).toHaveBeenLastCalledWith(
+        'ch-1',
+        expect.objectContaining({ content: 'A rewritten account.' })
+      );
+    });
+
+    test('stays put when the form itself refuses to submit', async () => {
+      // Whitespace passes the browser's `required` check and reaches the
+      // form's own validation, which used to navigate away from its error too.
+      render(<ChapterForm mode="create" />);
+      const inputs = screen.getAllByRole('textbox');
+      fireEvent.change(inputs[0], { target: { value: 'Title only' } });
+      fireEvent.change(inputs[2], { target: { value: '   ' } });
+      submit(/Create Chapter/i);
+      expect(await screen.findByText('Content is required')).toBeInTheDocument();
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Create flow
   // -------------------------------------------------------------------------
   describe('create flow', () => {

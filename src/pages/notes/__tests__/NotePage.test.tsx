@@ -100,7 +100,11 @@ jest.mock("core/services/firebase/data/DocumentService", () => ({
 jest.mock("features/collaboration", () => {
   const React = require("react");
   const NoteEditorMock = React.forwardRef((props: any, _ref: any) => (
-    <div data-testid="note-editor" data-readonly={props.readOnly ? "true" : "false"}>
+    <div
+      data-testid="note-editor"
+      data-readonly={props.readOnly ? "true" : "false"}
+      data-note-content={props.note?.content ?? ""}
+    >
       {/* Exercises the wiring NotePage owns: back/archive/delete now live in
           the editor's own top bar (Tasks 11-12), and onSave still fires. */}
       <button onClick={props.onBack}>All notes</button>
@@ -313,6 +317,11 @@ describe("NotePage", () => {
       );
     });
 
+    it("leaves the editor to look its own note up, so writes go through the active campaign", () => {
+      renderPage();
+      expect(screen.getByTestId("note-editor")).toHaveAttribute("data-note-content", "");
+    });
+
     it("getNoteById is called with the correct noteId", () => {
       renderPage();
       expect(mockGetNoteById).toHaveBeenCalledWith("note-1");
@@ -358,6 +367,16 @@ describe("NotePage", () => {
         expect(screen.getByTestId("note-editor")).toHaveAttribute(
           "data-readonly",
           "true"
+        );
+      });
+    });
+
+    it("hands the fetched note to the read-only editor, which cannot look it up (FUNC-001)", async () => {
+      renderPage();
+      await waitFor(() => {
+        expect(screen.getByTestId("note-editor")).toHaveAttribute(
+          "data-note-content",
+          "From another campaign"
         );
       });
     });
