@@ -24,7 +24,6 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | critical | T080 | Users can rewrite server-owned fields on their own profiles | M | in progress | Self-granted unlimited AI usage; an admin's removal redirected to another member. Fixed rules await pasting into the console |
-| high | T081 | Two simultaneous same-name creates keep one record | M | open | A successful create silently disappears |
 | high | T082 | A save in flight lands in the campaign you switch to | M | open | Content misfiled; an image replacement deletes a still-used file |
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
 | high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
@@ -187,24 +186,6 @@ there until then. What is left:
   nobody had tampered with usage or identity fields and that nobody had ever
   renamed, so production holds no forged values and no name/reservation drift.
 - **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01).
-- **Source**: code review, 2026-10-04
-
-### T081 — Two simultaneous creates of the same name keep only one record
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Two members or tabs creating an NPC, quest, location or rumour whose name maps
-to the same unused id both succeed; the second write replaces the first, author
-and all. #1402's retry handles an id that already exists, not two creates
-racing.
-
-- **Where**: `src/core/services/firebase/data/DocumentService.ts:185` reads for
-  existence, `:205` writes; nothing makes the pair atomic.
-  `CampaignService.createCampaign` has the same check-then-set (per the report;
-  not opened).
-- **Findings**: DATA-001 (03), TEST-001 (08).
-- **Catch**: the cross-session test fake is itself atomic (TEST-001), so the
-  suite cannot see the race. The regression test must hold both reads before
-  either write.
 - **Source**: code review, 2026-10-04
 
 ### T082 — A save in flight lands in whichever campaign you switch to
