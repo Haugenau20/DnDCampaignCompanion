@@ -31,6 +31,12 @@ export interface QuickAddFormProps {
   initialName?: string;
   /** Pre-filled line, from note conversion. */
   initialLine?: string;
+  /**
+   * Told every record this surface creates, by either action. The attach
+   * tray's escape hatch attaches each one here, so *Create & add another*
+   * links what it makes just as *Create & open* does (T093).
+   */
+  onAdded?: (id: string) => void;
   /** Run just before *Create & open* navigates -- a dialog closes itself here. */
   onCreated?: (id: string) => void;
   /** Cancel. Omitted on a mount with nothing to go back to. */
@@ -67,6 +73,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
   carry,
   initialName = "",
   initialLine = "",
+  onAdded,
   onCreated,
   onCancel,
   cancelLabel = "Cancel",
@@ -126,24 +133,26 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
     const id = await submit();
     if (!id) return;
 
+    onAdded?.(id);
     onCreated?.(id);
     if (!navigateOnCreate) return;
     // The destination's first unwritten field is named in router state rather
     // than focused here: the prompts belong to `15-4`…`15-6`, which this PR
     // must not implement. Those PRs read `quickAddFocus`.
     navigate(spec.destinationFor(id), { state: { quickAddFocus: spec.focusField } });
-  }, [submit, onCreated, navigate, spec, navigateOnCreate]);
+  }, [submit, onAdded, onCreated, navigate, spec, navigateOnCreate]);
 
   const handleCreateAndAddAnother = useCallback(async () => {
     const id = await submit();
     if (!id) return;
 
+    onAdded?.(id);
     setName("");
     setLine("");
     setFieldErrors({});
     setAddedCount((count) => count + 1);
     nameRef.current?.focus();
-  }, [submit]);
+  }, [submit, onAdded]);
 
   return (
     <form

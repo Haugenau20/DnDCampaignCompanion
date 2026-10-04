@@ -22,9 +22,10 @@ export interface QuickAddOptions {
   initialName?: string;
   initialLine?: string;
   /**
-   * Told the new record's id instead of navigating to it. The attach tray's
-   * escape hatch uses this to attach what was just created and leave the
-   * form you were filling exactly where it was.
+   * Told each new record's id instead of navigating to it -- every record,
+   * whether made by *Create & open* or *Create & add another*. The attach
+   * tray's escape hatch uses this to attach what was just created and leave
+   * the form you were filling exactly where it was.
    */
   onCreated?: (id: string) => void;
 }

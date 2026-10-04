@@ -35,7 +35,6 @@ adjusted for the images focus above.
 | medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
-| medium | T093 | "Create & add another" from the attach tray doesn't attach | S | open | Says success, leaves the record unlinked |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -328,18 +327,6 @@ Eight findings, each reproduced in Chromium (11, 19):
   precedence over a device-approval link, and after rejection there is no way
   to correct the email.
 - **Findings**: 02. That review was stopped and will not be finished.
-- **Source**: code review, 2026-10-04
-
-### T093 — "Create & add another" from the attach tray creates an unlinked record
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-From a location's attach tray, quick add's "Create & add another" saves the
-NPC and says so, but never attaches it. "Create & open" attaches correctly.
-
-- **Where**: `QuickAddForm.tsx:137-146` never calls `onCreated`, which is what
-  attaches (`AttachTray.tsx:197-202`); `handleCreateAndOpen` at `:125-129` does.
-- **Catch**: decide whether to attach on every create or drop "add another" in
-  this context. **Findings**: BROWSER-001 (14).
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade

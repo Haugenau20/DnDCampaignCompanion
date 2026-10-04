@@ -13,6 +13,10 @@ export interface QuickAddDialogProps {
   carry?: QuickAddCarry;
   initialName?: string;
   initialLine?: string;
+  /**
+   * Told the id of every record created, by either action. When set,
+   * *Create & open* closes the dialog instead of navigating.
+   */
   onCreated?: (id: string) => void;
 }
 
@@ -63,12 +67,11 @@ const QuickAddDialog: React.FC<QuickAddDialogProps> = ({
         carry={carry}
         initialName={initialName}
         initialLine={initialLine}
-        // A caller that wants the id handles the close itself -- it opened
-        // this to fill a field, not to go somewhere.
-        onCreated={(id) => {
-          onCreated?.(id);
-          onClose();
-        }}
+        // A caller that wants the id is told every record made here, by
+        // either action: it opened this to fill a field, not to go somewhere,
+        // and *Create & add another* fills it as surely as *Create & open*.
+        onAdded={onCreated}
+        onCreated={onClose}
         navigateOnCreate={!onCreated}
         onCancel={onClose}
       />

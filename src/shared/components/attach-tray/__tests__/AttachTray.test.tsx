@@ -1,9 +1,10 @@
 // src/shared/components/attach-tray/__tests__/AttachTray.test.tsx
 import React, { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AttachTray from "../AttachTray";
 import type { AttachSources } from "../attachCandidates";
+import QuickAddContext, { type QuickAddOptions } from "shared/context/QuickAddContext";
 
 const SOURCES: AttachSources = {
   npc: [
@@ -290,6 +291,55 @@ describe("AttachTray", () => {
       await userEvent.click(screen.getByRole("button", { name: /attach/i }));
       await userEvent.click(screen.getByRole("button", { name: /no such person yet/i }));
       expect(onCreateNew).toHaveBeenCalledWith("npc");
+    });
+
+    it("attaches every record quick add makes, each onto the relation as it now stands (T093)", async () => {
+      // Quick add keeps the hatch's callback for as long as its dialog is
+      // open, and *Create & add another* calls it once per record. A page's
+      // `onAttach` writes from the record it rendered, so a callback frozen
+      // at the moment the dialog opened would write the second record over
+      // the first.
+      let options: QuickAddOptions | undefined;
+      const quickAdd = {
+        openQuickAdd: (_: unknown, opened?: QuickAddOptions) => {
+          options = opened;
+        },
+        closeQuickAdd: () => undefined,
+        openEntity: null,
+      };
+      function PageLikeHost() {
+        const [ids, setIds] = useState<string[]>([]);
+        return (
+          <AttachTray
+            kinds={["npc"]}
+            sources={SOURCES}
+            attachedIds={ids}
+            // Not a functional update, on purpose: the pages build the new
+            // list from the record they rendered.
+            onAttach={(id) => setIds([...ids, id])}
+            onDetach={jest.fn()}
+          />
+        );
+      }
+      render(
+        <QuickAddContext.Provider value={quickAdd}>
+          <PageLikeHost />
+        </QuickAddContext.Provider>
+      );
+      await userEvent.click(screen.getByRole("button", { name: /attach/i }));
+      await userEvent.click(screen.getByRole("button", { name: /no such person yet/i }));
+
+      act(() => options?.onCreated?.("thorin"));
+      act(() => options?.onCreated?.("balin"));
+
+      expect(screen.getByRole("option", { name: /Thorin/ })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+      expect(screen.getByRole("option", { name: /Balin/ })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
     });
 
     it("is still reachable when the collection is empty", async () => {

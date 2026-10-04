@@ -4,6 +4,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import QuickAddForm from "../QuickAddForm";
+import QuickAddDialog from "../QuickAddDialog";
 
 // ---------------------------------------------------------------------------
 // Router
@@ -263,6 +264,83 @@ describe("QuickAddForm", () => {
       await userEvent.type(lineField(), "An old dwarf");
       await userEvent.click(createAndAddAnother());
       expect(await screen.findByText("2 NPCs added")).toBeInTheDocument();
+    });
+
+    it("reports each record it adds, without saying the launcher is done (T093)", async () => {
+      const onAdded = jest.fn();
+      const onCreated = jest.fn();
+      mockAddNPC.mockResolvedValueOnce("npc-1").mockResolvedValueOnce("npc-2");
+      renderForm({ onAdded, onCreated });
+
+      await userEvent.type(nameField(), "Thorin");
+      await userEvent.type(lineField(), "Exiled king");
+      await userEvent.click(createAndAddAnother());
+      await waitFor(() => expect(onAdded).toHaveBeenCalledWith("npc-1"));
+
+      await userEvent.type(nameField(), "Balin");
+      await userEvent.type(lineField(), "An old dwarf");
+      await userEvent.click(createAndAddAnother());
+      await waitFor(() => expect(onAdded).toHaveBeenCalledWith("npc-2"));
+
+      expect(onAdded).toHaveBeenCalledTimes(2);
+      expect(onCreated).not.toHaveBeenCalled();
+    });
+
+    it("reports the record Create & open adds, once", async () => {
+      const onAdded = jest.fn();
+      renderForm({ onAdded });
+      await userEvent.type(nameField(), "Thorin");
+      await userEvent.type(lineField(), "Exiled king");
+      await userEvent.click(createAndOpen());
+
+      await waitFor(() => expect(onAdded).toHaveBeenCalledWith("npc-1"));
+      expect(onAdded).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Launched from the attach tray: every record made is attached (T093)
+  // -------------------------------------------------------------------------
+  describe("the dialog, opened by a caller that wants the id", () => {
+    function renderDialog() {
+      const onCreated = jest.fn();
+      const onClose = jest.fn();
+      render(
+        <MemoryRouter>
+          <QuickAddDialog entity="npc" onCreated={onCreated} onClose={onClose} />
+        </MemoryRouter>
+      );
+      return { onCreated, onClose };
+    }
+
+    it("hands over every record Create & add another makes, and stays open", async () => {
+      mockAddNPC.mockResolvedValueOnce("npc-1").mockResolvedValueOnce("npc-2");
+      const { onCreated, onClose } = renderDialog();
+
+      await userEvent.type(nameField(), "Thorin");
+      await userEvent.type(lineField(), "Exiled king");
+      await userEvent.click(createAndAddAnother());
+      await waitFor(() => expect(onCreated).toHaveBeenCalledWith("npc-1"));
+
+      await userEvent.type(nameField(), "Balin");
+      await userEvent.type(lineField(), "An old dwarf");
+      await userEvent.click(createAndAddAnother());
+      await waitFor(() => expect(onCreated).toHaveBeenCalledWith("npc-2"));
+
+      expect(onClose).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("hands over the record Create & open makes once, closes, and navigates nowhere", async () => {
+      const { onCreated, onClose } = renderDialog();
+      await userEvent.type(nameField(), "Thorin");
+      await userEvent.type(lineField(), "Exiled king");
+      await userEvent.click(createAndOpen());
+
+      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      expect(onCreated).toHaveBeenCalledTimes(1);
+      expect(onCreated).toHaveBeenCalledWith("npc-1");
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 
