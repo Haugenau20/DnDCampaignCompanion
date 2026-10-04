@@ -919,6 +919,67 @@ describe("NPCDetailPage", () => {
     });
   });
 
+  describe("clearing an optional fact (T094)", () => {
+    // The listener would deliver the write; here the mock plays its part, so
+    // the page re-renders the record as the server now has it.
+    const persistWrites = () =>
+      mockUpdateNPC.mockImplementation(async (npc: any) => {
+        mockNPCDataReturn = {
+          ...mockNPCDataReturn,
+          npcs: mockNPCDataReturn.npcs.map((n) => (n.id === npc.id ? npc : n)),
+        };
+      });
+
+    it("retracts a role that proved wrong, and asks for it again", async () => {
+      persistWrites();
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit role" }));
+      fireEvent.change(screen.getByLabelText("Role"), { target: { value: "" } });
+      fireEvent.click(screen.getByText("Save role"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "npc-1", occupation: "" })
+        )
+      );
+      const prompt = await screen.findByRole("button", { name: /What do they do\?/ });
+      await waitFor(() => expect(prompt).toHaveFocus());
+    });
+
+    it("retracts a title", async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit the title" }));
+      fireEvent.change(screen.getByLabelText("Title"), { target: { value: "  " } });
+      fireEvent.click(screen.getByText("Save title"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "npc-1", title: "" })
+        )
+      );
+    });
+
+    it("retracts a background", async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit background" }));
+      fireEvent.change(screen.getByLabelText("Background"), { target: { value: "" } });
+      fireEvent.click(screen.getByText("Save background"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "npc-1", background: "" })
+        )
+      );
+    });
+
+    it("still refuses to save an empty name", () => {
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Edit the name/ }));
+      fireEvent.change(screen.getByLabelText("Name"), { target: { value: "" } });
+      expect(screen.getByText("Save name")).toBeDisabled();
+    });
+  });
+
   describe("when a save fails", () => {
     it("keeps every character the user typed", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));

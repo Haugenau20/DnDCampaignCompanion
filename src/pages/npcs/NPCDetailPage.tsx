@@ -742,6 +742,7 @@ const NPCDetailPage: React.FC = () => {
                             helperText="What they are called — “The Grey”, “Innkeeper of Bree”."
                             rows={1}
                             initialValue={npc.title ?? ''}
+                            optional
                             submitLabel="Save title"
                             onSubmit={(value) => save({ title: value })}
                             onSaved={() => afterSave('title')}
@@ -770,7 +771,12 @@ const NPCDetailPage: React.FC = () => {
                           )
                         ) : (
                           gate.canAct && (
-                            <FieldPrompt onClick={() => openOnly('title')}>
+                            <FieldPrompt
+                              ref={(node) => {
+                                triggers.current.title = node;
+                              }}
+                              onClick={() => openOnly('title')}
+                            >
                               What are they called?
                             </FieldPrompt>
                           )
@@ -916,6 +922,7 @@ const NPCDetailPage: React.FC = () => {
                           label="Role"
                           rows={1}
                           initialValue={npc.occupation ?? ''}
+                          optional
                           submitLabel="Save role"
                           placeholder="Wizard"
                           onSubmit={(value) => save({ occupation: value })}
@@ -945,7 +952,12 @@ const NPCDetailPage: React.FC = () => {
                               <Typography variant="body-sm">{npc.occupation}</Typography>
                             )
                           ) : gate.canAct ? (
-                            <FieldPrompt onClick={() => openOnly('occupation')}>
+                            <FieldPrompt
+                              ref={(node) => {
+                                triggers.current.occupation = node;
+                              }}
+                              onClick={() => openOnly('occupation')}
+                            >
                               What do they do?
                             </FieldPrompt>
                           ) : (
@@ -961,6 +973,7 @@ const NPCDetailPage: React.FC = () => {
                           label="Race"
                           rows={1}
                           initialValue={npc.race ?? ''}
+                          optional
                           submitLabel="Save race"
                           placeholder="Maia"
                           onSubmit={(value) => save({ race: value })}
@@ -990,7 +1003,12 @@ const NPCDetailPage: React.FC = () => {
                               <Typography variant="body-sm">{npc.race}</Typography>
                             )
                           ) : gate.canAct ? (
-                            <FieldPrompt onClick={() => openOnly('race')}>
+                            <FieldPrompt
+                              ref={(node) => {
+                                triggers.current.race = node;
+                              }}
+                              onClick={() => openOnly('race')}
+                            >
                               What race are they?
                             </FieldPrompt>
                           ) : (
@@ -1085,6 +1103,7 @@ const NPCDetailPage: React.FC = () => {
                             label={label}
                             helperText={helper}
                             initialValue={value ?? ''}
+                            optional
                             submitLabel={`Save ${label.toLowerCase()}`}
                             onSubmit={(next) => save({ [field]: next })}
                             onSaved={() => afterSave(field)}
@@ -1117,7 +1136,14 @@ const NPCDetailPage: React.FC = () => {
                           </>
                         ) : (
                           gate.canAct && (
-                            <FieldPrompt onClick={() => openOnly(field)}>{prompt}</FieldPrompt>
+                            <FieldPrompt
+                              ref={(node) => {
+                                triggers.current[field] = node;
+                              }}
+                              onClick={() => openOnly(field)}
+                            >
+                              {prompt}
+                            </FieldPrompt>
                           )
                         )}
                       </div>

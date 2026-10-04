@@ -696,6 +696,7 @@ const QuestDetailPage: React.FC = () => {
                 label="Background"
                 helperText="How this came about, and what the party already knows."
                 initialValue={quest.background ?? ''}
+                optional
                 submitLabel="Save background"
                 onSubmit={(value) => save({ background: value })}
                 onSaved={() => setEditing(null)}
@@ -867,6 +868,7 @@ const QuestDetailPage: React.FC = () => {
                 label="Level range"
                 rows={1}
                 initialValue={quest.levelRange ?? ''}
+                optional
                 submitLabel="Save level range"
                 placeholder="7–9"
                 onSubmit={(value) => save({ levelRange: value })}

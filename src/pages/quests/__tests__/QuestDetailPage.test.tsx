@@ -649,6 +649,39 @@ describe('editing in place', () => {
     );
   });
 
+  it('retracts a background that proved wrong (T094)', async () => {
+    renderPage();
+    fireEvent.click(screen.getByText(QUEST.background));
+    fireEvent.change(screen.getByLabelText('Background'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save background' }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuest).toHaveBeenCalledWith(
+        expect.objectContaining({ background: '' })
+      )
+    );
+  });
+
+  it('retracts a level range (T094)', async () => {
+    renderPage();
+    fireEvent.click(screen.getByText(`Levels ${QUEST.levelRange}`));
+    fireEvent.change(screen.getByLabelText('Level range'), { target: { value: ' ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save level range' }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuest).toHaveBeenCalledWith(
+        expect.objectContaining({ levelRange: '' })
+      )
+    );
+  });
+
+  it('still refuses an empty title', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Rename/ }));
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Save title' })).toBeDisabled();
+  });
+
   it('offers no link to the edit form', () => {
     // §7: this is where a quest is changed. `/quests/edit/:id` is `15-8`'s to
     // retire; nothing here sends anyone to it.

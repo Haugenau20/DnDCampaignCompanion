@@ -19,26 +19,28 @@ export interface FieldPromptProps {
  * §12.7). Each box becomes a question with somewhere to type.
  *
  * Deliberately a button rather than a click target dressed as text: it is the
- * only thing in the section, so a keyboard has to be able to reach it.
+ * only thing in the section, so a keyboard has to be able to reach it. It
+ * forwards its ref so a page can return focus to it once an editor closes on
+ * a field that is now empty.
  */
-export const FieldPrompt: React.FC<FieldPromptProps> = ({
-  children,
-  onClick,
-  className,
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={clsx(
-      'flex items-center gap-2 w-full text-left px-3 py-2.5 rounded-md',
-      'border border-dashed card-border selectable-item typography-secondary',
-      'min-h-[44px] sm:min-h-[38px]',
-      className
-    )}
-  >
-    <Plus size={14} aria-hidden="true" className="shrink-0" />
-    <span className="text-sm">{children}</span>
-  </button>
+export const FieldPrompt = React.forwardRef<HTMLButtonElement, FieldPromptProps>(
+  ({ children, onClick, className }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      onClick={onClick}
+      className={clsx(
+        'flex items-center gap-2 w-full text-left px-3 py-2.5 rounded-md',
+        'border border-dashed card-border selectable-item typography-secondary',
+        'min-h-[44px] sm:min-h-[38px]',
+        className
+      )}
+    >
+      <Plus size={14} aria-hidden="true" className="shrink-0" />
+      <span className="text-sm">{children}</span>
+    </button>
+  )
 );
+FieldPrompt.displayName = 'FieldPrompt';
 
 export default FieldPrompt;
