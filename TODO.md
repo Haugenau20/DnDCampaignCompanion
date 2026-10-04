@@ -24,7 +24,7 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
-| high | T084 | A write that outlives its upload's lease points at a deleted file | M | blocked | Images focus; first half needs the 2026-10-04 rules pasted, then the enforcing half |
+| high | T084 | A write that outlives its upload's lease points at a deleted file | M | open | Images focus; the first half's rules are live, the enforcing half is left |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
@@ -182,18 +182,16 @@ tabs.
 - **Source**: code review, 2026-10-04
 
 ### T084 — A write that arrives after its upload's lease can still point at a deleted file
-**Type** bug · **Size** M · **Status** blocked · **Verified** 2026-10-04
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
 
 The first half is in: an upload records itself in
 `groups/{groupId}/pendingUploads/{file}` before the document write
 (`ImageStorageService.upload`), the hook clears it once the write lands, and
 the daily sweep spares a file whose entry is under 30 days old, then deletes
 entry and file (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`). The rule for
-the collection is revision 2026-10-04 of `firestore.rules.prod`.
+the collection is revision 2026-10-04 of `firestore.rules.prod`, pasted into
+the console by the maintainer on 2026-10-04.
 
-- **Blocked on**: the maintainer pasting that revision into the console.
-  Until then production refuses the entry and uploads go on unprotected,
-  exactly as before (the client treats the entry as best effort).
 - **Left**: a document write queued for longer than the lease still lands
   and points at the file the sweep deleted (IMG-003's last case). Close it
   in the rules: an NPC, location, campaign banner or group crest write that
@@ -676,10 +674,10 @@ drift with nothing to notice it.
   rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
   `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
   are console-only and never deployed by CI.
-- **Catch**: the live Firestore rules were read back on 2026-10-04 and matched
-  `firestore.rules.prod`; the Storage rules have not been compared. The first
-  deploy overwrites whatever is live, so read the console back and diff it
-  first. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
+- **Catch**: the maintainer confirmed on 2026-10-04 that the live Firestore
+  and Storage rules are the `.prod` files (Firestore at T084's revision). The
+  first deploy overwrites whatever is live, so read the console back and diff
+  it first all the same. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
   or from CI decides whether the deploy service account needs rules permissions.
 - **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
   its `firestore.rules` key at `firestore.rules`; it has no such key.
