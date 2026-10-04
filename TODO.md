@@ -183,11 +183,9 @@ fix) until they are pasted into the console, so all four findings stay open
 there until then. What is left:
 
 - **Paste the rules** (maintainer): `firestore.rules.prod` into the console.
-- **Audit, once the rules are live**: profiles with `entityExtractionUsage`
-  set to unlimited or with counters below the calls made; group profiles whose
-  `userId`/`id` differs from the document id; and reservations that disagree
-  with usernames (a profile name with no reservation, a reservation whose
-  owner goes by another name).
+- **No audit of existing data**: the maintainer confirmed on 2026-10-04 that
+  nobody had tampered with usage or identity fields and that nobody had ever
+  renamed, so production holds no forged values and no name/reservation drift.
 - **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01).
 - **Source**: code review, 2026-10-04
 
