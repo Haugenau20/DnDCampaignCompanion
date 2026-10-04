@@ -148,3 +148,71 @@ describe('paginateProse — markup is never severed', () => {
     expect(pages).toHaveLength(1);
   });
 });
+
+// PERF2-002: an oversized paragraph was split by recounting the words of
+// everything left, and of every candidate page, at every space -- quadratic in
+// its length. 50,000 words took ~480 ms in Chromium before the book showed.
+describe('paginateProse — work on a long paragraph', () => {
+  /**
+   * The splitter as it was before the linear rewrite, kept as the reference:
+   * the rewrite must choose exactly the same pages.
+   */
+  function referencePages(raw: string, budget: number): string[] {
+    const countWords = (text: string) => text.split(/\s+/).filter(Boolean).length;
+    const balanced = (text: string) => {
+      if ((text.match(/`/g) ?? []).length % 2 !== 0) return false;
+      if ((text.match(/_/g) ?? []).length % 2 !== 0) return false;
+      if ((text.match(/\*\*/g) ?? []).length % 2 !== 0) return false;
+      return (text.replace(/\*\*/g, '').match(/\*/g) ?? []).length % 2 === 0;
+    };
+    const source = raw.trim();
+    const pages: string[] = [];
+    let cursor = 0;
+    while (cursor < source.length) {
+      const remaining = source.slice(cursor);
+      if (countWords(remaining) <= budget) break;
+      let lastLegalEnd = -1;
+      const boundary = /\s+/g;
+      let match: RegExpExecArray | null;
+      while ((match = boundary.exec(remaining)) !== null) {
+        const candidate = remaining.slice(0, match.index);
+        if (countWords(candidate) > budget) break;
+        if (candidate.length > 0 && balanced(candidate)) lastLegalEnd = match.index;
+      }
+      if (lastLegalEnd <= 0) break;
+      pages.push(remaining.slice(0, lastLegalEnd));
+      const rest = remaining.slice(lastLegalEnd);
+      cursor += lastLegalEnd + (rest.length - rest.replace(/^\s+/, '').length);
+    }
+    if (cursor < source.length) pages.push(source.slice(cursor));
+    return pages;
+  }
+
+  /** A deterministic paragraph with emphasis, bold, code and underscores. */
+  function markedParagraph(count: number, seed: number): string {
+    const pieces = ['plain', '*soft', 'soft*', '**loud', 'loud**', '`code`', '_under', 'under_', 'x**y**z', 'a*b*c'];
+    let state = seed;
+    const out: string[] = [];
+    for (let i = 0; i < count; i += 1) {
+      state = (state * 1103515245 + 12345) % 2147483648;
+      out.push(pieces[state % pieces.length]);
+    }
+    return out.join(state % 3 === 0 ? '  ' : ' ');
+  }
+
+  it.each([1, 2, 3, 4, 5, 6, 7, 8])('cuts a marked-up paragraph exactly where it always did (seed %i)', (seed) => {
+    const paragraph = markedParagraph(900, seed);
+    expect(paginateProse(paragraph, 37)).toEqual(referencePages(paragraph, 37));
+  });
+
+  it('does not re-split the paragraph for every word', () => {
+    const paragraph = words(20000);
+    const split = jest.spyOn(String.prototype, 'split');
+    try {
+      paginateProse(paragraph);
+      expect(split.mock.calls.length).toBeLessThan(20);
+    } finally {
+      split.mockRestore();
+    }
+  });
+});

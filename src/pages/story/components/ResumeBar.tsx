@@ -2,7 +2,7 @@
 import React from 'react';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
-import type { StorySummary } from 'features/storytelling/chapters/utils/chapter-progress';
+import type { StorySummary } from 'features/storytelling';
 import { clsx } from 'clsx';
 
 export interface ResumeBarProps {

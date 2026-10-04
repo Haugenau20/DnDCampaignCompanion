@@ -61,26 +61,6 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
-/**
- * True when `text` leaves no inline span open.
- *
- * Deliberately shallow: it counts delimiters rather than parsing them, which
- * is enough for the only question being asked — *is this a safe place to
- * stop?* A false negative costs a slightly short page; a false positive costs
- * a visibly broken phrase, so an odd count always answers "not safe".
- */
-function hasNoOpenInlineSpan(text: string): boolean {
-  if ((text.match(/`/g) ?? []).length % 2 !== 0) return false;
-  if ((text.match(/_/g) ?? []).length % 2 !== 0) return false;
-
-  if ((text.match(/\*\*/g) ?? []).length % 2 !== 0) return false;
-
-  // Single-asterisk emphasis is counted only after the bold pairs are removed,
-  // so `**bold**` does not read as two unbalanced emphasis marks.
-  const withoutBold = text.replace(/\*\*/g, '');
-  return (withoutBold.match(/\*/g) ?? []).length % 2 === 0;
-}
-
 /** A line opening a block construct that a page break must not fall inside. */
 function isBlockConstructLine(line: string): boolean {
   return /^\s*(>|[-*+]\s|\d+[.)]\s|#{1,6}\s)/.test(line);
@@ -156,52 +136,110 @@ function toBlocks(source: string): Block[] {
   }));
 }
 
+/** One word of a prose block, with the inline delimiters it holds. */
+interface Word {
+  /** Offset into the normalised source, inclusive. */
+  start: number;
+  /** Offset into the normalised source, exclusive. */
+  end: number;
+  /** Delimiters that flip a span open or shut: backticks, underscores, `**`, lone `*`. */
+  ticks: number;
+  unders: number;
+  bolds: number;
+  stars: number;
+}
+
+/**
+ * The words of `source` between `start` and `end`, each with its own
+ * delimiter counts.
+ *
+ * A run of words leaves no inline span open when every count is even.
+ * Deliberately shallow: it counts delimiters rather than parsing them, which
+ * is enough for the only question being asked -- *is this a safe place to
+ * stop?* A false negative costs a slightly short page; a false positive costs
+ * a visibly broken phrase, so an odd count always answers "not safe".
+ * Single-asterisk emphasis is counted after the bold pairs are taken out, so
+ * `**bold**` does not read as two unbalanced emphasis marks.
+ *
+ * A delimiter never spans whitespace, so the counts of a run of words are the
+ * sums of its words' counts: that is what lets {@link splitProseBlock} keep
+ * running totals instead of rescanning the run.
+ */
+function wordsIn(source: string, start: number, end: number): Word[] {
+  const words: Word[] = [];
+  const word = /\S+/g;
+  const text = source.slice(start, end);
+  let match: RegExpExecArray | null;
+  while ((match = word.exec(text)) !== null) {
+    const token = match[0];
+    const bolds = (token.match(/\*\*/g) ?? []).length;
+    words.push({
+      start: start + match.index,
+      end: start + match.index + token.length,
+      ticks: (token.match(/`/g) ?? []).length,
+      unders: (token.match(/_/g) ?? []).length,
+      bolds,
+      stars: (token.match(/\*/g) ?? []).length - 2 * bolds,
+    });
+  }
+  return words;
+}
+
 /**
  * Split one oversized prose block into units of at most `budget` words,
  * breaking only at whitespace where no inline span is open.
  *
  * Emits the remainder whole when no legal boundary exists: an over-long page is
  * a cosmetic problem, a severed `**` is a visible defect.
+ *
+ * One pass over the block's words, keeping running delimiter counts. It used
+ * to recount the words of everything left, and of every candidate page, at
+ * every space: quadratic in the block's length, ~480 ms for a 50,000-word
+ * paragraph (PERF2-002). The cut points are the same; the tests hold the old
+ * splitter as a reference.
  */
 function splitProseBlock(source: string, block: Block, budget: number): Unit[] {
+  const words = wordsIn(source, block.start, block.end);
   const units: Unit[] = [];
-  let cursor = block.start;
+  let first = 0;
 
-  while (cursor < block.end) {
-    const remaining = source.slice(cursor, block.end);
-    if (countWords(remaining) <= budget) break;
+  while (words.length - first > budget) {
+    let ticks = 0;
+    let unders = 0;
+    let bolds = 0;
+    let stars = 0;
+    let lastLegal = -1;
 
-    let lastLegalEnd = -1;
-    const boundary = /\s+/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = boundary.exec(remaining)) !== null) {
-      const candidate = remaining.slice(0, match.index);
-      if (countWords(candidate) > budget) break;
-      if (candidate.length > 0 && hasNoOpenInlineSpan(candidate)) {
-        lastLegalEnd = match.index;
+    // Never past the budget, so never onto the block's last word: every
+    // candidate here is followed by whitespace, as a cut must be.
+    for (let index = first; index < first + budget; index += 1) {
+      const word = words[index];
+      ticks += word.ticks;
+      unders += word.unders;
+      bolds += word.bolds;
+      stars += word.stars;
+      if (ticks % 2 === 0 && unders % 2 === 0 && bolds % 2 === 0 && stars % 2 === 0) {
+        lastLegal = index;
       }
     }
 
-    if (lastLegalEnd <= 0) break; // nothing safe to cut at — keep it whole
+    if (lastLegal < 0) break; // nothing safe to cut at -- keep it whole
 
     units.push({
-      start: cursor,
-      end: cursor + lastLegalEnd,
-      words: countWords(remaining.slice(0, lastLegalEnd)),
+      // The block's own start for its first unit, so leading whitespace on its
+      // first line stays on the page and concatenation still round-trips.
+      start: first === 0 ? block.start : words[first].start,
+      end: words[lastLegal].end,
+      words: lastLegal - first + 1,
     });
-
-    // Step over the whitespace that separated the two units, so the next page
-    // does not begin with a stray space.
-    const rest = remaining.slice(lastLegalEnd);
-    cursor += lastLegalEnd + (rest.length - rest.replace(/^\s+/, '').length);
+    first = lastLegal + 1;
   }
 
-  if (cursor < block.end) {
+  if (first < words.length) {
     units.push({
-      start: cursor,
+      start: first === 0 ? block.start : words[first].start,
       end: block.end,
-      words: countWords(source.slice(cursor, block.end)),
+      words: words.length - first,
     });
   }
 

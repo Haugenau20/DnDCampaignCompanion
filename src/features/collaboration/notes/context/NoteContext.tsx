@@ -39,6 +39,12 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    */
   const [drafts, setDrafts] = useState<Note[]>([]);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Bumped by `retry` to reopen a listener that failed. A failed listener is
+   * closed for good, and nothing else changes the subscription's key on an
+   * ordinary return to the page (RECOVERY-003).
+   */
+  const [attempt, setAttempt] = useState(0);
   const demand = useListenerDemand();
   const { user } = useAuth();
   const { activeGroupId } = useGroups();
@@ -97,7 +103,17 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
       },
       [where("campaignId", "==", activeCampaignId)]
     );
-  }, [notesCollection, activeCampaignId, subscriptionKey, documentService]);
+  }, [notesCollection, activeCampaignId, subscriptionKey, documentService, attempt]);
+
+  /**
+   * Reopen the listener after it failed. The failed snapshot is dropped, so
+   * the list reads as loading until the new one arrives, not as empty.
+   */
+  const retry = useCallback(() => {
+    setError(null);
+    setStored(null);
+    setAttempt((current) => current + 1);
+  }, []);
 
   /*
     Switching campaign (or group, or user) drops the drafts made under the
@@ -520,6 +536,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     */
     isLoading: (loading && notes.length === 0) || isResolving,
     error,
+    retry,
     getNoteById,
     createNote,
     saveNote, // Add saveNote to context

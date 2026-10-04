@@ -1,9 +1,13 @@
 // pages/story/StoryPage.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { ChapterRail, ChapterReader, useStory } from 'features/storytelling';
-import { deriveChapterProgress } from 'features/storytelling/chapters/utils/chapter-progress';
-import { deriveChapterByline } from 'features/storytelling/chapters/utils/chapter-byline';
+import {
+  ChapterRail,
+  ChapterReader,
+  useStory,
+  deriveChapterProgress,
+  deriveChapterByline,
+} from 'features/storytelling';
 import Button from '../../core/components/Button';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { usePageGate, GatedContent } from 'shared/components/gated';

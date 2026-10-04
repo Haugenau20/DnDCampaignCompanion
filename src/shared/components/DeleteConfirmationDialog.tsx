@@ -1,5 +1,5 @@
 // components/shared/DeleteConfirmationDialog.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Dialog from 'core/components/Dialog';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
@@ -54,6 +54,18 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /*
+    Every opening starts fresh. A page may keep this dialog mounted and only
+    toggle `isOpen`, and it used to reopen with the last attempt's error, or
+    with its controls still disabled (FUNC-006).
+  */
+  useEffect(() => {
+    if (isOpen) {
+      setIsDeleting(false);
+      setError(null);
+    }
+  }, [isOpen]);
+
   const handleConfirm = async () => {
     setIsDeleting(true);
     setError(null);
@@ -64,6 +76,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
     } catch (err) {
       console.error(`Error deleting ${itemType}:`, err);
       setError(err instanceof Error ? err.message : `An error occurred while deleting the ${itemType}`);
+    } finally {
       setIsDeleting(false);
     }
   };

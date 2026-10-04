@@ -111,6 +111,28 @@ describe("Input", () => {
       expect(screen.getByText("Looks good!")).toBeInTheDocument();
     });
 
+    // A11Y-005: the message sat under the field without being tied to it, so
+    // a screen reader on the field never heard why it was invalid.
+    test("should describe the field with its error message", () => {
+      render(<Input label="Name" error="Give them a name." />);
+      expect(screen.getByLabelText("Name")).toHaveAccessibleDescription("Give them a name.");
+    });
+
+    test("should describe a textarea with its helper text", () => {
+      render(<Input label="Line" isTextArea helperText="One sentence." />);
+      expect(screen.getByLabelText("Line")).toHaveAccessibleDescription("One sentence.");
+    });
+
+    test("should keep a description the caller passed alongside its own", () => {
+      render(
+        <>
+          <span id="hint">Shown on the card.</span>
+          <Input label="Name" error="Too long." aria-describedby="hint" />
+        </>
+      );
+      expect(screen.getByLabelText("Name")).toHaveAccessibleDescription("Shown on the card. Too long.");
+    });
+
     test("should prefer error over successMessage when both are provided", () => {
       render(<Input error="Error!" successMessage="Success!" />);
       // Only error is shown

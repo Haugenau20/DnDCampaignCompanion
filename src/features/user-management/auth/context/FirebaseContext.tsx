@@ -1,5 +1,5 @@
 // src/context/firebase/FirebaseContext.tsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import firebaseServices from 'core/services/firebase';
 import { UserProfile, GroupUserProfile, Group, Campaign } from 'core/types/user';
@@ -46,9 +46,31 @@ interface FirebaseContextType {
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
 
+/**
+ * Thrown inside a load that the auth state has overtaken (AUTH-003), so the
+ * chain stops without touching state that now belongs to a newer user.
+ */
+class StaleAuthError extends Error {
+  constructor() {
+    super('Auth state changed while loading');
+    this.name = 'StaleAuthError';
+  }
+}
+
 export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // State
   const [user, setUser] = useState<User | null>(null);
+  /**
+   * The uid of the newest auth state, or null when signed out. Set as each
+   * auth callback starts, so a load begun for an earlier user can tell it has
+   * been overtaken: every load below checks it after each await and drops its
+   * result. Without this, a slow profile load finishing after sign-out (or
+   * after another user signed in) wrote the old profile, group and campaign
+   * back (AUTH-003).
+   */
+  const authUidRef = useRef<string | null>(null);
+  /** Whether a result loaded for `uid` arrived after the auth state moved on. */
+  const isStale = (uid: string) => authUidRef.current !== uid;
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -132,6 +154,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Load user's profile in this group
       const groupProfile = await firebaseServices.user.getGroupUserProfile(groupId, authUser.uid);
+      if (isStale(authUser.uid)) return;
 
       if (groupProfile) {
         setActiveGroupUserProfile(groupProfile);
@@ -139,6 +162,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Now load campaigns
         try {
           const groupCampaigns = await campaignsPromise;
+          if (isStale(authUser.uid)) return;
           setCampaigns(groupCampaigns);
           
           if (groupCampaigns.length > 0) {
@@ -280,6 +304,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     while (retryCount < maxRetries) {
       try {
         const profile = await firebaseServices.user.getUserProfile(userId);
+        if (isStale(userId)) throw new StaleAuthError();
 
         if (profile) {
           setUserProfile(profile);
@@ -294,6 +319,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
       } catch (err) {
+        if (err instanceof StaleAuthError) throw err;
         console.error(`Error loading user profile (attempt ${retryCount + 1}):`, err);
         if (retryCount >= maxRetries - 1) throw err;
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -310,6 +336,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // The profile already lists the group ids; passing them saves reading
       // the same `users/{uid}` document a second time (PERF-02).
       const userGroups = await firebaseServices.group.getGroups(profile.groups);
+      if (isStale(userId)) throw new StaleAuthError();
       setGroups(userGroups);
 
       if (userGroups.length > 0) {
@@ -322,7 +349,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       return userGroups;
     } catch (err) {
-      console.error('Error loading groups:', err);
+      if (!(err instanceof StaleAuthError)) console.error('Error loading groups:', err);
       throw err;
     }
   };
@@ -341,14 +368,20 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const reloadUserContext = async (): Promise<void> => {
     const currentUser = firebaseServices.auth.getUser();
     if (!currentUser) return;
+    // The auth service is never behind the listener -- it changes first, and
+    // the listener hears about it after -- so it is the newest auth state
+    // there is. This runs just after a sign-in the listener may not have
+    // delivered yet.
+    authUidRef.current = currentUser.uid;
 
     try {
       const profile = await firebaseServices.user.getUserProfile(currentUser.uid);
-      if (!profile) return;
+      if (!profile || isStale(currentUser.uid)) return;
       setError(null);
       setUserProfile(profile);
       await loadGroups(currentUser.uid, profile, currentUser);
     } catch (err) {
+      if (err instanceof StaleAuthError) return;
       console.error('Error reloading user context:', err);
       setError(err instanceof Error ? err.message : 'Failed to load user data');
     }
@@ -360,6 +393,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     const unsubscribe = onAuthStateChanged(auth, 
       async (firebaseUser) => {
+        authUidRef.current = firebaseUser?.uid ?? null;
         setUser(firebaseUser);
         
         if (firebaseUser) {
@@ -386,6 +420,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setGroupsLoading(false);
             setAuthLoading(false);
           } catch (err) {
+            // Overtaken by a newer auth state, which owns the state and the
+            // loading flags from here on.
+            if (err instanceof StaleAuthError) return;
             console.error('Error in auth state change loading:', err);
             setError(err instanceof Error ? err.message : 'Failed to load user data');
             // All three flags must be cleared here, not just the last two.

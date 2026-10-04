@@ -1362,6 +1362,97 @@ describe("FirebaseContext Behavioral Testing", () => {
     });
   });
 
+  // AUTH-003: a load started for one user finished after a newer auth state
+  // (signed out, or another user) and wrote the old user's context back.
+  describe("a load that finishes after the user changed", () => {
+    /** A promise the test settles by hand. */
+    function deferred<T>() {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((r) => {
+        resolve = r;
+      });
+      return { promise, resolve };
+    }
+
+    test("does not restore the old profile after sign-out", async () => {
+      const held = deferred<UserProfile>();
+      mockGetUserProfile.mockReturnValueOnce(held.promise);
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      let first!: Promise<void>;
+      act(() => {
+        first = capturedAuthCallback!(makeUser("user-1"));
+      });
+      await act(async () => {
+        await capturedAuthCallback!(null);
+      });
+      await act(async () => {
+        held.resolve(makeUserProfile({ id: "user-1", activeGroupId: "group-1", groups: ["group-1"] }));
+        await first;
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.userProfile).toBeNull();
+      expect(result.current.activeGroupId).toBeNull();
+      expect(result.current.activeCampaignId).toBeNull();
+      expect(mockGetGroups).not.toHaveBeenCalled();
+    });
+
+    test("does not restore the old group and campaign after sign-out", async () => {
+      mockGetUserProfile.mockResolvedValue(
+        makeUserProfile({ id: "user-1", activeGroupId: "group-1", groups: ["group-1"] })
+      );
+      mockGetGroups.mockResolvedValue([makeGroup("group-1")]);
+      const heldProfile = deferred<GroupUserProfile>();
+      mockGetGroupUserProfile.mockReturnValueOnce(heldProfile.promise);
+      mockGetCampaigns.mockResolvedValue([makeCampaign("campaign-1", "group-1")]);
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      let first!: Promise<void>;
+      act(() => {
+        first = capturedAuthCallback!(makeUser("user-1"));
+      });
+      await waitFor(() => expect(mockGetGroupUserProfile).toHaveBeenCalled());
+      await act(async () => {
+        await capturedAuthCallback!(null);
+      });
+      mockSetActiveCampaign.mockClear();
+      await act(async () => {
+        heldProfile.resolve(makeGroupUserProfile({ activeCampaignId: "campaign-1" }));
+        await first;
+      });
+
+      expect(result.current.activeGroupUserProfile).toBeNull();
+      expect(result.current.campaigns).toEqual([]);
+      expect(result.current.activeCampaignId).toBeNull();
+      expect(mockSetActiveCampaign).not.toHaveBeenCalled();
+    });
+
+    test("keeps the new user's profile when the old user's load finishes last", async () => {
+      const held = deferred<UserProfile>();
+      mockGetUserProfile
+        .mockReturnValueOnce(held.promise)
+        .mockResolvedValueOnce(makeUserProfile({ id: "user-2", activeGroupId: null, groups: [] }));
+      const { result } = renderHook(() => useFirebaseContext(), { wrapper });
+
+      let first!: Promise<void>;
+      act(() => {
+        first = capturedAuthCallback!(makeUser("user-1"));
+      });
+      await act(async () => {
+        await capturedAuthCallback!(makeUser("user-2"));
+      });
+      await act(async () => {
+        held.resolve(makeUserProfile({ id: "user-1", activeGroupId: null, groups: [] }));
+        await first;
+      });
+
+      expect(result.current.user?.uid).toBe("user-2");
+      expect(result.current.userProfile?.id).toBe("user-2");
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
   describe("Cleanup — unsubscribe on unmount", () => {
     test("should call the unsubscribe function returned by onAuthStateChanged when the provider unmounts", () => {
       const { unmount } = renderHook(() => useFirebaseContext(), { wrapper });

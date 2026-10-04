@@ -14,7 +14,7 @@ The Notes feature allows users to create and manage personal notes within their 
 - **NotesList**: Displays all user notes with creation option
 - **NoteCard**: Card representation of a single note in the list
 - **NoteEditor**: Interface for editing note title and content
-- **EntityExtractor**: Extracts entities from note content
+- **CampaignLinksPanel**: Scans a note for names and lists its campaign links
 - **EntityCard**: Displays an extracted entity with conversion options
 - **NoteReferences**: Shows connections between notes and campaign elements
 
@@ -22,7 +22,6 @@ The Notes feature allows users to create and manage personal notes within their 
 
 1. Notes are created and managed through `NoteContext`
 2. Entity extraction performed through `useEntityExtractor` hook
-3. Bidirectional relationships maintained through `note-relationships.ts`
 
 ## Usage
 

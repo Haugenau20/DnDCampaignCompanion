@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import Typography from './Typography';
+import { keepTabInside } from '../utils/focus-trap';
 import clsx from 'clsx';
 
 interface DialogProps {
@@ -44,18 +45,6 @@ interface DialogProps {
   placement?: 'center' | 'sheet-on-phone';
 }
 
-/**
- * Selector for the things a keyboard can land on inside the panel. Used by the
- * focus trap to find the first and last stops.
- */
-const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])'
-].join(', ');
 
 /**
  * A reusable dialog component that provides a modal interface with a backdrop,
@@ -128,6 +117,18 @@ const Dialog: React.FC<DialogProps> = ({
   // Losing focus to <body> on close means the next Tab starts from the top of
   // the page rather than from the control the user was working with.
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  /*
+    Where focus was when the dialog opened, read while rendering the opening,
+    before any effect. A child that focuses its own field as it mounts (quick
+    add's name) runs its effect before this component's, so reading it in the
+    focus effect below recorded that field. The field is gone after closing,
+    and focus fell to <body> (A11Y-003).
+  */
+  const wasOpenRef = useRef(false);
+  if (open && !wasOpenRef.current) {
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+  }
+  wasOpenRef.current = open;
 
   // Create portal container on mount (and whenever isNested changes).
   // Deliberately does NOT depend on `portalRoot` — depending on the value this
@@ -208,12 +209,14 @@ const Dialog: React.FC<DialogProps> = ({
   useEffect(() => {
     if (!open || !portalRoot) return;
 
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-
     // Focus the panel itself rather than its first control. The close button is
     // almost never what the reader came for, and focusing it announces "Close
-    // dialog" ahead of the title they were meant to hear.
-    dialogRef.current?.focus();
+    // dialog" ahead of the title they were meant to hear. A child that already
+    // took focus inside the panel chose for itself, and keeps it.
+    const panel = dialogRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      panel.focus();
+    }
 
     return () => {
       const previous = previouslyFocusedRef.current;
@@ -236,37 +239,7 @@ const Dialog: React.FC<DialogProps> = ({
   // a nested dialog traps on its own without either one needing to know about
   // the other — focus is only ever inside one of them.
   const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Tab') return;
-
-    const panel = dialogRef.current;
-    if (!panel) return;
-
-    const focusable = Array.from(
-      panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-    );
-
-    // A dialog with nothing to focus keeps focus on the panel; letting Tab
-    // through would drop the user behind the backdrop.
-    if (focusable.length === 0) {
-      event.preventDefault();
-      return;
-    }
-
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    const active = document.activeElement;
-
-    if (event.shiftKey) {
-      // The panel itself counts as "before the first stop": it is where focus
-      // starts, so shift-tabbing from it should wrap to the end.
-      if (active === first || active === panel) {
-        event.preventDefault();
-        last.focus();
-      }
-    } else if (active === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    keepTabInside(event, dialogRef.current);
   };
 
   // Handle backdrop click

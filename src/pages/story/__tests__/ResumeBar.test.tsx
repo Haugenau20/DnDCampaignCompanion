@@ -2,7 +2,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ResumeBar from "../components/ResumeBar";
-import type { StorySummary } from "features/storytelling/chapters/utils/chapter-progress";
+import type { StorySummary } from "features/storytelling";
 
 // ---------------------------------------------------------------------------
 // Child component mocks

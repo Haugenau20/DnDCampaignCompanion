@@ -23,7 +23,7 @@ function escapeForRegExp(value: string): string {
  * guards makes that impossible, because the full stop is still there.
  *
  * `normalizeTextForComparison` is deliberately left alone: it is still
- * correct for the entity-vs-entity equality checks in EntityExtractor.
+ * correct for the entity-vs-entity equality checks in CampaignLinksPanel.
  *
  * Word boundaries are expressed as "not a letter or digit" on either side
  * rather than `\b`, so that candidates beginning or ending with punctuation

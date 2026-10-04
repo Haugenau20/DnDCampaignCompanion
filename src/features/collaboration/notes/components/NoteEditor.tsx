@@ -81,8 +81,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
    * Error message from the most recent manual save attempt, surfaced to the
    * user via {@link getStatusIndicator}. Only set by {@link triggerManualSave}
    * (the Ctrl+S call site) — the ref-exposed
-   * `saveCurrentContent` still rejects directly so EntityExtractor can abort
-   * AI extraction on a failed pre-extraction save (bug #1051).
+   * `saveCurrentContent` still rejects directly so CampaignLinksPanel can
+   * abort AI extraction on a failed pre-extraction save (bug #1051).
    */
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -93,6 +93,13 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const contentRef = useRef(content);
   const hasExplicitTitleRef = useRef(hasExplicitTitle);
   const debounceTimerRef = useRef<number | null>(null);
+  /**
+   * The fields this editor last wrote successfully, and for which note. An
+   * autosave of exactly these writes nothing: the idle save behind a Ctrl+S
+   * used to write the same text a second time (PERF2-005). Set only by a
+   * write, never by loading, so a save that is asked for always happens.
+   */
+  const lastWrittenRef = useRef<{ noteId: string; title: string; content: string } | null>(null);
   /** The id whose data is in the fields. See the load effect. */
   const loadedNoteIdRef = useRef<string | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -170,6 +177,17 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     const nextTitle = titleToPersist(hasExplicitTitleRef.current, titleRef.current);
     const nextContent = contentRef.current;
 
+    const written = lastWrittenRef.current;
+    if (
+      !viaSave &&
+      written?.noteId === note.id &&
+      written.title === nextTitle &&
+      written.content === nextContent
+    ) {
+      markCleanIfUnchanged(nextTitle, nextContent);
+      return;
+    }
+
     try {
       setIsSaving(true);
 
@@ -183,6 +201,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       // edits through saveNote internally.
       const persist = viaSave || isNewNote ? saveNote : updateNote;
       await persist(note.id, { title: nextTitle, content: nextContent });
+      lastWrittenRef.current = { noteId: note.id, title: nextTitle, content: nextContent };
+      setSaveError(null);
 
       // Reflect a now-created document locally so the footer's "Not saved to
       // server" state clears without waiting on a reload.
@@ -241,12 +261,17 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     return slot.promise;
   }, []);
 
-  /** An autosave: the idle debounce and the dirty-note interval. */
+  /**
+   * An autosave: the idle debounce and the dirty-note interval. A failure
+   * shows its reason in the footer, with a retry, instead of only being
+   * logged behind the same "Unsaved changes" as a pause (REACT-004).
+   */
   const performAutosave = useCallback(async () => {
     try {
       await runSave(false);
     } catch (error) {
       console.error("Failed to save note:", error);
+      setSaveError(error instanceof Error ? error.message : "Failed to save note.");
     }
   }, [runSave]);
 
@@ -371,6 +396,15 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
           <Typography variant="body-sm" color="error">
             {saveError}
           </Typography>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={triggerManualSave}
+              className="typography-secondary underline hover:no-underline"
+            >
+              Try again
+            </button>
+          )}
         </div>
       );
     }

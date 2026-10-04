@@ -35,6 +35,8 @@ const { useCreateNote } = require('../../hooks/useCreateNote');
 const { useCampaigns } = require('@/features/user-management');
 const { useNavigation } = require('shared/hooks/useNavigation');
 
+const mockRetry = jest.fn();
+
 function setupMocks({
   notes = [] as Note[],
   isLoading = false,
@@ -46,6 +48,7 @@ function setupMocks({
     notes,
     isLoading,
     error,
+    retry: mockRetry,
     saveNote: mockSaveNote,
   });
   (useCreateNote as jest.Mock).mockReturnValue({ createAndOpen: mockCreateAndOpen });
@@ -107,6 +110,14 @@ describe('NotesList', () => {
       setupMocks({ error: 'Failed to fetch notes' });
       render(<NotesList />);
       expect(screen.getByText('Failed to fetch notes')).toBeInTheDocument();
+    });
+
+    // RECOVERY-003: the error used to be all there was; only a reload helped.
+    test('should offer to try again after an error', () => {
+      setupMocks({ error: 'Failed to fetch notes' });
+      render(<NotesList />);
+      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+      expect(mockRetry).toHaveBeenCalledTimes(1);
     });
 
     test('should show the no-campaign state', () => {

@@ -71,6 +71,8 @@ export interface NoteContextValue {
   isLoading: boolean;
   /** Error message if any */
   error: string | null;
+  /** Reopen the notes listener after it failed; clears `error`. */
+  retry: () => void;
   
   /**
    * Get a note by its ID

@@ -169,6 +169,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
     },
   });
 
+  /*
+    Focus stays in the input, so the browser never scrolls the panel to the
+    selected row on its own. Without this the arrow keys walked the selection
+    past the panel's bottom edge, and Enter opened a result nobody could see
+    (A11Y-002). `nearest` moves the panel only as far as it must.
+  */
+  const selectedId = isOpen ? navigableItems[selectedIndex]?.id : undefined;
+  useEffect(() => {
+    if (!selectedId) return;
+    document.getElementById(selectedId)?.scrollIntoView?.({ block: "nearest" });
+  }, [selectedId]);
+
   if (!isOpen) {
     return null;
   }

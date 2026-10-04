@@ -1,5 +1,6 @@
 // src/features/campaign-entities/locations/utils/__tests__/location-tree.test.ts
 import {
+  ancestorIdsIn,
   ancestorPathOf,
   buildLocationIndex,
   childrenOf,
@@ -11,6 +12,7 @@ import {
   wouldCreateCycle,
 } from '../location-tree';
 import { Location } from '../../types';
+import { ancestorIdsOf } from 'shared/hooks/useHighlightTarget';
 
 const place = (id: string, name: string, parentId?: string): Location =>
   ({
@@ -182,6 +184,27 @@ describe('the cycle guard (PERF-11 / T033, and 15-4 item 5)', () => {
     );
     expect(ancestorPathOf(chain, 'n499').length).toBeLessThanOrEqual(64);
     expect(descendantIdsOf(chain, 'n0').length).toBeLessThanOrEqual(64);
+  });
+});
+
+// PERF2-001: the directory walks many ids through one index instead of
+// indexing the collection again for each. The walk itself must not change.
+describe('ancestorIdsIn', () => {
+  const walkOf = (locations: Location[], id: string) =>
+    ancestorIdsOf(locations, id, { idOf: (l) => l.id, parentIdOf: (l) => l.parentId || undefined });
+
+  it.each([
+    ['a nested place', TREE, 'fountain'],
+    ['a root', TREE, 'beleriand'],
+    ['a cycle', [place('a', 'A', 'b'), place('b', 'B', 'a'), place('inner', 'Inner', 'a')], 'inner'],
+    ['its own parent', [place('self', 'Self', 'self')], 'self'],
+    ['a dangling parent', [place('lost', 'Lost', 'gone')], 'lost'],
+  ])('walks %s exactly as the per-call walk does', (_label, locations, id) => {
+    expect(ancestorIdsIn(buildLocationIndex(locations), id)).toEqual(walkOf(locations, id));
+  });
+
+  it('gives the same path label with or without a prebuilt index', () => {
+    expect(pathLabelOf(TREE, 'fountain', buildLocationIndex(TREE))).toBe(pathLabelOf(TREE, 'fountain'));
   });
 });
 

@@ -17,7 +17,7 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T083–T102 and T037's rise were triaged 2026-10-04 from the code
+The rows for T083–T101 and T037's rise were triaged 2026-10-04 from the code
 review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
 adjusted for the images focus above.
 
@@ -29,10 +29,7 @@ adjusted for the images focus above.
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T086 | Failed actions give no visible reason or retry | M | open | Data survives, but the user can't tell or try again |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
-| medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
-| medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -47,10 +44,9 @@ adjusted for the images focus above.
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
-| low | T101 | Large campaigns get slow | M | open | Measured at 1,000s of records; not felt at current sizes |
+| low | T101 | Large campaigns: quest and rumour rosters unpaged | S | open | Measured at 1,000s of records; not felt at current sizes |
 | low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
-| nit | T102 | Remove unused modules; story utilities through the barrel | S | open | Maintenance only |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -99,11 +95,11 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding not yet fixed is covered by an entry: T083–T102, plus T037.
-- **Not filed**: the reviews' unverified leads, and the optional refactors
-  other than ARCH-M01/M02 (T102). They stay in the reports.
+- Every confirmed finding not yet fixed is covered by an entry: T083–T101, plus T037.
+- **Not filed**: the reviews' unverified leads, and the optional refactors.
+  They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its four findings are filed (T037, T091); the rest
+  (maintainer, 2026-10-04). Its open findings are filed under T037; the rest
   of that scope stays unreviewed by decision.
 - App source was byte-identical to the reviewed commit `64fe195` when these were
   filed, and each entry's primary location was opened on 2026-10-04.
@@ -228,25 +224,6 @@ failed write.
   regression sequences; consider splitting at pickup. Plan first.
 - **Source**: code review, 2026-10-04
 
-### T086 — Failed actions give no visible reason or retry
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-The data survives these, but the user cannot tell anything failed, or cannot
-try again.
-
-- `CampaignLinksPanel.tsx:231-235` clears previous detections *before* the
-  rescan runs; a rejected rescan leaves none and also says "no new names"
-  (FUNC-002, TEST-004).
-- `ChapterEditPage.tsx:55-58` swallows a failed delete; the dialog closes and
-  stays disabled when reopened (FUNC-006).
-- `NotePage.tsx:146-169`: a failed archive or delete only logs (WRITES-001).
-- `NoteEditor.tsx:245-250`: a failed autosave only logs and the footer stays
-  "Unsaved changes" (REACT-004). A manual save behind a pending idle save
-  writes the same snapshot twice (PERF2-005).
-- `NoteContext.tsx:91-95`: a failed notes listener empties the list with no
-  retry (RECOVERY-003). The NPC provider's Try again is the working pattern.
-- **Findings**: 05, 06, 07, 08, 17, 20. **Source**: code review, 2026-10-04
-
 ### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
 
@@ -265,37 +242,6 @@ Each of these decides from a stale local copy, then writes:
   independent; can go first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
-- **Source**: code review, 2026-10-04
-
-### T090 — Keyboard and focus problems in shared components
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Eight findings, each reproduced in Chromium (11, 19):
-
-- A11Y-001: `AttachTray.tsx:176-180` toggles the active row on Enter or Space
-  typed inside its filter and buttons.
-- A11Y-006: `Button.tsx:101` sets `focus:outline-none` with the ring commented
-  out, so primary and outline buttons show no focus. Touches every page.
-- A11Y-004: the phone chapter drawer (`ChapterRail.tsx:229-236`) neither takes
-  nor traps focus and ignores Escape. Same drawer as T026.
-- A11Y-002 palette arrows select an off-screen result; A11Y-003 closing quick
-  add leaves focus on the body; A11Y-005 quick-add errors are not announced;
-  A11Y-007 location and quest inline editors drop focus (NPC's works);
-  A11Y-008 campaign switch and Undo drop focus.
-- **Catch**: none found; each is small on its own.
-- **Source**: code review, 2026-10-04
-
-### T091 — Auth: a stale sign-in can restore the previous user, and a pending email blocks a device link
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- AUTH-003: `FirebaseContext.tsx:276-286` sets the profile from an async load
-  without checking the user is still the same, so a slow load can restore the
-  old profile, group and campaign after sign-out. Client state only; no server
-  bypass.
-- AUTH-004: `EmailLinkPage.tsx:73-82` lets any pending email sign-in take
-  precedence over a device-approval link, and after rejection there is no way
-  to correct the email.
-- **Findings**: 02. That review was stopped and will not be finished.
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade
@@ -564,8 +510,6 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 - **Next step**: on the phone it was seen on, note the browser, then open the
   drawer on a chapter late in a long campaign and drag the list. A desktop
   window cannot answer this: the browser agent has no touch input.
-- **Related**: the same drawer neither takes nor traps keyboard focus (A11Y-004,
-  in T090).
 - **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
 
 ---
@@ -686,33 +630,20 @@ time anyone edits it.
   PowerShell. **Catch**: do it with T065's start/stop round trip.
 - **Source**: code review, 2026-10-04
 
-### T101 — Large campaigns get slow
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Measured at sizes well beyond current campaigns:
-
-- PERF2-001: the location filter calls `ancestorIdsOf` per matching row
-  (`LocationDirectory.tsx:212-218`), each rebuilding an index: 247 ms at 2,000
-  locations.
-- PERF2-002: saga pagination slices and recounts at every word boundary
-  (`paginate-prose.ts:171-180`): 481 ms on a 50,000-word paragraph.
-- PERF2-003: quick add subscribes to NPCs, quests, locations and notes before
-  any create (`useQuickAddCreate.ts:118-121`).
-- Pass 5: 1,200 NPC rows are 19k DOM elements and ~350–570 ms to restore; the
-  reviewers suggest paging or virtualisation.
-- **Findings**: 07, 18. **Source**: code review, 2026-10-04
-
-### T102 — Remove unused modules; route story utilities through the barrel
+### T101 — Large campaigns: the rest of the roster work
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
 
-- ARCH-M01: nine modules have no production caller, e.g.
-  `notes/utils/note-relationships.ts` (no importer), `useOpenAIExtractor` (only
-  its barrel export, `collaboration/index.ts:36`), `core/components/Chip.tsx`,
-  `core/config/buildConfig.ts`. The full list with lines is in 10.
-- ARCH-M02: three story pages import chapter utilities from internals instead
-  of the storytelling barrel.
-- **Catch**: recheck callers first; `notes/README.md:25` still describes
-  `note-relationships.ts`. **Source**: code review, 2026-10-04
+The NPC roster now mounts 100 rows at a time behind *Show more*
+(`shared/utils/roster-paging.ts`). Two things pass 5 (18) pointed at are left:
+
+- The quest and rumour rosters still mount every row. Their groups are by
+  status and can be collapsed, and a collapsed group still mounts its rows
+  (`hidden`), so paging them has to decide what a folded group counts as.
+- `NPCDirectory` resolves each NPC's location with `resolveLocationName`,
+  which searches the location array linearly per row (`location-display.ts`).
+  An id/name index would serve every row; pass 5 could not say how much of the
+  1,200-row redraw this is.
+- **Source**: code review, 2026-10-04
 
 ### T105 — Deploy the Firestore and Storage rules from the repo, not by pasting into the console
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04

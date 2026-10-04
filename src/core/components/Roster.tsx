@@ -2,6 +2,7 @@
 import React from 'react';
 import Typography from './Typography';
 import Input from './Input';
+import Button from './Button';
 import { AlertCircle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import clsx from 'clsx';
 import EntitySigil from './EntitySigil';
@@ -358,6 +359,46 @@ export const RosterBatchBar: React.FC<RosterBatchBarProps> = ({ label, children,
       </div>
     )}
   </>
+);
+
+// ---------------------------------------------------------------------------
+// Show more
+// ---------------------------------------------------------------------------
+
+export interface RosterShowMoreProps {
+  /** Rows on the page. */
+  shown: number;
+  /** Rows the roster holds. */
+  total: number;
+  /** How many one press adds, at most. */
+  step: number;
+  /** What the rows are, plural: "NPCs". */
+  noun: string;
+  onShowMore: () => void;
+}
+
+/**
+ * The foot of a roster cut to its first rows: how many are on the page, and a
+ * button for the next batch. A plain button rather than infinite scroll, so
+ * the footer and everything below the roster stay reachable, and the
+ * browser's find-in-page searches exactly what the reader asked to see (T101).
+ */
+export const RosterShowMore: React.FC<RosterShowMoreProps> = ({
+  shown,
+  total,
+  step,
+  noun,
+  onShowMore,
+}) => (
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    {/* A status, so the new count is announced after each press. */}
+    <Typography variant="body-sm" color="secondary" role="status">
+      Showing {shown} of {total} {noun}
+    </Typography>
+    <Button variant="outline" size="sm" onClick={onShowMore}>
+      Show {Math.min(step, total - shown)} more
+    </Button>
+  </div>
 );
 
 // ---------------------------------------------------------------------------

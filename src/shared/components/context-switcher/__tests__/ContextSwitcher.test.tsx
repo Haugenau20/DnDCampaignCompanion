@@ -684,5 +684,38 @@ describe('ContextSwitcher', () => {
       });
       expect(trigger).toHaveFocus();
     });
+
+    // A11Y-008: a switch closed the menu, and an Undo removed the toast, with
+    // focus inside each, so focus fell to <body>.
+    test('a switch hands focus back to the trigger', async () => {
+      renderContextSwitcher();
+      const trigger = screen.getAllByRole('button')[0];
+      fireEvent.click(trigger);
+      const campaign = screen.getByRole('menuitem', { name: /Hogwarts Campaign/ });
+      campaign.focus();
+
+      fireEvent.click(campaign);
+
+      await waitFor(() => expect(trigger).toHaveFocus());
+    });
+
+    test('an undo hands focus back to the trigger', async () => {
+      const { rerender } = renderContextSwitcher();
+      const trigger = screen.getAllByRole('button')[0];
+      fireEvent.click(trigger);
+      fireEvent.click(screen.getByText('Hogwarts Campaign'));
+      await screen.findByRole('button', { name: /undo/i });
+      (useCampaigns as jest.Mock).mockReturnValue(
+        makeCampaignsMock({ activeCampaignId: 'campaign-2', activeCampaign: mockCampaigns[1] })
+      );
+      rerender(<ContextSwitcher onJoinGroup={mockOnJoinGroup} />);
+      const undo = screen.getByRole('button', { name: /undo/i });
+      undo.focus();
+
+      fireEvent.click(undo);
+
+      await waitFor(() => expect(trigger).toHaveFocus());
+      expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument();
+    });
   });
 });

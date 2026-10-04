@@ -306,7 +306,7 @@ describe('NoteEditor', () => {
   describe('handleManualSave error propagation', () => {
     // Bug #1051 (fixed): handleManualSave still re-throws (that contract is
     // relied on by the ref-exposed saveCurrentContent -- see the
-    // "imperative ref methods" describe block below, and EntityExtractor's
+    // "imperative ref methods" describe block below, and CampaignLinksPanel's
     // own suite). The standalone Save button is gone -- Ctrl+S is the only
     // manual-save trigger now, and it goes through triggerManualSave, which
     // catches the rejection and surfaces it via the saveError state instead
@@ -408,6 +408,47 @@ describe('NoteEditor', () => {
   });
 
   // -------------------------------------------------------------------------
+  // REACT-004: a failed autosave was only logged; the footer went back to
+  // "Unsaved changes", the same as a pause that had not saved yet.
+  // -------------------------------------------------------------------------
+  describe('a failed autosave', () => {
+    test('shows the reason and keeps the text', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockUpdateNote.mockRejectedValue(new Error('Autosave refused'));
+      renderEditor({ note: makeNote({ content: 'start' }) });
+      const body = screen.getByLabelText('Note content') as HTMLTextAreaElement;
+
+      fireEvent.change(body, { target: { value: 'start and more' } });
+      await act(async () => { jest.advanceTimersByTime(2500); });
+
+      expect(screen.getByText('Autosave refused')).toBeInTheDocument();
+      expect(body.value).toBe('start and more');
+    });
+
+    test('offers a retry that saves, and the reason goes once it has', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockUpdateNote.mockRejectedValue(new Error('Autosave refused'));
+      renderEditor({ note: makeNote({ content: 'start' }) });
+
+      fireEvent.change(screen.getByLabelText('Note content'), {
+        target: { value: 'start and more' },
+      });
+      await act(async () => { jest.advanceTimersByTime(2500); });
+
+      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByText('Autosave refused')).not.toBeInTheDocument();
+      });
+      expect(mockSaveNote).toHaveBeenCalledWith(
+        'note-1',
+        expect.objectContaining({ content: 'start and more' })
+      );
+      expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // useImperativeHandle ref (line 55 — getCurrentContent / saveCurrentContent)
   // -------------------------------------------------------------------------
   describe('imperative ref methods', () => {
@@ -435,15 +476,15 @@ describe('NoteEditor', () => {
     });
 
     // Bug #1051: the report's "Recommended Fix" option 1 (remove `throw error`
-    // from handleManualSave) would break this contract. EntityExtractor's
+    // from handleManualSave) would break this contract. CampaignLinksPanel's
     // handleExtract calls saveCurrentContent (via NotePage's
     // saveCurrentEditorContent) and depends on the rejection to abort AI
     // extraction against unsaved content -- see
-    // src/features/collaboration/entity-extraction/components/EntityExtractor.tsx
+    // src/features/collaboration/notes/components/CampaignLinksPanel.tsx
     // (the pre-extraction save's catch block). This test guards against a
     // future "simplification" that swallows the error inside NoteEditor
     // instead of rejecting.
-    test('should reject saveCurrentContent (via ref) when saveNote fails, so callers like EntityExtractor can abort', async () => {
+    test('should reject saveCurrentContent (via ref) when saveNote fails, so callers like CampaignLinksPanel can abort', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockSaveNote.mockRejectedValue(new Error('Save failed'));
 
@@ -1067,6 +1108,34 @@ describe('NoteEditor', () => {
       await release(0);
       expect(calls).toHaveLength(2);
       expect(calls[1].updates.content).toBe('abc');
+    });
+
+    // PERF2-005: the idle save behind a Ctrl+S wrote the same text again.
+    test('an autosave of text a save already wrote writes nothing', async () => {
+      const { calls, release } = renderWithHeldSaves(makeNote({ content: 'a' }));
+
+      type('ab');
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      expect(calls).toHaveLength(1);
+      await release(0);
+
+      idle();
+      await act(async () => { jest.advanceTimersByTime(30000); });
+      expect(calls).toHaveLength(1);
+    });
+
+    test('an autosave queued behind a save of the same text writes nothing', async () => {
+      const { calls, release } = renderWithHeldSaves(makeNote({ content: 'a' }));
+
+      type('ab');
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      idle();
+      expect(calls).toHaveLength(1);
+
+      await release(0);
+      await act(async () => { jest.advanceTimersByTime(0); });
+      expect(calls).toHaveLength(1);
+      expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument();
     });
 
     test('once all saves are through, the note reads as saved', async () => {

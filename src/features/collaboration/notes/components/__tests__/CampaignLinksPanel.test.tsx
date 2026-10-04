@@ -404,6 +404,71 @@ describe('CampaignLinksPanel', () => {
       });
     });
 
+    // FUNC-002 / TEST-004: a failed rescan used to clear the saved detections
+    // before the extraction ran, then report "no new names" as well.
+    describe('a rescan that fails', () => {
+      const pending = {
+        id: 'ent-1',
+        text: 'Black Spider',
+        type: 'npc' as const,
+        confidence: 0.91,
+        isConverted: false,
+        createdAt: '2024-01-15T10:00:00.000Z',
+      };
+
+      test('keeps the previous detections and writes nothing when extraction fails', async () => {
+        setupMocks({ note: makeNote({ extractedEntities: [pending] }) });
+        mockExtractWithOpenAI.mockRejectedValue(
+          new Error('Content is too long (maximum 10,000 characters)')
+        );
+
+        render(<CampaignLinksPanel noteId="note-1" />);
+        expect(screen.getByText('Black Spider')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+        await waitFor(() => {
+          expect(screen.getByText(/content is too long/i)).toBeInTheDocument();
+        });
+        expect(mockUpdateNote).not.toHaveBeenCalled();
+        expect(screen.getByText('Black Spider')).toBeInTheDocument();
+        expect(screen.queryByText(/no new names/i)).not.toBeInTheDocument();
+      });
+
+      test('keeps the previous detections when saving the result fails', async () => {
+        setupMocks({ note: makeNote({ extractedEntities: [pending] }) });
+        mockExtractWithOpenAI.mockResolvedValue([
+          { ...pending, id: 'ent-2', text: 'Grey Wolf' },
+        ]);
+        mockUpdateNote.mockRejectedValue(new Error('Write refused'));
+
+        render(<CampaignLinksPanel noteId="note-1" />);
+        fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+        await waitFor(() => {
+          expect(screen.getByText('Write refused')).toBeInTheDocument();
+        });
+        expect(screen.getByText('Black Spider')).toBeInTheDocument();
+        expect(screen.queryByText('Grey Wolf')).not.toBeInTheDocument();
+      });
+
+      test('replaces the detections in a single write once a scan succeeds', async () => {
+        setupMocks({ note: makeNote({ extractedEntities: [pending] }) });
+        const found = { ...pending, id: 'ent-2', text: 'Grey Wolf' };
+        mockExtractWithOpenAI.mockResolvedValue([found]);
+
+        render(<CampaignLinksPanel noteId="note-1" />);
+        fireEvent.click(screen.getByRole('button', { name: /scan note/i }));
+
+        await waitFor(() => {
+          expect(screen.getByText('Grey Wolf')).toBeInTheDocument();
+        });
+        expect(mockUpdateNote).toHaveBeenCalledTimes(1);
+        expect(mockUpdateNote).toHaveBeenCalledWith('note-1', { extractedEntities: [found] });
+        expect(screen.queryByText('Black Spider')).not.toBeInTheDocument();
+      });
+    });
+
     test('should disable the scan button and show a spinner while extracting', async () => {
       setupMocks();
       mockExtractWithOpenAI.mockReturnValue(new Promise(() => {})); // never resolves

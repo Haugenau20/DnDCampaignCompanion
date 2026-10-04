@@ -35,7 +35,7 @@ function setup({
   query = "",
   isLink = true,
   pending = { email: "frodo@shire.dev", rememberMe: true } as
-    | { email: string; rememberMe: boolean }
+    | { email: string; rememberMe: boolean; device?: string }
     | null,
   strict = false,
 } = {}) {
@@ -131,6 +131,21 @@ describe("EmailLinkPage", () => {
       expect(screen.getByRole("link", { name: /back to sign in/i })).toHaveAttribute("href", "/signin");
     });
 
+    // AUTH-004: a remembered address that is not the one the link was sent
+    // to failed, and left no way to give the right one.
+    test("asks for the right address when the remembered one is refused", async () => {
+      completeSignInLink
+        .mockRejectedValueOnce(Object.assign(new Error("bad"), { code: "auth/invalid-email" }))
+        .mockResolvedValueOnce({ user: { uid: "u1" }, isNewUser: false });
+      setup({ query: "?next=%2Fquests", pending: { email: "sam@shire.dev", rememberMe: true } });
+
+      await userEvent.type(await screen.findByLabelText("Email"), "frodo@shire.dev");
+      await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+
+      await waitFor(() => expect(screen.getByTestId("landed")).toHaveTextContent("/quests"));
+      expect(completeSignInLink).toHaveBeenLastCalledWith("frodo@shire.dev", expect.any(String), false);
+    });
+
     test("explains a spent or expired link", async () => {
       completeSignInLink.mockRejectedValueOnce(
         Object.assign(new Error("x"), { code: "auth/invalid-action-code" })
@@ -224,12 +239,29 @@ describe("EmailLinkPage — showing the code for another device", () => {
     expect(approveDeviceSignIn).toHaveBeenCalledTimes(1);
   });
 
-  // The browser that asked for the link is the one being signed in.
+  // The browser that asked for the link is the one being signed in. Rewritten
+  // against the requirement (AUTH-004, approved 2026-10-04): it used to give
+  // the browser no request of its own, so ANY remembered address won.
   test("signs in directly in the browser that asked for the link", async () => {
-    setup({ query: DEVICE });
+    setup({ query: DEVICE, pending: { email: "frodo@shire.dev", rememberMe: true, device: "req-1" } });
     await waitFor(() => expect(screen.getByTestId("landed")).toHaveTextContent("/quests"));
     expect(approveDeviceSignIn).not.toHaveBeenCalled();
     expect(lookUpDeviceSignIn).not.toHaveBeenCalled();
+  });
+
+  // AUTH-004: a link this browser asked for earlier, never opened, took over
+  // the other device's link and tried to sign in here with the wrong address.
+  test("approves the other device even when this browser waits on a link of its own", async () => {
+    setup({ query: DEVICE, pending: { email: "sam@shire.dev", rememberMe: false, device: "req-9" } });
+    await screen.findByTestId("device-sign-in-code");
+    expect(approveDeviceSignIn).toHaveBeenCalledWith("frodo@shire.dev", window.location.href, "req-1");
+    expect(completeSignInLink).not.toHaveBeenCalled();
+  });
+
+  test("approves the other device when this browser's link carried no request", async () => {
+    setup({ query: DEVICE, pending: { email: "sam@shire.dev", rememberMe: false } });
+    await screen.findByTestId("device-sign-in-code");
+    expect(completeSignInLink).not.toHaveBeenCalled();
   });
 
   test("asks for the address on a link without a request", () => {

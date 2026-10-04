@@ -82,7 +82,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
 }) => {
   const spec = QUICK_ADD_SPECS[entity];
   const navigate = useNavigate();
-  const create = useQuickAddCreate();
+  const create = useQuickAddCreate({ entity, parentId, noteId, carry });
 
   const [name, setName] = useState(initialName);
   const [line, setLine] = useState(initialLine);
@@ -116,7 +116,13 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
     const errors = validateQuickAdd(entity, { name, line });
     setFieldErrors(errors);
     setWriteError(null);
-    if (errors.name || errors.line) return null;
+    if (errors.name || errors.line) {
+      // Take the reader to what was refused; the field describes the reason.
+      // Focus stayed on the submit button, where nothing said why nothing
+      // happened (A11Y-005).
+      (errors.name ? nameRef : lineRef).current?.focus();
+      return null;
+    }
 
     setIsSubmitting(true);
     try {

@@ -34,8 +34,7 @@ import { usePageGate, GatedContent } from "shared/components/gated";
  *   member between campaigns must not be sent to a campaign picker to reach
  *   them. The group-scoped cards keep their own `activeGroup` check.
  *
- * The skeleton is the gate's rather than `LoadingState`'s, which also means it
- * now waits on `useAuth().loading` instead of `useGroups().loading` -- the
+ * The skeleton is the gate's, which also means it now waits on `useAuth().loading` instead of `useGroups().loading` -- the
  * flag that stays true for the whole restore chain rather than the one that
  * flips false the moment `groups` is an array (bug #701).
  */

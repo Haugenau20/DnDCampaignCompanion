@@ -24,8 +24,10 @@ import {
   RosterSkeleton,
   RosterEmpty,
   RosterStatus,
+  RosterShowMore,
   type RosterStatusTone,
 } from 'core/components/Roster';
+import { ROSTER_PAGE_SIZE, pageGroups, limitReaching } from 'shared/utils/roster-paging';
 
 interface NPCDirectoryProps {
   npcs: NPC[];
@@ -137,6 +139,8 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
   const [expandedNpcId, setExpandedNpcId] = useState<string | null>(null);
+  /** How many rows the roster mounts; "Show more" raises it (T101). */
+  const [rowLimit, setRowLimit] = useState(ROSTER_PAGE_SIZE);
   const { locations } = useLocations();
   const { updateNPCRelationship, deleteNPC, updateNPCsStatus, deleteNPCs } = useNPCs();
   /** The NPC whose Delete was pressed, awaiting confirmation. */
@@ -259,7 +263,13 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     return <RosterSkeleton label="Loading NPCs" />;
   }
 
-  const groups = Object.entries(groupedNPCs);
+  const allGroups = Object.entries(groupedNPCs);
+  // A deep link reaches its NPC however far down the roster it sits.
+  const highlightedIndex = highlightedNpcId
+    ? allGroups.flatMap(([, list]) => list).findIndex((npc) => npc.id === highlightedNpcId)
+    : -1;
+  const limit = limitReaching(rowLimit, highlightedIndex);
+  const roster = pageGroups(allGroups, limit);
 
   return (
     <div className="space-y-6">
@@ -308,15 +318,15 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
       )}
 
       {/* NPC roster by location */}
-      {groups.length > 0 ? (
-        groups.map(([location, locationNPCs]) => {
+      {roster.groups.length > 0 ? (
+        roster.groups.map(({ key: location, rows: locationNPCs, total: groupTotal }) => {
           const isUnknown = location === 'Location unknown';
 
           return (
             <RosterGroup
               key={location}
               title={location}
-              count={locationNPCs.length}
+              count={groupTotal}
               muted={isUnknown}
               onOpen={isUnknown ? undefined : () => handleLocationClick(location)}
             >
@@ -528,6 +538,16 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
               Add the first NPC
             </Button>
           }
+        />
+      )}
+
+      {roster.shown < roster.total && (
+        <RosterShowMore
+          shown={roster.shown}
+          total={roster.total}
+          step={ROSTER_PAGE_SIZE}
+          noun="NPCs"
+          onShowMore={() => setRowLimit(limit + ROSTER_PAGE_SIZE)}
         />
       )}
 

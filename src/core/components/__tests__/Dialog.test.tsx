@@ -418,6 +418,53 @@ describe("Dialog", () => {
       });
     });
 
+    // A11Y-003: a child that focuses its own field on mount (quick add's
+    // name) ran before the dialog recorded where focus was, so the dialog
+    // recorded that field, and closing sent focus to <body>.
+    describe("with a child that takes focus as it mounts", () => {
+      const NameField: React.FC = () => {
+        const ref = React.useRef<HTMLInputElement>(null);
+        React.useEffect(() => {
+          ref.current?.focus();
+        }, []);
+        return <input ref={ref} aria-label="Name" />;
+      };
+
+      test("should leave focus on the child's field", async () => {
+        const user = userEvent.setup();
+        render(
+          <DialogHarness title="Add NPC">
+            <NameField />
+          </DialogHarness>
+        );
+
+        await openDialog(user);
+
+        await waitFor(() => {
+          expect(screen.getByLabelText("Name")).toHaveFocus();
+        });
+      });
+
+      test("should still return focus to the trigger when it closes", async () => {
+        const user = userEvent.setup();
+        render(
+          <DialogHarness title="Add NPC">
+            <NameField />
+          </DialogHarness>
+        );
+
+        const trigger = screen.getByTestId("open-trigger");
+        await openDialog(user);
+        await screen.findByRole("dialog");
+
+        await user.click(screen.getByLabelText("Close dialog"));
+
+        await waitFor(() => {
+          expect(trigger).toHaveFocus();
+        });
+      });
+    });
+
     test("should keep Tab inside the dialog rather than leaking to the page", async () => {
       const user = userEvent.setup();
       render(

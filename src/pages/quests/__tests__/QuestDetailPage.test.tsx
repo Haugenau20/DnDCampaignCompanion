@@ -657,6 +657,21 @@ describe('editing in place', () => {
     );
   });
 
+  // A11Y-007: closing an editor left focus on <body>.
+  it('hands focus back to Rename when the title editor is cancelled', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Rename/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: /Rename/ })).toHaveFocus();
+  });
+
+  it('hands focus back to the description when its editor is cancelled', () => {
+    renderPage();
+    fireEvent.click(screen.getByText(QUEST.description));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: QUEST.description })).toHaveFocus();
+  });
+
   it('edits the description where it is read', async () => {
     renderPage();
     fireEvent.click(screen.getByText(QUEST.description));

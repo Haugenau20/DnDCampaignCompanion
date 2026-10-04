@@ -1,5 +1,5 @@
 // src/features/campaign-entities/locations/utils/location-tree.ts
-import { ancestorIdsOf, HIGHLIGHT_DEPTH_CAP } from 'shared/hooks/useHighlightTarget';
+import { walkAncestors, HIGHLIGHT_DEPTH_CAP } from 'shared/hooks/useHighlightTarget';
 import { Location } from '../types';
 
 /**
@@ -80,9 +80,23 @@ export const childrenOf = (index: LocationIndex, id: string): Location[] =>
   index.children.get(id) ?? [];
 
 /**
+ * Every ancestor of `id`, nearest first, walked through an index built once.
+ *
+ * The same walk as `15-3`'s `ancestorIdsOf` -- its visited set, its cap, and
+ * the dangling or cycle-closing edge reported -- without indexing the whole
+ * collection again for each id, which a directory filtering 2,000 places did
+ * once per match (PERF2-001).
+ *
+ * @param index The collection's index
+ * @param id Where the walk starts
+ */
+export const ancestorIdsIn = (index: LocationIndex, id: string): string[] =>
+  walkAncestors((key) => index.byId.get(key), id, parentIdOf);
+
+/**
  * The chain from the outermost ancestor down to `id`'s parent.
  *
- * Built on `15-3`'s `ancestorIdsOf`, which carries the visited set and the cap;
+ * Built on {@link ancestorIdsIn}, which carries the visited set and the cap;
  * this only resolves the ids and reverses them, because a breadcrumb reads
  * outermost-first while a parent walk produces nearest-first.
  *
@@ -98,21 +112,18 @@ export const childrenOf = (index: LocationIndex, id: string): Location[] =>
  */
 export function ancestorPathOf(
   locations: readonly Location[],
-  id: string
+  id: string,
+  index: LocationIndex = buildLocationIndex(locations)
 ): Location[] {
-  const byId = new Map(locations.map((location) => [location.id, location]));
   const seen = new Set<string>([id]);
 
-  return ancestorIdsOf(locations, id, {
-    idOf: (location) => location.id,
-    parentIdOf,
-  })
+  return ancestorIdsIn(index, id)
     .filter((ancestorId) => {
       if (seen.has(ancestorId)) return false;
       seen.add(ancestorId);
       return true;
     })
-    .map((ancestorId) => byId.get(ancestorId))
+    .map((ancestorId) => index.byId.get(ancestorId))
     .filter((location): location is Location => Boolean(location))
     .reverse();
 }
@@ -229,9 +240,10 @@ export const insideCountOf = (index: LocationIndex, id: string): number =>
  */
 export function pathLabelOf(
   locations: readonly Location[],
-  id: string
+  id: string,
+  index?: LocationIndex
 ): string {
-  return ancestorPathOf(locations, id)
+  return ancestorPathOf(locations, id, index)
     .map((ancestor) => ancestor.name)
     .join(' · ');
 }
