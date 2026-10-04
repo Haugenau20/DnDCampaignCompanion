@@ -77,4 +77,11 @@ describe("useCreateRumor", () => {
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });
+
+  test("titles the rumour with a name the caller typed (T097)", async () => {
+    const { result } = renderHook(() => useCreateRumor());
+    await act(() => result.current.createAndOpen("Dragon over Neverwinter"));
+
+    expect(mockAddRumor.mock.calls[0][0].title).toBe("Dragon over Neverwinter");
+  });
 });

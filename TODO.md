@@ -51,7 +51,6 @@ adjusted for the images focus above.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| low | T097 | "New NPC named …" in the palette drops the name | S | open | Retype the name |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
 | low | T101 | Large campaigns get slow | M | open | Measured at 1,000s of records; not felt at current sizes |
 | low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
@@ -354,15 +353,6 @@ pass 4.
 
 - **Catch**: the editor needs to be told which fields are required; the caller
   decides. **Findings**: FUNC-003 (05).
-- **Source**: code review, 2026-10-04
-
-### T097 — "New NPC named …" in the palette drops the name
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`CommandPalette.tsx:376` labels the action with the typed query, but quick add
-opens with an empty name.
-
-- **Findings**: FUNC-004 (05). **Catch**: none found.
 - **Source**: code review, 2026-10-04
 
 ### T098 — Two chapters with identical text share reading progress

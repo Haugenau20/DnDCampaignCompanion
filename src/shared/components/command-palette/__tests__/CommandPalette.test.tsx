@@ -41,7 +41,7 @@ beforeEach(() => {
   useNavigation.mockReturnValue({ navigateToPage: mockNavigateToPage, createPath: (p: string) => p });
   useCampaigns.mockReturnValue({ activeCampaign: { id: "p", name: "Phandelver" } });
   useCreateActions.mockReturnValue([
-    { id: "npc", entityLabel: "NPC", icon: () => null, run: mockRun },
+    { id: "npc", entityLabel: "NPC", icon: () => null, takesName: true, run: mockRun },
   ]);
 });
 
@@ -174,6 +174,29 @@ describe("CommandPalette", () => {
     expect(mockRun).toHaveBeenCalledTimes(1);
   });
 
+  // T097: the label promised the name and the command dropped it.
+  it("hands the typed name to the create command it names", async () => {
+    useSearch.mockReturnValue(searchState({ query: "  Droop " }));
+    open();
+    await userEvent.click(screen.getByText('New NPC named "Droop"'));
+    expect(mockRun).toHaveBeenCalledWith("Droop");
+  });
+
+  it("promises no name for a create command that cannot take one", () => {
+    useCreateActions.mockReturnValue([
+      { id: "chapter", entityLabel: "Chapter", icon: () => null, run: mockRun },
+    ]);
+    open();
+    expect(screen.getByText("New Chapter")).toBeInTheDocument();
+    expect(screen.queryByText(/named/)).not.toBeInTheDocument();
+  });
+
+  it("promises no name while the query is empty", () => {
+    useSearch.mockReturnValue(searchState({ query: "", results: [] }));
+    open();
+    expect(screen.getByText("New NPC")).toBeInTheDocument();
+  });
+
   it("navigates on a result click without waiting out a blur timer", async () => {
     open();
     await userEvent.click(screen.getByText("Chapter 12 — Cragmaw Hideout"));
@@ -304,6 +327,12 @@ describe("CommandPalette keyboard", () => {
     await userEvent.keyboard("{ArrowDown}{ArrowDown}");
     const active = screen.getByRole("combobox").getAttribute("aria-activedescendant");
     expect(active).toBe("cmdk-create-npc");
+  });
+
+  it("hands the typed name to a create command chosen with Enter (T097)", async () => {
+    open();
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+    expect(mockRun).toHaveBeenCalledWith("droop");
   });
 
   // T014 / T045: every record with its own page opens that page. A rumour has
