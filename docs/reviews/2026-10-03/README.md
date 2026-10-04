@@ -33,7 +33,10 @@ Cross-reference those records rather than copying their contents as new findings
 - [pass-3/README.md](pass-3/README.md): five third-pass specialist reports,
   verification and diagnostic evidence, stacked on PR #197.
 
-Store subsequent pass reports here with their own baseline and summary. The
+The [fourth pass](../2026-10-04/pass-4/README.md) adds complete-App local browser,
+recovery and supported legacy-data evidence against the merged main baseline.
+
+Store subsequent pass reports with their own baseline and summary. The
 architecture/duplication, accessibility, external-AI integration and operations
 angles are recorded in pass 3. This directory is an assessment record;
 it contains no implemented application fixes or changes to the backlog.

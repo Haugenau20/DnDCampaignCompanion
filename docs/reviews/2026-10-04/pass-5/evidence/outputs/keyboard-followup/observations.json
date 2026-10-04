@@ -1,0 +1,172 @@
+[
+  {
+    "name": "local-app-signed-in",
+    "value": {
+      "url": "http://127.0.0.1:3001/",
+      "project": "demo-review-pass5",
+      "campaignId": "review-keyboard-followup"
+    }
+  },
+  {
+    "name": "campaign-menu-step-switch-and-undo-followup",
+    "value": {
+      "name": "campaign-menu-step-switch-and-undo-followup",
+      "status": "observed",
+      "detail": {
+        "entry": {
+          "tag": "BUTTON",
+          "role": "menuitem",
+          "name": "Change",
+          "value": ""
+        },
+        "afterChange": {
+          "tag": "BODY",
+          "role": null,
+          "name": "You need to enable JavaScript to run this app.D&D Campaign CompanionD&D CompanionReview keyboard-followupChoose a groupSynthetic Review GroupChoosing a group lo"
+        },
+        "recovered": {
+          "tag": "BUTTON",
+          "role": "menuitem",
+          "name": "Choose a group",
+          "value": ""
+        },
+        "afterBack": {
+          "tag": "BODY",
+          "role": null,
+          "name": "You need to enable JavaScript to run this app.D&D Campaign CompanionD&D CompanionReview keyboard-followupGroupSynthetic Review GroupChangeCampaigns in this grou"
+        },
+        "afterSwitch": {
+          "tag": "BODY",
+          "role": null,
+          "name": "You need to enable JavaScript to run this app.D&D Campaign CompanionD&D CompanionKeyboard Other CampaignSwitched to Keyboard Other CampaignUndoHomeStoryQuestsRu"
+        },
+        "firstTab": {
+          "tag": "BUTTON",
+          "role": null,
+          "name": "Undo",
+          "value": ""
+        },
+        "switchRegions": [
+          {
+            "role": "status",
+            "live": "polite",
+            "text": "Switched to Keyboard Other CampaignUndo"
+          }
+        ],
+        "afterUndo": {
+          "tag": "BODY",
+          "role": null,
+          "name": "You need to enable JavaScript to run this app.D&D Campaign CompanionD&D CompanionReview keyboard-followupHomeStoryQuestsRumorsNPCsLocationsNotesMoreSearchCtrl K"
+        },
+        "firstTabAfterUndo": {
+          "tag": "BUTTON",
+          "role": null,
+          "name": "Home",
+          "value": ""
+        },
+        "reopened": {
+          "tag": "BUTTON",
+          "role": "menuitem",
+          "name": "Change",
+          "value": ""
+        },
+        "escape": {
+          "tag": "BUTTON",
+          "role": null,
+          "name": "Active campaign: Review keyboard-followup. Change group or campaign",
+          "value": ""
+        },
+        "storedCampaignId": "review-keyboard-followup"
+      },
+      "url": "http://127.0.0.1:3001/"
+    }
+  },
+  {
+    "name": "search-keyboard-open-select-destination-followup",
+    "value": {
+      "name": "search-keyboard-open-select-destination-followup",
+      "status": "diagnostic-error",
+      "error": "locator.waitFor: Error: strict mode violation: getByRole('option').filter({ hasText: 'Keyboard Session' }) resolved to 6 elements:\n    1) <div role=\"option\" aria-selected=\"true\" id=\"cmdk-create-note\" class=\"flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px] search-result-selected border-accent\">…</div> aka getByRole('option', { name: 'New Note named \"Keyboard' })\n    2) <div role=\"option\" aria-selected=\"false\" id=\"cmdk-create-chapter\" class=\"flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px] search-result border-transparent\">…</div> aka getByRole('option', { name: 'New Chapter named \"Keyboard' })\n    3) <div role=\"option\" id=\"cmdk-create-npc\" aria-selected=\"false\" class=\"flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px] search-result border-transparent\">…</div> aka getByRole('option', { name: 'New NPC named \"Keyboard' })\n    4) <div role=\"option\" aria-selected=\"false\" id=\"cmdk-create-location\" class=\"flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px] search-result border-transparent\">…</div> aka getByRole('option', { name: 'New Location named \"Keyboard' })\n    5) <div role=\"option\" aria-selected=\"false\" id=\"cmdk-create-rumor\" class=\"flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px] search-result border-transparent\">…</div> aka getByRole('option', { name: 'New Rumor named \"Keyboard' })\n    6) <div role=\"option\" aria-selected=\"false\" id=\"cmdk-create-quest\" class=\"flex items-center gap-3 px-4 py-2.5 cursor-pointer border-l-[3px] search-result border-transparent\">…</div> aka getByRole('option', { name: 'New Quest named \"Keyboard' })\n\nCall log:\n\u001b[2m  - waiting for getByRole('option').filter({ hasText: 'Keyboard Session' }) to be visible\u001b[22m\n\n    at /tmp/pass5-keyboard/followup.cjs:26:201\n    at async step (/tmp/pass5-keyboard/followup.cjs:12:77)\n    at async exports.run (/tmp/pass5-keyboard/followup.cjs:23:2)\n    at async main (/tmp/pass5-runtime/run.cjs:31:15)",
+      "focus": {
+        "tag": "INPUT",
+        "role": "combobox",
+        "name": "",
+        "value": "Keyboard Session"
+      },
+      "url": "http://127.0.0.1:3001/",
+      "body": "D&D Campaign Companion\n\nReview keyboard-followup\n\nHome\n\nStory\n\nQuests\n\nRumors\n\nNPCs\n\nLocations\n\nNotes\n\nSearch\n\nCtrl K\nB\n\nBrowser Reviewer\n\nSYNTHETIC REVIEW GROUP\n\nReview keyboard-followup\n\nSynthetic fourth-pass data only\n\nStarted 10/3/2026\n\nChapter 1\n\nCampaign Stats\n1\n\nCHAPTERS\n\n1\n\nNPCS\n\n1\n\nLOCATIONS\n\n0\n\nRUMORS\n\n0\n\nof 1 quest complete\n\n1 active\n\nSince you last played\nAll\nStory\nQuests\nNPCs\nLocations\nRumors\nK\nKeyboard Opening Chapter\n\nStory · Browser Reviewer · 21 hours ago\n\nRead\n\nK\nKeyboard Crossing\n\nQuest · Browser Reviewer · 21 hours ago\n\nOpen\n\nK\nKeyboard Ferryman\n\nNPC · Browser Reviewer · 21 hours ago\n\nOpen\n\nOpen quests\n\nKeyboard Crossing\n\nNo rumors yet\n\nTavern gossip is the cheapest way to seed a session. Add the first one.\n\nAdd a rumor\nSynthetic Review Group\n\n1 chapter\n\n© 2026 D&D Campaign Companion\n\nPrivacy Policy\nContact Us\n\n0 results in Review keyboard-followup\n\nesc\n\nNo results in Review keyboard-followup\n\nNew Note named \"Keyboard Session\"\n\n↵ open\n\nNew Chapter named \"Keyboard Session\"\n\nNew NPC named \"Keyboard Session\"\n\nNew Location named \"Keyboard Session\"\n\nNew Rumor named \"Keyboard Session\"\n\nNew Quest named \"Keyboard Session\"\n\n↑↓ move · ↵ open · tab filter by type\n\nSearching Review keyboard-followup only"
+    }
+  },
+  {
+    "name": "runtime-boundaries",
+    "value": {
+      "blockedRemoteRequests": [
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        }
+      ],
+      "pageErrors": []
+    }
+  }
+]

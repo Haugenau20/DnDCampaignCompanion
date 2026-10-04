@@ -1,0 +1,125 @@
+{
+  "sourceBaseline": "4ebd53362c34840871745386b99f7905de75c26a",
+  "applicationBaseline": "64fe19512b1d3bd14427fad8996403a742fbe8a9",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "f09b203fd31ca49956d9ad2c83107aec244ff92458aa0fae4b97a42dbe35752f"
+    },
+    {
+      "path": "TODO.md",
+      "sha256": "a67093f15f05f68b719b9fda61b3169c76ac8a4240606e6438503ec54e21a92b"
+    },
+    {
+      "path": "scripts/start-dev.ps1",
+      "sha256": "5c490f95158ceeeedc5523ae0c2dd9742053c268ab5bf6f59918ba2ff3690684"
+    },
+    {
+      "path": "scripts/manage-dev-data.ps1",
+      "sha256": "0b637ae7d43f5efca086681a583ab7d162363a1b3e6c4087e55d98f8a6e63ca5"
+    },
+    {
+      "path": "firebase/firebase.json",
+      "sha256": "216064e618be20844430870a5522854c4d4b6599a738d1ae5a583b985a2f9a7d"
+    },
+    {
+      "path": "firebase/firebase.emulators.json",
+      "sha256": "ee06481a2fc4cdf62d8ab250ed0afa9c65922027e4b9805f7e2e7d648324f6e8"
+    },
+    {
+      "path": "firebase/.firebaserc",
+      "sha256": "e68b8515d42cc67f7dff53d26202984be356740e16f98b06141fe61e627fa0c8"
+    },
+    {
+      "path": "firebase/firestore.indexes.json",
+      "sha256": "3b97698cdb86d9c038c5403f4f3cad7a53ef2d6bfcb72f960cdb614c837be3f9"
+    },
+    {
+      "path": "firebase/firestore.rules",
+      "sha256": "bd37b14e2e59b06ce03936d54d4f9bd9cb184d194620c9301559e2d5050a49d8"
+    },
+    {
+      "path": "firebase/firestore.rules.prod",
+      "sha256": "171dca1faf3f9d84d9e19cdd69222d167a604f4aff5be2d5571ecd883e3f3da3"
+    },
+    {
+      "path": "firebase/storage.rules",
+      "sha256": "b1998501fe45dcb0537012fc433da49d07626bfda887d2b384fba19f538eb21f"
+    },
+    {
+      "path": "firebase/storage.rules.prod",
+      "sha256": "0e394ffa385047b9cf00e8fdb2b65f5f72c4c569cd48926081c749cae73c13a2"
+    },
+    {
+      "path": "firebase/package.json",
+      "sha256": "7e3f17eb3465e20ae28400a00aec8bb055291161e4a03e05d6b8268eea033b96"
+    },
+    {
+      "path": "firebase/functions/package.json",
+      "sha256": "0444ef68ad9130a3a7346d7821a4ed98a9a8d4834b5b2ce775599d8d92abddbe"
+    },
+    {
+      "path": "firebase/functions/src/index.ts",
+      "sha256": "479f367cc95a7c3a58f8f117790b15c684902b7bca9a05da2704d46f8efe204a"
+    },
+    {
+      "path": ".github/workflows/firebase-hosting-merge.yml",
+      "sha256": "2104be5eddb589a9a192e9e60ed6c0723cad578ab9e2c52620b673a0056ffdaf"
+    },
+    {
+      "path": ".github/workflows/firebase-hosting-pull-request.yml",
+      "sha256": "a58fe38e0b60a5e9c7d8d2ff5a181632d6df8dbac88aad222f2225fe9e91c9e2"
+    },
+    {
+      "path": ".github/workflows/firebase-hosting-pull-request-cleanup.yml",
+      "sha256": "9c577c77e8d40a36ea03a939e8eea2ce35b51aee6f34776fe838d165bdd33d60"
+    },
+    {
+      "path": ".github/workflows/test.yml",
+      "sha256": "5263aa35ba7f54f6295f9ac118234a4f441f4e99b95a4efe1c262c656a1eba93"
+    },
+    {
+      "path": "docker/Dockerfile.frontend.prod",
+      "sha256": "f4013f7ec51e549873621014859d3aa05c85da26813a45d06114e18bf46a0f00"
+    },
+    {
+      "path": "src/core/services/firebase/config/firebaseConfig.ts",
+      "sha256": "bc77fe54347f93e52afe653213581f03551fd858c8f3f6f109796464d67c2f86"
+    },
+    {
+      "path": "src/core/services/firebase/core/BaseFirebaseService.ts",
+      "sha256": "873209d684acd27947a58cef2ceda984606bf2725d6ac579f36ad0371fa693cd"
+    },
+    {
+      "path": "src/core/types/storedImage.ts",
+      "sha256": "df9b751df99e0272d0336a7f4d7201d6b213aca90d7b967fcc57e1e910e88959"
+    }
+  ],
+  "configAgreement": {
+    "functions": true,
+    "firestoreIndexes": true,
+    "commonEmulatorPorts": true,
+    "productionRulesKeysPresent": false,
+    "developmentFirestorePermissiveDefault": true,
+    "developmentStorageRules": "storage.rules"
+  },
+  "indexDefinitions": 20,
+  "fieldOverrides": 2,
+  "functionNodeEngine": "22",
+  "pinnedFirebaseCli": "15.22.4",
+  "network": {
+    "type": "restricted",
+    "publicHostingAllowed": false,
+    "vpnConfigured": false,
+    "tcpDomainGrants": 0,
+    "tcpIpGrants": 0
+  },
+  "availableShells": {
+    "windowsPowerShell": false,
+    "powerShellCore": false
+  },
+  "deployedInspection": {
+    "attempted": false,
+    "cause": "No configured cloud identities/credentials; target Hosting host outside enforced allowlist. No proxy bypass or login attempted."
+  }
+}

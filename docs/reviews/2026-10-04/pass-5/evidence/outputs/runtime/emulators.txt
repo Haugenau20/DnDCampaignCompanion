@@ -1,0 +1,163 @@
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+i  emulators: Starting emulators: auth, functions, firestore, storage
+i  emulators: Detected demo project ID "demo-review-pass5", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+(node:37223) MetadataLookupWarning: received unexpected error = Request failed with status code 403 code = UNKNOWN
+(Use `node --trace-warnings ...` to show where the warning was created)
+MetadataLookupWarning: received unexpected error = Request failed with status code 403 code = UNKNOWN
+    at Object.isAvailable (/workspace/DnDCampaignCompanion/firebase/node_modules/gcp-metadata/build/src/index.js:356:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async GoogleAuth._checkIsGCE (/workspace/DnDCampaignCompanion/firebase/node_modules/google-auth-library/build/src/auth/googleauth.js:300:51)
+    at async GoogleAuth.getApplicationDefaultAsync (/workspace/DnDCampaignCompanion/firebase/node_modules/google-auth-library/build/src/auth/googleauth.js:283:13)
+    at async hasDefaultCredentials (/workspace/DnDCampaignCompanion/firebase/node_modules/firebase-tools/lib/defaultCredentials.js:84:9)
+    at async getCredentialsEnvironment (/workspace/DnDCampaignCompanion/firebase/node_modules/firebase-tools/lib/emulator/env.js:49:9)
+    at async FunctionsEmulator.start (/workspace/DnDCampaignCompanion/firebase/node_modules/firebase-tools/lib/emulator/functionsEmulator.js:251:31)
+    at async EmulatorRegistry.start (/workspace/DnDCampaignCompanion/firebase/node_modules/firebase-tools/lib/emulator/registry.js:19:9)
+    at async Object.startAll (/workspace/DnDCampaignCompanion/firebase/node_modules/firebase-tools/lib/emulator/controller.js:405:9)
+    at async /workspace/DnDCampaignCompanion/firebase/node_modules/firebase-tools/lib/commands/emulators-start.js:34:43
+⚠  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file.
+⚠  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  functions: Watching "/tmp/pass5-runtime/functions" for Cloud Functions...
+✔  functions: Using node@22 from host.
+Serving at port 8017
+
+✔  functions: Loaded functions definitions from source: extractEntities, getUsageStatus, sendContactEmail, deleteUser, removeUserFromGroup, deleteCampaign, sweepOrphanedImagesDaily, createGroup, redeemInvitation, setMemberRole, gateAccountCreation, reserveSignUp, approveDeviceSignIn, claimDeviceSignIn, lookUpDeviceSignIn, startDeviceSignIn.
+✔  functions[europe-west1-extractEntities]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/extractEntities).
+✔  functions[europe-west1-getUsageStatus]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/getUsageStatus).
+✔  functions[europe-west1-sendContactEmail]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/sendContactEmail).
+✔  functions[europe-west1-deleteUser]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/deleteUser).
+✔  functions[europe-west1-removeUserFromGroup]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/removeUserFromGroup).
+✔  functions[europe-west1-deleteCampaign]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/deleteCampaign).
+i  functions[europe-west1-sweepOrphanedImagesDaily]: function ignored because the pubsub emulator does not exist or is not running.
+✔  functions[europe-west1-createGroup]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/createGroup).
+✔  functions[europe-west1-redeemInvitation]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/redeemInvitation).
+✔  functions[europe-west1-setMemberRole]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/setMemberRole).
+✔  functions[europe-west1-gateAccountCreation]: providers/cloud.auth/eventTypes/user.beforeCreate function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/gateAccountCreation).
+✔  functions[europe-west1-reserveSignUp]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/reserveSignUp).
+✔  functions[europe-west1-approveDeviceSignIn]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/approveDeviceSignIn).
+✔  functions[europe-west1-claimDeviceSignIn]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/claimDeviceSignIn).
+✔  functions[europe-west1-lookUpDeviceSignIn]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/lookUpDeviceSignIn).
+✔  functions[europe-west1-startDeviceSignIn]: http function initialized (http://127.0.0.1:5001/demo-review-pass5/europe-west1/startDeviceSignIn).
+
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┬─────────────────────────────────┐
+│ Emulator       │ Host:Port      │ View in Emulator UI             │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Authentication │ 127.0.0.1:9099 │ http://127.0.0.1:4000/auth      │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Functions      │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Firestore      │ 127.0.0.1:8080 │ http://127.0.0.1:4000/firestore │
+├────────────────┼────────────────┼─────────────────────────────────┤
+│ Storage        │ 127.0.0.1:9199 │ http://127.0.0.1:4000/storage   │
+└────────────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500, 9150
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 201.192049ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 19.607605ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 22.006428ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 192.816606ms
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 12.840784ms
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 19.195146ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 15.866203ms
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 17.647648ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 13.525747ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 13.235828ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 13.365024ms
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 12.899341ms
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 8.365498ms
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 13.407377ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 18.423803ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 8.440647ms
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 16.191103ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 17.328542ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-startDeviceSignIn"
+>  {"verifications":{"app":"MISSING","auth":"MISSING"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-startDeviceSignIn" in 12.638678ms
+⚠  canHandleCodeInApp is unsupported in Auth Emulator. All OOB operations will complete via web.
+i  Synthetic sign-in link omitted from archived output.
+i  functions: Beginning execution of "europe-west1-getUsageStatus"
+>  {"verifications":{"app":"MISSING","auth":"VALID"},"logging.googleapis.com/labels":{"firebase-log-type":"callable-request-verification"},"severity":"DEBUG","message":"Callable request verification passed"}
+i  functions: Finished "europe-west1-getUsageStatus" in 13.287287ms
+i  emulators: Received export request. Exporting data to /tmp/pass5-restore/export-fresh-20261004.
+✔  emulators: Export complete.
+
+i  emulators: Received SIGINT (Ctrl-C) for the first time. Starting a clean shutdown.
+i  emulators: Please wait for a clean shutdown or send the SIGINT (Ctrl-C) signal again to stop right now.
+i  emulators: Shutting down emulators.
+i  ui: Stopping Emulator UI
+i  functions: Stopping Functions Emulator
+i  firestore: Stopping Firestore Emulator
+i  auth: Stopping Authentication Emulator
+i  storage: Stopping Storage Emulator
+i  eventarc: Stopping Eventarc Emulator
+i  tasks: Stopping Cloud Tasks Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

@@ -1,0 +1,16 @@
+{
+  "markdownDocuments": 11,
+  "localLinks": 110,
+  "markdownAnchors": 7,
+  "sourceLineReferences": 26,
+  "cjsSyntaxChecks": 12,
+  "jsonFilesParsed": 16,
+  "retainedExecutedInputsMatched": 11,
+  "inputHashesVerified": 13,
+  "replayConfigMatches": true,
+  "sourceBaselineMatches": true,
+  "errors": [],
+  "stagedFiles": 63,
+  "documentationOnly": true,
+  "whitespaceCheck": "passed"
+}

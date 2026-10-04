@@ -1,0 +1,108 @@
+[
+  {
+    "name": "local-app-signed-in",
+    "value": {
+      "url": "http://127.0.0.1:3001/",
+      "project": "demo-review-pass5",
+      "campaignId": "review-keyboard-search-fixed"
+    }
+  },
+  {
+    "name": "search-keyboard-open-select-destination-final",
+    "value": {
+      "name": "search-keyboard-open-select-destination-final",
+      "status": "observed",
+      "detail": {
+        "reissuedQuery": false,
+        "entry": {
+          "tag": "INPUT",
+          "role": "combobox",
+          "name": "",
+          "value": ""
+        },
+        "escape": {
+          "tag": "BUTTON",
+          "role": null,
+          "name": "Search",
+          "value": ""
+        },
+        "shortcutEntry": {
+          "tag": "INPUT",
+          "role": "combobox",
+          "name": "",
+          "value": ""
+        },
+        "selected": "cmdk-option-note-kb-note",
+        "destination": {
+          "tag": "BODY",
+          "role": null,
+          "name": "You need to enable JavaScript to run this app.D&D Campaign CompanionD&D CompanionReview keyboard-search-fixedHomeStoryQuestsRumorsNPCsLocationsNotesMoreSearchCt"
+        },
+        "firstTab": {
+          "tag": "A",
+          "role": null,
+          "name": "D&D Campaign CompanionD&D Companion"
+        },
+        "live": [],
+        "title": "Keyboard Session"
+      },
+      "url": "http://127.0.0.1:3001/notes/kb-note"
+    }
+  },
+  {
+    "name": "runtime-boundaries",
+    "value": {
+      "blockedRemoteRequests": [
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        }
+      ],
+      "pageErrors": []
+    }
+  }
+]

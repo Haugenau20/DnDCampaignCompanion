@@ -1,0 +1,20 @@
+'use strict';
+// Replay preparation aid assembled after execution; it starts no service.
+const fs=require('node:fs');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+const root='/workspace/DnDCampaignCompanion',staging='/tmp/pass5-runtime';
+assert(fs.existsSync(path.join(root,'firebase/functions/lib/index.js')),'Build Functions first');
+assert(fs.existsSync(path.join(root,'firebase/functions/node_modules')),'Install Functions dependencies first');
+fs.mkdirSync(path.join(staging,'functions'),{recursive:true});
+fs.cpSync(path.join(root,'firebase/functions/lib'),path.join(staging,'functions/lib'),{recursive:true});
+fs.copyFileSync(path.join(root,'firebase/functions/package.json'),path.join(staging,'functions/package.json'));
+const link=path.join(staging,'functions/node_modules');
+if(!fs.existsSync(link))fs.symlinkSync(path.join(root,'firebase/functions/node_modules'),link,'dir');
+const config=JSON.parse(fs.readFileSync(path.join(root,'firebase/firebase.emulators.json'),'utf8'));
+config.functions.source='functions';
+config.firestore.indexes=path.join(root,'firebase/firestore.indexes.json');
+config.storage.rules=path.join(root,'firebase/storage.rules');
+for(const emulator of Object.values(config.emulators))emulator.host='127.0.0.1';
+fs.writeFileSync(path.join(staging,'firebase.emulators.json'),JSON.stringify(config,null,2)+'\n');
+console.log(JSON.stringify({project:'demo-review-pass5',staging,startsServices:false,copied:['lib','package.json']}));

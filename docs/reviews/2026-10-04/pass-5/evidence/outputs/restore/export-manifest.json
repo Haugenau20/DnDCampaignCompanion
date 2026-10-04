@@ -1,0 +1,63 @@
+{
+  "exportDir": "/tmp/pass5-restore/export-fresh-20261004",
+  "metadata": {
+    "version": "15.22.4",
+    "firestore": {
+      "version": "1.21.0",
+      "path": "firestore_export",
+      "metadata_file": "firestore_export/firestore_export.overall_export_metadata"
+    },
+    "storage": {
+      "version": "15.22.4",
+      "path": "storage_export"
+    }
+  },
+  "files": [
+    {
+      "path": "firebase-export-metadata.json",
+      "bytes": 261,
+      "sha256": "7f8bacab8f5e0d733cbb25328228bd0037b5d23a4ba85cf1ba576fa06b8364c3"
+    },
+    {
+      "path": "firestore_export/all_namespaces/all_kinds/all_namespaces_all_kinds.export_metadata",
+      "bytes": 52,
+      "sha256": "46cf4b1d9f5cd8008c74116bc082975288e46d0af2cbd2eb3b1dc9475c7c95e4"
+    },
+    {
+      "path": "firestore_export/all_namespaces/all_kinds/output-0",
+      "bytes": 9358394,
+      "sha256": "5bd35543d7bd755bd36bd219ab5ab36f2ae5cc8599f1665c5e79d8e3161fa86b"
+    },
+    {
+      "path": "firestore_export/firestore_export.overall_export_metadata",
+      "bytes": 98,
+      "sha256": "3b0e981d61b6ca33e6f287d74bfd292900f60f5b2e44004f783b0e2c5fb6b3e6"
+    },
+    {
+      "path": "storage_export/blobs/5c2c9591-947d-40f4-9331-6bf2ffefaf63",
+      "bytes": 68,
+      "sha256": "5e3d382db4dd83d59aa5742793ad6b7903409e865c83bcbc54835049f043bc15"
+    },
+    {
+      "path": "storage_export/blobs/6dfbbca4-c8f1-4e38-9b1f-b6e3ad1c04c8",
+      "bytes": 550,
+      "sha256": "04e940eb8fe4bb33757b58b8a80d7f6df50f278ce4d8bf8a851fe53a4d33619f"
+    },
+    {
+      "path": "storage_export/buckets.json",
+      "bytes": 78,
+      "sha256": "61cebfcf08a83074b9d0b69c5115704dab025e1db8854f2761166b01ef957e3a"
+    },
+    {
+      "path": "storage_export/metadata/5c2c9591-947d-40f4-9331-6bf2ffefaf63.json",
+      "bytes": 667,
+      "sha256": "5c8cb16fa4c89d637c1155fb2f820ce784de642e18b0b4418ce5790b4d0a3f51"
+    },
+    {
+      "path": "storage_export/metadata/6dfbbca4-c8f1-4e38-9b1f-b6e3ad1c04c8.json",
+      "bytes": 684,
+      "sha256": "d0487ef872451e2314dad77d763d48be1b0434ec8b9661925d3b6aba6799ac57"
+    }
+  ],
+  "note": "Hashes only; fresh synthetic Firestore/Storage export stays outside the repository."
+}

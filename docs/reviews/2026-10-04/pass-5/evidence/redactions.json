@@ -1,0 +1,21 @@
+{
+  "scope": "Saved output only; synthetic fixture constants remain in executable inputs",
+  "files": {
+    "outputs/runtime/emulators.txt": {
+      "syntheticSignInLines": 12,
+      "downloadTokenValues": 0
+    },
+    "outputs/writes/main-observations.json": {
+      "syntheticSignInLines": 0,
+      "downloadTokenValues": 1
+    },
+    "outputs/writes/main-results.txt": {
+      "syntheticSignInLines": 0,
+      "downloadTokenValues": 1
+    },
+    "outputs/restore/import-results.txt": {
+      "syntheticSignInLines": 1,
+      "downloadTokenValues": 0
+    }
+  }
+}

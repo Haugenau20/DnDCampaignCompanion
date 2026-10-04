@@ -1,0 +1,42 @@
+{
+  "ids": {
+    "npc": "legacy4-archivist",
+    "location": "legacy4-old-harbor",
+    "quest": "legacy4-lost-logbook",
+    "rumor": "legacy4-harbor-whisper",
+    "note": "note-94001",
+    "chapter": "legacy4-chapter",
+    "timestampChapter": "legacy4-timestamp-chapter"
+  },
+  "results": [
+    {
+      "name": "chapter-without-summary-or-modification",
+      "status": "passed",
+      "evidence": {
+        "before": {
+          "createdBy": "review-user",
+          "createdByUsername": "Legacy recorder",
+          "dateAdded": "2025-05-31T19:27:30.387Z",
+          "title": "Legacy Shore Account",
+          "content": "# An old account\n\nThe party followed the shore to Legacy Old Harbor. The original account remains legible.\n\nThe Legacy Archivist asked them to find the lost logbook.",
+          "order": 1
+        },
+        "after": {
+          "createdBy": "review-user",
+          "createdByUsername": "Legacy recorder",
+          "dateAdded": "2025-05-31T19:27:30.387Z",
+          "title": "Legacy Shore Account",
+          "order": 1,
+          "modifiedByCharacterName": null,
+          "summary": "# An old account The party followed the shore to Legacy Old Harbor. The original account remains legible. The Legacy Archivist asked them to find the lost logbook. The old account was supplemented.",
+          "modifiedByUsername": "Browser Reviewer",
+          "dateModified": "2026-10-04T06:34:11.246Z",
+          "modifiedBy": "review-user",
+          "modifiedByCharacterId": null,
+          "content": "# An old account\n\nThe party followed the shore to Legacy Old Harbor. The original account remains legible.\n\nThe Legacy Archivist asked them to find the lost logbook.\n\nThe old account was supplemented."
+        }
+      }
+    }
+  ],
+  "pageErrors": []
+}
