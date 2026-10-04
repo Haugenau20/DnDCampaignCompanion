@@ -190,11 +190,12 @@ describe('ChapterForm', () => {
       expect(mockNavigateToPage).toHaveBeenCalledWith('/story/chapters/ch-42');
     });
 
-    test('clicking Cancel calls navigateToPage with undefined chapter path in create mode', () => {
+    test('clicking Cancel in create mode returns to the chapter index (T095)', () => {
+      // There is no chapter to go back to. `/story/chapters/undefined` is what
+      // this used to build, and the reader resolves it to the first chapter.
       render(<ChapterForm mode="create" />);
       fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
-      // chapter is undefined so chapter?.id is undefined → path is /story/chapters/undefined
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/story/chapters/undefined');
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/story/chapters');
     });
   });
 

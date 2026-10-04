@@ -35,10 +35,8 @@ adjusted for the images focus above.
 | medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
-| medium | T092 | App renders nothing when browser storage is blocked | S | open | Whole app down for those browsers |
 | medium | T093 | "Create & add another" from the attach tray doesn't attach | S | open | Says success, leaves the record unlinked |
 | medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
-| medium | T098 | Chapters with identical text share reading progress | S | open | Completion never recorded for the second |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -52,9 +50,6 @@ adjusted for the images focus above.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| low | T095 | Cancelling a new chapter opens the first chapter | S | open | Confusing, nothing lost |
-| low | T096 | Note dates show the previous day west of UTC | S | open | Display only; stored value correct |
-| low | T097 | "New NPC named …" in the palette drops the name | S | open | Retype the name |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
 | low | T101 | Large campaigns get slow | M | open | Measured at 1,000s of records; not felt at current sizes |
 | low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
@@ -336,17 +331,6 @@ Eight findings, each reproduced in Chromium (11, 19):
 - **Findings**: 02. That review was stopped and will not be finished.
 - **Source**: code review, 2026-10-04
 
-### T092 — The app renders nothing when browser storage is blocked
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`ThemeProvider` reads `localStorage` unguarded
-(`src/core/themes/ThemeContext.tsx:84`), so a browser that throws on storage
-access (blocked site data, some private modes) fails at the root. A failing
-preference write also skips applying the theme.
-
-- **Findings**: ARCH-001 (10). **Catch**: none found.
-- **Source**: code review, 2026-10-04
-
 ### T093 — "Create & add another" from the attach tray creates an unlinked record
 **Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
 
@@ -368,47 +352,6 @@ pass 4.
 
 - **Catch**: the editor needs to be told which fields are required; the caller
   decides. **Findings**: FUNC-003 (05).
-- **Source**: code review, 2026-10-04
-
-### T095 — Cancelling a new chapter opens the first chapter
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-Cancel in `ChapterForm.tsx:154` goes to `/story/chapters/${chapter?.id}`, which
-is `undefined` in create mode, and the reader resolves that to the first
-chapter. Nothing is written.
-
-- **Findings**: BROWSER-002 (14). **Catch**: none found.
-- **Source**: code review, 2026-10-04
-
-### T096 — Note dates show the previous day west of UTC
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`formatNoteDate` (`src/shared/utils/dateFormatter.ts:122-128`) parses
-`YYYY-MM-DD` with `new Date`, which is UTC midnight, then formats it in local
-time (`formatCalendarDate`, `:144`). A 2025-05-31 note reads 30/05 in Los
-Angeles, edit prompt included. The stored value stays right.
-
-- **Findings**: LEGACY-001 (16). **Catch**: keep full-ISO legacy values working.
-- **Source**: code review, 2026-10-04
-
-### T097 — "New NPC named …" in the palette drops the name
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`CommandPalette.tsx:376` labels the action with the typed query, but quick add
-opens with an empty name.
-
-- **Findings**: FUNC-004 (05). **Catch**: none found.
-- **Source**: code review, 2026-10-04
-
-### T098 — Two chapters with identical text share reading progress
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`ChapterReader` resets its per-chapter state when `content` changes
-(`ChapterReader.tsx:303`), not when the chapter does, so moving between two
-equal-text (typically short) chapters skips the reset, and the second never
-reports completion.
-
-- **Findings**: REACT-005 (06). **Catch**: keep the scroll-restore behaviour.
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade

@@ -12,7 +12,8 @@ import { useRumors } from '../context/RumorContext';
  * record's own address; a rumour has neither, so the honest equivalent is to
  * write the record and land on the row that holds it.
  *
- * Nothing is filled in. A rumour created this way has no title, no content
+ * Nothing is filled in beyond a title the caller passes -- the command
+ * palette's "New Rumor named …" does. A rumour created bare has no title, no content
  * and no source, so the list shows it as "Untitled rumour" and the row opens
  * with the caret waiting -- there is no placeholder title like "New rumour",
  * because a stored placeholder is indistinguishable from one somebody typed,
@@ -28,16 +29,16 @@ import { useRumors } from '../context/RumorContext';
  * highlight for a rumour that was never written would be worse than doing
  * nothing.
  */
-export function useCreateRumor(): { createAndOpen: () => Promise<void> } {
+export function useCreateRumor(): { createAndOpen: (title?: string) => Promise<void> } {
   // Write-only, and mounted on every route through the header's create
   // actions: it must not hold the rumour listener open (T032, PERF-03).
   const { addRumor } = useRumors({ subscribe: false });
   const { navigateToPage, createPath } = useNavigation();
 
-  const createAndOpen = useCallback(async () => {
+  const createAndOpen = useCallback(async (title: string = '') => {
     try {
       const id = await addRumor({
-        title: '',
+        title,
         content: '',
         status: 'unconfirmed',
         // Absent, not 'other': nobody has been asked where this came from.

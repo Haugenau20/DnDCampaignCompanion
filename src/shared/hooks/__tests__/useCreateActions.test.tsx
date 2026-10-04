@@ -103,6 +103,31 @@ describe("useCreateActions", () => {
     expect(mockNavigateToPage).not.toHaveBeenCalled();
   });
 
+  // T097: the palette offers "New NPC named …" and must deliver the name.
+  it("pre-fills quick add with a name, for the NPC, the location and the quest", () => {
+    const { result } = renderHook(() => useCreateActions());
+    (["npc", "location", "quest"] as const).forEach((id) => {
+      act(() => {
+        result.current.find((a) => a.id === id)!.run("Droop");
+      });
+      expect(mockOpenQuickAdd).toHaveBeenLastCalledWith(id, { initialName: "Droop" });
+    });
+  });
+
+  it("titles a new rumour with a name it is given", () => {
+    const { result } = renderHook(() => useCreateActions());
+    act(() => {
+      result.current.find((a) => a.id === "rumor")!.run("Dragon over Neverwinter");
+    });
+    expect(mockCreateAndOpenRumor).toHaveBeenCalledWith("Dragon over Neverwinter");
+  });
+
+  it("says which actions take a name: everything but the note and the chapter", () => {
+    const { result } = renderHook(() => useCreateActions());
+    const named = result.current.filter((a) => a.takesName).map((a) => a.id);
+    expect(named).toEqual(["npc", "location", "rumor", "quest"]);
+  });
+
   it("creates and opens a note rather than navigating, for the note action", async () => {
     const { result } = renderHook(() => useCreateActions());
     await act(async () => {

@@ -131,6 +131,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
     });
   }, [availableTypes]);
 
+  /** What a create command names its new record: the query, as typed. */
+  const createName = query.trim();
+
   const commit = useCallback(() => {
     const item = navigableItems[selectedIndex];
     if (!item) return;
@@ -139,10 +142,10 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
     } else {
       // Fire-and-forget, matching the floating action button: awaiting here
       // would defer the close by a microtask, a real user-visible difference.
-      void item.action.run();
+      void item.action.run(createName);
     }
     onClose();
-  }, [navigableItems, selectedIndex, navigateToResult, onClose]);
+  }, [navigableItems, selectedIndex, navigateToResult, onClose, createName]);
 
   // Reset the selection whenever the *navigable* list changes -- not just
   // when `results` changes. `navigableItems` is derived from `filteredGroups`,
@@ -362,7 +365,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
                     aria-selected={isSelected}
                     onMouseEnter={() => setSelectedIndex(index)}
                     onClick={() => {
-                      action.run();
+                      action.run(createName);
                       onClose();
                     }}
                     className={clsx(
@@ -373,7 +376,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose, trigge
                     <Plus className="w-4 h-4 flex-shrink-0 primary" />
                     <Icon className="w-4 h-4 flex-shrink-0 primary" />
                     <Typography variant="body-sm">
-                      {`New ${action.entityLabel} named "${query}"`}
+                      {action.takesName && createName
+                        ? `New ${action.entityLabel} named "${createName}"`
+                        : `New ${action.entityLabel}`}
                     </Typography>
                     {isSelected && (
                       <Typography variant="body-sm" color="secondary" className="flex-shrink-0 ml-auto">

@@ -207,6 +207,59 @@ describe('ThemeProvider — applyThemeToDOM error handling (line 56)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ThemeProvider — storage unavailable (T092)
+// ---------------------------------------------------------------------------
+
+describe('ThemeProvider — storage unavailable (T092)', () => {
+  test('renders with the default theme when getItem throws', () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        ...makeThrowingLocalStorage(),
+        getItem: jest.fn(() => {
+          throw new DOMException('The operation is insecure.', 'SecurityError');
+        }),
+      },
+      writable: true,
+    });
+
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    expect(result.current.theme.name).toBe(defaultTheme.name);
+    expect(document.documentElement.dataset.theme).toBe(defaultTheme.name);
+  });
+
+  test('renders with the default theme when touching localStorage at all throws', () => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    });
+
+    const { result } = renderHook(() => useTheme(), { wrapper });
+
+    expect(result.current.theme.name).toBe(defaultTheme.name);
+  });
+
+  test('a refused save still applies the newly chosen theme to the document', () => {
+    Object.defineProperty(window, 'localStorage', {
+      value: makeThrowingLocalStorage(),
+      writable: true,
+    });
+
+    const { result } = renderHook(() => useTheme(), { wrapper });
+    expect(document.documentElement.dataset.theme).toBe('light');
+
+    act(() => {
+      result.current.setTheme('dark');
+    });
+
+    expect(result.current.theme.name).toBe('dark');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.style.colorScheme).toBe(themes.dark.tokens.scheme);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // ThemeProvider — CSS variables applied to document root
 // ---------------------------------------------------------------------------
 

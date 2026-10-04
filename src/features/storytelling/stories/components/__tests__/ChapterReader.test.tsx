@@ -541,6 +541,59 @@ describe('ChapterReader', () => {
       expect(reportNew).not.toHaveBeenCalledWith(pageScrollPercent(-300, 5000, 500));
     });
 
+    // T098: identity is the chapter, not its text. Two chapters with the same
+    // body (a copied chapter, two one-line ones) used to share one effect
+    // lifetime, so the second inherited the first's state.
+    test('a second short chapter with the same text reports its own completion', () => {
+      fakePage({ proseHeight: 300, viewportHeight: 500 });
+      const reportFirst = jest.fn();
+      const reportSecond = jest.fn();
+      const { rerender } = render(
+        <ChapterReader chapterId="ch-1" content={makeParagraphs(2)} {...baseProps} onProgressChange={reportFirst} />
+      );
+      expect(reportFirst).toHaveBeenCalledWith(100, true);
+
+      rerender(
+        <ChapterReader chapterId="ch-2" content={makeParagraphs(2)} {...baseProps} onProgressChange={reportSecond} />
+      );
+
+      expect(reportSecond).toHaveBeenCalledWith(100, true);
+    });
+
+    test('a second long chapter with the same text restores its own position', () => {
+      const page = fakePage({ proseHeight: 2000, viewportHeight: 500, proseTop: 300 });
+      const { rerender } = render(
+        <ChapterReader chapterId="ch-1" content={makeParagraphs(5)} {...baseProps} position={0} />
+      );
+      expect(page.scrollY).toBe(0);
+
+      rerender(
+        <ChapterReader chapterId="ch-2" content={makeParagraphs(5)} {...baseProps} position={40} />
+      );
+
+      // 40% of a 1500px range, below a prose block that starts 300px down.
+      expect(page.scrollY).toBe(900);
+    });
+
+    test("on a change to a same-text chapter, the old chapter's last position goes to the old chapter's handler", () => {
+      const page = fakePage({ proseHeight: 5000, viewportHeight: 500 });
+      const reportOld = jest.fn();
+      const reportNew = jest.fn();
+      const { rerender } = render(
+        <ChapterReader chapterId="ch-1" content={makeParagraphs(5)} {...baseProps} onProgressChange={reportOld} />
+      );
+
+      page.scrollTo(100); // leading-edge emit
+      page.scrollTo(300); // pending trailing emission
+
+      rerender(
+        <ChapterReader chapterId="ch-2" content={makeParagraphs(5)} {...baseProps} onProgressChange={reportNew} />
+      );
+
+      expect(reportOld).toHaveBeenLastCalledWith(pageScrollPercent(-300, 5000, 500));
+      expect(reportNew).not.toHaveBeenCalledWith(pageScrollPercent(-300, 5000, 500));
+    });
+
     test('restores a saved position by scrolling the window', () => {
       const page = fakePage({ proseHeight: 2000, viewportHeight: 500, proseTop: 300 });
       render(<ChapterReader content={makeParagraphs(5)} {...baseProps} position={40} />);
