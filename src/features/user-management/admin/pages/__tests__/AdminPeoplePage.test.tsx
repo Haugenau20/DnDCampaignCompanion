@@ -22,8 +22,9 @@ const {
 
 // Shaped as Firestore actually returns them: the document id **is** the uid,
 // and no `userId` field exists on the document. Measured against the emulator,
-// not assumed -- `GroupService.getGroupUsers` maps `doc.id` to `id` and spreads
-// the rest, and none of the five group-user documents carries a `userId`.
+// not assumed -- `GroupService.getGroupUsers` spreads the data, then sets `id`
+// (and `userId`) to `doc.id`; none of the five group-user documents carries a
+// `userId` of its own.
 const MEMBERS: GroupMember[] = [
   { id: "u1", username: "Legolas", role: "admin", joinedAt: new Date("2025-05-31") },
   { id: "u2", username: "DungeonMaster", role: "Admin", joinedAt: new Date("2025-05-31") },
@@ -149,6 +150,50 @@ describe("AdminPeoplePage", () => {
       });
       await settle();
       expect(within(membersList()).getByText("You")).toBeInTheDocument();
+    });
+
+    // SEC-002 (T080). A member could set `userId` on their own profile to an
+    // innocent member's uid; removing the forger's row removed the innocent
+    // member instead, and the forger stayed. Only the document id names a
+    // member.
+    describe("a profile whose stored userId names someone else", () => {
+      const FORGED: GroupMember[] = [
+        { id: "u1", username: "Legolas", role: "admin" },
+        { id: "u3", username: "Aragorn", role: "member" },
+        { id: "u4", userId: "u3", username: "Gimli", role: "member" },
+      ];
+      const rowOf = (name: string) =>
+        within(membersList())
+          .getAllByRole("listitem")
+          .find((r) => r.textContent?.includes(name))!;
+
+      test("removing that row removes its own member, not the one it names", async () => {
+        setup({ members: FORGED });
+        await settle();
+        await userEvent.click(within(rowOf("Gimli")).getByRole("button", { name: "Remove" }));
+        const dialog = await screen.findByRole("dialog");
+        await userEvent.click(within(dialog).getByRole("button", { name: /delete/i }));
+        await settle();
+        expect(deleteUser).toHaveBeenCalledWith("u4");
+        expect(deleteUser).not.toHaveBeenCalledWith("u3");
+      });
+
+      test("a role change on that row targets its own member", async () => {
+        setup({ members: FORGED });
+        await settle();
+        await userEvent.click(within(rowOf("Gimli")).getByRole("button", { name: "Make admin" }));
+        const dialog = await screen.findByRole("dialog");
+        await userEvent.click(within(dialog).getByRole("button", { name: "Make admin" }));
+        await settle();
+        expect(setMemberRole).toHaveBeenCalledWith("u4", "admin");
+      });
+
+      test("naming you does not make that row yours", async () => {
+        setup({ members: [...FORGED, { id: "u5", userId: "u1", username: "Boromir", role: "member" }] });
+        await settle();
+        expect(within(rowOf("Boromir")).queryByText("You")).not.toBeInTheDocument();
+        expect(within(rowOf("Boromir")).getByRole("button", { name: "Remove" })).toBeInTheDocument();
+      });
     });
 
     // T034. Roles change through the `setMemberRole` Cloud Function, which

@@ -464,6 +464,20 @@ describe('GroupService', () => {
       expect(users).toHaveLength(1);
       expect(users[0].username).toBe('Admin');
     });
+
+    // SEC-002 (T080): stored `id` / `userId` fields are client-written; the
+    // document id is the uid, and must win over both.
+    test('names each member by document id, whatever the document stores', async () => {
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, { role: 'admin' })); // membership
+      mockGetDocs.mockResolvedValueOnce(
+        makeQuerySnapshot([
+          makeDocSnapshot(true, { id: 'uid-9', userId: 'uid-9', username: 'Forger', role: 'member' }, 'uid-2'),
+        ])
+      );
+      const users = await GroupService.getInstance().getGroupUsers('g1');
+      expect(users[0].id).toBe('uid-2');
+      expect(users[0].userId).toBe('uid-2');
+    });
   });
 
   // ─── updateGroup (T036) ──────────────────────────────────────────────────────

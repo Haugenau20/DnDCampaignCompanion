@@ -139,9 +139,13 @@ import { httpsCallable } from 'firebase/functions';
       return snapshot.docs.map(doc => {
         const data = doc.data();
         
+        // The document id is the uid, so it goes last: a stored `id` or
+        // `userId` is client-written, and one naming another member steered
+        // an admin's removal onto them (SEC-002, T080).
         return {
-          id: doc.id,
           ...data,
+          id: doc.id,
+          userId: doc.id,
           joinedAt: data.joinedAt?.toDate ? data.joinedAt.toDate() : data.joinedAt
         };
       });

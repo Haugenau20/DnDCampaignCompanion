@@ -52,7 +52,8 @@ export function useGroupSummaries(
       ])
         .then(([campaigns, users]) => {
           if (cancelled) return;
-          const me = users.find((u: any) => (u.userId ?? u.id) === userId);
+          // `id` is the document id, the uid; a stored `userId` is not (T080).
+          const me = users.find((u: any) => u.id === userId);
 
           setSummaries((previous) => ({
             ...previous,

@@ -182,10 +182,6 @@ they are pasted into the console, so every hole below is open there. What is
 left:
 
 - **Paste the rules** (maintainer): `firestore.rules.prod` into the console.
-- **Admin UI** (SEC-002): `memberId()` (`admin/types.ts:40-41`) prefers the
-  stored `userId`, and the member list spreads stored data over the document
-  id. Profiles written before the rules change can still carry a forged one,
-  so target members by document id only.
 - **Cleanup** (SEC-005): `removeUserFromGroup` / `deleteUser` delete the
   reservation named by the profile's `username` without checking its owner.
   Still reachable without a forged write: until the rules change, the profile
