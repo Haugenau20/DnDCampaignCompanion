@@ -23,6 +23,13 @@ import type { ChapterByline } from 'features/storytelling/chapters/utils/chapter
 const PROGRESS_THROTTLE_MS = 1500;
 
 export interface ChapterReaderProps {
+  /**
+   * Which chapter this is. A change of chapter resets the reader's
+   * per-chapter state and restores `position`. Without it the body stands in
+   * for identity, and two chapters with the same text are one chapter to the
+   * reader: the second never reports completion (T098).
+   */
+  chapterId?: string;
   /** Raw chapter body. May contain literal "\n" escape sequences as well as real newlines. */
   content: string;
   /** The chapter's own title, unnumbered: the eyebrow above it carries the number. */
@@ -70,6 +77,7 @@ export interface ChapterReaderProps {
  * `SagaPage`'s continuous saga view.
  */
 const ChapterReader: React.FC<ChapterReaderProps> = ({
+  chapterId,
   content,
   title,
   position,
@@ -97,8 +105,9 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
   const onProgressChangeRef = useRef(onProgressChange);
   onProgressChangeRef.current = onProgressChange;
 
-  // Per-chapter emission state. All of these are reset when `content` changes
-  // (see the layout effect below) so a new chapter starts with a clean slate.
+  // Per-chapter emission state. All of these are reset when the chapter or its
+  // `content` changes (see the layout effect below) so a new chapter starts
+  // with a clean slate.
   /** True once `onProgressChange(percent, true)` has fired for this chapter — guards against re-emitting completion on every subsequent scroll. */
   const hasEmittedCompletionRef = useRef(false);
   /** True for exactly one scroll event: the echo of the programmatic restore-scroll below. */
@@ -300,7 +309,7 @@ const ChapterReader: React.FC<ChapterReaderProps> = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restore only on mount/chapter change, not on every `position` update from the caller (which would otherwise fight the reader's own scrolling).
-  }, [content]);
+  }, [chapterId, content]);
 
   if (!content) {
     return (

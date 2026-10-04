@@ -205,6 +205,7 @@ const StoryPage: React.FC = () => {
         </div>
 
         <ChapterReader
+          chapterId={currentChapter?.id}
           content={currentChapter?.content || ''}
           title={currentChapter?.title ?? ''}
           position={restoredPosition.current}

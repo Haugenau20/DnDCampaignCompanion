@@ -37,7 +37,6 @@ adjusted for the images focus above.
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
 | medium | T093 | "Create & add another" from the attach tray doesn't attach | S | open | Says success, leaves the record unlinked |
 | medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
-| medium | T098 | Chapters with identical text share reading progress | S | open | Completion never recorded for the second |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -353,17 +352,6 @@ pass 4.
 
 - **Catch**: the editor needs to be told which fields are required; the caller
   decides. **Findings**: FUNC-003 (05).
-- **Source**: code review, 2026-10-04
-
-### T098 — Two chapters with identical text share reading progress
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`ChapterReader` resets its per-chapter state when `content` changes
-(`ChapterReader.tsx:303`), not when the chapter does, so moving between two
-equal-text (typically short) chapters skips the reset, and the second never
-reports completion.
-
-- **Findings**: REACT-005 (06). **Catch**: keep the scroll-restore behaviour.
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade

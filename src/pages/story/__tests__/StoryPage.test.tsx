@@ -92,6 +92,7 @@ jest.mock("features/storytelling", () => ({
     <div
       data-testid="chapter-reader"
       data-title={props.title}
+      data-chapter-id={props.chapterId ?? ""}
       data-position={String(props.position)}
       data-chapter-number={String(props.chapterNumber)}
       data-chapter-count={String(props.chapterCount)}
@@ -347,6 +348,17 @@ describe("StoryPage", () => {
       expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
         "data-title",
         "The Beginning"
+      );
+    });
+
+    // T098: the reader's per-chapter state follows this, not the chapter's
+    // text, so two chapters with the same body are still two chapters.
+    it("tells the reader which chapter it is showing", () => {
+      mockChapterId = "chapter-02";
+      renderPage();
+      expect(screen.getByTestId("chapter-reader")).toHaveAttribute(
+        "data-chapter-id",
+        "chapter-02"
       );
     });
 
