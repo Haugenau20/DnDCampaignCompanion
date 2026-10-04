@@ -1322,11 +1322,12 @@ describe('NoteContext Behavioral Tests', () => {
         capturedContext.retry();
       });
 
+      // The new listener's first snapshot arrives a tick after the retry.
       await waitFor(() => {
-        expect(capturedContext.error).toBeNull();
+        expect(capturedContext.isLoading).toBe(false);
       });
+      expect(capturedContext.error).toBeNull();
       expect(notesListener.subscribe.mock.calls.length).toBe(opened + 1);
-      expect(capturedContext.isLoading).toBe(false);
     });
 
     test('shows the loading state, not an empty list, while a retry waits for its snapshot', async () => {
