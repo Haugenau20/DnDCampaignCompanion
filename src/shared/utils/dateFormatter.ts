@@ -115,18 +115,36 @@ export const toNoteDate = (value: Date = new Date()): string =>
  * value, so a row showed `2025-05-31T19:27:30.387Z` while the NPC detail page
  * rendered the same value properly.
  *
+ * The two are read differently. A full timestamp is an instant, shown as the
+ * reader's local day. A `YYYY-MM-DD` is a calendar date and is shown as that
+ * day everywhere: `new Date('2025-05-31')` is UTC midnight, which west of UTC
+ * is still the 30th, so a note read 30/05 in Los Angeles (T096).
+ *
  * A value that cannot be parsed is returned untouched: a date the reader
  * cannot read is not a date, and showing the raw string is more honest than
  * inventing one.
  */
 export const formatNoteDate = (value: string): string => {
   if (!value) return '';
+  const calendarDate = CALENDAR_DATE.exec(value);
+  if (calendarDate) {
+    const [year, month, day] = calendarDate.slice(1).map(Number);
+    const local = new Date(year, month - 1, day);
+    // `Date` rolls an impossible day over (30 February is 2 March); refuse it.
+    if (local.getMonth() !== month - 1 || local.getDate() !== day) {
+      return value;
+    }
+    return formatCalendarDate(local);
+  }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
   return formatCalendarDate(parsed);
 };
+
+/** The stored shape `toNoteDate` writes, captured as year, month and day. */
+const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
  * One calendar date, in the one shape this product writes dates.
