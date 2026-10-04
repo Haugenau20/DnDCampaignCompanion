@@ -173,20 +173,16 @@ documents agreed with each other and none of them agreed with the product.
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
 ### T080 — Users can rewrite server-owned fields on their own profiles
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+**Type** bug · **Size** M · **Status** in progress · **Verified** 2026-10-04
 
 `firestore.rules.prod` now limits both profiles to the fields the client
-writes, and refuses raw deletes of group profiles. Production keeps the old
-rules (read back 2026-10-04: identical to the repo before the fix) until
-they are pasted into the console, so every hole below is open there. What is
-left:
+writes, and refuses raw deletes of group profiles; the admin UI and account
+cleanup no longer trust a profile's stored `userId` or `username`. Production
+keeps the old rules (read back 2026-10-04: identical to the repo before the
+fix) until they are pasted into the console, so all four findings stay open
+there until then. What is left:
 
 - **Paste the rules** (maintainer): `firestore.rules.prod` into the console.
-- **Cleanup** (SEC-005): `removeUserFromGroup` / `deleteUser` delete the
-  reservation named by the profile's `username` without checking its owner.
-  Still reachable without a forged write: until the rules change, the profile
-  editor renamed without reserving, so a profile's name may be one somebody
-  else has since reserved.
 - **Audit, once the rules are live**: profiles with `entityExtractionUsage`
   set to unlimited or with counters below the calls made; group profiles whose
   `userId`/`id` differs from the document id; and reservations that disagree

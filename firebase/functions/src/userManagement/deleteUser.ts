@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 import {LAST_ADMIN_MESSAGE, wouldStrandGroup} from "../shared/groupAdmins";
+import {releaseUsernames} from "../shared/usernameReservations";
 
 interface DeleteUserData {
   userId: string;
@@ -81,30 +82,11 @@ export const deleteUser = functions.onCall(
       // Create a batch for Firestore operations
       const batch = admin.firestore().batch();
       
-      // 1. Remove from all groups
+      // 1. Release the user's name reservations in every group -- found by
+      // owner, never by the profile's client-written `username` (SEC-005,
+      // T080).
       for (const groupId of groups) {
-        // Delete group user profile
-        const groupUserRef = admin
-          .firestore()
-          .collection("groups")
-          .doc(groupId)
-          .collection("users")
-          .doc(userIdToDelete);
-        
-        const groupUserDoc = await groupUserRef.get();
-        
-        // If user has a username in this group, delete the reservation
-        if (groupUserDoc.exists && groupUserDoc.data()?.username) {
-          const username = groupUserDoc.data()?.username;
-          const usernameRef = admin
-            .firestore()
-            .collection("groups")
-            .doc(groupId)
-            .collection("usernames")
-            .doc(username.toLowerCase());
-          
-          batch.delete(usernameRef);
-        }
+        await releaseUsernames(batch, groupId, userIdToDelete);
       }
 
       // 2. Delete global user profile
