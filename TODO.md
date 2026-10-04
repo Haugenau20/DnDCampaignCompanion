@@ -24,7 +24,7 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
-| high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
+| high | T084 | The sweep can delete an upload whose document write is pending | M | open | Images focus; the sweep can delete a valid upload |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
@@ -187,22 +187,23 @@ tabs.
   Plan first.
 - **Source**: code review, 2026-10-04
 
-### T084 — Image edge cases: offline uploads swept, the 2 MiB boundary, an unbounded sweep
+### T084 — The sweep can delete an upload whose document write is still pending
 **Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
 
-Three independent defects in the image lifecycle:
+A picture attached offline whose document write is still pending after 24 h
+is deleted by the daily sweep, which knows only object age and current
+references (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`,
+`referencedPaths` and the age guard). Reconnecting then writes a reference to
+a missing file. Needs a protocol for pending writes, not a longer grace
+period.
 
-- **Offline upload swept** (IMG-003, 04): a picture attached offline whose
-  document write is still pending after 24 h is deleted by the daily sweep,
-  which knows only object age and current references
-  (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts:50-68`).
-  Reconnecting then writes a reference to a missing file. Needs a protocol for
-  pending writes, not a longer grace period.
-- **Exactly 2 MiB** (IMG-004, TEST-006): `src/core/utils/prepare-image.ts:141`
-  refuses `> MAX_UPLOAD_BYTES`, `firebase/storage.rules.prod:81` requires
-  `< 2 MiB`, and each side's test checks only its own boundary. Small.
-- **Unbounded sweep** (PERF2-004, 07): every reference document is read and
-  every orphan delete launched at once.
+- **Findings**: IMG-003 (04).
+- **Related**: the sweep still reads every NPC, location, campaign and group
+  document daily to learn what is referenced (PERF2-004's remaining half,
+  07). Its listing and deletes are bounded now; the reads grow with all
+  content. A ledger of uploads awaiting their document would answer both:
+  the sweep would check candidates instead of everything, and could tell a
+  pending upload from an orphan.
 - **Source**: code review, 2026-10-04
 
 ### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
