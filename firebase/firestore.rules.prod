@@ -135,6 +135,25 @@
 // the frontend currently deployed, which still writes membership itself.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-04 -- T084, first half
+// ---------------------------------------------------------------------------
+// One addition, pinned by the "pending uploads" tests in
+// `functions/test/rules/firestore-rules-prod.test.ts`:
+//
+// 6. NEW -- `groups/{groupId}/pendingUploads/{uploadId}`. A member records an
+//    image upload before writing the file and deletes the entry once the
+//    document points at it, so the daily sweep can tell an upload whose
+//    document write is queued in an offline tab from an orphan (IMG-003).
+//    Create is for members, in their own name, at the server's time, naming
+//    a file in this group under the entry's own id; delete is owner-only.
+//
+// Deploy order does not matter for this one. Before it is pasted, the client
+// finds its entry refused and uploads as it always has; after, the sweep
+// spares pending uploads. The second half of T084 -- refusing an image path
+// with no live entry, so a write that arrives after the lease cannot point at
+// a deleted file -- is a later revision, and THAT one must follow the client.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // When you change the production rules in the console, update this file in the
 // same PR as whatever motivated the change. If you are relying on these rules
@@ -334,6 +353,25 @@ service cloud.firestore {
 
         // Only group admins or global admin can delete tokens
         allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+      }
+
+      // Uploads whose document write may still be on its way (T084). The
+      // client records one before it uploads and deletes it once the document
+      // that points at the file is written; the daily sweep spares the file
+      // while the entry is under 30 days old, then deletes both. The entry is
+      // named after the file and stamped with the server's time, because it
+      // is a lease: a client-chosen time could hold a file forever.
+      match /pendingUploads/{uploadId} {
+        allow create: if isGroupMember(groupId) &&
+                       request.resource.data.keys().hasOnly(['path', 'uid', 'createdAt']) &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.path is string &&
+                       request.resource.data.path.matches('groups/' + groupId + '/.+/' + uploadId);
+
+        // Only its owner removes it. Nobody reads or changes one: the sweep
+        // reads them with the Admin SDK.
+        allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
       }
 
       // Campaigns and all campaign content.

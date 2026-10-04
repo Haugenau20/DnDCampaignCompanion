@@ -24,7 +24,7 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
-| high | T084 | The sweep can delete an upload whose document write is pending | M | open | Images focus; the sweep can delete a valid upload |
+| high | T084 | A write that outlives its upload's lease points at a deleted file | M | blocked | Images focus; first half needs the 2026-10-04 rules pasted, then the enforcing half |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
@@ -181,23 +181,34 @@ tabs.
   Plan first.
 - **Source**: code review, 2026-10-04
 
-### T084 — The sweep can delete an upload whose document write is still pending
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+### T084 — A write that arrives after its upload's lease can still point at a deleted file
+**Type** bug · **Size** M · **Status** blocked · **Verified** 2026-10-04
 
-A picture attached offline whose document write is still pending after 24 h
-is deleted by the daily sweep, which knows only object age and current
-references (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`,
-`referencedPaths` and the age guard). Reconnecting then writes a reference to
-a missing file. Needs a protocol for pending writes, not a longer grace
-period.
+The first half is in: an upload records itself in
+`groups/{groupId}/pendingUploads/{file}` before the document write
+(`ImageStorageService.upload`), the hook clears it once the write lands, and
+the daily sweep spares a file whose entry is under 30 days old, then deletes
+entry and file (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`). The rule for
+the collection is revision 2026-10-04 of `firestore.rules.prod`.
 
-- **Findings**: IMG-003 (04).
+- **Blocked on**: the maintainer pasting that revision into the console.
+  Until then production refuses the entry and uploads go on unprotected,
+  exactly as before (the client treats the entry as best effort).
+- **Left**: a document write queued for longer than the lease still lands
+  and points at the file the sweep deleted (IMG-003's last case). Close it
+  in the rules: an NPC, location, campaign banner or group crest write that
+  changes the image path must find a live entry for it (`exists()` on
+  `pendingUploads/{last path segment}`), and the client must then treat the
+  entry as required. **Deploy order**: client first, then those rules --
+  rules first would refuse every upload from a client that writes no entry.
+  The sweep already deletes expired entries before it reads references, so
+  a refused late write is the only outcome left.
 - **Related**: the sweep still reads every NPC, location, campaign and group
   document daily to learn what is referenced (PERF2-004's remaining half,
-  07). Its listing and deletes are bounded now; the reads grow with all
-  content. A ledger of uploads awaiting their document would answer both:
-  the sweep would check candidates instead of everything, and could tell a
-  pending upload from an orphan.
+  07). With entries required, a file with no entry and no reference is an
+  orphan by construction, but the old file of a replace has neither, so the
+  full read stays until replaces are recorded too.
+- **Findings**: IMG-003 (04).
 - **Source**: code review, 2026-10-04
 
 ### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails

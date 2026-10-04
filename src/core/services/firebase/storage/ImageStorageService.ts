@@ -5,6 +5,7 @@ import {
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
+import { doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import BaseFirebaseService from "../core/BaseFirebaseService";
 import {
   firebaseConfig,
@@ -73,6 +74,30 @@ export function supportScreenshotPrefix(uid: string): string {
 }
 
 /**
+ * How long an upload waits for its pending entry before going on without it.
+ * The entry needs the server; a client that cannot reach it should still get
+ * an answer rather than a progress bar that never moves.
+ */
+const PENDING_ENTRY_TIMEOUT_MS = 10_000;
+
+/**
+ * Where the pending entry for an image path lives: in the path's group, named
+ * after the file (T084). `firestore.rules.prod` checks both.
+ *
+ * @param path An image path under `groups/{groupId}/`
+ * @returns The entry's collection path and document id
+ */
+export function pendingUploadOf(path: string): { collection: string; id: string } {
+  const segments = path.split("/");
+  const [root, groupId] = segments;
+  const id = segments[segments.length - 1];
+  if (root !== "groups" || !groupId || segments.length < 3 || !id) {
+    throw new Error(`Not an image path in a group: "${path}"`);
+  }
+  return { collection: `groups/${groupId}/pendingUploads`, id };
+}
+
+/**
  * Whether a URL is a download URL for this app's own bucket.
  *
  * A member can write any string into a Firestore document, so an image URL is
@@ -99,10 +124,11 @@ export function isOwnBucketUrl(url: string): boolean {
 /**
  * Uploads and deletes images in Firebase Storage.
  *
- * It knows nothing about Firestore: callers save the returned `StoredImage`
- * on their document, and decide the order of writes (see the design's
- * lifecycle table -- the document is always written before an old file is
- * deleted).
+ * Callers save the returned `StoredImage` on their document, and decide the
+ * order of writes (see the design's lifecycle table -- the document is always
+ * written before an old file is deleted). The one Firestore write here is the
+ * upload's pending entry, which says "a document is about to point at this
+ * file" until the caller calls `clearPendingUpload` (T084).
  */
 class ImageStorageService extends BaseFirebaseService {
   private static instance: ImageStorageService;
@@ -135,7 +161,13 @@ class ImageStorageService extends BaseFirebaseService {
   ): Promise<StoredImage> {
     const uid = this.requireUid();
     const path = `${prefix}/${crypto.randomUUID()}.${image.extension}`;
+    // The entry is written alongside the bytes, and waited for before the
+    // image is handed back: the caller's document write must not reach the
+    // server ahead of it, or the daily sweep could take a file whose write
+    // is queued in an offline tab for an orphan (IMG-003).
+    const recorded = this.recordPendingUpload(path, uid);
     const objectRef = await this.put(path, image, onProgress, IMMUTABLE_CACHE_CONTROL);
+    await recorded;
 
     return {
       path,
@@ -168,6 +200,51 @@ class ImageStorageService extends BaseFirebaseService {
     const path = `${supportScreenshotPrefix(this.requireUid())}/${crypto.randomUUID()}.${image.extension}`;
     await this.put(path, image, onProgress);
     return path;
+  }
+
+  /**
+   * The document now points at `path`, or never will: its pending entry can
+   * go. Never throws -- an entry left behind only keeps its file until the
+   * sweep's lease runs out, so the user's action has still succeeded.
+   * @param path `StoredImage.path`
+   */
+  public clearPendingUpload(path: string): void {
+    const warn = (error: unknown) =>
+      console.warn(`Could not clear the pending entry for ${path}; the sweep's lease will.`, error);
+    try {
+      const { collection, id } = pendingUploadOf(path);
+      deleteDoc(doc(this.db, collection, id)).catch(warn);
+    } catch (error) {
+      warn(error);
+    }
+  }
+
+  /**
+   * Record `path` as an upload whose document is still to be written.
+   *
+   * Best effort, for now: until the production rules allow the entry, it is
+   * refused and the upload goes on as it always has (T084's first half). It
+   * also gives up waiting after {@link PENDING_ENTRY_TIMEOUT_MS}.
+   */
+  private async recordPendingUpload(path: string, uid: string): Promise<void> {
+    const { collection, id } = pendingUploadOf(path);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<void>((resolve) => {
+      timer = setTimeout(() => {
+        console.warn(`The pending entry for ${path} did not answer; uploading without waiting.`);
+        resolve();
+      }, PENDING_ENTRY_TIMEOUT_MS);
+    });
+    try {
+      await Promise.race([
+        setDoc(doc(this.db, collection, id), { path, uid, createdAt: serverTimestamp() }),
+        timedOut
+      ]);
+    } catch (error) {
+      console.warn(`Could not record ${path} as a pending upload.`, error);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**

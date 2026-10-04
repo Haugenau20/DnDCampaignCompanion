@@ -21,6 +21,8 @@ import {
   RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {setLogLevel} from "firebase/firestore";
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
 import {EMULATOR_HOSTS} from "../emulator";
 
 // Every denied write is logged as a warning with a stack; here, being denied
@@ -302,5 +304,53 @@ describe("reading progress (T073)", () => {
 
   it("nor can a stranger write one into the group", async () => {
     await assertFails(as("sauron").doc(progress("sauron")).set(place));
+  });
+});
+
+// T084 (IMG-003): an upload records itself before the file is written, so the
+// daily sweep can tell an upload whose document write is still queued from an
+// orphan. The entry is the lease, so its time must be the server's.
+describe("pending uploads (T084)", () => {
+  const ID = "7d3e2b1c.webp";
+  const entry = (id = ID) => `groups/${G}/pendingUploads/${id}`;
+  const FILE = `groups/${G}/campaigns/c1/npcs/n1/${ID}`;
+  const now = () => firebase.firestore.FieldValue.serverTimestamp();
+  const record = (over: Record<string, unknown> = {}) => ({path: FILE, uid: "frodo", createdAt: now(), ...over});
+
+  it("a member records their own upload, stamped by the server", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+  });
+
+  it("and removes it once the document is written", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+    await assertSucceeds(as("frodo").doc(entry()).delete());
+  });
+
+  it("cannot record one in another member's name", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({uid: "gandalf"})));
+  });
+
+  it("cannot choose its time, which would stretch the lease", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({createdAt: new Date(Date.now() + 365 * 86400000)})));
+  });
+
+  it("must name a file in this group, under the entry's own id", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({path: `groups/mordor/campaigns/c9/npcs/n9/${ID}`})));
+    await assertFails(as("frodo").doc(entry()).set(record({path: `groups/${G}/campaigns/c1/npcs/n1/other.webp`})));
+  });
+
+  it("holds nothing but the three fields", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({note: "hello"})));
+  });
+
+  it("is not changed after the fact, nor removed or read by anyone else", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+    await assertFails(as("frodo").doc(entry()).update({path: `groups/${G}/crest/${ID}`}));
+    await assertFails(as("gandalf").doc(entry()).delete());
+    await assertFails(as("gandalf").doc(entry()).get());
+  });
+
+  it("a stranger cannot record one in the group", async () => {
+    await assertFails(as("sauron").doc(entry()).set(record({uid: "sauron"})));
   });
 });

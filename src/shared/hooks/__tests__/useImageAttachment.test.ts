@@ -6,11 +6,13 @@ import { PreparedImage } from 'core/utils/prepare-image';
 
 const mockUpload = jest.fn();
 const mockRemove = jest.fn();
+const mockClearPending = jest.fn();
 
 jest.mock('core/services/firebase', () => ({
   images: {
     upload: (...args: unknown[]) => mockUpload(...args),
     remove: (...args: unknown[]) => mockRemove(...args),
+    clearPendingUpload: (...args: unknown[]) => mockClearPending(...args),
   },
 }));
 
@@ -56,6 +58,7 @@ beforeEach(() => {
   mockRemove.mockReset().mockImplementation(async (path: string) => {
     calls.push(`remove ${path}`);
   });
+  mockClearPending.mockReset();
   jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
@@ -115,6 +118,29 @@ describe('useImageAttachment', () => {
       const { result } = setup(OLD);
 
       expect(await settle(() => result.current.upload(prepared, jest.fn()))).toBeUndefined();
+    });
+
+    // T084: the upload's pending entry holds the file from the sweep until
+    // the document points at it, and not a moment longer than it must.
+    it('clears the pending entry once the document points at the new file', async () => {
+      const save = jest.fn(async (_image: StoredImage | null) => {
+        expect(mockClearPending).not.toHaveBeenCalled();
+      });
+      const { result } = setup(OLD, save);
+
+      await act(() => result.current.upload(prepared, jest.fn()));
+
+      expect(save).toHaveBeenCalled();
+      expect(mockClearPending).toHaveBeenCalledWith(NEW.path);
+    });
+
+    it('clears it as well when saving fails, since the new file is going', async () => {
+      const save = jest.fn().mockRejectedValue(new Error('permission-denied'));
+      const { result } = setup(OLD, save);
+
+      await settle(() => result.current.upload(prepared, jest.fn()));
+
+      expect(mockClearPending).toHaveBeenCalledWith(NEW.path);
     });
 
     it('refuses without a prefix, before uploading anything', async () => {

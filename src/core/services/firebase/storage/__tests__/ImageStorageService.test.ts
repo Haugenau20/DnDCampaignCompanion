@@ -15,6 +15,10 @@ const mockRef = jest.fn((_storage: unknown, path: string) => ({ fullPath: path }
 const mockUploadBytesResumable = jest.fn();
 const mockGetDownloadURL = jest.fn();
 const mockDeleteObject = jest.fn();
+const mockFirestoreDoc = jest.fn((_db: unknown, ...segments: string[]) => ({ path: segments.join('/') }));
+const mockSetDoc = jest.fn();
+const mockDeleteDoc = jest.fn();
+const SERVER_TIME = { sentinel: 'serverTimestamp' };
 
 jest.mock('firebase/storage', () => ({
   getStorage: jest.fn(() => mockStorage),
@@ -32,6 +36,10 @@ jest.mock('firebase/auth', () => ({
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
   connectFirestoreEmulator: jest.fn(),
+  doc: function () { return (mockFirestoreDoc as Function).apply(null, arguments); },
+  setDoc: function () { return (mockSetDoc as Function).apply(null, arguments); },
+  deleteDoc: function () { return (mockDeleteDoc as Function).apply(null, arguments); },
+  serverTimestamp: () => SERVER_TIME,
 }));
 jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/functions', () => ({
@@ -95,6 +103,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockAuth.currentUser = { uid: 'uploader-1' };
   mockConfig.useEmulators = false;
+  mockSetDoc.mockResolvedValue(undefined);
+  mockDeleteDoc.mockResolvedValue(undefined);
 });
 
 // ─── Path helpers ────────────────────────────────────────────────────────────
@@ -258,6 +268,103 @@ describe('ImageStorageService.upload', () => {
     mockAuth.currentUser = null;
     await expect(service.upload('groups/g1/crest', prepared)).rejects.toThrow(/Not authenticated/);
     expect(mockUploadBytesResumable).not.toHaveBeenCalled();
+  });
+});
+
+// T084 (IMG-003): an upload is recorded as pending, so the daily sweep does
+// not take it for an orphan while its document write is still on its way.
+describe('ImageStorageService.upload -- the pending entry', () => {
+  const service = ImageStorageService.getInstance();
+
+  /** Start an upload and let its bytes finish; hands back the promise. */
+  const uploadAndFinish = () => {
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+    mockGetDownloadURL.mockResolvedValue('u');
+    const pending = service.upload('groups/g1/campaigns/c1/npcs/n1', prepared);
+    observer.complete!();
+    return pending;
+  };
+
+  it('records the upload in its group, named after the file, at the server time', async () => {
+    const image = await uploadAndFinish();
+
+    const name = image.path.split('/').pop();
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      { path: `groups/g1/pendingUploads/${name}` },
+      { path: image.path, uid: 'uploader-1', createdAt: SERVER_TIME }
+    );
+  });
+
+  it('starts recording it before any bytes are written', async () => {
+    await uploadAndFinish();
+
+    expect(mockSetDoc.mock.invocationCallOrder[0]).toBeLessThan(
+      mockUploadBytesResumable.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('hands the image back only once the entry is written, so the document cannot be first', async () => {
+    let written!: () => void;
+    mockSetDoc.mockReturnValue(new Promise<void>((resolve) => { written = resolve; }));
+    let done = false;
+
+    const pending = uploadAndFinish().then(() => { done = true; });
+    await flush();
+    expect(done).toBe(false);
+
+    written();
+    await pending;
+    expect(done).toBe(true);
+  });
+
+  it('uploads as it always has when the entry is refused', async () => {
+    // Before the rules for it are pasted into the console, production refuses
+    // the entry; the upload must not depend on it yet.
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockSetDoc.mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }));
+
+    await expect(uploadAndFinish()).resolves.toMatchObject({ url: 'u' });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('does not wait forever for an entry that never answers', async () => {
+    jest.useFakeTimers();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockSetDoc.mockReturnValue(new Promise(() => undefined));
+    try {
+      const pending = uploadAndFinish();
+      // Let the upload reach its wait for the entry, then run out the clock.
+      for (let i = 0; i < 5; i += 1) await Promise.resolve();
+      jest.advanceTimersByTime(10_000);
+      await expect(pending).resolves.toMatchObject({ url: 'u' });
+    } finally {
+      warn.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('ImageStorageService.clearPendingUpload', () => {
+  const service = ImageStorageService.getInstance();
+  const PATH = 'groups/g1/crest/7d3e2b1c.webp';
+
+  it('deletes the entry once the document points at the file', async () => {
+    service.clearPendingUpload(PATH);
+    await flush();
+    expect(mockDeleteDoc).toHaveBeenCalledWith({ path: 'groups/g1/pendingUploads/7d3e2b1c.webp' });
+  });
+
+  it('never throws: a stale entry only holds a file the sweep will free in time', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockDeleteDoc.mockRejectedValue(new Error('offline'));
+
+    expect(() => service.clearPendingUpload(PATH)).not.toThrow();
+    await flush();
+    expect(warn).toHaveBeenCalled();
+    expect(() => service.clearPendingUpload('not/a/group/path.webp')).not.toThrow();
+    warn.mockRestore();
   });
 });
 

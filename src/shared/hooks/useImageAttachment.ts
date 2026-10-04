@@ -28,11 +28,26 @@ export function discardImage(path: string): void {
 }
 
 /**
+ * Clear an upload's pending entry (T084). Clean-up, like `discardImage`: an
+ * entry left behind only holds its file until the sweep's lease runs out, so
+ * nothing here may fail the user's upload.
+ */
+function forgetPendingUpload(path: string): void {
+  try {
+    images.clearPendingUpload(path);
+  } catch (error) {
+    console.warn(`Could not clear the pending entry for ${path}.`, error);
+  }
+}
+
+/**
  * Attach an image to a document, replace it, or remove it -- in the one order
  * that can never leave a document pointing at a missing file:
  *
  * - upload the new file, **then** save it on the document, **then** delete the
  *   old file. If saving fails, the new file is deleted and the old one kept.
+ *   The upload is recorded as pending until the save has landed, so the daily
+ *   sweep does not take it for an orphan meanwhile (T084).
  * - to remove: clear the document, **then** delete the file.
  *
  * A failure can therefore leave an orphaned file (cheap, invisible), but never
@@ -51,8 +66,12 @@ export function useImageAttachment({ prefix, current, save }: ImageAttachmentOpt
         await save(uploaded);
       } catch (error) {
         discardImage(uploaded.path);
+        forgetPendingUpload(uploaded.path);
         throw error;
       }
+      // The document points at the file now, so the sweep no longer needs
+      // telling that a write is on its way (T084).
+      forgetPendingUpload(uploaded.path);
 
       if (current) discardImage(current.path);
     },
