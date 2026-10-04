@@ -193,3 +193,28 @@ describe("PrivacyNotice — names and accents", () => {
     expect(formAccentsIn(container)).toEqual([]);
   });
 });
+
+describe('PrivacyNotice with storage unavailable (T092)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+    const refuse = () => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    };
+    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(refuse);
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(refuse);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('shows the notice, and "Got it" still dismisses it', () => {
+    render(<PrivacyNotice />);
+    expect(screen.getByText('Privacy Notice')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/got it/i));
+
+    expect(screen.queryByText('Privacy Notice')).not.toBeInTheDocument();
+  });
+});

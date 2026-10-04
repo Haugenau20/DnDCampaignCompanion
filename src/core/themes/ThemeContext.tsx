@@ -4,6 +4,7 @@ import { Theme, ThemeName, ThemeContextState } from './types';
 import { themes } from './definitions';
 import { applyTokens, TokenTree } from './token-variables';
 import { resolveThemeName } from './theme-migration';
+import { readLocalStorage, writeLocalStorage } from '../utils/local-storage';
 
 // Import CSS files for the new theme system
 import './css/variables.css';
@@ -33,14 +34,17 @@ const THEME_STORAGE_KEY = 'medieval-companion-theme';
 /**
  * Write a theme to the document and remember it.
  *
+ * The document comes first and the preference second, each on its own: a
+ * store that refuses the write (blocked, full) used to throw before any of
+ * the theme reached the page, so the switch showed dark while the page stayed
+ * light (T092).
+ *
  * Module-level because it reads no component state: inside the provider it
  * was a new function every render, which is what kept it out of the effect's
  * dependencies below.
  */
 const applyThemeToDOM = (theme: Theme) => {
   try {
-    localStorage.setItem(THEME_STORAGE_KEY, theme.name);
-    
     // Get the root element
     const root = document.documentElement;
     
@@ -65,6 +69,10 @@ const applyThemeToDOM = (theme: Theme) => {
   } catch (error) {
     console.error('Error applying theme:', error);
   }
+
+  if (!writeLocalStorage(THEME_STORAGE_KEY, theme.name)) {
+    console.error('Error applying theme:', 'the preference could not be saved');
+  }
 };
 
 /**
@@ -80,15 +88,13 @@ const applyThemeToCssVariables = (theme: Theme, root: HTMLElement) => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Start with the theme from localStorage if available, defaultTheme otherwise
-  const savedThemeName = localStorage.getItem(THEME_STORAGE_KEY);
-  const resolvedThemeName = resolveThemeName(savedThemeName);
-  const initialTheme = resolvedThemeName
-    ? themes[resolvedThemeName]
-    : defaultTheme;
-    
-  // Initialize with saved theme right away to prevent flashing
-  const [currentTheme, setCurrentTheme] = useState<Theme>(initialTheme);
+  // Initialize with the saved theme right away to prevent flashing, or the
+  // default when there is none or storage can't be read. Lazy, so the store is
+  // read once rather than on every render.
+  const [currentTheme, setCurrentTheme] = useState<Theme>(() => {
+    const resolvedThemeName = resolveThemeName(readLocalStorage(THEME_STORAGE_KEY));
+    return resolvedThemeName ? themes[resolvedThemeName] : defaultTheme;
+  });
   
   // Write the theme to the document and storage: on mount, so the saved theme
   // applies immediately, and on every change after.

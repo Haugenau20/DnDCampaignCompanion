@@ -35,7 +35,6 @@ adjusted for the images focus above.
 | medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
-| medium | T092 | App renders nothing when browser storage is blocked | S | open | Whole app down for those browsers |
 | medium | T093 | "Create & add another" from the attach tray doesn't attach | S | open | Says success, leaves the record unlinked |
 | medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
 | medium | T098 | Chapters with identical text share reading progress | S | open | Completion never recorded for the second |
@@ -334,17 +333,6 @@ Eight findings, each reproduced in Chromium (11, 19):
   precedence over a device-approval link, and after rejection there is no way
   to correct the email.
 - **Findings**: 02. That review was stopped and will not be finished.
-- **Source**: code review, 2026-10-04
-
-### T092 — The app renders nothing when browser storage is blocked
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`ThemeProvider` reads `localStorage` unguarded
-(`src/core/themes/ThemeContext.tsx:84`), so a browser that throws on storage
-access (blocked site data, some private modes) fails at the root. A failing
-preference write also skips applying the theme.
-
-- **Findings**: ARCH-001 (10). **Catch**: none found.
 - **Source**: code review, 2026-10-04
 
 ### T093 — "Create & add another" from the attach tray creates an unlinked record

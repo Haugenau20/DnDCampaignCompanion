@@ -5,6 +5,7 @@ import { X, ExternalLink } from 'lucide-react';
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from 'core/constants/time';
 import { useNavigation } from 'shared/hooks/useNavigation';
 import clsx from 'clsx';
+import { readLocalStorage, writeLocalStorage } from 'core/utils/local-storage';
 
 /**
  * Simple notification to inform users about session activity tracking
@@ -16,14 +17,14 @@ const PrivacyNotice: React.FC = () => {
   
   useEffect(() => {
     // Check if user has already seen the notice
-    const hasSeenNotice = localStorage.getItem('privacyNoticeSeen');
+    const hasSeenNotice = readLocalStorage('privacyNoticeSeen');
     if (!hasSeenNotice) {
       setShowNotice(true);
     }
   }, []);
   
   const handleDismiss = () => {
-    localStorage.setItem('privacyNoticeSeen', 'true');
+    writeLocalStorage('privacyNoticeSeen', 'true');
     setShowNotice(false);
   };
   

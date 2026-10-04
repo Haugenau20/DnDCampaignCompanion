@@ -16,6 +16,7 @@ import ResumeBar from './components/ResumeBar';
 import StoryViewTabs from './components/StoryViewTabs';
 import { Plus, List, Grid } from 'lucide-react';
 import { clsx } from 'clsx';
+import { readLocalStorage, writeLocalStorage } from 'core/utils/local-storage';
 
 /** localStorage key for the list/shelf view toggle. */
 const VIEW_PREFERENCE_KEY = 'chapters-view-preference';
@@ -53,10 +54,10 @@ function normaliseFilterMode(stored: string | null): FilterMode {
  */
 const ChaptersPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    normaliseViewMode(localStorage.getItem(VIEW_PREFERENCE_KEY))
+    normaliseViewMode(readLocalStorage(VIEW_PREFERENCE_KEY))
   );
   const [filterMode, setFilterMode] = useState<FilterMode>(() =>
-    normaliseFilterMode(localStorage.getItem(FILTER_PREFERENCE_KEY))
+    normaliseFilterMode(readLocalStorage(FILTER_PREFERENCE_KEY))
   );
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -66,11 +67,11 @@ const ChaptersPage: React.FC = () => {
   const gate = usePageGate('story', { loading: isLoading });
 
   useEffect(() => {
-    localStorage.setItem(VIEW_PREFERENCE_KEY, viewMode);
+    writeLocalStorage(VIEW_PREFERENCE_KEY, viewMode);
   }, [viewMode]);
 
   useEffect(() => {
-    localStorage.setItem(FILTER_PREFERENCE_KEY, filterMode);
+    writeLocalStorage(FILTER_PREFERENCE_KEY, filterMode);
   }, [filterMode]);
 
   // Campaign-wide progress, independent of the search/filter row below —
