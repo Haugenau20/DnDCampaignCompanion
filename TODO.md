@@ -17,11 +17,35 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
+The rows for T080–T102 and T037's rise were triaged 2026-10-04 from the code
+review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
+adjusted for the images focus above.
+
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
+| critical | T080 | Users can rewrite server-owned fields on their own profiles | M | open | Self-granted unlimited AI usage; an admin's removal redirected to another member |
+| high | T081 | Two simultaneous same-name creates keep one record | M | open | A successful create silently disappears |
+| high | T082 | A save in flight lands in the campaign you switch to | M | open | Content misfiled; an image replacement deletes a still-used file |
+| high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
+| high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
+| high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
+| high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T037 | A group cannot be deleted | L | open | Decided 2026-10-02 to build it, plan first: members' data cannot be removed until it exists |
+| medium | T086 | Failed actions give no visible reason or retry | M | open | Data survives, but the user can't tell or try again |
+| medium | T087 | AI usage: quota overrun, stale meter | M | open | Paid calls beyond the allowance; scanning blocked after reset |
+| medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
+| medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
+| medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
+| medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
+| medium | T092 | App renders nothing when browser storage is blocked | S | open | Whole app down for those browsers |
+| medium | T093 | "Create & add another" from the attach tray doesn't attach | S | open | Says success, leaves the record unlinked |
+| medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
+| medium | T098 | Chapters with identical text share reading progress | S | open | Completion never recorded for the second |
+| medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
+| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen; its read-back is T080's prerequisite |
+| medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
+| medium | T106 | Should the production rules be public? | S | open | Public repo; makes T080's hole easy to find until fixed |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -31,6 +55,14 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
+| low | T095 | Cancelling a new chapter opens the first chapter | S | open | Confusing, nothing lost |
+| low | T096 | Note dates show the previous day west of UTC | S | open | Display only; stored value correct |
+| low | T097 | "New NPC named …" in the palette drops the name | S | open | Retype the name |
+| low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
+| low | T101 | Large campaigns get slow | M | open | Measured at 1,000s of records; not felt at current sizes |
+| low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
+| low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
+| nit | T102 | Remove unused modules; story utilities through the barrel | S | open | Maintenance only |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -69,6 +101,32 @@ why something was deferred rather than forgotten.
 `docs/testing/bug-tracking/README.md` (bugs found by the behavioural suites) and
 `CLAUDE.md`'s known-issues notes. Items that belong there are cross-referenced,
 not copied.
+
+### The 2026-10 code review
+
+Five review passes by OpenAI agents (2026-10-03/04) are recorded in
+`docs/reviews/`. They are filed here **by piece of work, not by finding**: one
+entry carries every finding ID (`SEC-001`, `DATA-003`, …) that one change
+closes, and the ID is the anchor into its report for the reproduction,
+evidence and fix direction. Read the report at pickup rather than copying it
+here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
+
+- Every confirmed finding is covered by an entry: T080–T102, plus T037.
+- **Not filed**: the reviews' unverified leads, and the optional refactors
+  other than ARCH-M01/M02 (T102). They stay in the reports.
+- **The auth review was stopped partway and will not be finished**
+  (maintainer, 2026-10-04). Its four findings are filed (T037, T091); the rest
+  of that scope stays unreviewed by decision.
+- App source was byte-identical to the reviewed commit `64fe195` when these were
+  filed, and each entry's primary location was opened on 2026-10-04.
+
+Entries cite reports by number:
+
+| # | Report | # | Report |
+|---|---|---|---|
+| 01–04 | `docs/reviews/2026-10-03/` | 14–16 | `docs/reviews/2026-10-04/pass-4/` |
+| 05–08 | `docs/reviews/2026-10-03/pass-2/` | 17–21 | `docs/reviews/2026-10-04/pass-5/` |
+| 09–13 | `docs/reviews/2026-10-03/pass-3/` | | |
 
 ## What phase 15 learned
 
@@ -113,6 +171,315 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
+
+### T080 — Users can rewrite server-owned fields on their own profiles
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+The self-update rules refuse only a short list of keys, so a member can write
+anything else on their own documents: grant themselves unlimited AI usage,
+change the identity fields an admin's "remove member" acts on, delete their
+roster entry while keeping campaign access, or edit the username that account
+cleanup later deletes as theirs.
+
+- **Where**: `firebase/firestore.rules.prod:195-196` (global profile: only
+  `isAdmin` and `groups` refused, so usage counters and `isUnlimited` are
+  writable); `:235-236` (group profile: only `role` refused); raw self-delete
+  at `:245`.
+- **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01). SEC-002 also needs the
+  admin UI to target members by document path, not a profile field; SEC-005
+  needs cleanup to check who owns a reservation.
+- **Catch**: the reviews tested the repo copy, and the live rules are in the
+  Firebase console. Read them back before changing anything (T105). Once fixed,
+  audit existing usage values.
+- **Touches**: the rules, `firestore-rules-prod.test.ts`, the admin member
+  actions, `removeUserFromGroup` / `deleteUser` cleanup.
+- **Source**: code review, 2026-10-04
+
+### T081 — Two simultaneous creates of the same name keep only one record
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+Two members or tabs creating an NPC, quest, location or rumour whose name maps
+to the same unused id both succeed; the second write replaces the first, author
+and all. #1402's retry handles an id that already exists, not two creates
+racing.
+
+- **Where**: `src/core/services/firebase/data/DocumentService.ts:185` reads for
+  existence, `:205` writes; nothing makes the pair atomic.
+  `CampaignService.createCampaign` has the same check-then-set (per the report;
+  not opened).
+- **Findings**: DATA-001 (03), TEST-001 (08).
+- **Catch**: the cross-session test fake is itself atomic (TEST-001), so the
+  suite cannot see the race. The regression test must hold both reads before
+  either write.
+- **Source**: code review, 2026-10-04
+
+### T082 — A save in flight lands in whichever campaign you switch to
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+Writes resolve their group and campaign *after* an await, so switching campaign
+mid-save files the content under the new one. For an image replacement it also
+deletes the original campaign's still-referenced file. High on the images focus.
+
+- **Where**: `DocumentService.ts:246` awaits attribution, then `:255` builds
+  the collection path from whatever context is current. Image side:
+  `src/shared/hooks/useImageAttachment.ts:43-59`.
+- **Findings**: DATA-002 (03), IMG-001 (04).
+- **Catch**: the fix is capturing the full path when the operation starts,
+  through every context writer that passes a bare collection name, not a patch
+  in one place.
+- **Source**: code review, 2026-10-04
+
+### T083 — Edits send the whole record and overwrite newer changes
+**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+
+Ticking an objective, changing a status or adding a note writes back the full
+in-memory record, so whatever anyone changed since it loaded is reverted. A
+second tick can undo the first; an unrelated write can restore an image whose
+file was already replaced and deleted. Pass 4 reproduced it in two ordinary
+tabs.
+
+- **Where**: `src/features/campaign-entities/quests/context/QuestContext.tsx:147`
+  writes `{ ...quest, objectives }` under a doc comment saying it leaves every
+  other field alone. The NPC, location, rumour and note contexts do the same
+  (the report lists each).
+- **Findings**: DATA-003 (03), IMG-002 (04), TEST-002 (08). The duplicated
+  batch-limit helper (09, consolidation item 2) belongs with this change.
+- **Catch**: three problems under one symptom. Scalar fields need true patches,
+  arrays (objectives, notes) need stable element ids or transactions, and
+  overlapping prose edits need a decision on conflict behaviour. And
+  `QuestContext.objectives.test.tsx` asserts the stale fields: a field-only
+  patch fails four tests. They pin the defect, like #1414/#1415, and need
+  rewriting against the requirement with the maintainer's agreement. Plan first.
+- **Source**: code review, 2026-10-04
+
+### T084 — Image edge cases: offline uploads swept, the 2 MiB boundary, an unbounded sweep
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+Three independent defects in the image lifecycle:
+
+- **Offline upload swept** (IMG-003, 04): a picture attached offline whose
+  document write is still pending after 24 h is deleted by the daily sweep,
+  which knows only object age and current references
+  (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts:50-68`).
+  Reconnecting then writes a reference to a missing file. Needs a protocol for
+  pending writes, not a longer grace period.
+- **Exactly 2 MiB** (IMG-004, TEST-006): `src/core/utils/prepare-image.ts:141`
+  refuses `> MAX_UPLOAD_BYTES`, `firebase/storage.rules.prod:81` requires
+  `< 2 MiB`, and each side's test checks only its own boundary. Small.
+- **Unbounded sweep** (PERF2-004, 07): every reference document is read and
+  every orphan delete launched at once.
+- **Source**: code review, 2026-10-04
+
+### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
+**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+
+Authored text is lost or misfiled in several ways. Separate causes, grouped
+because the fix is one idea: a draft belongs to one record and outlives a
+failed write.
+
+- **Failed save loses the draft**: `ChapterForm.tsx:145-149` navigates away in
+  `finally`, success or not (FUNC-005). A rejected entity write sets the
+  provider error (`useFirebaseData.ts:285`) that the page gate reads, which
+  unmounts the editor, and Retry doesn't recover it (REACT-002, TEST-007).
+- **Wrong record**: going from NPC A to B keeps A's draft and saves it to B
+  (REACT-001); an offline-queued note save runs against the next note after
+  Search navigation (RECOVERY-001); a cross-campaign note's fallback survives
+  route and campaign changes (RECOVERY-002).
+- **Draft dropped on leaving**: leaving a note before the autosave debounce
+  cancels the only pending save; a reload loses an unacknowledged one
+  (REACT-003).
+- **Cross-campaign note is blank**: `NotePage.tsx:229-236` passes only `noteId`
+  to the read-only editor, never the fetched note (FUNC-001, TEST-003).
+- **Findings**: 05, 06, 08, 15. **Catch**: the reviewers say these need separate
+  regression sequences; consider splitting at pickup. Plan first.
+- **Source**: code review, 2026-10-04
+
+### T086 — Failed actions give no visible reason or retry
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+The data survives these, but the user cannot tell anything failed, or cannot
+try again.
+
+- `CampaignLinksPanel.tsx:231-235` clears previous detections *before* the
+  rescan runs; a rejected rescan leaves none and also says "no new names"
+  (FUNC-002, TEST-004).
+- `ChapterEditPage.tsx:55-58` swallows a failed delete; the dialog closes and
+  stays disabled when reopened (FUNC-006).
+- `NotePage.tsx:146-169`: a failed archive or delete only logs (WRITES-001).
+- `NoteEditor.tsx:245-250`: a failed autosave only logs and the footer stays
+  "Unsaved changes" (REACT-004). A manual save behind a pending idle save
+  writes the same snapshot twice (PERF2-005).
+- `NoteContext.tsx:91-95`: a failed notes listener empties the list with no
+  retry (RECOVERY-003). The NPC provider's Try again is the working pattern.
+- **Findings**: 05, 06, 07, 08, 17, 20. **Source**: code review, 2026-10-04
+
+### T087 — AI usage: the quota can be overrun, and the meter goes stale
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+- **Quota race** (SEC-003, 01): `checkAndUpdateUsage`
+  (`firebase/functions/src/entityExtraction.ts:263`) reads and then writes the
+  counters outside a transaction; four parallel calls spent the one remaining
+  slot and recorded one use.
+- **Stale meter** (AI-001, 12): a cached "exhausted" snapshot keeps scanning
+  disabled after the reset time.
+- **Zero shown as ten** (AI-003): `UsageMeter.tsx:114` picks `customLimit` by
+  truthiness, where the server uses `??` (`entityExtraction.ts:229`).
+- **Confidence out of range** (AI-002): the model schema accepts `90` or
+  `-0.4`, shown as 9000% or −40%.
+- **Catch**: T080 must stop clients editing usage fields first, or the counters
+  mean nothing. **Source**: code review, 2026-10-04
+
+### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
+**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+
+Each of these decides from a stale local copy, then writes:
+
+- **Conversion** (DATA-005, 03): rumour → quest and combine create the target
+  first (`RumorContext.tsx:306-311`) and mark the sources after; a failed mark
+  leaves an extra quest on every retry (pass 5 reproduced it, 17).
+- **Location tree** (DATA-006): `LocationContext.tsx:178` checks for a cycle
+  against the local list, so two opposite moves make one; a child added during
+  a delete is orphaned.
+- **Chapter order** (DATA-007): `StoryContext.tsx:472-488` shifts orders from
+  the local list; concurrent inserts gave 1, 2, 3, 3.
+- **Attachment kind** (DATA-008): `attachCandidates.ts:86` keys "attached" by
+  bare id, so a location and a quest sharing a slug are confused. Small and
+  independent; can go first.
+- **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
+  an id the allocator then changes.
+- **Source**: code review, 2026-10-04
+
+### T089 — Search keeps a stale index, and untitled notes and rumours show no name
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+- `SearchContext.tsx:193-196` returns early when every collection is empty, so
+  an empty campaign never becomes ready, and one that drops to zero keeps its
+  old index (REACT-006, 06).
+- A query typed before the data arrives isn't rerun when the index updates
+  (REACT-007). Probably what pass 5 saw when Search stalled at 15 of 30 results
+  (18).
+- Content-only rumours (`RumorDirectory.tsx:369` creates with `title: ''`) and
+  notes appear blank in search, the attach tray and quest backlinks: those
+  read the raw title instead of the existing `rumor-title` / `note-title`
+  helpers (DUP-001, 09).
+- **Source**: code review, 2026-10-04
+
+### T090 — Keyboard and focus problems in shared components
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+Eight findings, each reproduced in Chromium (11, 19):
+
+- A11Y-001: `AttachTray.tsx:176-180` toggles the active row on Enter or Space
+  typed inside its filter and buttons.
+- A11Y-006: `Button.tsx:101` sets `focus:outline-none` with the ring commented
+  out, so primary and outline buttons show no focus. Touches every page.
+- A11Y-004: the phone chapter drawer (`ChapterRail.tsx:229-236`) neither takes
+  nor traps focus and ignores Escape. Same drawer as T026.
+- A11Y-002 palette arrows select an off-screen result; A11Y-003 closing quick
+  add leaves focus on the body; A11Y-005 quick-add errors are not announced;
+  A11Y-007 location and quest inline editors drop focus (NPC's works);
+  A11Y-008 campaign switch and Undo drop focus.
+- **Catch**: none found; each is small on its own.
+- **Source**: code review, 2026-10-04
+
+### T091 — Auth: a stale sign-in can restore the previous user, and a pending email blocks a device link
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+
+- AUTH-003: `FirebaseContext.tsx:276-286` sets the profile from an async load
+  without checking the user is still the same, so a slow load can restore the
+  old profile, group and campaign after sign-out. Client state only; no server
+  bypass.
+- AUTH-004: `EmailLinkPage.tsx:73-82` lets any pending email sign-in take
+  precedence over a device-approval link, and after rejection there is no way
+  to correct the email.
+- **Findings**: 02. That review was stopped and will not be finished.
+- **Source**: code review, 2026-10-04
+
+### T092 — The app renders nothing when browser storage is blocked
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+`ThemeProvider` reads `localStorage` unguarded
+(`src/core/themes/ThemeContext.tsx:84`), so a browser that throws on storage
+access (blocked site data, some private modes) fails at the root. A failing
+preference write also skips applying the theme.
+
+- **Findings**: ARCH-001 (10). **Catch**: none found.
+- **Source**: code review, 2026-10-04
+
+### T093 — "Create & add another" from the attach tray creates an unlinked record
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+From a location's attach tray, quick add's "Create & add another" saves the
+NPC and says so, but never attaches it. "Create & open" attaches correctly.
+
+- **Where**: `QuickAddForm.tsx:137-146` never calls `onCreated`, which is what
+  attaches (`AttachTray.tsx:197-202`); `handleCreateAndOpen` at `:125-129` does.
+- **Catch**: decide whether to attach on every create or drop "add another" in
+  this context. **Findings**: BROWSER-001 (14).
+- **Source**: code review, 2026-10-04
+
+### T094 — An optional fact can't be cleared once recorded
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+`InlineEditor.tsx:135` refuses any empty value, so an NPC's role or a quest's
+optional field can be changed but never removed. Confirmed in the browser in
+pass 4.
+
+- **Catch**: the editor needs to be told which fields are required; the caller
+  decides. **Findings**: FUNC-003 (05).
+- **Source**: code review, 2026-10-04
+
+### T095 — Cancelling a new chapter opens the first chapter
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+Cancel in `ChapterForm.tsx:154` goes to `/story/chapters/${chapter?.id}`, which
+is `undefined` in create mode, and the reader resolves that to the first
+chapter. Nothing is written.
+
+- **Findings**: BROWSER-002 (14). **Catch**: none found.
+- **Source**: code review, 2026-10-04
+
+### T096 — Note dates show the previous day west of UTC
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+`formatNoteDate` (`src/shared/utils/dateFormatter.ts:122-128`) parses
+`YYYY-MM-DD` with `new Date`, which is UTC midnight, then formats it in local
+time (`formatCalendarDate`, `:144`). A 2025-05-31 note reads 30/05 in Los
+Angeles, edit prompt included. The stored value stays right.
+
+- **Findings**: LEGACY-001 (16). **Catch**: keep full-ISO legacy values working.
+- **Source**: code review, 2026-10-04
+
+### T097 — "New NPC named …" in the palette drops the name
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+`CommandPalette.tsx:376` labels the action with the typed query, but quick add
+opens with an empty name.
+
+- **Findings**: FUNC-004 (05). **Catch**: none found.
+- **Source**: code review, 2026-10-04
+
+### T098 — Two chapters with identical text share reading progress
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+`ChapterReader` resets its per-chapter state when `content` changes
+(`ChapterReader.tsx:303`), not when the chapter does, so moving between two
+equal-text (typically short) chapters skips the reset, and the second never
+reports completion.
+
+- **Findings**: REACT-005 (06). **Catch**: keep the scroll-restore behaviour.
+- **Source**: code review, 2026-10-04
+
+### T099 — The contact form's rate limit is easy to evade
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
+
+`firebase/functions/src/contact.ts:78-106` throttles in process memory, keyed
+for anonymous callers by the address they supply. A new address, or a new
+function instance, resets it.
+
+- **Findings**: SEC-006 (01). **Catch**: identifying an anonymous caller (App
+  Check, IP) is the design question.
+- **Source**: code review, 2026-10-04
 
 ---
 
@@ -253,7 +620,16 @@ the same foundation.
   band carries no accent") stays true but stops mattering on these pages; a
   light card can carry accent controls. Verify in a browser, both themes, at
   phone width.
-- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02
+- **Reported 2026-10-04: "entries" on the location page differ from the other
+  pages.** Read as the table notes, the one list both pages share. Both render
+  `NoteHistory`, but the location's (`LocationDetailPage.tsx:752-786`) sits in
+  an `EntityPageSection` titled "Notes from the table", with no "oldest first",
+  no saved confirmation (`onSaved` is a no-op) and the default row spacing. The
+  NPC's (`NPCDetailPage.tsx:1129-1176`) is its own card titled "Notes", with a
+  saved notice and padded rows. Quests have no table notes. If "entries" meant
+  something else, ask the maintainer.
+- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; location
+  notes added from todo.txt, 2026-10-04
 
 ### T074 — Default pictures where none has been uploaded
 **Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
@@ -360,12 +736,31 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 - **Next step**: on the phone it was seen on, note the browser, then open the
   drawer on a chapter late in a long campaign and drag the list. A desktop
   window cannot answer this: the browser agent has no touch input.
+- **Related**: the same drawer neither takes nor traps keyboard focus (A11Y-004,
+  in T090).
 - **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
 
 ---
 
-### T037 — A group cannot be deleted
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-09-16
+### T037 — Deletions cannot recover from a failure, and a group cannot be deleted
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-04
+
+**The deletions that exist leave data behind when they fail** (code review,
+2026-10-04). Group deletion would be built on them, so the plan covers these
+first:
+
+- `deleteCampaign` (`firebase/functions/src/campaignManagement/deleteCampaign.ts:107-150`)
+  deletes member notes through a BulkWriter whose individual failures
+  `close()` does not reject, deletes images before documents, and
+  `recursiveDelete` can remove the root after a failed child, after which a
+  retry is refused. The campaign stays writable during cleanup. DATA-004,
+  DATA-010 (03), IMG-005 (04), TEST-005 (08).
+- The last-admin guard (`firebase/functions/src/shared/groupAdmins.ts:29-42`)
+  reads the roster outside a transaction: two admins leaving at once both pass
+  and leave the group with none. AUTH-001 (02).
+- `deleteUser` (`deleteUser.ts:110-129`) deletes the profile before the Auth
+  account, so an Auth failure becomes unretryable (AUTH-002). A retried group
+  removal has lost the username it should release (DATA-009, 03).
 
 **Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
 plan to write, not something to start without one. The maintainer's reason is
@@ -380,8 +775,8 @@ means cascading through its campaigns (each with its own subcollections), its
 `users`, its `usernames` reservations and its `registrationTokens`, plus every
 member's notes for every campaign in it.
 
-- **Precedent worth copying**: `deleteCampaign` — an Admin SDK
-  `recursiveDelete` in a callable. Its doc comment at
+- **Precedent**: `deleteCampaign`, an Admin SDK `recursiveDelete` in a
+  callable, but with the failure modes above. Its doc comment at
   `src/core/services/firebase/campaign/CampaignService.ts:225` explains why a
   client cannot do this itself.
 - **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
@@ -398,7 +793,8 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
   the project's `^5.7.3`; its `jest-watch-typeahead@1.1.0` wants Jest 27/28
   against `^29.7.0`. CRA itself is no longer maintained, so no upgrade of it fixes this.
 - **Where**: `package.json:21`; CI installs in `docker/Dockerfile.frontend.prod:8`
-  (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not enforced).
+  (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not
+  enforced; T107 would drop that Docker build).
 - **Decided (maintainer, 2026-10-02): move to Vite**, planned before any code.
   It touches the build, env-var names (`REACT_APP_*` → `VITE_*`), jest config
   (stay on jest, or move to Vitest — the plan decides) and the four-resolvers
@@ -446,6 +842,148 @@ time anyone edits it.
   them or keep the fallback on purpose.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted
+
+### T100 — `start-dev.ps1` stop can lose data and kills unrelated Java; start skips compiling Functions
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
+
+- OPS-001: `scripts/start-dev.ps1:128-129` runs the export and prints "Data
+  exported successfully" regardless: `firebase` is a native command, so a
+  failed export never reaches the `catch`. Then it shuts the emulators down.
+- OPS-002: `:148-152` force-stops every `java` process on the machine.
+- OPS-004: start never builds `firebase/functions`, so the emulators can run
+  missing or stale compiled code while the UI looks ready.
+- OPS-003: the sample-data generator logs a failure, then announces completion
+  and exits 0, which `manage-dev-data.ps1` trusts.
+- **Findings**: 13. OPS-001/002 are source-only; the reviewers could not run
+  PowerShell. **Catch**: do it with T065's start/stop round trip.
+- **Source**: code review, 2026-10-04
+
+### T101 — Large campaigns get slow
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
+
+Measured at sizes well beyond current campaigns:
+
+- PERF2-001: the location filter calls `ancestorIdsOf` per matching row
+  (`LocationDirectory.tsx:212-218`), each rebuilding an index: 247 ms at 2,000
+  locations.
+- PERF2-002: saga pagination slices and recounts at every word boundary
+  (`paginate-prose.ts:171-180`): 481 ms on a 50,000-word paragraph.
+- PERF2-003: quick add subscribes to NPCs, quests, locations and notes before
+  any create (`useQuickAddCreate.ts:118-121`).
+- Pass 5: 1,200 NPC rows are 19k DOM elements and ~350–570 ms to restore; the
+  reviewers suggest paging or virtualisation.
+- **Findings**: 07, 18. **Source**: code review, 2026-10-04
+
+### T102 — Remove unused modules; route story utilities through the barrel
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
+
+- ARCH-M01: nine modules have no production caller, e.g.
+  `notes/utils/note-relationships.ts` (no importer), `useOpenAIExtractor` (only
+  its barrel export, `collaboration/index.ts:36`), `core/components/Chip.tsx`,
+  `core/config/buildConfig.ts`. The full list with lines is in 10.
+- ARCH-M02: three story pages import chapter utilities from internals instead
+  of the storytelling barrel.
+- **Catch**: recheck callers first; `notes/README.md:25` still describes
+  `note-relationships.ts`. **Source**: code review, 2026-10-04
+
+### T105 — Deploy the Firestore and Storage rules from the repo, not by pasting into the console
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
+
+Production rules are pasted into the Firebase console by hand from
+`firestore.rules.prod` / `storage.rules.prod`, so the repo and production can
+drift with nothing to notice it.
+
+- **Where**: `firebase/firebase.json` deliberately has no rules keys (`:9`,
+  `:12` explain why: the keys used to point at the permissive emulator
+  rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
+  `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
+  are console-only and never deployed by CI.
+- **Catch**: nobody has compared the `.prod` copies with the live rules; the
+  code review could not either. The first deploy overwrites whatever is live,
+  so read the console back and diff it first. That read-back is also T080's
+  prerequisite. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
+  or from CI decides whether the deploy service account needs rules permissions.
+- **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
+  its `firestore.rules` key at `firestore.rules`; it has no such key.
+- **Source**: todo.txt, 2026-10-04
+
+### T107 — CI builds the site inside a Docker image only to copy the files out
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
+
+Docker is not needed for development (none exists), but it is not unused:
+both Hosting workflows build the shipped site with it
+(`firebase-hosting-merge.yml:81`, `firebase-hosting-pull-request.yml:38`).
+They then `docker cp` the files out, so the Dockerfile's nginx stage and
+`docker/config/nginx.conf` serve nothing. `test.yml` already builds without
+Docker, and the build could be produced the same way.
+
+- **Catch**: the shipped build is not the one CI checked. `Dockerfile.frontend.prod:8`
+  runs `npm install --legacy-peer-deps`, which ignores the lockfile, while
+  `test.yml` builds from `npm ci`. A direct build must keep `CI: false` (see
+  `test.yml`'s Build step) and the `.env` the workflow writes from secrets.
+- **Touches**: both Hosting workflows, `docker/`, `.dockerignore`, `CLAUDE.md:27-29`,
+  T059's `Where` line. Local leftovers `docker/emulators/{data,logs}` are
+  untracked and can simply be deleted.
+- **More Docker instead?** The note also asked this. Development already moved
+  off Docker on purpose (`CLAUDE.md`: "No Docker"); the remaining use adds a
+  layer and buys nothing that `actions/setup-node` doesn't.
+- **Source**: todo.txt, 2026-10-04
+
+---
+
+## Decisions
+
+Open questions that block work until the maintainer answers them.
+
+### T103 — Browser checks are not reproducible
+**Type** decision · **Size** L · **Status** needs scoping · **Verified** 2026-10-04
+
+Claude-in-Chrome checks catch what jsdom cannot (see "What phase 15 learned"),
+but each one is a one-off: nothing replays it, so a defect it found can come
+back unnoticed.
+
+- **Measured**: the repo has no browser test runner (`package.json` has no
+  Playwright, Cypress or Puppeteer). The code review's passes 4–5 did build
+  one outside the repo: Playwright Core driving the production build against
+  the emulators with seeded fixtures (`docs/reviews/2026-10-04/pass-4/evidence/probes/runtime/`,
+  `run.cjs` and `helpers.cjs`), written for Linux paths.
+- **Starting point**: CI's `functions` job already starts the emulators (Java
+  included), which an end-to-end job would also need.
+- **To decide**: which journeys become replayable tests, whether every defect
+  found in the browser must land with one, and what stays exploratory in
+  Claude-in-Chrome. Size depends on the answer.
+- **Source**: todo.txt, 2026-10-04
+
+### T104 — Update the Firebase email templates
+**Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-04
+
+The only mail Firebase sends for the app is the sign-in link
+(`sendSignInLinkToEmail`, `src/core/services/firebase/auth/AuthService.ts:230`).
+Its template lives in the Firebase console (Authentication → Templates), not
+in the repo, so this is console work plus whatever copy is decided.
+
+- **To decide**: what should change (wording, sender name, branding). The site
+  is being renamed (T075), so do this after the name is chosen. A custom
+  sending domain is T057's blocker, not this item's.
+- **Unverified**: how much of the email-link template the console lets you
+  edit.
+- **Source**: todo.txt, 2026-10-04
+
+### T106 — Should the production rules be public on GitHub?
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-10-04
+
+- **Measured**: the repository is **public** (`gh repo view`).
+  `firestore.rules.prod` and `storage.rules.prod` hold no identities or secrets:
+  global admin is a profile flag (`firestore.rules.prod:155-158`), not a
+  hard-coded uid or email.
+- **What it changes**: the Firebase web config is public by design, and the
+  rules are what protect the data. Hiding them protects nothing that correct
+  rules don't. But public rules make an open hole easy to find, and T080 is
+  one today.
+- **To decide**: keep them public, or make the repo private (moving them
+  elsewhere would break T105's deploy-from-repo). Either way, T080 is the
+  actual exposure.
+- **Source**: todo.txt, 2026-10-04
 
 ---
 
