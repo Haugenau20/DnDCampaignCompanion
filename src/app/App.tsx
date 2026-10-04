@@ -17,6 +17,7 @@ import { QuickAddProvider } from 'shared/context/QuickAddProvider';
 import ErrorBoundary from 'shared/components/ErrorBoundary';
 import Layout from 'app/layout/Layout';
 import EditRouteRedirect from 'app/EditRouteRedirect';
+import RecordRoute from 'app/RecordRoute';
 import RouteFallback from 'app/RouteFallback';
 import { lazyPage } from 'app/lazyPage';
 
@@ -140,7 +141,10 @@ const App: React.FC = () => {
                                         `/quests/create` and `/quests/edit/x` keep
                                         their own pages rather than being read as
                                         a quest id. */}
-                                    <Route path="/quests/:questId" element={<QuestDetailPage />} />
+                                    <Route
+                                      path="/quests/:questId"
+                                      element={<RecordRoute param="questId"><QuestDetailPage /></RecordRoute>}
+                                    />
                                     <Route path="/npcs" element={<NPCsPage />} />
                                     <Route path="/npcs/create" element={<NPCsCreatePage />} />
                                     <Route
@@ -153,7 +157,12 @@ const App: React.FC = () => {
                                         />
                                       }
                                     />
-                                    <Route path="/npcs/:npcId" element={<NPCDetailPage />} />
+                                    {/* Each record gets its own page, so an editor cannot carry one
+                                        record's draft into the next (REACT-001). */}
+                                    <Route
+                                      path="/npcs/:npcId"
+                                      element={<RecordRoute param="npcId"><NPCDetailPage /></RecordRoute>}
+                                    />
                                     <Route path="/locations" element={<LocationsPage />} />
                                     <Route path="/locations/create" element={<LocationCreatePage />} />
                                     <Route
@@ -170,7 +179,10 @@ const App: React.FC = () => {
                                         `/locations/create` and `/locations/edit/x`
                                         keep their own pages rather than being read
                                         as a location id. */}
-                                    <Route path="/locations/:locationId" element={<LocationDetailPage />} />
+                                    <Route
+                                      path="/locations/:locationId"
+                                      element={<RecordRoute param="locationId"><LocationDetailPage /></RecordRoute>}
+                                    />
                                     <Route path="/rumors" element={<RumorsPage />} />
                                     {/* `15-9` retired the create form. A rumour
                                         has no page, so there was nothing for
@@ -195,7 +207,10 @@ const App: React.FC = () => {
                                       }
                                     />
                                     <Route path="/notes" element={<NotesPage />} />
-                                    <Route path="/notes/:noteId" element={<NotePage />} />
+                                    <Route
+                                      path="/notes/:noteId"
+                                      element={<RecordRoute param="noteId"><NotePage /></RecordRoute>}
+                                    />
                                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
                                     <Route path="/contact" element={<ContactPage />} />
                                     <Route path="/profile" element={<ProfilePage />} />

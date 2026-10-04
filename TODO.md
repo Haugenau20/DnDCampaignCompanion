@@ -210,12 +210,16 @@ failed write.
 - **Failed save loses the draft**: a rejected entity write sets the provider
   error (`useFirebaseData.ts:285`) that the page gate reads, which unmounts
   the editor, and Retry doesn't recover it (REACT-002, TEST-007).
-- **Wrong record**: going from NPC A to B keeps A's draft and saves it to B
-  (REACT-001); an offline-queued note save runs against the next note after
-  Search navigation (RECOVERY-001); a cross-campaign note's fallback survives
-  route and campaign changes (RECOVERY-002). Seen 2026-10-04 the other way
-  round too: switching campaign with your own note open leaves "Note Not
-  Found" until a reload, though a fresh load of the same URL shows it.
+- **Wrong record**: a cross-campaign note's fallback survives a campaign
+  change (RECOVERY-002). Seen 2026-10-04 the other way round too: switching
+  campaign with your own note open leaves "Note Not Found" until a reload,
+  though a fresh load of the same URL shows it. A route change no longer
+  carries it: `app/RecordRoute.tsx` remounts the note page per note id. That
+  same remount should also close RECOVERY-001 (an offline-queued note save
+  running against the next note after Search navigation): the queue then
+  belongs to the old note's editor, which is the reviewers' own unmount
+  control. That is traced in the source, not re-run; re-run pass 4's
+  sequence (15) before deleting this.
 - **Draft dropped on leaving**: leaving a note before the autosave debounce
   cancels the only pending save; a reload loses an unacknowledged one
   (REACT-003).

@@ -265,6 +265,14 @@ jest.mock("@/features/user-management/groups/pages/JoinPage", () => ({
   default: () => <div data-testid="page-join" />,
 }));
 
+// Marks which routes give each record its own page instance (REACT-001).
+jest.mock("app/RecordRoute", () => ({
+  __esModule: true,
+  default: ({ param, children }: { param: string; children: React.ReactNode }) => (
+    <div data-testid={`record-route-${param}`}>{children}</div>
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Import App after all mocks are registered
 // ---------------------------------------------------------------------------
@@ -534,6 +542,22 @@ describe("App", () => {
     test(`declares exactly ${EXPECTED_ROUTES.length} routes`, () => {
       render(<App />);
       expect(capturedRoutes).toHaveLength(EXPECTED_ROUTES.length);
+    });
+
+    // REACT-001: the router reuses a route's element when only the id
+    // changes, so an editor opened on one record saved its draft onto the
+    // next. Each of these pages edits the record named by its id.
+    test.each([
+      ["npcs_npcId", "npcId", "page-npc-detail"],
+      ["quests_questId", "questId", "page-quest-detail"],
+      ["locations_locationId", "locationId", "page-location-detail"],
+      ["notes_noteId", "noteId", "page-note"],
+    ])("gives each record behind route '%s' its own page", async (route, param, page) => {
+      render(<App />);
+      const keyed = within(screen.getByTestId(`route-${route}`)).getByTestId(
+        `record-route-${param}`
+      );
+      expect(await within(keyed).findByTestId(page)).toBeInTheDocument();
     });
   });
 });
