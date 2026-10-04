@@ -70,7 +70,17 @@ const EmailLinkPage: React.FC = () => {
   // The link as it was opened. Navigating away changes `window.location`, and
   // the one-time code in it must be read exactly once.
   const [link] = useState(() => window.location.href);
-  const [pending] = useState(() => getPendingEmailSignIn());
+  /*
+    The link this browser is waiting on, if it is this one. A link carrying a
+    device request was asked for by the browser holding that same request; any
+    other browser approves it for that device instead, even one waiting on a
+    link of its own. Letting any remembered address win tried to sign in here
+    with the wrong address and never approved the device (AUTH-004).
+  */
+  const [pending] = useState(() => {
+    const stored = getPendingEmailSignIn();
+    return stored && (!intent.device || stored.device === intent.device) ? stored : null;
+  });
   const [phase, setPhase] = useState<Phase>(() =>
     !isSignInLink(link)
       ? 'invalid'
@@ -83,6 +93,8 @@ const EmailLinkPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Set when the remembered address was refused, so the page asks for it. */
+  const [askAddress, setAskAddress] = useState(false);
   const started = useRef(false);
 
   const inviteLink = intent.invitation
@@ -99,6 +111,9 @@ const EmailLinkPage: React.FC = () => {
         ({ isNewUser } = await completeSignInLink(address, link, rememberMe));
       } catch (err) {
         setError(describeSignInError(err));
+        // The address is wrong, not the link, so the link still works: ask
+        // for the right one rather than leaving only "Back to sign in".
+        setAskAddress((err as { code?: string } | null)?.code === 'auth/invalid-email');
         setPhase('failed');
         return;
       }
@@ -220,12 +235,26 @@ const EmailLinkPage: React.FC = () => {
         </div>
       )}
 
-      {phase === 'needEmail' && (
+      {(phase === 'needEmail' || (phase === 'failed' && askAddress)) && (
         <form onSubmit={handleEmailSubmit} className="card rounded-lg px-6 py-6 space-y-4">
-          <Typography color="secondary">
-            This link was opened on a different device or browser from the one
-            that asked for it. Confirm the email address it was sent to.
-          </Typography>
+          {phase === 'failed' ? (
+            <>
+              <div
+                role="alert"
+                className="rounded-md border px-3 py-2 feedback-banner feedback-banner-error"
+              >
+                <Typography variant="body-sm">{error}</Typography>
+              </div>
+              <Typography color="secondary">
+                Enter the email address the link was sent to.
+              </Typography>
+            </>
+          ) : (
+            <Typography color="secondary">
+              This link was opened on a different device or browser from the one
+              that asked for it. Confirm the email address it was sent to.
+            </Typography>
+          )}
           <Input
             label="Email"
             type="email"
@@ -244,7 +273,7 @@ const EmailLinkPage: React.FC = () => {
         </form>
       )}
 
-      {phase === 'failed' && (
+      {phase === 'failed' && !askAddress && (
         <div className="card rounded-lg px-6 py-6 space-y-4">
           <div
             role="alert"

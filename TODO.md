@@ -30,7 +30,6 @@ adjusted for the images focus above.
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
-| medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -101,7 +100,7 @@ here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 - **Not filed**: the reviews' unverified leads, and the optional refactors
   other than ARCH-M01/M02 (T102). They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its four findings are filed (T037, T091); the rest
+  (maintainer, 2026-10-04). Its open findings are filed under T037; the rest
   of that scope stays unreviewed by decision.
 - App source was byte-identical to the reviewed commit `64fe195` when these were
   filed, and each entry's primary location was opened on 2026-10-04.
@@ -244,19 +243,6 @@ Each of these decides from a stale local copy, then writes:
   independent; can go first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
-- **Source**: code review, 2026-10-04
-
-### T091 — Auth: a stale sign-in can restore the previous user, and a pending email blocks a device link
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- AUTH-003: `FirebaseContext.tsx:276-286` sets the profile from an async load
-  without checking the user is still the same, so a slow load can restore the
-  old profile, group and campaign after sign-out. Client state only; no server
-  bypass.
-- AUTH-004: `EmailLinkPage.tsx:73-82` lets any pending email sign-in take
-  precedence over a device-approval link, and after rejection there is no way
-  to correct the email.
-- **Findings**: 02. That review was stopped and will not be finished.
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade

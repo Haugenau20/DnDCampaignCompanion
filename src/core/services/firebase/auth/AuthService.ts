@@ -30,6 +30,12 @@ import {
   export interface PendingEmailSignIn {
     email: string;
     rememberMe: boolean;
+    /**
+     * The device sign-in request the link carries, when this browser opened
+     * one. The landing page signs in here only for a link carrying this same
+     * request; any other request belongs to another device (AUTH-004).
+     */
+    device?: string;
   }
 
   /**
@@ -220,7 +226,9 @@ import {
      * The address and the "keep me signed in" choice are remembered in this
      * browser, so opening the link here does not ask for the address again.
      * Opened on another device, the page has to ask -- Firebase requires the
-     * address to match the one the link was sent to.
+     * address to match the one the link was sent to. The device sign-in
+     * request `continueUrl` carries, if any, is remembered too, so the landing
+     * page can tell this browser's link from another device's (AUTH-004).
      *
      * @param email Where to send the link
      * @param continueUrl Absolute URL the link opens
@@ -228,7 +236,8 @@ import {
      */
     public async sendSignInLink(email: string, continueUrl: string, rememberMe: boolean = false): Promise<void> {
       await sendSignInLinkToEmail(this.auth, email, { url: continueUrl, handleCodeInApp: true });
-      const pending: PendingEmailSignIn = { email, rememberMe };
+      const device = new URL(continueUrl).searchParams.get('device');
+      const pending: PendingEmailSignIn = device ? { email, rememberMe, device } : { email, rememberMe };
       localStorage.setItem(PENDING_EMAIL_SIGN_IN_KEY, JSON.stringify(pending));
     }
 
@@ -241,9 +250,10 @@ import {
         const stored = localStorage.getItem(PENDING_EMAIL_SIGN_IN_KEY);
         if (!stored) return null;
         const parsed = JSON.parse(stored);
-        return typeof parsed?.email === 'string'
-          ? { email: parsed.email, rememberMe: parsed.rememberMe === true }
-          : null;
+        if (typeof parsed?.email !== 'string') return null;
+        const pending: PendingEmailSignIn = { email: parsed.email, rememberMe: parsed.rememberMe === true };
+        if (typeof parsed.device === 'string') pending.device = parsed.device;
+        return pending;
       } catch {
         return null;
       }

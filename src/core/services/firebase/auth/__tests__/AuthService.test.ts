@@ -406,6 +406,16 @@ describe('AuthService', () => {
       expect(svc.getPendingEmailSignIn()).toEqual({ email: 'a@b.com', rememberMe: true });
     });
 
+    // AUTH-004: the landing page tells "this browser asked" from "another
+    // device asked" by the request the link carries, so it needs to know
+    // which request this browser opened.
+    test('remembers the device request the link carries', async () => {
+      mockSendSignInLinkToEmail.mockResolvedValueOnce(undefined);
+      const svc = AuthService.getInstance();
+      await svc.sendSignInLink('a@b.com', 'http://app/auth/link?device=req-1');
+      expect(svc.getPendingEmailSignIn()).toEqual({ email: 'a@b.com', rememberMe: false, device: 'req-1' });
+    });
+
     test('remembers nothing when sending fails', async () => {
       mockSendSignInLinkToEmail.mockRejectedValueOnce(new Error('quota'));
       const svc = AuthService.getInstance();
