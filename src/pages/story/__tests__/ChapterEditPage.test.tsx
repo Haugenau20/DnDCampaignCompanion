@@ -116,9 +116,11 @@ jest.mock("features/storytelling", () => ({
 // ---------------------------------------------------------------------------
 // Child component mocks
 // ---------------------------------------------------------------------------
+/** The props the page last gave the dialog, to call `onConfirm` as it does. */
+let mockDialogProps: any;
 jest.mock("shared/components/DeleteConfirmationDialog", () => ({
   __esModule: true,
-  default: (props: any) => (
+  default: (props: any) => (mockDialogProps = props) && (
     <div data-testid="delete-dialog" data-open={String(props.isOpen)}>
       <span data-testid="delete-dialog-item-name">{props.itemName}</span>
       <button data-testid="delete-dialog-confirm" onClick={props.onConfirm}>
@@ -404,6 +406,18 @@ describe("ChapterEditPage", () => {
       });
       expect(mockDeleteChapter).toHaveBeenCalledWith("chapter-01");
       expect(mockNavigateToPage).toHaveBeenCalledWith("/story/chapters");
+    });
+
+    // FUNC-006: the page swallowed the failure, so the dialog closed as if the
+    // chapter were gone and could not show why, or let the author retry.
+    it("lets a failed delete reject, so the dialog can show it and offer a retry", async () => {
+      mockDeleteChapter.mockRejectedValueOnce(new Error("Write refused"));
+      renderPage();
+      fireEvent.click(screen.getByTestId("chapter-form-delete-click"));
+
+      await expect(mockDialogProps.onConfirm()).rejects.toThrow("Write refused");
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("navigate-redirect")).not.toBeInTheDocument();
     });
 
     it("redirects to /story after deletion (isDeleted=true)", async () => {

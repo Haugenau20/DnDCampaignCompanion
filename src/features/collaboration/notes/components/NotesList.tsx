@@ -32,7 +32,7 @@ const COLLAPSED_ROW_COUNT = 4;
  * this is the first place `status: "archived"` becomes visible.
  */
 const NotesList: React.FC = () => {
-  const { notes, isLoading, error, saveNote } = useNotes();
+  const { notes, isLoading, error, retry, saveNote } = useNotes();
   const { activeCampaignId, activeCampaign } = useCampaigns();
   const { createAndOpen } = useCreateNote();
 
@@ -104,9 +104,12 @@ const NotesList: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center py-8 error-container">
-        <AlertCircle className="w-6 h-6 mr-3 feedback-error" />
+      <div className="flex flex-wrap items-center justify-center gap-3 py-8 error-container">
+        <AlertCircle className="w-6 h-6 feedback-error" />
         <Typography color="error">{error}</Typography>
+        <Button variant="outline" onClick={retry}>
+          Try again
+        </Button>
       </div>
     );
   }

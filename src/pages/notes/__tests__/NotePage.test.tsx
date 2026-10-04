@@ -561,17 +561,42 @@ describe("NotePage", () => {
       expect(mockNavigateToPage).not.toHaveBeenCalled();
     });
 
-    it("closes the dialog after a failed delete, leaving the note editor visible", async () => {
-      mockDeleteNote.mockRejectedValue(new Error("Delete failed"));
+    // Rewritten against the requirement (WRITES-001, approved 2026-10-04):
+    // this test used to assert that a failed delete closed the dialog, which
+    // is the defect -- the reader could not tell the note survived, or why.
+    it("keeps the dialog open with the reason after a failed delete, and a retry works", async () => {
+      mockDeleteNote.mockRejectedValueOnce(new Error("Delete failed"));
       renderPage();
 
       fireEvent.click(screen.getByRole("button", { name: /delete/i }));
       fireEvent.click(screen.getByRole("button", { name: /delete note/i }));
 
-      await waitFor(() => {
-        expect(screen.queryByText(/delete this note/i)).not.toBeInTheDocument();
-      });
+      expect(await screen.findByRole("alert")).toHaveTextContent(/delete failed/i);
+      expect(screen.getByRole("heading", { name: /delete this note/i })).toBeInTheDocument();
       expect(screen.getByTestId("note-editor")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /delete note/i })).toBeEnabled();
+
+      mockDeleteNote.mockResolvedValueOnce(undefined);
+      fireEvent.click(screen.getByRole("button", { name: /delete note/i }));
+
+      await waitFor(() => {
+        expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
+      });
+      expect(mockDeleteNote).toHaveBeenCalledTimes(2);
+    });
+
+    it("opens again without the last attempt's error", async () => {
+      mockDeleteNote.mockRejectedValueOnce(new Error("Delete failed"));
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /delete note/i }));
+      await screen.findByRole("alert");
+
+      fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
 
@@ -587,6 +612,26 @@ describe("NotePage", () => {
 
       await act(async () => {});
       expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+
+    // WRITES-001: a failed archive used to be logged and nothing else.
+    it("says the archive failed, and clears that once a retry succeeds", async () => {
+      mockArchiveNote.mockRejectedValueOnce(new Error("Archive failed"));
+      renderPage();
+
+      fireEvent.click(screen.getByRole("button", { name: /archive/i }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/couldn.t archive/i);
+      expect(screen.getByRole("alert")).toHaveTextContent(/archive failed/i);
+      expect(screen.getByTestId("note-editor")).toBeInTheDocument();
+
+      mockArchiveNote.mockResolvedValueOnce(undefined);
+      fireEvent.click(screen.getByRole("button", { name: /archive/i }));
+
+      await waitFor(() => {
+        expect(mockNavigateToPage).toHaveBeenCalledWith("/notes");
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
   });
 

@@ -175,24 +175,26 @@ describe('useEntityExtractor', () => {
     test('should throw error for empty content', async () => {
       const { result } = renderHook(() => useEntityExtractor());
 
-      let entities: ExtractedEntity[] = [];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractWithOpenAI('');
+        failure = await result.current.extractWithOpenAI('').catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
       expect(result.current.error).toBe('Content is required for entity extraction');
     });
 
     test('should throw error for whitespace-only content', async () => {
       const { result } = renderHook(() => useEntityExtractor());
 
-      let entities: ExtractedEntity[] = [];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractWithOpenAI('   ');
+        failure = await result.current.extractWithOpenAI('   ').catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
       expect(result.current.error).toBe('Content is required for entity extraction');
     });
 
@@ -200,12 +202,13 @@ describe('useEntityExtractor', () => {
       const { result } = renderHook(() => useEntityExtractor());
       const longContent = 'a'.repeat(10001);
 
-      let entities: ExtractedEntity[] = [];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractWithOpenAI(longContent);
+        failure = await result.current.extractWithOpenAI(longContent).catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
       expect(result.current.error).toBe('Content is too long (maximum 10,000 characters)');
     });
 
@@ -306,7 +309,7 @@ describe('useEntityExtractor', () => {
 
       const { result } = renderHook(() => useEntityExtractor());
       await act(async () => {
-        await result.current.extractWithOpenAI('content');
+        await result.current.extractWithOpenAI('content').catch(() => undefined);
       });
 
       expect(mockRefreshUsageStatus).toHaveBeenCalledTimes(1);
@@ -315,7 +318,7 @@ describe('useEntityExtractor', () => {
     test('does not ask when the content never left the browser', async () => {
       const { result } = renderHook(() => useEntityExtractor());
       await act(async () => {
-        await result.current.extractWithOpenAI('');
+        await result.current.extractWithOpenAI('').catch(() => undefined);
       });
 
       expect(mockRefreshUsageStatus).not.toHaveBeenCalled();
@@ -344,13 +347,13 @@ describe('useEntityExtractor', () => {
       const { result } = renderHook(() => useEntityExtractor());
 
       await act(async () => {
-        await result.current.extractWithOpenAI('content');
+        await result.current.extractWithOpenAI('content').catch(() => undefined);
       });
 
       expect(mockSetUsageLimitExceededWithInfo).toHaveBeenCalledWith(usage, contactInfo);
     });
 
-    test('should return empty array on usage limit exceeded', async () => {
+    test('should reject on usage limit exceeded', async () => {
       const error = new MockUsageLimitExceededError({
         error: 'Limit exceeded',
         usage: makeUsageStatus(),
@@ -360,12 +363,13 @@ describe('useEntityExtractor', () => {
 
       const { result } = renderHook(() => useEntityExtractor());
 
-      let entities: ExtractedEntity[] = [makeExtractedEntity('1', 'test')];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractWithOpenAI('content');
+        failure = await result.current.extractWithOpenAI('content').catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
     });
 
     test('should set error message on usage limit exceeded', async () => {
@@ -379,7 +383,7 @@ describe('useEntityExtractor', () => {
       const { result } = renderHook(() => useEntityExtractor());
 
       await act(async () => {
-        await result.current.extractWithOpenAI('content');
+        await result.current.extractWithOpenAI('content').catch(() => undefined);
       });
 
       expect(result.current.error).toBe('You have exceeded your daily limit');
@@ -393,12 +397,13 @@ describe('useEntityExtractor', () => {
     test('should validate content and throw for empty input', async () => {
       const { result } = renderHook(() => useEntityExtractor());
 
-      let entities: ExtractedEntity[] = [];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractFromContent('');
+        failure = await result.current.extractFromContent('').catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
       expect(result.current.error).toBe('Content is required for entity extraction');
     });
 
@@ -434,12 +439,13 @@ describe('useEntityExtractor', () => {
       const { result } = renderHook(() => useEntityExtractor());
       const longContent = 'b'.repeat(10001);
 
-      let entities: ExtractedEntity[] = [];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractFromContent(longContent);
+        failure = await result.current.extractFromContent(longContent).catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
       expect(result.current.error).toBe('Content is too long (maximum 10,000 characters)');
     });
 
@@ -455,12 +461,13 @@ describe('useEntityExtractor', () => {
 
       const { result } = renderHook(() => useEntityExtractor());
 
-      let entities: ExtractedEntity[] = [];
+      let failure: unknown;
       await act(async () => {
-        entities = await result.current.extractFromContent('content');
+        failure = await result.current.extractFromContent('content').catch((err: unknown) => err);
       });
 
-      expect(entities).toEqual([]);
+      // A failure rejects; it is never an empty result (TEST-004).
+      expect(failure).toBeInstanceOf(Error);
       expect(mockSetUsageLimitExceededWithInfo).toHaveBeenCalledWith(usage, contactInfo);
     });
   });
@@ -475,7 +482,7 @@ describe('useEntityExtractor', () => {
       const { result } = renderHook(() => useEntityExtractor());
 
       await act(async () => {
-        await result.current.extractWithOpenAI('content');
+        await result.current.extractWithOpenAI('content').catch(() => undefined);
       });
 
       expect(result.current.error).not.toBeNull();

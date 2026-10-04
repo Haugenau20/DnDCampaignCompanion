@@ -45,18 +45,17 @@ const ChapterEditPage: React.FC = () => {
     }
   }, [chapterId, chapters, getChapterById]);
 
-  // Handle delete confirmation
+  /**
+   * Delete the chapter. A failure rejects on purpose: the dialog shows the
+   * reason and stays open for a retry. Catching it here made the dialog close
+   * as if the chapter were gone (FUNC-006).
+   */
   const handleDeleteConfirm = async () => {
     if (!chapter) return;
 
-    try {
-      await deleteChapter(chapter.id);
-      setIsDeleted(true);
-      navigateToPage('/story/chapters');
-    } catch (error) {
-      console.error('Error deleting chapter:', error);
-      // Error is handled in the dialog component
-    }
+    await deleteChapter(chapter.id);
+    setIsDeleted(true);
+    navigateToPage('/story/chapters');
   };
 
   // Breadcrumb items

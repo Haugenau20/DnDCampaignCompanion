@@ -271,6 +271,52 @@ describe('DeleteConfirmationDialog', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Reopening (FUNC-006)
+  // -------------------------------------------------------------------------
+  // A page that keeps the dialog mounted and only toggles `isOpen` reopened it
+  // with Delete and Cancel still disabled from the last attempt.
+  describe('reopening', () => {
+    test('opens with enabled controls and no old error after a failed attempt', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      const onConfirm = jest.fn().mockRejectedValue(new Error('Delete failed'));
+      const { result, props } = renderDialog({ onConfirm });
+
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      await waitFor(() => {
+        expect(screen.getByText('Delete failed')).toBeInTheDocument();
+      });
+
+      result.rerender(<DeleteConfirmationDialog {...props} isOpen={false} />);
+      result.rerender(<DeleteConfirmationDialog {...props} isOpen />);
+
+      expect(screen.queryByText('Delete failed')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /delete npc/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeEnabled();
+    });
+
+    test('opens with enabled controls after a confirm that settled while it was closed', async () => {
+      let resolveConfirm!: () => void;
+      const onConfirm = jest.fn().mockReturnValue(
+        new Promise<void>((resolve) => {
+          resolveConfirm = resolve;
+        })
+      );
+      const { result, props } = renderDialog({ onConfirm });
+
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      await act(async () => {
+        resolveConfirm();
+      });
+
+      result.rerender(<DeleteConfirmationDialog {...props} isOpen={false} />);
+      result.rerender(<DeleteConfirmationDialog {...props} isOpen />);
+
+      expect(screen.getByRole('button', { name: /delete npc/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /cancel/i })).toBeEnabled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Disabled state during loading
   // -------------------------------------------------------------------------
   describe('disabled state during deletion', () => {

@@ -26,6 +26,13 @@ import { useAuth, useGroups } from "features/user-management";
  * not-found) is this note's own business, handled only once the gate says
  * `ready`.
  */
+/**
+ * The reason a write failed, in words for the page.
+ * @param error What the write rejected with
+ */
+const describeFailure = (error: unknown): string =>
+  error instanceof Error && error.message ? error.message : "Something went wrong. Try again.";
+
 const NotePage: React.FC = () => {
   const { noteId } = useParams<{ noteId: string }>();
   const { navigateToPage } = useNavigation();
@@ -38,6 +45,10 @@ const NotePage: React.FC = () => {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  /** Why the last delete failed, shown in its dialog until the next attempt. */
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** Why the last archive failed, shown above the note until the next attempt. */
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [crossCampaignNote, setCrossCampaignNote] = useState<Note | null>(null);
   const [isLoadingCrossCampaignNote, setIsLoadingCrossCampaignNote] = useState(false);
   const [crossCampaignNotFound, setCrossCampaignNotFound] = useState(false);
@@ -141,31 +152,43 @@ const NotePage: React.FC = () => {
   };
 
   /**
-   * Archive this note and navigate back
+   * Archive this note and navigate back. A failure stays on the note and says
+   * why, rather than only logging it (WRITES-001).
    */
   const handleArchiveNote = async () => {
+    setArchiveError(null);
     try {
       await archiveNote(noteId);
       navigateToPage("/notes");
     } catch (error) {
       console.error("Failed to archive note:", error);
+      setArchiveError(describeFailure(error));
     }
+  };
+
+  const openDeleteDialog = () => {
+    setDeleteError(null);
+    setIsDeleteDialogOpen(true);
   };
 
   /**
    * Deleting a note is irreversible and used to happen on a single click,
-   * while leaving a group and deleting an account both ask first.
+   * while leaving a group and deleting an account both ask first. A failure
+   * keeps the dialog open with the reason, so Delete can simply be pressed
+   * again (WRITES-001).
    */
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       await deleteNote(noteId);
+      setIsDeleteDialogOpen(false);
       navigateToPage("/notes");
     } catch (error) {
       console.error("Failed to delete note:", error);
+      setDeleteError(describeFailure(error));
     } finally {
       setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -225,6 +248,12 @@ const NotePage: React.FC = () => {
               </div>
             )}
 
+            {archiveError && (
+              <Typography variant="body-sm" color="error" role="alert" className="mb-4">
+                Couldn't archive this note: {archiveError}
+              </Typography>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
               <NoteEditor
                 ref={noteEditorRef}
@@ -232,7 +261,7 @@ const NotePage: React.FC = () => {
                 readOnly={isFromDifferentCampaign} // Make cross-campaign notes read-only
                 onBack={handleBackClick}
                 onArchive={handleArchiveNote}
-                onDelete={() => setIsDeleteDialogOpen(true)}
+                onDelete={openDeleteDialog}
               />
 
               <div className="space-y-4">
@@ -256,6 +285,11 @@ const NotePage: React.FC = () => {
               <Typography color="secondary" className="mb-4">
                 This permanently removes the note and everything in it. This cannot be undone.
               </Typography>
+              {deleteError && (
+                <Typography variant="body-sm" color="error" role="alert" className="mb-4">
+                  Couldn't delete this note: {deleteError}
+                </Typography>
+              )}
               <div className="flex justify-end gap-3">
                 <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>
                   Cancel

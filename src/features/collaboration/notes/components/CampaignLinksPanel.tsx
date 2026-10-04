@@ -228,22 +228,15 @@ const CampaignLinksPanel: React.FC<CampaignLinksPanelProps> = ({
         throw new Error("Note content is too short for analysis (minimum 50 characters)");
       }
 
-      const note = getNoteById(noteId);
-      if (note) {
-        const convertedEntities = note.extractedEntities.filter(entity => entity.isConverted);
-        await updateNote(noteId, { extractedEntities: convertedEntities });
-        setExtractedEntities([]);
-      }
-
+      // Rejects on any failure, so nothing below runs and the detections
+      // already saved stay as they are: they are replaced only by a scan that
+      // succeeded, and only once that result is written (FUNC-002).
       const rawEntities = await extractWithOpenAI(contentToExtract);
-
-      if (rawEntities.length === 0 && isUsageLimitExceeded) {
-        return;
-      }
 
       const uniqueEntities = deduplicateEntities(rawEntities);
       const newEntities = filterNewEntities(uniqueEntities);
 
+      const note = getNoteById(noteId);
       if (note) {
         const convertedEntities = note.extractedEntities.filter(entity => entity.isConverted);
         await updateNote(noteId, {

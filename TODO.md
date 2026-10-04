@@ -29,7 +29,6 @@ adjusted for the images focus above.
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T086 | Failed actions give no visible reason or retry | M | open | Data survives, but the user can't tell or try again |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
@@ -227,25 +226,6 @@ failed write.
 - **Findings**: 05, 06, 08, 15. **Catch**: the reviewers say these need separate
   regression sequences; consider splitting at pickup. Plan first.
 - **Source**: code review, 2026-10-04
-
-### T086 — Failed actions give no visible reason or retry
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-The data survives these, but the user cannot tell anything failed, or cannot
-try again.
-
-- `CampaignLinksPanel.tsx:231-235` clears previous detections *before* the
-  rescan runs; a rejected rescan leaves none and also says "no new names"
-  (FUNC-002, TEST-004).
-- `ChapterEditPage.tsx:55-58` swallows a failed delete; the dialog closes and
-  stays disabled when reopened (FUNC-006).
-- `NotePage.tsx:146-169`: a failed archive or delete only logs (WRITES-001).
-- `NoteEditor.tsx:245-250`: a failed autosave only logs and the footer stays
-  "Unsaved changes" (REACT-004). A manual save behind a pending idle save
-  writes the same snapshot twice (PERF2-005).
-- `NoteContext.tsx:91-95`: a failed notes listener empties the list with no
-  retry (RECOVERY-003). The NPC provider's Try again is the working pattern.
-- **Findings**: 05, 06, 07, 08, 17, 20. **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04

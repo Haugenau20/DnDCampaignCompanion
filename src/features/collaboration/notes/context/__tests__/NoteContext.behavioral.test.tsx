@@ -1301,6 +1301,55 @@ describe('NoteContext Behavioral Tests', () => {
       });
       expect(capturedContext.notes).toEqual([]);
     });
+
+    // RECOVERY-003: a failed listener stayed failed until a reload; there was
+    // nothing to press.
+    test('reopens a failed listener on retry, and clears the error', async () => {
+      notesListener.firstSnapshot.mockRejectedValueOnce(new Error('Firebase error'));
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.error).toBe('Failed to fetch notes');
+      });
+      const opened = notesListener.subscribe.mock.calls.length;
+
+      act(() => {
+        capturedContext.retry();
+      });
+
+      await waitFor(() => {
+        expect(capturedContext.error).toBeNull();
+      });
+      expect(notesListener.subscribe.mock.calls.length).toBe(opened + 1);
+      expect(capturedContext.isLoading).toBe(false);
+    });
+
+    test('shows the loading state, not an empty list, while a retry waits for its snapshot', async () => {
+      notesListener.firstSnapshot.mockRejectedValueOnce(new Error('Firebase error'));
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.error).toBe('Failed to fetch notes');
+      });
+
+      notesListener.firstSnapshot.mockReturnValueOnce(new Promise(() => {}));
+      act(() => {
+        capturedContext.retry();
+      });
+
+      expect(capturedContext.isLoading).toBe(true);
+      expect(capturedContext.error).toBeNull();
+    });
   });
 
   describe('isLoading means "nothing to show yet", not "a fetch is in flight" (T044)', () => {
