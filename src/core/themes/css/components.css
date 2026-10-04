@@ -1210,16 +1210,6 @@
     background-color: var(--action-outline-hover);
   }
 
-  /*
-    The removable tag. Keeps `.tag`'s quiet recessed surface -- it stands for
-    something already chosen, so it is a label, not an invitation.
-  */
-  .chip-tag {
-    background-color: var(--surface-sunken-bg);
-    border: var(--border-width-sm) solid var(--surface-card-border);
-    color: var(--surface-page-on);
-  }
-
   /* ====== ENTITY SIGIL ====== */
   /*
     One ink for every mark, so the palette separates entities without any entry

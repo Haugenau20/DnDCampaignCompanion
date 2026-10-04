@@ -30,7 +30,7 @@ interface NoteReferencesProps {
 
 /**
  * Normalize text for consistent comparison
- * This function should be used by both NoteReferences and EntityExtractor
+ * This function should be used by both NoteReferences and CampaignLinksPanel
  */
 export const normalizeTextForComparison = (text: string): string => {
   return text

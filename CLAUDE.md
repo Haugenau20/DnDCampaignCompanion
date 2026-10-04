@@ -229,7 +229,7 @@ src/
 │   ├── components/           #   UI primitives: Button, Card, Dialog, Input, Typography, Roster
 │   ├── services/             #   Firebase (auth/user/group/campaign/data), search, openai
 │   ├── attribution/          #   the single place attribution values are built
-│   └── types/ themes/ config/ constants/ utils/
+│   └── types/ themes/ constants/ utils/
 ├── test-utils/               # Test infrastructure — never bundled
 ├── utils/__dev__/            # Sample-data tooling (used by scripts/manage-dev-data.ps1)
 └── styles/, index.tsx, setupTests.ts

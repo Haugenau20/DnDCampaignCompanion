@@ -74,9 +74,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, loading }) => {
         <div className="flex justify-between items-center mb-4 flex-nowrap">
           {heading}
         </div>
-        {/* LoadingState's `type="card"` has no branch and silently falls through to a
-            spinner, ignoring count/height — so the skeleton is inlined here to
-            actually match the shape of the list it stands in for. */}
+        {/* Inlined so the skeleton matches the shape of the list it stands in for. */}
         <div className={clsx('rounded-lg overflow-hidden card animate-pulse')}>
           {[1, 2, 3, 4].map((i) => (
             <div

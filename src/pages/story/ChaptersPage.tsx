@@ -1,11 +1,13 @@
 // pages/story/ChaptersPage.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useStory, BookshelfView, ChapterList } from 'features/storytelling';
 import {
+  useStory,
+  BookshelfView,
+  ChapterList,
   deriveChapterProgress,
   summariseProgress,
   filterChapters,
-} from 'features/storytelling/chapters/utils/chapter-progress';
+} from 'features/storytelling';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import PageShell from 'shared/components/page-shell/PageShell';

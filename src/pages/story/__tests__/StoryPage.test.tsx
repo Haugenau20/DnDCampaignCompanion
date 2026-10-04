@@ -87,6 +87,10 @@ let mockStoryContext: StoryContextMock;
 // The page derives read state through the real `deriveChapterProgress`, so the
 // rail mock below records what it was handed rather than re-deriving anything.
 jest.mock("features/storytelling", () => ({
+  // The page's read state and bylines come from the real helpers, which the
+  // barrel re-exports; only the context and the components are stand-ins.
+  ...jest.requireActual("features/storytelling/chapters/utils/chapter-progress"),
+  ...jest.requireActual("features/storytelling/chapters/utils/chapter-byline"),
   useStory: () => mockStoryContext,
   ChapterReader: (props: any) => (
     <div

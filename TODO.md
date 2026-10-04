@@ -17,7 +17,7 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T083–T102 and T037's rise were triaged 2026-10-04 from the code
+The rows for T083–T101 and T037's rise were triaged 2026-10-04 from the code
 review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
 adjusted for the images focus above.
 
@@ -47,7 +47,6 @@ adjusted for the images focus above.
 | low | T101 | Large campaigns: quest and rumour rosters unpaged | S | open | Measured at 1,000s of records; not felt at current sizes |
 | low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
-| nit | T102 | Remove unused modules; story utilities through the barrel | S | open | Maintenance only |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -96,9 +95,9 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding not yet fixed is covered by an entry: T083–T102, plus T037.
-- **Not filed**: the reviews' unverified leads, and the optional refactors
-  other than ARCH-M01/M02 (T102). They stay in the reports.
+- Every confirmed finding not yet fixed is covered by an entry: T083–T101, plus T037.
+- **Not filed**: the reviews' unverified leads, and the optional refactors.
+  They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
   (maintainer, 2026-10-04). Its open findings are filed under T037; the rest
   of that scope stays unreviewed by decision.
@@ -645,18 +644,6 @@ The NPC roster now mounts 100 rows at a time behind *Show more*
   An id/name index would serve every row; pass 5 could not say how much of the
   1,200-row redraw this is.
 - **Source**: code review, 2026-10-04
-
-### T102 — Remove unused modules; route story utilities through the barrel
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
-
-- ARCH-M01: nine modules have no production caller, e.g.
-  `notes/utils/note-relationships.ts` (no importer), `useOpenAIExtractor` (only
-  its barrel export, `collaboration/index.ts:36`), `core/components/Chip.tsx`,
-  `core/config/buildConfig.ts`. The full list with lines is in 10.
-- ARCH-M02: three story pages import chapter utilities from internals instead
-  of the storytelling barrel.
-- **Catch**: recheck callers first; `notes/README.md:25` still describes
-  `note-relationships.ts`. **Source**: code review, 2026-10-04
 
 ### T105 — Deploy the Firestore and Storage rules from the repo, not by pasting into the console
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04

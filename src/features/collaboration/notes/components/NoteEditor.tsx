@@ -81,8 +81,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
    * Error message from the most recent manual save attempt, surfaced to the
    * user via {@link getStatusIndicator}. Only set by {@link triggerManualSave}
    * (the Ctrl+S call site) — the ref-exposed
-   * `saveCurrentContent` still rejects directly so EntityExtractor can abort
-   * AI extraction on a failed pre-extraction save (bug #1051).
+   * `saveCurrentContent` still rejects directly so CampaignLinksPanel can
+   * abort AI extraction on a failed pre-extraction save (bug #1051).
    */
   const [saveError, setSaveError] = useState<string | null>(null);
 

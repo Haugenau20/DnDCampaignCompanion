@@ -306,7 +306,7 @@ describe('NoteEditor', () => {
   describe('handleManualSave error propagation', () => {
     // Bug #1051 (fixed): handleManualSave still re-throws (that contract is
     // relied on by the ref-exposed saveCurrentContent -- see the
-    // "imperative ref methods" describe block below, and EntityExtractor's
+    // "imperative ref methods" describe block below, and CampaignLinksPanel's
     // own suite). The standalone Save button is gone -- Ctrl+S is the only
     // manual-save trigger now, and it goes through triggerManualSave, which
     // catches the rejection and surfaces it via the saveError state instead
@@ -476,15 +476,15 @@ describe('NoteEditor', () => {
     });
 
     // Bug #1051: the report's "Recommended Fix" option 1 (remove `throw error`
-    // from handleManualSave) would break this contract. EntityExtractor's
+    // from handleManualSave) would break this contract. CampaignLinksPanel's
     // handleExtract calls saveCurrentContent (via NotePage's
     // saveCurrentEditorContent) and depends on the rejection to abort AI
     // extraction against unsaved content -- see
-    // src/features/collaboration/entity-extraction/components/EntityExtractor.tsx
+    // src/features/collaboration/notes/components/CampaignLinksPanel.tsx
     // (the pre-extraction save's catch block). This test guards against a
     // future "simplification" that swallows the error inside NoteEditor
     // instead of rejecting.
-    test('should reject saveCurrentContent (via ref) when saveNote fails, so callers like EntityExtractor can abort', async () => {
+    test('should reject saveCurrentContent (via ref) when saveNote fails, so callers like CampaignLinksPanel can abort', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockSaveNote.mockRejectedValue(new Error('Save failed'));
 

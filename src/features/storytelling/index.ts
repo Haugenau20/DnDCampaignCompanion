@@ -4,6 +4,14 @@ export { useChapterData } from './chapters/hooks/useChapterData';
 export { useSagaData } from './sagas/hooks/useSagaData';
 export type { Chapter, ChapterProgress, StoryProgress, StoryContextState, StoryContextValue } from './chapters/types';
 export type { SagaData, SagaContentInput, SagaContextState, SagaContextValue } from './sagas/types';
+// Chapter progress and bylines, as the story pages show them
+export {
+  deriveChapterProgress,
+  summariseProgress,
+  filterChapters,
+} from './chapters/utils/chapter-progress';
+export type { StorySummary } from './chapters/utils/chapter-progress';
+export { deriveChapterByline } from './chapters/utils/chapter-byline';
 // Components (used by pages/story/* and other consumers)
 // BookViewer is the paginated book surface, now used only by SagaPage — the
 // saga is one continuous work, so it keeps the page-turning presentation.

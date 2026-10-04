@@ -69,12 +69,12 @@ let mockStoryContext: StoryContextMock = {
   isLoading: false,
 };
 
-// `features/storytelling`'s barrel is mocked here -- but the utils import
-// (`features/storytelling/chapters/utils/chapter-progress`) is deliberately
-// left real, since ChaptersPage's filtering/derivation behaviour is exactly
-// what these tests exercise, and that module already has its own test suite
-// backing its contract.
+// `features/storytelling`'s barrel is mocked here -- but the chapter-progress
+// helpers it re-exports are deliberately left real, since ChaptersPage's
+// filtering/derivation behaviour is exactly what these tests exercise, and
+// that module already has its own test suite backing its contract.
 jest.mock("features/storytelling", () => ({
+  ...jest.requireActual("features/storytelling/chapters/utils/chapter-progress"),
   useStory: () => mockStoryContext,
   BookshelfView: (props: any) => (
     <div
