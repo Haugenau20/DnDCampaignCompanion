@@ -37,6 +37,7 @@ import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
+import { useInlineEditing } from 'shared/hooks/useInlineEditing';
 
 /** The eight kinds a place can be, as the select offers them. */
 const TYPE_OPTIONS: LocationType[] = [
@@ -155,7 +156,10 @@ const LocationDetailPage: React.FC = () => {
     },
   });
 
-  const [editing, setEditing] = useState<'name' | 'description' | 'feature' | 'tag' | null>(null);
+  // Closing an editor hands focus back to what opened it (A11Y-007).
+  const { editing, setEditing, closeEditor, triggerRef } = useInlineEditing<
+    'name' | 'description' | 'feature' | 'tag'
+  >();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const index = useMemo(() => buildLocationIndex(locations), [locations]);
@@ -542,11 +546,11 @@ const LocationDetailPage: React.FC = () => {
                           tags: Array.from(new Set([...(location.tags ?? []), value])),
                         })
                       }
-                      onSaved={() => setEditing(null)}
-                      onCancel={() => setEditing(null)}
+                      onSaved={closeEditor}
+                      onCancel={closeEditor}
                     />
                   ) : (
-                    <FieldPrompt onClick={() => setEditing('tag')}>
+                    <FieldPrompt ref={triggerRef('tag')} onClick={() => setEditing('tag')}>
                       {(location.tags ?? []).length
                         ? 'Add another tag'
                         : 'How would you find this place again?'}
@@ -594,6 +598,7 @@ const LocationDetailPage: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
+                  ref={triggerRef('name')}
                   onClick={() => setEditing('name')}
                   startIcon={<Pencil className="w-3.5 h-3.5" />}
                 >
@@ -609,8 +614,8 @@ const LocationDetailPage: React.FC = () => {
                 initialValue={location.name}
                 submitLabel="Save name"
                 onSubmit={(value) => save({ name: value })}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
             )}
 
@@ -639,13 +644,14 @@ const LocationDetailPage: React.FC = () => {
                 initialValue={location.description ?? ''}
                 submitLabel="Save description"
                 onSubmit={(value) => save({ description: value })}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
             ) : location.description ? (
               <button
                 type="button"
                 disabled={!canAct}
+                ref={triggerRef('description')}
                 onClick={() => setEditing('description')}
                 className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
               >
@@ -655,7 +661,7 @@ const LocationDetailPage: React.FC = () => {
                 </Typography>
               </button>
             ) : canAct ? (
-              <FieldPrompt onClick={() => setEditing('description')}>
+              <FieldPrompt ref={triggerRef('description')} onClick={() => setEditing('description')}>
                 What is this place?
               </FieldPrompt>
             ) : (
@@ -736,11 +742,11 @@ const LocationDetailPage: React.FC = () => {
                   onSubmit={(value) =>
                     save({ features: [...(location.features ?? []), value] })
                   }
-                  onSaved={() => setEditing(null)}
-                  onCancel={() => setEditing(null)}
+                  onSaved={closeEditor}
+                  onCancel={closeEditor}
                 />
               ) : (
-                <FieldPrompt onClick={() => setEditing('feature')}>
+                <FieldPrompt ref={triggerRef('feature')} onClick={() => setEditing('feature')}>
                   {(location.features ?? []).length
                     ? 'Add another feature'
                     : 'What would the party notice first?'}

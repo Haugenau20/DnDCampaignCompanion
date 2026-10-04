@@ -314,6 +314,28 @@ describe("CommandPalette keyboard", () => {
     expect(document.getElementById(active!)).toHaveAttribute("role", "option");
   });
 
+  // A11Y-002: the selection moved past the panel's bottom edge while the
+  // panel stayed put, so Enter opened a result nobody could see.
+  it("scrolls the selected option into view as the arrow keys move it", async () => {
+    const scrolled: Element[] = [];
+    const scrollIntoView = jest.fn(function (this: Element) {
+      scrolled.push(this);
+    });
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      open();
+      scrollIntoView.mockClear();
+      await userEvent.keyboard("{ArrowDown}");
+
+      const active = screen.getByRole("combobox").getAttribute("aria-activedescendant");
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+      expect(scrolled[scrolled.length - 1]).toHaveAttribute("id", active);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it("clamps at the top rather than wrapping", async () => {
     open();
     const input = screen.getByRole("combobox");

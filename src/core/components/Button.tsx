@@ -98,7 +98,9 @@ export function buttonClasses({
       `button`,
       `button-${variant}`,
       'relative rounded-lg font-medium transition-colors duration-200',
-      'focus:outline-none ', //focus:ring-2 focus:ring-offset-2',
+      // No focus utility: the global `:focus-visible` outline (globals.css)
+      // is the ring. `focus:outline-none` here outranked it and painted it
+      // transparent, so keyboard focus was invisible (A11Y-006).
       'disabled:opacity-50 disabled:cursor-not-allowed',
 
       // Size specific styles

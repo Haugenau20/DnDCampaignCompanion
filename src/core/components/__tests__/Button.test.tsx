@@ -246,4 +246,21 @@ describe("Button", () => {
       expect(screen.getByRole("button")).toHaveClass("my-custom-class");
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Focus (A11Y-006)
+  // -------------------------------------------------------------------------
+  // The one class assertion in this file, because jsdom computes no CSS. The
+  // focus ring is the global `:focus-visible` outline in globals.css; Tailwind's
+  // utility layer outranks it, so `focus:outline-none` on a variant painted
+  // that outline transparent, and no button showed keyboard focus.
+  describe("focus", () => {
+    test.each(["primary", "secondary", "outline", "ghost", "link"] as const)(
+      "should not suppress the focus outline on a %s button",
+      (variant) => {
+        render(<Button variant={variant}>Go</Button>);
+        expect(screen.getByRole("button").className).not.toMatch(/outline-none/);
+      }
+    );
+  });
 });

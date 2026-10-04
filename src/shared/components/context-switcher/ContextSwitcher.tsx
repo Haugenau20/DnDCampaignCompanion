@@ -108,6 +108,9 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
     try {
       await change();
       setIsOpen(false);
+      // The choice that had focus closes with the menu; without this, focus
+      // fell to <body> (A11Y-008). The trigger stays, and now names the switch.
+      triggerRef.current?.focus();
       setUndoTarget({ ...previous, label });
     } catch (error) {
       setSwitchError(
@@ -176,6 +179,8 @@ const ContextSwitcher: React.FC<ContextSwitcherProps> = ({ onJoinGroup }) => {
         await setActiveCampaign(campaignId);
       }
       setUndoTarget(null);
+      // Undo goes with its toast, so focus goes back to the trigger (A11Y-008).
+      triggerRef.current?.focus();
     } catch (error) {
       setUndoError(
         error instanceof Error ? error.message : 'Could not switch back.'

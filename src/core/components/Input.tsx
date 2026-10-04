@@ -93,6 +93,15 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
     const generatedId = React.useId();
     const inputId = label ? (id ?? generatedId) : id;
 
+    // The message under the field describes the field itself, so a screen
+    // reader on it hears why it is invalid, not only that it is (A11Y-005).
+    // A description the caller passed is kept, ahead of this one.
+    const message = error || successMessage || helperText;
+    const messageId = `${inputId ?? generatedId}-message`;
+    const describedBy =
+      [props['aria-describedby'], message ? messageId : undefined].filter(Boolean).join(' ') ||
+      undefined;
+
     const inputStyles = twMerge(
       clsx(
         'w-full rounded-lg border transition-colors duration-200',
@@ -147,6 +156,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
               className={inputStyles}
               rows={rows}
               {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+              aria-describedby={describedBy}
             />
           ) : (
             <input
@@ -154,6 +164,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
               id={inputId}
               className={inputStyles}
               {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
+              aria-describedby={describedBy}
             />
           )}
           {endIcon && (
@@ -165,14 +176,14 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
             </div>
           )}
         </div>
-        {(helperText || error || successMessage) && (
-          <p className={clsx(
+        {message && (
+          <p id={messageId} className={clsx(
             'mt-1.5 text-sm',
             error && `form-error`,
             successMessage && `form-success`,
             !error && !successMessage && `form-helper`
           )}>
-            {error || successMessage || helperText}
+            {message}
           </p>
         )}
       </div>

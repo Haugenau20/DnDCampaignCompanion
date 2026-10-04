@@ -187,6 +187,10 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
         return;
       }
       if (event.key === "Enter" || event.key === " ") {
+        // Only a row toggles. The handler sits on the whole tray, and these
+        // keys belong to whatever else has focus: a space typed in the
+        // filter, Enter on Close or on the create button (A11Y-001).
+        if ((event.target as HTMLElement).getAttribute("role") !== "option") return;
         const candidate = visible[activeIndex];
         if (!candidate) return;
         event.preventDefault();

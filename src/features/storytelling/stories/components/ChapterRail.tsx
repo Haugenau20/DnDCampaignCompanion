@@ -4,7 +4,61 @@ import clsx from 'clsx';
 import { X } from 'lucide-react';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
+import { keepTabInside } from 'core/utils/focus-trap';
 import { ChapterWithProgress } from 'features/storytelling/chapters/utils/chapter-progress';
+
+/**
+ * The drawer's panel: a modal surface over the reader, so it behaves like one
+ * (A11Y-004). Mounted only while the drawer is open, so mounting is opening.
+ *
+ * It takes focus as it opens -- on the open chapter's row, where the reader
+ * left off, or else on itself -- keeps Tab inside, closes on Escape, and
+ * hands focus back to whatever had it (the Chapters button) when it closes.
+ * Before, focus stayed on that button behind the scrim and the next Tab went
+ * into the reader the drawer covers.
+ */
+const ChapterDrawerPanel: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({
+  onClose,
+  children,
+}) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Read while rendering the opening, before any effect can move focus.
+  const [opener] = React.useState(() => document.activeElement as HTMLElement | null);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    const current = panel?.querySelector<HTMLElement>('[aria-current="page"]');
+    (current ?? panel)?.focus();
+    return () => {
+      // The opener can be gone; focusing a detached node sends focus to <body>.
+      if (opener && document.contains(opener)) opener.focus();
+    };
+  }, [opener]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    keepTabInside(event, panelRef.current);
+  };
+
+  return (
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Chapters"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      className="fixed top-0 left-0 h-full w-80 max-w-[85vw] shadow-lg z-50 focus:outline-none"
+    >
+      <div className="h-full flex flex-col card-subtle border-r sunken-divider">{children}</div>
+    </div>
+  );
+};
 
 /**
  * Props for {@link ChapterRail}.
@@ -232,21 +286,19 @@ const ChapterRail: React.FC<ChapterRailProps> = ({
             className="fixed inset-0 z-40 transition-opacity dialog-backdrop"
             onClick={onClose}
           />
-          <div className="fixed top-0 left-0 h-full w-80 max-w-[85vw] shadow-lg z-50">
-            <div className="h-full flex flex-col card-subtle border-r sunken-divider">
-              <ChapterRailHeader
-                unreadCount={unreadCount}
-                total={items.length}
-                onBackToIndex={onBackToIndex}
-                onClose={onClose}
-              />
-              <ChapterRailList
-                items={items}
-                currentChapterId={currentChapterId}
-                onSelect={handleDrawerSelect}
-              />
-            </div>
-          </div>
+          <ChapterDrawerPanel onClose={onClose}>
+            <ChapterRailHeader
+              unreadCount={unreadCount}
+              total={items.length}
+              onBackToIndex={onBackToIndex}
+              onClose={onClose}
+            />
+            <ChapterRailList
+              items={items}
+              currentChapterId={currentChapterId}
+              onSelect={handleDrawerSelect}
+            />
+          </ChapterDrawerPanel>
         </div>
       )}
     </>

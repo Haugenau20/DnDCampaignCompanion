@@ -384,6 +384,62 @@ describe('ChapterRail', () => {
       expect(container.querySelector('.fixed.top-0.left-0')).not.toBeNull();
     });
 
+    // A11Y-004: the drawer covered the reader but left focus on the trigger
+    // behind its scrim, ignored Escape, and had no modal boundary.
+    describe('keyboard', () => {
+      /** A trigger outside the rail, focused before the drawer opens. */
+      function renderWithTrigger(onClose = jest.fn()) {
+        const Harness: React.FC<{ open: boolean }> = ({ open }) => (
+          <>
+            <button>Chapters</button>
+            <ChapterRail
+              items={threeMixedChapters()}
+              currentChapterId="ch-2"
+              onChapterSelect={jest.fn()}
+              onBackToIndex={jest.fn()}
+              isOpen={open}
+              onClose={onClose}
+            />
+          </>
+        );
+        const view = render(<Harness open={false} />);
+        screen.getByRole('button', { name: 'Chapters' }).focus();
+        view.rerender(<Harness open />);
+        return { ...view, onClose, close: () => view.rerender(<Harness open={false} />) };
+      }
+
+      test('is a named modal dialog that takes focus as it opens', () => {
+        renderWithTrigger();
+        const drawer = screen.getByRole('dialog', { name: 'Chapters' });
+        expect(drawer).toHaveAttribute('aria-modal', 'true');
+        // Focus lands on the open chapter, where the reader left off.
+        expect(within(drawer).getByRole('button', { name: '2. Chapter 2 Title' })).toHaveFocus();
+      });
+
+      test('closes on Escape', () => {
+        const { onClose } = renderWithTrigger();
+        fireEvent.keyDown(screen.getByRole('dialog', { name: 'Chapters' }), { key: 'Escape' });
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+
+      test('keeps Tab inside the drawer', () => {
+        renderWithTrigger();
+        const drawer = screen.getByRole('dialog', { name: 'Chapters' });
+        const stops = within(drawer).getAllByRole('button');
+        stops[stops.length - 1].focus();
+
+        fireEvent.keyDown(stops[stops.length - 1], { key: 'Tab' });
+
+        expect(stops[0]).toHaveFocus();
+      });
+
+      test('hands focus back to the trigger when it closes', () => {
+        const { close } = renderWithTrigger();
+        close();
+        expect(screen.getByRole('button', { name: 'Chapters' })).toHaveFocus();
+      });
+    });
+
     test('clicking the backdrop calls onClose', () => {
       const onClose = jest.fn();
       const { container } = render(

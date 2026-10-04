@@ -202,6 +202,30 @@ describe("AttachTray", () => {
       expect(onFormKeyDown).not.toHaveBeenCalled();
     });
 
+    // A11Y-001: Enter and Space anywhere in the tray toggled the active row,
+    // so the filter could not take a space and Close attached a record.
+    it("lets the filter take a space without attaching anything", async () => {
+      const onAttach = jest.fn();
+      await openTray({ onAttach });
+      const filter = screen.getByRole("textbox", { name: /filter the list/i });
+
+      await userEvent.type(filter, "Bard the");
+
+      expect(filter).toHaveValue("Bard the");
+      expect(onAttach).not.toHaveBeenCalled();
+    });
+
+    it("lets Enter on Close close the tray without attaching", async () => {
+      const onAttach = jest.fn();
+      await openTray({ onAttach });
+      screen.getByRole("button", { name: /^close$/i }).focus();
+
+      await userEvent.keyboard("{Enter}");
+
+      expect(onAttach).not.toHaveBeenCalled();
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
+
     it("returns focus to the trigger when it closes", async () => {
       await openTray();
       screen.getAllByRole("option")[0].focus();

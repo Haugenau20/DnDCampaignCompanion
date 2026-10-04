@@ -513,6 +513,30 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     );
   });
 
+  // A11Y-007: closing an editor left focus on <body>.
+  it('hands focus back to Rename when the name editor is cancelled', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: 'Rename' })).toHaveFocus();
+  });
+
+  it('hands focus back to Rename once the name is saved', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ondolindë' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save name' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename' })).toHaveFocus());
+  });
+
+  it('hands focus back to the description when its editor is cancelled', () => {
+    renderPage();
+    fireEvent.click(screen.getByText('About Gondolin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('button', { name: /About Gondolin/ })).toHaveFocus();
+  });
+
   it('changes the type in place', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'dungeon' } });

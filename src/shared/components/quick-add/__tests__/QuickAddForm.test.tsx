@@ -139,6 +139,25 @@ describe("QuickAddForm", () => {
       expect(nameField()).toHaveAttribute("aria-invalid", "false");
     });
 
+    // A11Y-005: the reasons appeared on screen, but focus stayed on the
+    // submit button and neither field described its own reason.
+    it("moves focus to the first field it refused, which describes why", async () => {
+      renderForm();
+      await userEvent.click(createAndOpen());
+
+      expect(nameField()).toHaveFocus();
+      expect(nameField()).toHaveAccessibleDescription("Give them a name.");
+      expect(lineField()).toHaveAccessibleDescription("Say who they are, in a line.");
+    });
+
+    it("moves focus to the line when only the line was refused", async () => {
+      renderForm();
+      await userEvent.type(nameField(), "Thorin");
+      await userEvent.click(createAndOpen());
+
+      expect(lineField()).toHaveFocus();
+    });
+
     it("treats whitespace as empty", async () => {
       renderForm();
       await userEvent.type(nameField(), "   ");

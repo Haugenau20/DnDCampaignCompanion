@@ -30,7 +30,6 @@ adjusted for the images focus above.
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
-| medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
@@ -245,24 +244,6 @@ Each of these decides from a stale local copy, then writes:
   independent; can go first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
-- **Source**: code review, 2026-10-04
-
-### T090 — Keyboard and focus problems in shared components
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Eight findings, each reproduced in Chromium (11, 19):
-
-- A11Y-001: `AttachTray.tsx:176-180` toggles the active row on Enter or Space
-  typed inside its filter and buttons.
-- A11Y-006: `Button.tsx:101` sets `focus:outline-none` with the ring commented
-  out, so primary and outline buttons show no focus. Touches every page.
-- A11Y-004: the phone chapter drawer (`ChapterRail.tsx:229-236`) neither takes
-  nor traps focus and ignores Escape. Same drawer as T026.
-- A11Y-002 palette arrows select an off-screen result; A11Y-003 closing quick
-  add leaves focus on the body; A11Y-005 quick-add errors are not announced;
-  A11Y-007 location and quest inline editors drop focus (NPC's works);
-  A11Y-008 campaign switch and Undo drop focus.
-- **Catch**: none found; each is small on its own.
 - **Source**: code review, 2026-10-04
 
 ### T091 — Auth: a stale sign-in can restore the previous user, and a pending email blocks a device link
@@ -544,8 +525,6 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 - **Next step**: on the phone it was seen on, note the browser, then open the
   drawer on a chapter late in a long campaign and drag the list. A desktop
   window cannot answer this: the browser agent has no touch input.
-- **Related**: the same drawer neither takes nor traps keyboard focus (A11Y-004,
-  in T090).
 - **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
 
 ---

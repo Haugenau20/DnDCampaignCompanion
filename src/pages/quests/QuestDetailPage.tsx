@@ -27,6 +27,7 @@ import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import { InlineEditor } from 'shared/components/inline-edit';
+import { useInlineEditing } from 'shared/hooks/useInlineEditing';
 
 /** What points at this quest, from the three collections that can. */
 interface InboundLink {
@@ -165,9 +166,10 @@ const QuestDetailPage: React.FC = () => {
     },
   });
 
-  const [editing, setEditing] = useState<
-    'title' | 'description' | 'background' | 'levelRange' | 'place' | PrepField | null
-  >(null);
+  // Closing an editor hands focus back to what opened it (A11Y-007).
+  const { editing, setEditing, closeEditor, triggerRef } = useInlineEditing<
+    'title' | 'description' | 'background' | 'levelRange' | 'place' | PrepField
+  >();
 
   /**
    * The quest's location, as a name.
@@ -622,6 +624,7 @@ const QuestDetailPage: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
+                  ref={triggerRef('title')}
                   onClick={() => setEditing('title')}
                   startIcon={<Pencil className="w-3.5 h-3.5" />}
                 >
@@ -637,8 +640,8 @@ const QuestDetailPage: React.FC = () => {
                 initialValue={quest.title}
                 submitLabel="Save title"
                 onSubmit={(value) => save({ title: value })}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
             )}
 
@@ -649,20 +652,21 @@ const QuestDetailPage: React.FC = () => {
                 initialValue={quest.description ?? ''}
                 submitLabel="Save description"
                 onSubmit={(value) => save({ description: value })}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
             ) : quest.description ? (
               <button
                 type="button"
                 disabled={!canAct}
+                ref={triggerRef('description')}
                 onClick={() => setEditing('description')}
                 className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
               >
                 <Typography className="text-lg leading-relaxed">{quest.description}</Typography>
               </button>
             ) : canAct ? (
-              <FieldPrompt onClick={() => setEditing('description')}>
+              <FieldPrompt ref={triggerRef('description')} onClick={() => setEditing('description')}>
                 What was the party asked to do?
               </FieldPrompt>
             ) : (
@@ -700,13 +704,14 @@ const QuestDetailPage: React.FC = () => {
                 optional
                 submitLabel="Save background"
                 onSubmit={(value) => save({ background: value })}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
             ) : quest.background ? (
               <button
                 type="button"
                 disabled={!canAct}
+                ref={triggerRef('background')}
                 onClick={() => setEditing('background')}
                 className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
               >
@@ -716,7 +721,7 @@ const QuestDetailPage: React.FC = () => {
                 </Typography>
               </button>
             ) : canAct ? (
-              <FieldPrompt onClick={() => setEditing('background')}>
+              <FieldPrompt ref={triggerRef('background')} onClick={() => setEditing('background')}>
                 How did this come about?
               </FieldPrompt>
             ) : (
@@ -767,10 +772,10 @@ const QuestDetailPage: React.FC = () => {
                       clearOnSave
                       onSubmit={addTo(field.key)}
                       onSaved={() => undefined}
-                      onCancel={() => setEditing(null)}
+                      onCancel={closeEditor}
                     />
                   ) : (
-                    <FieldPrompt onClick={() => setEditing(field.key)}>
+                    <FieldPrompt ref={triggerRef(field.key)} onClick={() => setEditing(field.key)}>
                       {entries.length ? field.another : field.prompt}
                     </FieldPrompt>
                   ))}
@@ -846,10 +851,10 @@ const QuestDetailPage: React.FC = () => {
                     })
                   }
                   onSaved={() => undefined}
-                  onCancel={() => setEditing(null)}
+                  onCancel={closeEditor}
                 />
               ) : (
-                <FieldPrompt onClick={() => setEditing('place')}>
+                <FieldPrompt ref={triggerRef('place')} onClick={() => setEditing('place')}>
                   {(quest.keyLocations ?? []).length
                     ? 'Add another place'
                     : 'Where does this quest happen?'}
@@ -873,20 +878,21 @@ const QuestDetailPage: React.FC = () => {
                 submitLabel="Save level range"
                 placeholder="7–9"
                 onSubmit={(value) => save({ levelRange: value })}
-                onSaved={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
             ) : quest.levelRange ? (
               <button
                 type="button"
                 disabled={!canAct}
+                ref={triggerRef('levelRange')}
                 onClick={() => setEditing('levelRange')}
                 className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
               >
                 <Typography>Levels {quest.levelRange}</Typography>
               </button>
             ) : canAct ? (
-              <FieldPrompt onClick={() => setEditing('levelRange')}>
+              <FieldPrompt ref={triggerRef('levelRange')} onClick={() => setEditing('levelRange')}>
                 What levels is this pitched at?
               </FieldPrompt>
             ) : (
