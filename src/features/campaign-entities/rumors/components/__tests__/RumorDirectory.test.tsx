@@ -742,8 +742,8 @@ describe('RumorDirectory', () => {
 
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
+          'r1',
           expect.objectContaining({
-            id: 'r1',
             content: 'A red one, over the Lonely Mountain.',
           })
         )
@@ -850,7 +850,8 @@ describe('RumorDirectory', () => {
 
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'r2', relatedNPCs: ['npc-1'] })
+          'r2',
+          expect.objectContaining({ relatedNPCs: ['npc-1'] })
         )
       );
     });
@@ -890,18 +891,18 @@ describe('RumorDirectory', () => {
       test('detaching the person keeps the place', async () => {
         detach('The Hermit');
         await waitFor(() =>
-          expect(mockUpdateRumor).toHaveBeenCalledWith(
-            expect.objectContaining({ id: 'r2', relatedNPCs: [], locationId: 'high-pass' })
-          )
+          // Exactly the list: a patch that never names the place leaves it
+          // attached (T083).
+          expect(mockUpdateRumor).toHaveBeenCalledWith('r2', { relatedNPCs: [] })
         );
       });
 
       test('detaching the place keeps the person', async () => {
         detach('The High Pass');
         await waitFor(() =>
-          expect(mockUpdateRumor).toHaveBeenCalledWith(
-            expect.objectContaining({ id: 'r2', relatedNPCs: ['high-pass'], locationId: '' })
-          )
+          // Exactly the place: a patch that never names the people leaves them
+          // attached (T083).
+          expect(mockUpdateRumor).toHaveBeenCalledWith('r2', { locationId: '', location: '' })
         );
       });
     });
@@ -1208,6 +1209,7 @@ describe('RumorDirectory', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
+          'w',
           expect.objectContaining({ title: '', content: 'Somebody said something' })
         )
       );
@@ -1287,6 +1289,7 @@ describe('RumorDirectory', () => {
 
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
+          'srcd',
           expect.objectContaining({ sourceType: null })
         )
       );

@@ -104,20 +104,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to update rumor status');
     }
 
-    const rumor = getRumorById(rumorId);
-    if (!rumor) {
+    if (!getRumorById(rumorId)) {
       throw new Error('Rumor not found');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
-    const updatedRumor = {
-      ...rumor,
-      status,
-      ...modificationAttribution
-    };
-
-    await updateData(rumorId, updatedRumor);
+    await updateData(rumorId, { status, ...modificationAttribution });
   }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Update rumor note
@@ -139,13 +132,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...creationAttribution
     };
 
-    const updatedRumor = {
-      ...rumor,
+    // The notes alone (T083): the rest of the copy may be behind the server.
+    await updateData(rumorId, {
       notes: [...rumor.notes, noteWithUser],
       ...modificationAttribution
-    };
-
-    await updateData(rumorId, updatedRumor);
+    });
   }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Ids issued during this session but not yet reflected in `rumors` (loaded
@@ -199,20 +190,15 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return id;
   }, [user, userProfile, activeGroupUserProfile, addData, isRumorLoaded]);
 
-  // Update existing rumor
-  const updateRumor = useCallback(async (rumor: Rumor) => {
+  // Update an existing rumour: only the fields in `patch` (T083)
+  const updateRumor = useCallback(async (rumorId: string, patch: Partial<Rumor>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update rumors');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
-    const updatedRumor = {
-      ...rumor,
-      ...modificationAttribution
-    };
-
-    await updateData(rumor.id, updatedRumor);
+    await updateData(rumorId, { ...patch, ...modificationAttribution });
   }, [user, userProfile, activeGroupUserProfile, updateData]);
 
   // Delete rumor

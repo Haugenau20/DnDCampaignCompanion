@@ -482,10 +482,11 @@ const NPCDetailPage: React.FC = () => {
    * Nothing is patched locally after a write: the page shows the listener's
    * copy (T032), so it shows what was *written* rather than what was typed,
    * and another player's change to the same record arrives the same way.
+   * Only `patch` is written (T083): the copy may be behind the server.
    */
   const save = async (patch: Partial<NPC>) => {
     if (!npc) return;
-    await updateNPC({ ...npc, ...patch });
+    await updateNPC(npc.id, patch);
   };
 
   const portrait = useImageAttachment({
@@ -557,8 +558,7 @@ const NPCDetailPage: React.FC = () => {
       case 'rumor': {
         const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
         if (!rumor) return;
-        await updateRumor({
-          ...rumor,
+        await updateRumor(rumor.id, {
           relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), npc.id])),
         });
         break;
@@ -586,8 +586,7 @@ const NPCDetailPage: React.FC = () => {
       case 'rumor': {
         const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
         if (!rumor?.relatedNPCs?.includes(npc.id)) return;
-        await updateRumor({
-          ...rumor,
+        await updateRumor(rumor.id, {
           relatedNPCs: rumor.relatedNPCs.filter((existing) => existing !== npc.id),
         });
         break;

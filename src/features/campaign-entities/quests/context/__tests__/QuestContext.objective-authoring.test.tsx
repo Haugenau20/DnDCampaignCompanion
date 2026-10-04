@@ -266,8 +266,9 @@ describe('QuestContext — authoring objectives', () => {
 
       const written = updateData.mock.calls[0][1];
       expect(written.objectives.every((o: any) => o.completed)).toBe(true);
-      expect(written.status).toBe('active');
-      expect(written.dateCompleted).toBeUndefined();
+      // The objectives alone (T083, TEST-002): status and date are never
+      // written, so the quest stays active with no date invented.
+      expect(Object.keys(written)).toEqual(['objectives']);
 
       // ...and the deliberate act still does conclude it.
       await act(async () => {

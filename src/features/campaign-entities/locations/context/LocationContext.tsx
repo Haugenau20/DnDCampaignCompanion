@@ -101,8 +101,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    const updatedLocation = {
-      ...location,
+    // The notes alone (T083): the rest of the copy may be behind the server.
+    await updateData(locationId, {
       notes: [
         ...(location.notes || []),
         {
@@ -110,9 +110,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           date: toNoteDate()
         }
       ]
-    };
-
-    await updateData(locationId, updatedLocation);
+    });
   }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   // Update location status
@@ -121,17 +119,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('User must be authenticated and group/campaign context must be set to update location status');
     }
 
-    const location = getLocationById(locationId);
-    if (!location) {
+    if (!getLocationById(locationId)) {
       throw new Error('Location not found');
     }
 
-    const updatedLocation = {
-      ...location,
-      status
-    };
-
-    await updateData(locationId, updatedLocation);
+    await updateData(locationId, { status });
   }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   /**

@@ -91,7 +91,12 @@ export interface NPCContextValue extends NPCContextState {
   updateNPCNote: (npcId: string, note: NPCNote) => void;
   updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => Promise<void>;
   addNPC: (npc: DomainData<NPC>) => Promise<string>;
-  updateNPC: (npc: NPC) => Promise<void>;
+  /**
+   * Write `patch` to the NPC: the fields it names, and nothing else (T083).
+   * Never the whole record -- a copy from the listener can be behind the
+   * server, and sending it back reverts whatever changed since.
+   */
+  updateNPC: (npcId: string, patch: Partial<NPC>) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;
   /** Sets the status of several NPCs, committed as one batch. */
   updateNPCsStatus: (npcIds: string[], status: NPCStatus) => Promise<void>;

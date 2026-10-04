@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
+| high | T083 | Two edits to the same list keep only one | M | open | Two ticks or two added notes at once lose one; whole-record reverts are fixed |
 | high | T084 | A write that outlives its upload's lease points at a deleted file | S | blocked | Images focus; the code is in, the enforcing rules wait for the client to be live, then a paste |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
@@ -156,29 +156,27 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T083 — Edits send the whole record and overwrite newer changes
-**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+### T083 — Two edits to the same list, or the same prose, keep only one
+**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
 
-Ticking an objective, changing a status or adding a note writes back the full
-in-memory record, so whatever anyone changed since it loaded is reverted. A
-second tick can undo the first; an unrelated write can restore an image whose
-file was already replaced and deleted. Pass 4 reproduced it in two ordinary
-tabs.
+Every single-record writer now sends only the fields it changes
+(`updateNPC`, `updateQuest` and `updateRumor` take `(id, patch)`), so an
+edit no longer reverts the rest of the record or restores a replaced picture.
+What is left is a list or a text that two people change at once:
 
-- **Where**: `src/features/campaign-entities/quests/context/QuestContext.tsx:147`
-  writes `{ ...quest, objectives }` under a doc comment saying it leaves every
-  other field alone. The NPC, location, rumour and note contexts do the same
-  (the report lists each).
-- **Findings**: DATA-003 (03), IMG-002 (04), TEST-002 (08). The duplicated
-  batch-limit helper (09, consolidation item 2) belongs with this change.
-- **Catch**: three problems under one symptom. Scalar fields need true patches,
-  arrays (objectives, notes) need stable element ids or transactions, and
-  overlapping prose edits need a decision on conflict behaviour. And
-  `QuestContext.objectives.test.tsx` asserts the stale fields: a field-only
-  patch fails four tests. They pin the defect, like #1414/#1415. **Approved
-  (maintainer, 2026-10-04): rewrite them against the requirement**, so that an
-  objective write carries only `objectives`. Say so in the PR, test by test.
-  Plan first.
+- **Lists**: a writer still computes the whole new list from its local copy and
+  sends it -- objectives (`QuestContext.writeObjectives`), table notes on NPCs,
+  locations and rumours, a rumour's `relatedNPCs` / `relatedLocations`, an
+  NPC's `connections`, a note's extracted-entity markers
+  (`NoteContext.markEntityAsConverted`). Two ticks or two added notes from the
+  same snapshot keep only the second. Read-modify-write in a transaction
+  (`useFirebaseData.updateDataAfterReading`) closes it per record.
+- **Prose**: two people saving the same field (a description) is last write
+  wins. Whether that needs a conflict check is the maintainer's call; nothing
+  reverts a field anyone did not edit any more.
+- **Findings**: DATA-003's array half (03), TEST-002's interleaving test (08).
+  The duplicated batch-limit helper (09, consolidation item 2) moves to T088's
+  rumour work, which touches the same batches.
 - **Source**: code review, 2026-10-04
 
 ### T084 — A write that arrives after its upload's lease can still point at a deleted file
@@ -259,6 +257,9 @@ Each of these decides from a stale local copy, then writes:
   first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
+- **With the conversion**: `RumorContext`'s batch helper duplicates
+  `commitEntityWrites` (09, consolidation item 2); fold it in while touching
+  those batches.
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade

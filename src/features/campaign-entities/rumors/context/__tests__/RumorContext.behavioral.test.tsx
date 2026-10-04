@@ -216,7 +216,7 @@ describe('RumorContext Behavioral Testing', () => {
       };
 
       // BEHAVIOR: Should reject when not authenticated
-      await expect(rumorContext.updateRumor(rumor)).rejects.toThrow(
+      await expect(rumorContext.updateRumor(rumor.id, { title: rumor.title })).rejects.toThrow(
         'User must be authenticated to update rumors'
       );
 
@@ -661,14 +661,11 @@ describe('RumorContext Behavioral Testing', () => {
         expect(rumorContext).toBeDefined();
       });
 
-      const updatedRumor = {
-        ...mockRumors[0],
-        title: 'Updated Rumor Title',
-        content: 'Updated rumor content'
-      };
-
       await act(async () => {
-        await rumorContext.updateRumor(updatedRumor);
+        await rumorContext.updateRumor('test-rumor', {
+          title: 'Updated Rumor Title',
+          content: 'Updated rumor content'
+        });
       });
 
       // BEHAVIOR: Should update with basic metadata

@@ -106,21 +106,17 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to update quest status');
     }
 
-    const quest = getQuestById(questId);
-    if (!quest) {
+    if (!getQuestById(questId)) {
       throw new Error('Quest not found');
     }
 
     const now = new Date().toISOString();
 
-    const updatedQuest = {
-      ...quest,
+    // The status alone (T083), and the completion date if completing.
+    await updateData(questId, {
       status,
-      // If completing, set the completion date
       ...(status === 'completed' && { dateCompleted: now })
-    };
-
-    await updateData(questId, updatedQuest);
+    });
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
 
   /**
@@ -145,10 +141,14 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return quest;
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById]);
 
-  /** Write a new objective list, leaving every other field of the quest alone. */
+  /**
+   * Write a new objective list, leaving every other field of the quest alone:
+   * only `objectives` is sent (T083). Sending the whole quest wrote back
+   * whatever this copy held of the title and status, over newer changes.
+   */
   const writeObjectives = useCallback(
     async (quest: Quest, objectives: Quest['objectives']) => {
-      await updateData(quest.id, { ...quest, objectives });
+      await updateData(quest.id, { objectives });
     },
     [updateData]
   );
@@ -271,8 +271,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return id;
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, addData]);
 
-  // Update existing quest
-  const updateQuest = useCallback(async (quest: Quest) => {
+  // Update an existing quest: only the fields in `patch` (T083)
+  const updateQuest = useCallback(async (questId: string, patch: Partial<Quest>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update quests');
     }
@@ -281,11 +281,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to update quests');
     }
 
-    const updatedQuest = {
-      ...quest
-    };
-
-    await updateData(quest.id, updatedQuest);
+    await updateData(questId, patch);
   }, [user, userProfile, activeGroupId, activeCampaignId, updateData]);
 
   // Delete quest
@@ -368,14 +364,11 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       completed: true
     }));
 
-    const updatedQuest = {
-      ...quest,
+    await updateData(questId, {
       status: 'completed' as QuestStatus,
       dateCompleted: completionDate,
       objectives: completedObjectives
-    };
-
-    await updateData(questId, updatedQuest);
+    });
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
 
   // Mark quest as failed
@@ -388,17 +381,11 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to mark quests as failed');
     }
 
-    const quest = getQuestById(questId);
-    if (!quest) {
+    if (!getQuestById(questId)) {
       throw new Error('Quest not found');
     }
 
-    const updatedQuest = {
-      ...quest,
-      status: 'failed' as QuestStatus
-    };
-
-    await updateData(questId, updatedQuest);
+    await updateData(questId, { status: 'failed' as QuestStatus });
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
 
   const value: QuestContextValue = {

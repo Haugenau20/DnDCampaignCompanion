@@ -97,11 +97,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('NPC not found');
     }
 
-    const updatedNPC = {
-      ...npc,
-      notes: [...(npc.notes || []), note]
-    };
-    await updateData(npcId, updatedNPC);
+    // The notes alone (T083): the rest of the copy may be behind the server.
+    await updateData(npcId, { notes: [...(npc.notes || []), note] });
   }, [getNPCById, updateData, hasRequiredContext, user, userProfile]);
 
   // Update NPC relationship
@@ -114,16 +111,11 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update relationship');
     }
 
-    const npc = getNPCById(npcId);
-    if (!npc) {
+    if (!getNPCById(npcId)) {
       throw new Error('NPC not found');
     }
 
-    const updatedNPC = {
-      ...npc,
-      relationship
-    };
-    await updateData(npcId, updatedNPC);
+    await updateData(npcId, { relationship });
   }, [getNPCById, updateData, hasRequiredContext, user, userProfile]);
 
   // Ids issued during this session but not yet reflected in `npcs` (loaded
@@ -160,8 +152,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return id;
   }, [hasRequiredContext, user, userProfile, getNPCById, addData]);
 
-  // Update an existing NPC
-  const updateNPC = useCallback(async (npc: NPC): Promise<void> => {
+  // Update an existing NPC: only the fields in `patch` (T083)
+  const updateNPC = useCallback(async (npcId: string, patch: Partial<NPC>): Promise<void> => {
     if (!hasRequiredContext) {
       throw new Error('Cannot update NPC: No group or campaign selected');
     }
@@ -170,16 +162,11 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update an NPC');
     }
 
-    const existingNPC = getNPCById(npc.id);
-    if (!existingNPC) {
+    if (!getNPCById(npcId)) {
       throw new Error('NPC not found');
     }
 
-    const updatedNPC = {
-      ...npc
-    };
-
-    await updateData(npc.id, updatedNPC);
+    await updateData(npcId, patch);
   }, [hasRequiredContext, user, userProfile, getNPCById, updateData]);
 
   // Delete an NPC

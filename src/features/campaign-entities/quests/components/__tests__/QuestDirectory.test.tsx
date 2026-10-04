@@ -627,7 +627,8 @@ describe('QuestDirectory', () => {
 
       await waitFor(() =>
         expect(mockUpdateQuest).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'q1', status: 'completed' })
+          'q1',
+          expect.objectContaining({ status: 'completed' })
         )
       );
     });

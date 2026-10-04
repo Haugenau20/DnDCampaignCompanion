@@ -394,8 +394,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
   /** Every write here re-reads through the context, as the pages do. */
   const handleSave = async (rumor: Rumor, draft: RumorDraft) => {
-    await updateRumor({
-      ...rumor,
+    await updateRumor(rumor.id, {
       title: draft.title,
       content: draft.content,
       // Normalised on the way out: see `Rumor.sourceType` for why this is
@@ -424,8 +423,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
    */
   const handleAttach = async (rumor: Rumor, id: string, kind: AttachKind) => {
     if (kind === 'npc') {
-      await updateRumor({
-        ...rumor,
+      await updateRumor(rumor.id, {
         relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), id])),
       });
       return;
@@ -433,12 +431,11 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
     const place = locations.find((candidate) => candidate.id === id);
     if (!rumor.locationId) {
-      await updateRumor({ ...rumor, locationId: id, location: place?.name ?? '' });
+      await updateRumor(rumor.id, { locationId: id, location: place?.name ?? '' });
       return;
     }
 
-    await updateRumor({
-      ...rumor,
+    await updateRumor(rumor.id, {
       relatedLocations: Array.from(new Set([...(rumor.relatedLocations ?? []), id])),
     });
   };
@@ -449,20 +446,18 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
    */
   const handleDetach = async (rumor: Rumor, id: string, kind: AttachKind) => {
     if (kind === 'npc') {
-      await updateRumor({
-        ...rumor,
+      await updateRumor(rumor.id, {
         relatedNPCs: (rumor.relatedNPCs ?? []).filter((existing) => existing !== id),
       });
       return;
     }
 
     if (id === rumor.locationId) {
-      await updateRumor({ ...rumor, locationId: '', location: '' });
+      await updateRumor(rumor.id, { locationId: '', location: '' });
       return;
     }
 
-    await updateRumor({
-      ...rumor,
+    await updateRumor(rumor.id, {
       relatedLocations: (rumor.relatedLocations ?? []).filter((existing) => existing !== id),
     });
   };

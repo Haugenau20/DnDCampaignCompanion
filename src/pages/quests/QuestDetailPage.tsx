@@ -291,10 +291,11 @@ const QuestDetailPage: React.FC = () => {
   // another player changed the same record first, the refetch is where that
   // becomes visible. `updateQuest` already does that read and awaits it
   // (`QuestContext`), so asking again here fetched the whole collection twice
-  // for one edit (PERF-06).
+  // for one edit (PERF-06). Only `patch` is written (T083): the copy may be
+  // behind the server.
   const save = async (patch: Partial<Quest>) => {
     if (!quest) return;
-    await updateQuest({ ...quest, ...patch });
+    await updateQuest(quest.id, patch);
   };
 
   /** Append one line to a prep list. */

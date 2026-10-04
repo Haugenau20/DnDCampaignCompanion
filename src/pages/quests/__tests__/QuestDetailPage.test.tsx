@@ -450,6 +450,7 @@ describe('who is in it', () => {
     );
     await waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({ relatedNPCIds: ['thorin'] })
       )
     );
@@ -552,6 +553,7 @@ describe('the prep material', () => {
 
     await waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({
           leads: ['The door can only be opened on Durin’s Day', 'Ask Balin'],
         })
@@ -621,6 +623,7 @@ describe('where the quest happens', () => {
 
     return waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({ locationId: 'erebor', location: 'Erebor' })
       )
     );
@@ -652,6 +655,7 @@ describe('editing in place', () => {
 
     await waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({ title: 'Retake Erebor' })
       )
     );
@@ -682,6 +686,7 @@ describe('editing in place', () => {
 
     await waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({ description: 'Take back the mountain.' })
       )
     );
@@ -695,6 +700,7 @@ describe('editing in place', () => {
 
     await waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({ background: '' })
       )
     );
@@ -708,6 +714,7 @@ describe('editing in place', () => {
 
     await waitFor(() =>
       expect(mockUpdateQuest).toHaveBeenCalledWith(
+        'reclaim-erebor',
         expect.objectContaining({ levelRange: '' })
       )
     );

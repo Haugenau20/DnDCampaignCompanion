@@ -156,9 +156,12 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(updatedObjectives[1].completed).toBe(false); // obj-2 unchanged
       expect(updatedObjectives[2].completed).toBe(true);  // obj-3 unchanged
 
-      // Quest should still be active (not all objectives complete)
-      expect(updatedQuestData.status).toBe('active');
-      expect(updatedQuestData.dateCompleted).toBeUndefined();
+      // Quest should still be active (not all objectives complete):
+      // T083 (TEST-002): the write carries the objectives and nothing else, so
+      // the stored status stays whatever the server holds -- including a newer
+      // change this copy has not seen. Asserting the old value in the payload
+      // demanded the stale write.
+      expect(Object.keys(updatedQuestData)).toEqual(['objectives']);
 
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
     });
@@ -218,9 +221,12 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(questId).toBe('test-quest');
       // Every objective is ticked...
       expect(updatedQuestData.objectives.every((obj: any) => obj.completed)).toBe(true);
-      // ...and the quest is still open, with no completion date invented.
-      expect(updatedQuestData.status).toBe('active');
-      expect(updatedQuestData.dateCompleted).toBeUndefined();
+      // ...and the quest is still open, with no completion date invented:
+      // T083 (TEST-002): the write carries the objectives and nothing else, so
+      // the stored status stays whatever the server holds -- including a newer
+      // change this copy has not seen. Asserting the old value in the payload
+      // demanded the stale write.
+      expect(Object.keys(updatedQuestData)).toEqual(['objectives']);
     });
 
     test('leaves a completed quest completed, with its original date', async () => {
@@ -264,9 +270,12 @@ describe('QuestContext Objective Management Behavior', () => {
       // BEHAVIOR: Objective should be updated
       expect(updatedQuestData.objectives[1].completed).toBe(true);
 
-      // BEHAVIOR: Quest should remain completed with original date
-      expect(updatedQuestData.status).toBe('completed');
-      expect(updatedQuestData.dateCompleted).toBe('2023-01-01T00:00:00.000Z');
+      // BEHAVIOR: Quest should remain completed with original date:
+      // T083 (TEST-002): the write carries the objectives and nothing else, so
+      // the stored status and date stays whatever the server holds -- including a newer
+      // change this copy has not seen. Asserting the old value in the payload
+      // demanded the stale write.
+      expect(Object.keys(updatedQuestData)).toEqual(['objectives']);
     });
 
     test('leaves a failed quest failed', async () => {
@@ -309,9 +318,12 @@ describe('QuestContext Objective Management Behavior', () => {
       // BEHAVIOR: Objective should be updated
       expect(updatedQuestData.objectives[1].completed).toBe(true);
 
-      // BEHAVIOR: Quest should remain failed
-      expect(updatedQuestData.status).toBe('failed');
-      expect(updatedQuestData.dateCompleted).toBeUndefined();
+      // BEHAVIOR: Quest should remain failed:
+      // T083 (TEST-002): the write carries the objectives and nothing else, so
+      // the stored status stays whatever the server holds -- including a newer
+      // change this copy has not seen. Asserting the old value in the payload
+      // demanded the stale write.
+      expect(Object.keys(updatedQuestData)).toEqual(['objectives']);
     });
   });
 
@@ -447,8 +459,9 @@ describe('QuestContext Objective Management Behavior', () => {
       expect(updatedQuestData.status).toBe('failed');
       expect(updatedQuestData.dateCompleted).toBeUndefined(); // No completion date for failed
 
-      // BEHAVIOR: Objectives should remain unchanged when quest fails
-      expect(updatedQuestData.objectives[0].completed).toBe(false);
+      // BEHAVIOR: Objectives should remain unchanged when quest fails -- they
+      // are not written at all (T083), so they stay as the server holds them.
+      expect(updatedQuestData).not.toHaveProperty('objectives');
 
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
     });

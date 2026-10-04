@@ -72,7 +72,12 @@ export interface RumorContextValue extends RumorContextState {
   updateRumorStatus: (rumorId: string, status: RumorStatus) => Promise<void>;
   updateRumorNote: (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => Promise<void>;
   addRumor: (rumor: DomainData<Rumor>) => Promise<string>;
-  updateRumor: (rumor: Rumor) => Promise<void>;
+  /**
+   * Write `patch` to the rumour: the fields it names, and nothing else (T083).
+   * Never the whole record -- a copy from the listener can be behind the
+   * server, and sending it back reverts whatever changed since.
+   */
+  updateRumor: (rumorId: string, patch: Partial<Rumor>) => Promise<void>;
   deleteRumor: (rumorId: string) => Promise<void>;
   /** Set the status of several rumours in one atomic write (T032, `PERF-06`). */
   updateRumorsStatus: (rumorIds: string[], status: RumorStatus) => Promise<void>;

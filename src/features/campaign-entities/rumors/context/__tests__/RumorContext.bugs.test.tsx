@@ -210,10 +210,7 @@ describe('RumorContext Bug Discovery Tests', () => {
       });
 
       await act(async () => {
-        await rumorContext.updateRumor({
-          ...mockRumors[0],
-          content: 'Updated content'
-        });
+        await rumorContext.updateRumor(mockRumors[0].id, { content: 'Updated content' });
       });
 
       // Specifies the correct attribution values; currently passes. The former

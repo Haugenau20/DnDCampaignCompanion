@@ -773,7 +773,7 @@ describe('NPCContext Behavioral Testing', () => {
 
       // BEHAVIOR: updateNPC validates NPC existence and rejects for a nonexistent NPC (bug #006)
       await act(async () => {
-        await expect(npcContext.updateNPC(updatedNPC)).rejects.toThrow('NPC not found');
+        await expect(npcContext.updateNPC(updatedNPC.id, { description: updatedNPC.description })).rejects.toThrow('NPC not found');
       });
 
       // BEHAVIOR: Firebase is not called for nonexistent NPC
@@ -804,15 +804,12 @@ describe('NPCContext Behavioral Testing', () => {
         expect(npcContext).toBeDefined();
       });
 
-      const updatedNPC = {
-        ...existingNPC,
-        description: 'Updated description',
-        relationship: 'ally' as NPCRelationship
-      };
-
       // BEHAVIOR: Should update NPC successfully
       await act(async () => {
-        await npcContext.updateNPC(updatedNPC);
+        await npcContext.updateNPC('test-npc', {
+          description: 'Updated description',
+          relationship: 'ally' as NPCRelationship
+        });
       });
 
       // BEHAVIOR: Should call Firebase with updated NPC data
@@ -822,6 +819,8 @@ describe('NPCContext Behavioral Testing', () => {
       expect(npcId).toBe('test-npc');
       expect(updatedNPCData.description).toBe('Updated description');
       expect(updatedNPCData.relationship).toBe('ally');
+      // The patch, not the record (T083): an unchanged field is never sent.
+      expect(updatedNPCData).not.toHaveProperty('name');
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
       // BEHAVIOR: Should refresh NPCs after update
