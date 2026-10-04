@@ -29,7 +29,7 @@ adjusted for the images focus above.
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Cycles, duplicate orders, extra quests per retry |
+| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -235,11 +235,19 @@ Each of these decides from a stale local copy, then writes:
 - **Conversion** (DATA-005, 03): rumour → quest and combine create the target
   first (`RumorContext.tsx:306-311`) and mark the sources after; a failed mark
   leaves an extra quest on every retry (pass 5 reproduced it, 17).
-- **Location tree** (DATA-006): `LocationContext.tsx:178` checks for a cycle
-  against the local list, so two opposite moves make one; a child added during
-  a delete is orphaned.
+- **Location delete** (DATA-006): `deleteLocation` takes the children from
+  the local list, so a child added or moved in during a delete is orphaned,
+  and one moved out is still deleted. Moves are transactional now
+  (`updateDataAfterReading`), but a transaction reads documents, not
+  queries, so it cannot find "every child" either. Needs a design.
 - **Chapter order** (DATA-007): `StoryContext.tsx:472-488` shifts orders from
-  the local list; concurrent inserts gave 1, 2, 3, 3.
+  the local list; concurrent inserts gave 1, 2, 3, 3. **Catch**: the same
+  limit. A transaction cannot read "all chapters", so serializing this needs
+  a shared document every structural change reads and writes (an order list
+  or a version, plus a rules change and a backfill for existing campaigns),
+  or a deliberate tiebreak (gaps, and a stable second key such as
+  `dateAdded`) that makes duplicates harmless. The maintainer's call; plan
+  first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
 - **Source**: code review, 2026-10-04

@@ -98,6 +98,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     subscribeToCollection,
     createDocument,
     updateDocumentWithAttribution,
+    updateDocumentAfterReading,
     deleteDocument
   } = useFirestore();
 
@@ -308,6 +309,29 @@ export function useFirebaseData<T extends Record<string, any>>(
     }
   }, [subscribing, options.collection, updateDocumentWithAttribution]);
 
+  /**
+   * `updateData` for a write whose validity depends on other records: `decide`
+   * reads them by id inside a transaction and returns the fields to write, or
+   * throws to refuse. See `DocumentService.updateDocumentAfterReading`.
+   */
+  const updateDataAfterReading = useCallback(async (
+    id: string,
+    decide: (read: (otherId: string) => Promise<T | undefined>) => Promise<Partial<T>>
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (options.collection === null) throw new Error(NO_CAMPAIGN);
+      await updateDocumentAfterReading<T>(options.collection, id, decide);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update data';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [options.collection, updateDocumentAfterReading]);
+
   const deleteData = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -334,6 +358,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     retry,
     addData,
     updateData,
+    updateDataAfterReading,
     deleteData,
     setDocument: addData // Backward compatibility
   };

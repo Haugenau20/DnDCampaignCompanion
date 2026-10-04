@@ -67,12 +67,18 @@ describe('LocationContext — moving and deleting in a tree', () => {
   let context: any;
   let updateData: jest.Mock;
   let deleteData: jest.Mock;
+  /**
+   * What the server holds, which a move re-reads inside its transaction. The
+   * same as the local list unless a test says another member moved on.
+   */
+  let serverTree: Location[];
 
   beforeEach(() => {
     jest.clearAllMocks();
     context = null;
     updateData = jest.fn().mockResolvedValue(undefined);
     deleteData = jest.fn().mockResolvedValue(undefined);
+    serverTree = TREE;
 
     mockUseAuth.mockReturnValue({ user: { uid: 'user-1' } });
     mockUseUser.mockReturnValue({ userProfile: {}, activeGroupUserProfile: {} });
@@ -88,6 +94,11 @@ describe('LocationContext — moving and deleting in a tree', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: jest.fn(),
       updateData,
+      // The transaction, modelled: `decide` reads the server's documents, and
+      // what it returns is written as `updateData` would write it.
+      updateDataAfterReading: jest.fn(async (id: string, decide: any) =>
+        updateData(id, await decide(async (other: string) => serverTree.find((l) => l.id === other)))
+      ),
       deleteData,
     });
 
@@ -128,6 +139,29 @@ describe('LocationContext — moving and deleting in a tree', () => {
       await act(async () => {
         await expect(context.moveLocation('beleriand', 'fountain')).rejects.toThrow(
           'The fountain is already inside Beleriand.'
+        );
+      });
+      expect(updateData).not.toHaveBeenCalled();
+    });
+
+    // DATA-006: the local list is a snapshot. Another member has since put
+    // Doriath inside King's square, so Doriath is now inside Gondolin -- and
+    // the move the local list still allows would close a cycle.
+    it('re-checks against the server, so a move the local list allows cannot close a cycle', async () => {
+      serverTree = TREE.map((l) => (l.id === 'doriath' ? { ...l, parentId: 'kings-square' } : l));
+      await act(async () => {
+        await expect(context.moveLocation('gondolin', 'doriath')).rejects.toThrow(
+          'Doriath is already inside Gondolin.'
+        );
+      });
+      expect(updateData).not.toHaveBeenCalled();
+    });
+
+    it('refuses a parent that no longer exists', async () => {
+      serverTree = TREE.filter((l) => l.id !== 'doriath');
+      await act(async () => {
+        await expect(context.moveLocation('gondolin', 'doriath')).rejects.toThrow(
+          'Doriath no longer exists.'
         );
       });
       expect(updateData).not.toHaveBeenCalled();
