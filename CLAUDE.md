@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A tool for D&D **players** (not DMs) to collect and organize their shared campaign data: stories,
 rumors, NPCs, locations, and quests. Components should focus on player-facing features.
 
+**Design for scale.** The site has fewer than 20 users today, but design everything as if it were a
+large, fully deployed website with many users: concurrency, abuse, data volume and cost included.
+"Only a handful of people use it" is never the reason to skip a guard, an index or a race fix.
+
 **Key documents**
 - `TODO.md` — **start here**: the backlog, its priorities and what is blocked on whom
 - `docs/testing/bug-tracking/README.md` — live bug tracker
@@ -18,6 +22,9 @@ rumors, NPCs, locations, and quests. Components should focus on player-facing fe
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
   emulator data to `firebase/emulator-data`; `start` re-imports it if present)
 - Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
+- **Never stop a dev server or the emulators you did not start in this session.** The maintainer
+  usually has them running. Need to switch branches under a running dev server? Ask first, or use a
+  worktree.
 
 The emulators run from **`firebase/firebase.emulators.json`**, not `firebase.json`: the Storage
 emulator won't start under the real project id without a `storage.rules` key, and that key in
