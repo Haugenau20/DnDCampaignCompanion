@@ -46,6 +46,23 @@ interface ExtractEntitiesRequest {
  */
 const EXTRACTION_MODEL = "gpt-4.1-mini";
 
+/**
+ * The scale of `confidence`, told to the model in the tool schema. The client
+ * shows it as a percentage of 1, so `90` would read as 9000% (AI-002).
+ * `minimum`/`maximum` would say it more firmly, but whether strict mode
+ * accepts them was not verified, and a schema the API rejects fails every
+ * call; `isFraction` below holds the line instead.
+ */
+const CONFIDENCE_DESCRIPTION =
+  "How sure you are that this is a real entity, " +
+  "as a fraction from 0 to 1 (0.9, not 90).";
+
+/** Whether `value` is a confidence on the 0 to 1 scale. */
+function isFraction(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) &&
+    value >= 0 && value <= 1;
+}
+
 // Usage tracking types
 interface PeriodUsage {
   count: number;
@@ -168,189 +185,127 @@ function initializeUsageData(): EntityExtractionUsage {
   };
 }
 
-/**
- * Get usage status without incrementing counters
- * Used for display purposes only
- */
-async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
-  const userRef = admin.firestore().collection("users").doc(userId);
-  const userDoc = await userRef.get();
-  
-  let usageData: EntityExtractionUsage;
-  
-  if (!userDoc.exists || !userDoc.data()?.entityExtractionUsage) {
-    // Initialize usage data for new user
-    usageData = initializeUsageData();
-  } else {
-    usageData = userDoc.data()!.entityExtractionUsage as EntityExtractionUsage;
-  }
-  
-  // Check if user has unlimited access
-  if (usageData.isUnlimited) {
-    return {
-      usage: usageData,
-      limitExceeded: false,
-      nextReset: {
-        daily: getNextReset('daily').toISOString(),
-        weekly: getNextReset('weekly').toISOString(),
-        monthly: getNextReset('monthly').toISOString()
-      }
-    };
-  }
-  
-  const now = new Date().toISOString();
-  let needsUpdate = false;
-  
-  // Reset periods if needed (but don't increment counters)
-  if (shouldResetPeriod(usageData.daily.lastReset, 'daily')) {
-    usageData.daily.count = 0;
-    usageData.daily.lastReset = now;
-    needsUpdate = true;
-  }
-  
-  if (shouldResetPeriod(usageData.weekly.lastReset, 'weekly')) {
-    usageData.weekly.count = 0;
-    usageData.weekly.lastReset = now;
-    needsUpdate = true;
-  }
-  
-  if (shouldResetPeriod(usageData.monthly.lastReset, 'monthly')) {
-    usageData.monthly.count = 0;
-    usageData.monthly.lastReset = now;
-    needsUpdate = true;
-  }
-  
-  // Update database if periods were reset
-  if (needsUpdate) {
-    await userRef.set({ entityExtractionUsage: usageData }, { merge: true });
-  }
-  
-  // Check limits without incrementing
-  const dailyLimit = usageData.customLimit ?? usageData.daily.limit;
-  const weeklyLimit = usageData.weekly.limit;
-  const monthlyLimit = usageData.monthly.limit;
-  
-  let limitExceeded = false;
-  let exceededPeriod: 'daily' | 'weekly' | 'monthly' | undefined;
-  
-  if (usageData.daily.count >= dailyLimit) {
-    limitExceeded = true;
-    exceededPeriod = 'daily';
-  } else if (usageData.weekly.count >= weeklyLimit) {
-    limitExceeded = true;
-    exceededPeriod = 'weekly';
-  } else if (usageData.monthly.count >= monthlyLimit) {
-    limitExceeded = true;
-    exceededPeriod = 'monthly';
-  }
-  
+/** When each period next resets, as the client shows it. */
+function nextResets(): UsageStatus["nextReset"] {
   return {
-    usage: usageData,
-    limitExceeded,
-    exceededPeriod,
-    nextReset: {
-      daily: getNextReset('daily').toISOString(),
-      weekly: getNextReset('weekly').toISOString(),
-      monthly: getNextReset('monthly').toISOString()
-    }
+    daily: getNextReset('daily').toISOString(),
+    weekly: getNextReset('weekly').toISOString(),
+    monthly: getNextReset('monthly').toISOString()
   };
 }
 
 /**
- * Check and update usage limits - increments counters
- * Used only when actually performing extraction
+ * Zero every period whose window has passed, in place.
+ *
+ * @return Whether anything was reset
  */
-async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
-  const userRef = admin.firestore().collection("users").doc(userId);
-  const userDoc = await userRef.get();
-  
-  let usageData: EntityExtractionUsage;
-  
-  if (!userDoc.exists || !userDoc.data()?.entityExtractionUsage) {
-    // Initialize usage data for new user
-    usageData = initializeUsageData();
-  } else {
-    usageData = userDoc.data()!.entityExtractionUsage as EntityExtractionUsage;
+function resetElapsedPeriods(
+  usageData: EntityExtractionUsage,
+  now: string
+): boolean {
+  let changed = false;
+  for (const period of ['daily', 'weekly', 'monthly'] as const) {
+    if (shouldResetPeriod(usageData[period].lastReset, period)) {
+      usageData[period].count = 0;
+      usageData[period].lastReset = now;
+      changed = true;
+    }
   }
-  
-  // Check if user has unlimited access
-  if (usageData.isUnlimited) {
-    return {
-      usage: usageData,
-      limitExceeded: false,
-      nextReset: {
-        daily: getNextReset('daily').toISOString(),
-        weekly: getNextReset('weekly').toISOString(),
-        monthly: getNextReset('monthly').toISOString()
-      }
-    };
-  }
-  
-  const now = new Date().toISOString();
-  let needsUpdate = false;
-  
-  // Reset periods if needed
-  if (shouldResetPeriod(usageData.daily.lastReset, 'daily')) {
-    usageData.daily.count = 0;
-    usageData.daily.lastReset = now;
-    needsUpdate = true;
-  }
-  
-  if (shouldResetPeriod(usageData.weekly.lastReset, 'weekly')) {
-    usageData.weekly.count = 0;
-    usageData.weekly.lastReset = now;
-    needsUpdate = true;
-  }
-  
-  if (shouldResetPeriod(usageData.monthly.lastReset, 'monthly')) {
-    usageData.monthly.count = 0;
-    usageData.monthly.lastReset = now;
-    needsUpdate = true;
-  }
-  
-  // Check limits
+  return changed;
+}
+
+/** Which period, if any, has no calls left. */
+function exhaustedPeriod(
+  usageData: EntityExtractionUsage
+): 'daily' | 'weekly' | 'monthly' | undefined {
+  // `??`, not `||`: a custom limit of 0 is a real limit (AI-003).
   const dailyLimit = usageData.customLimit ?? usageData.daily.limit;
-  const weeklyLimit = usageData.weekly.limit;
-  const monthlyLimit = usageData.monthly.limit;
-  
-  let limitExceeded = false;
-  let exceededPeriod: 'daily' | 'weekly' | 'monthly' | undefined;
-  
-  if (usageData.daily.count >= dailyLimit) {
-    limitExceeded = true;
-    exceededPeriod = 'daily';
-  } else if (usageData.weekly.count >= weeklyLimit) {
-    limitExceeded = true;
-    exceededPeriod = 'weekly';
-  } else if (usageData.monthly.count >= monthlyLimit) {
-    limitExceeded = true;
-    exceededPeriod = 'monthly';
+  if (usageData.daily.count >= dailyLimit) return 'daily';
+  if (usageData.weekly.count >= usageData.weekly.limit) return 'weekly';
+  if (usageData.monthly.count >= usageData.monthly.limit) return 'monthly';
+  return undefined;
+}
+
+/** The stored usage, or a fresh record for a user who has none. */
+function readUsage(
+  userDoc: admin.firestore.DocumentSnapshot
+): EntityExtractionUsage {
+  const stored = userDoc.exists ?
+    userDoc.data()?.entityExtractionUsage :
+    undefined;
+  return stored ? (stored as EntityExtractionUsage) : initializeUsageData();
+}
+
+/**
+ * The user's usage as it stands, for display. Writes nothing.
+ *
+ * A period that has rolled over is shown reset, but the reset is not written
+ * back: this read is not in a transaction, so writing its copy could
+ * overwrite a call reserved in between (SEC-003). The next reservation
+ * performs the reset, inside its transaction.
+ */
+async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
+  const userDoc = await admin.firestore().collection("users").doc(userId).get();
+  const usageData = readUsage(userDoc);
+
+  if (usageData.isUnlimited) {
+    return {usage: usageData, limitExceeded: false, nextReset: nextResets()};
   }
-  
-  // If not exceeded, increment counters (this is the key difference)
-  if (!limitExceeded) {
-    usageData.daily.count++;
-    usageData.weekly.count++;
-    usageData.monthly.count++;
-    usageData.lastExtraction = now;
-    needsUpdate = true;
-  }
-  
-  // Update database if needed
-  if (needsUpdate) {
-    await userRef.set({ entityExtractionUsage: usageData }, { merge: true });
-  }
-  
+
+  resetElapsedPeriods(usageData, new Date().toISOString());
+  const exceededPeriod = exhaustedPeriod(usageData);
   return {
     usage: usageData,
-    limitExceeded,
+    limitExceeded: exceededPeriod !== undefined,
     exceededPeriod,
-    nextReset: {
-      daily: getNextReset('daily').toISOString(),
-      weekly: getNextReset('weekly').toISOString(),
-      monthly: getNextReset('monthly').toISOString()
-    }
+    nextReset: nextResets()
   };
+}
+
+/**
+ * Reserve one extraction: reset elapsed periods, check every limit, and count
+ * the call, all in one transaction.
+ *
+ * It used to read, check and then write a copy outside any transaction, so
+ * calls racing for the last slot were all admitted and each wrote the same
+ * incremented count -- four calls spent one slot and recorded one use
+ * (SEC-003). The paid model call stays outside: a transaction can be retried,
+ * and a retry must never call the model twice.
+ */
+async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
+  const db = admin.firestore();
+  const userRef = db.collection("users").doc(userId);
+
+  return db.runTransaction(async (transaction) => {
+    const usageData = readUsage(await transaction.get(userRef));
+
+    if (usageData.isUnlimited) {
+      return {usage: usageData, limitExceeded: false, nextReset: nextResets()};
+    }
+
+    const now = new Date().toISOString();
+    let needsUpdate = resetElapsedPeriods(usageData, now);
+    const exceededPeriod = exhaustedPeriod(usageData);
+
+    if (exceededPeriod === undefined) {
+      usageData.daily.count++;
+      usageData.weekly.count++;
+      usageData.monthly.count++;
+      usageData.lastExtraction = now;
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      transaction.set(userRef, {entityExtractionUsage: usageData}, {merge: true});
+    }
+
+    return {
+      usage: usageData,
+      limitExceeded: exceededPeriod !== undefined,
+      exceededPeriod,
+      nextReset: nextResets()
+    };
+  });
 }
 
 /**
@@ -513,7 +468,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       properties: {
                           type: { enum: ["npc"] },
                           text: { type: "string" },
-                          confidence: { type: "number" },
+                          confidence: { type: "number", description: CONFIDENCE_DESCRIPTION },
                           name: { type: "string" },
                           title: { type: ["string", "null"] },
                           race: { type: ["string", "null"] },
@@ -547,7 +502,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       properties: {
                           type: { enum: ["location"] },
                           text: { type: "string" },
-                          confidence: { type: "number" },
+                          confidence: { type: "number", description: CONFIDENCE_DESCRIPTION },
                           name: { type: "string" },
                           locationType: {
                           type: "string",
@@ -591,7 +546,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       properties: {
                           type: { enum: ["quest"] },
                           text: { type: "string" },
-                          confidence: { type: "number" },
+                          confidence: { type: "number", description: CONFIDENCE_DESCRIPTION },
                           title: { type: "string" },
                           description: { type: ["string", "null"] },
                           objectives: {
@@ -633,7 +588,7 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
                       properties: {
                           type: { enum: ["rumor"] },
                           text: { type: "string" },
-                          confidence: { type: "number" },
+                          confidence: { type: "number", description: CONFIDENCE_DESCRIPTION },
                           title: { type: "string" },
                           content: { type: "string" },
                           // No "unknown": `RumorStatus` in the app has three
@@ -722,9 +677,25 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
       // Parse and return the entities with usage info
       const parsedResponse = JSON.parse(rawArgs);
 
+      // A confidence off the 0-1 scale is not reinterpreted: `90` may mean
+      // 0.9 or may not, and a guessed score would outrank a real one when the
+      // client picks between duplicates. The detection is dropped (AI-002).
+      const entities =
+        (parsedResponse.entities ?? []) as Array<{confidence?: unknown}>;
+      const scored = entities.filter((entity) => isFraction(entity.confidence));
+      if (scored.length < entities.length) {
+        console.warn(
+          `Dropped ${entities.length - scored.length} detection(s) ` +
+            "with a confidence off the 0-1 scale."
+        );
+      }
+
       return {
         success: true,
-        entities: dropPartyCharacters(parsedResponse.entities, partyNames),
+        entities: dropPartyCharacters(
+          scored as typeof parsedResponse.entities,
+          partyNames
+        ),
         usage: usageStatus
       };
 

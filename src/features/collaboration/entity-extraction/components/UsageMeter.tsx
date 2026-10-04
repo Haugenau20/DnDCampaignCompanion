@@ -109,9 +109,10 @@ const UsageMeter: React.FC = () => {
 
   const rows = PERIODS.map(({ key, label, allowance }) => {
     const period = usage[key];
-    // An admin's custom limit overrides the daily allowance only — the same
-    // rule the old indicator's ring and tooltip applied.
-    const limit = key === "daily" && customLimit ? customLimit : period.limit;
+    // An admin's custom limit overrides the daily allowance only. `??`, as the
+    // server reads it: a custom limit of 0 is a limit, not an absent one
+    // (AI-003).
+    const limit = key === "daily" ? customLimit ?? period.limit : period.limit;
     const ratio = limit > 0 ? period.count / limit : 0;
 
     // Every row carries its own reset, so the two periods that aren't binding

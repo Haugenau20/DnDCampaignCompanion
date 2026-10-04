@@ -36,7 +36,9 @@ export const useEntityExtractor = () => {
   const extractWithOpenAI = useCallback(async (content: string): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
-    
+    /** Whether the call reached the server, which counts it before the model answers. */
+    let sent = false;
+
     try {
       // Validate content before making the call
       if (!content || content.trim().length === 0) {
@@ -48,8 +50,9 @@ export const useEntityExtractor = () => {
       }
 
       // Extract entities - this will update usage in the service
+      sent = true;
       const entities = await entityService.extractEntities(content);
-      
+
       // Update shared usage status from the service after successful extraction
       const newUsageStatus = entityService.getCurrentUsage();
       if (newUsageStatus) {
@@ -67,12 +70,18 @@ export const useEntityExtractor = () => {
         const errorMessage = err instanceof Error ? err.message : 'Failed to extract entities';
         setError(errorMessage);
         console.error('Entity extraction error:', err);
+        // The server reserves a call before asking the model, so a failure
+        // after that was still counted. Without asking again the meter shows
+        // a slot that is gone (AI-001).
+        if (sent) {
+          void refreshUsageStatus();
+        }
         return [];
       }
     } finally {
       setIsExtracting(false);
     }
-  }, [entityService, updateUsageStatus, setUsageLimitExceededWithInfo]);
+  }, [entityService, updateUsageStatus, setUsageLimitExceededWithInfo, refreshUsageStatus]);
 
   /**
    * Extract entities from arbitrary content (not tied to a note)
@@ -80,7 +89,9 @@ export const useEntityExtractor = () => {
   const extractFromContent = useCallback(async (content: string): Promise<ExtractedEntity[]> => {
     setIsExtracting(true);
     setError(null);
-    
+    /** Whether the call reached the server, which counts it before the model answers. */
+    let sent = false;
+
     try {
       // Validate content before making the call
       if (!content || content.trim().length === 0) {
@@ -92,6 +103,7 @@ export const useEntityExtractor = () => {
       }
 
       // Extract entities - usage will only increment when OpenAI is called
+      sent = true;
       const entities = await entityService.extractEntities(content);
       
       // Update shared usage status from the service after successful extraction
@@ -111,12 +123,18 @@ export const useEntityExtractor = () => {
         const errorMessage = err instanceof Error ? err.message : 'Failed to extract entities';
         setError(errorMessage);
         console.error('Entity extraction error:', err);
+        // The server reserves a call before asking the model, so a failure
+        // after that was still counted. Without asking again the meter shows
+        // a slot that is gone (AI-001).
+        if (sent) {
+          void refreshUsageStatus();
+        }
         return [];
       }
     } finally {
       setIsExtracting(false);
     }
-  }, [entityService, updateUsageStatus, setUsageLimitExceededWithInfo]);
+  }, [entityService, updateUsageStatus, setUsageLimitExceededWithInfo, refreshUsageStatus]);
 
   /**
    * Reset error state

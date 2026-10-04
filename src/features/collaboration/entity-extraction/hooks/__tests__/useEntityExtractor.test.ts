@@ -297,6 +297,32 @@ describe('useEntityExtractor', () => {
   });
 
   // -------------------------------------------------------------------------
+  // extractWithOpenAI - a failed call may still have been counted (AI-001)
+  // -------------------------------------------------------------------------
+  describe('extractWithOpenAI - a failed scan', () => {
+    test('asks for usage again, since the server counts a call before the model answers', async () => {
+      mockExtractEntities.mockRejectedValue(new Error('Failed to extract entities'));
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const { result } = renderHook(() => useEntityExtractor());
+      await act(async () => {
+        await result.current.extractWithOpenAI('content');
+      });
+
+      expect(mockRefreshUsageStatus).toHaveBeenCalledTimes(1);
+    });
+
+    test('does not ask when the content never left the browser', async () => {
+      const { result } = renderHook(() => useEntityExtractor());
+      await act(async () => {
+        await result.current.extractWithOpenAI('');
+      });
+
+      expect(mockRefreshUsageStatus).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // extractWithOpenAI - usage limit exceeded
   // -------------------------------------------------------------------------
   describe('extractWithOpenAI - usage limit exceeded', () => {

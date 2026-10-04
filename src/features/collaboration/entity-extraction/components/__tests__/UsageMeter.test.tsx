@@ -191,6 +191,12 @@ describe('UsageMeter', () => {
       expect(within(row('daily')).getByText('2 of 99')).toBeInTheDocument();
     });
 
+    test('shows a custom limit of zero as zero, the limit the server enforces (AI-003)', () => {
+      setupUsage({ daily: { count: 0, limit: 10 } }, { customLimit: 0 });
+      render(<UsageMeter />);
+      expect(within(row('daily')).getByText('0 of 0')).toBeInTheDocument();
+    });
+
     test('should say so when usage is unlimited, and show no rows', () => {
       setupUsage({}, { isUnlimited: true });
       render(<UsageMeter />);

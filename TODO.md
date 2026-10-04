@@ -30,7 +30,6 @@ adjusted for the images focus above.
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T086 | Failed actions give no visible reason or retry | M | open | Data survives, but the user can't tell or try again |
-| medium | T087 | AI usage: quota overrun, stale meter | M | open | Paid calls beyond the allowance; scanning blocked after reset |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
 | medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
@@ -248,21 +247,6 @@ try again.
 - `NoteContext.tsx:91-95`: a failed notes listener empties the list with no
   retry (RECOVERY-003). The NPC provider's Try again is the working pattern.
 - **Findings**: 05, 06, 07, 08, 17, 20. **Source**: code review, 2026-10-04
-
-### T087 — AI usage: the quota can be overrun, and the meter goes stale
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- **Quota race** (SEC-003, 01): `checkAndUpdateUsage`
-  (`firebase/functions/src/entityExtraction.ts:263`) reads and then writes the
-  counters outside a transaction; four parallel calls spent the one remaining
-  slot and recorded one use.
-- **Stale meter** (AI-001, 12): a cached "exhausted" snapshot keeps scanning
-  disabled after the reset time.
-- **Zero shown as ten** (AI-003): `UsageMeter.tsx:114` picks `customLimit` by
-  truthiness, where the server uses `??` (`entityExtraction.ts:229`).
-- **Confidence out of range** (AI-002): the model schema accepts `90` or
-  `-0.4`, shown as 9000% or −40%.
-- **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04

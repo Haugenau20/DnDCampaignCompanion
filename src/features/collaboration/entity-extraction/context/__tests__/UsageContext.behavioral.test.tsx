@@ -664,4 +664,52 @@ describe("UsageContext Behavioral Testing", () => {
       await waitFor(() => expect(mockFetchUsageStatus).toHaveBeenCalledTimes(2));
     });
   });
+
+  // -------------------------------------------------------------------------
+  // AI-001: an exhausted allowance is looked at again once it resets.
+  describe("when the allowance resets", () => {
+    afterEach(() => jest.useRealTimers());
+
+    test("asks the server again at the reset time, and lifts the block", async () => {
+      jest.useFakeTimers("modern");
+      jest.setSystemTime(new Date("2026-10-03T23:59:00Z"));
+      const exhausted = makeUsageStatus({
+        limitExceeded: true,
+        exceededPeriod: "daily",
+        nextReset: {
+          daily: "2026-10-04T00:00:00Z",
+          weekly: "2026-10-05T00:00:00Z",
+          monthly: "2026-11-01T00:00:00Z",
+        },
+      });
+      mockFetchUsageStatus
+        .mockResolvedValueOnce(exhausted)
+        .mockResolvedValueOnce(makeUsageStatus({ limitExceeded: false }));
+
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
+      await waitFor(() => expect(result.current.isUsageLimitExceeded).toBe(true));
+      expect(result.current.isExtractionAvailable()).toBe(false);
+
+      await act(async () => {
+        jest.advanceTimersByTime(61 * 1000);
+      });
+
+      await waitFor(() => expect(result.current.isUsageLimitExceeded).toBe(false));
+      expect(mockFetchUsageStatus).toHaveBeenCalledTimes(2);
+      expect(result.current.isExtractionAvailable()).toBe(true);
+    });
+
+    test("does not ask again while nothing is exhausted", async () => {
+      jest.useFakeTimers("modern");
+      jest.setSystemTime(new Date("2026-05-21T23:59:00Z"));
+      const { result } = renderHook(() => useShownUsage(), { wrapper });
+      await waitFor(() => expect(result.current.usageStatus).not.toBeNull());
+
+      await act(async () => {
+        jest.advanceTimersByTime(2 * 24 * 60 * 60 * 1000);
+      });
+
+      expect(mockFetchUsageStatus).toHaveBeenCalledTimes(1);
+    });
+  });
 });
