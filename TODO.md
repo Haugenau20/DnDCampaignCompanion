@@ -17,13 +17,12 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T080–T102 and T037's rise were triaged 2026-10-04 from the code
+The rows for T083–T102 and T037's rise were triaged 2026-10-04 from the code
 review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
 adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| critical | T080 | Users can rewrite server-owned fields on their own profiles | M | in progress | Self-granted unlimited AI usage; an admin's removal redirected to another member. Fixed rules await pasting into the console |
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
 | high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
@@ -43,7 +42,7 @@ adjusted for the images focus above.
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
-| medium | T106 | Should the production rules be public? | S | open | Public repo; makes T080's hole easy to find until fixed |
+| medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -109,7 +108,7 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding is covered by an entry: T080–T102, plus T037.
+- Every confirmed finding not yet fixed is covered by an entry: T083–T102, plus T037.
 - **Not filed**: the reviews' unverified leads, and the optional refactors
   other than ARCH-M01/M02 (T102). They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
@@ -169,23 +168,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T080 — Users can rewrite server-owned fields on their own profiles
-**Type** bug · **Size** M · **Status** in progress · **Verified** 2026-10-04
-
-`firestore.rules.prod` now limits both profiles to the fields the client
-writes, and refuses raw deletes of group profiles; the admin UI and account
-cleanup no longer trust a profile's stored `userId` or `username`. Production
-keeps the old rules (read back 2026-10-04: identical to the repo before the
-fix) until they are pasted into the console, so all four findings stay open
-there until then. What is left:
-
-- **Paste the rules** (maintainer): `firestore.rules.prod` into the console.
-- **No audit of existing data**: the maintainer confirmed on 2026-10-04 that
-  nobody had tampered with usage or identity fields and that nobody had ever
-  renamed, so production holds no forged values and no name/reservation drift.
-- **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01).
-- **Source**: code review, 2026-10-04
 
 ### T083 — Edits send the whole record and overwrite newer changes
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
@@ -286,8 +268,7 @@ try again.
   truthiness, where the server uses `??` (`entityExtraction.ts:229`).
 - **Confidence out of range** (AI-002): the model schema accepts `90` or
   `-0.4`, shown as 9000% or −40%.
-- **Catch**: T080 must stop clients editing usage fields first, or the counters
-  mean nothing. **Source**: code review, 2026-10-04
+- **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
@@ -938,11 +919,10 @@ in the repo, so this is console work plus whatever copy is decided.
   hard-coded uid or email.
 - **What it changes**: the Firebase web config is public by design, and the
   rules are what protect the data. Hiding them protects nothing that correct
-  rules don't. But public rules make an open hole easy to find, and T080 is
-  one today.
+  rules don't. But public rules make any open hole easy to find.
 - **To decide**: keep them public, or make the repo private (moving them
-  elsewhere would break T105's deploy-from-repo). Either way, T080 is the
-  actual exposure.
+  elsewhere would break T105's deploy-from-repo). Either way, the exposure
+  is a hole in the rules, not their visibility.
 - **Source**: todo.txt, 2026-10-04
 
 ---
