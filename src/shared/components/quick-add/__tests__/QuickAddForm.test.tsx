@@ -35,10 +35,25 @@ const mockLocations = [
   { id: "loc-bree", name: "Bree" },
 ];
 
+/** What each list hook was asked for, so a test can see which lists opened. */
+const mockListReads: Record<string, unknown[]> = {};
+const mockReadOf = (name: string) => (options: unknown) => {
+  (mockListReads[name] ??= []).push(options);
+};
+
 jest.mock("features/campaign-entities", () => ({
-  useNPCs: () => ({ addNPC: mockAddNPC, npcs: mockNPCs }),
-  useQuests: () => ({ addQuest: mockAddQuest }),
-  useLocations: () => ({ createLocation: mockCreateLocation, locations: mockLocations }),
+  useNPCs: (options: unknown) => {
+    mockReadOf("npcs")(options);
+    return { addNPC: mockAddNPC, npcs: mockNPCs };
+  },
+  useQuests: (options: unknown) => {
+    mockReadOf("quests")(options);
+    return { addQuest: mockAddQuest };
+  },
+  useLocations: (options: unknown) => {
+    mockReadOf("locations")(options);
+    return { createLocation: mockCreateLocation, locations: mockLocations };
+  },
   /*
     The real implementation, not a stub. `quickAddSpecs` calls this while
     building a quest document, so a mock returning something else would make
@@ -51,7 +66,10 @@ jest.mock("features/campaign-entities", () => ({
 }));
 
 jest.mock("features/collaboration", () => ({
-  useNotes: () => ({ markEntityAsConverted: mockMarkEntityAsConverted }),
+  useNotes: (options: unknown) => {
+    mockReadOf("notes")(options);
+    return { markEntityAsConverted: mockMarkEntityAsConverted };
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -500,5 +518,47 @@ describe("QuickAddForm", () => {
         );
       });
     });
+  });
+});
+
+// PERF2-003: quick add opened the NPC, quest, location and notes listeners on
+// every mount, though a plain create reads none of them, and a released
+// listener stays open for five minutes.
+describe("QuickAddForm -- the lists it opens", () => {
+  /** Whether the last render asked `name`'s list to stay open. */
+  const subscribed = (name: string) => {
+    const reads = mockListReads[name] ?? [];
+    const last = reads[reads.length - 1] as { subscribe?: boolean } | undefined;
+    return last?.subscribe ?? true;
+  };
+
+  beforeEach(() => {
+    Object.keys(mockListReads).forEach((key) => delete mockListReads[key]);
+  });
+
+  it("opens none for a plain create", () => {
+    renderForm({ entity: "npc" });
+    expect(["npcs", "quests", "locations", "notes"].filter(subscribed)).toEqual([]);
+  });
+
+  it("opens the locations when a carried location name has to become an id", () => {
+    renderForm({ entity: "npc", carry: { location: "Bree" } });
+    expect(subscribed("locations")).toBe(true);
+    expect(subscribed("npcs")).toBe(false);
+  });
+
+  it("opens the NPCs when a quest carries names of people", () => {
+    renderForm({ entity: "quest", carry: { relatedNPCNames: ["Frodo"] } });
+    expect(subscribed("npcs")).toBe(true);
+  });
+
+  it("opens the locations for a place created inside another", () => {
+    renderForm({ entity: "location", parentId: "hobbiton" });
+    expect(subscribed("locations")).toBe(true);
+  });
+
+  it("opens the notes when it converts a note's detection", () => {
+    renderForm({ entity: "npc", noteId: "note-1", entityId: "ent-1" });
+    expect(subscribed("notes")).toBe(true);
   });
 });

@@ -3,10 +3,7 @@ import { Location, LocationStatus } from '../types';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
 import { useLocations } from '../context/LocationContext';
-import useHighlightTarget, {
-  ancestorIdsOf,
-  HIGHLIGHT_DEPTH_CAP,
-} from 'shared/hooks/useHighlightTarget';
+import useHighlightTarget, { HIGHLIGHT_DEPTH_CAP } from 'shared/hooks/useHighlightTarget';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { Plus } from 'lucide-react';
@@ -24,6 +21,7 @@ import {
 import LocationTreeRow from './LocationTreeRow';
 import LocationRowSummary from './LocationRowSummary';
 import {
+  ancestorIdsIn,
   buildLocationIndex,
   childrenOf,
   insideCountOf,
@@ -211,16 +209,15 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     const toExpand = new Set<string>();
     locations.forEach((location) => {
       if (!matchesSelf(location)) return;
-      ancestorIdsOf(locations, location.id, {
-        idOf: (candidate) => candidate.id,
-        parentIdOf,
-      }).forEach((id) => toExpand.add(id));
+      // Through the index built once above, not one rebuilt per match
+      // (PERF2-001).
+      ancestorIdsIn(index, location.id).forEach((id) => toExpand.add(id));
     });
 
     if (toExpand.size) {
       setExpandedLocations((previous) => new Set([...previous, ...toExpand]));
     }
-  }, [searching, typeFilter, statusFilter, locations, matchesSelf]);
+  }, [searching, typeFilter, statusFilter, locations, index, matchesSelf]);
 
   // Status counts drive the one bar that replaced the "All Status" dropdown
   const statusSegments: RosterSegment[] = useMemo(() => {
@@ -339,7 +336,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     ? flatMatches.map((location) =>
         // A root's own path is empty, so a hit at the top level needs a
         // placeholder that still marks it as flattened.
-        renderRow(location, 0, new Set(), pathLabelOf(locations, location.id) || 'the top level')
+        renderRow(location, 0, new Set(), pathLabelOf(locations, location.id, index) || 'the top level')
       )
     : index.roots
         .filter((location) => matchesWithDescendants(location))

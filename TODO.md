@@ -44,7 +44,7 @@ adjusted for the images focus above.
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
-| low | T101 | Large campaigns get slow | M | open | Measured at 1,000s of records; not felt at current sizes |
+| low | T101 | Large campaigns: quest and rumour rosters unpaged | S | open | Measured at 1,000s of records; not felt at current sizes |
 | low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | nit | T102 | Remove unused modules; story utilities through the barrel | S | open | Maintenance only |
@@ -631,21 +631,20 @@ time anyone edits it.
   PowerShell. **Catch**: do it with T065's start/stop round trip.
 - **Source**: code review, 2026-10-04
 
-### T101 — Large campaigns get slow
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
+### T101 — Large campaigns: the rest of the roster work
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
 
-Measured at sizes well beyond current campaigns:
+The NPC roster now mounts 100 rows at a time behind *Show more*
+(`shared/utils/roster-paging.ts`). Two things pass 5 (18) pointed at are left:
 
-- PERF2-001: the location filter calls `ancestorIdsOf` per matching row
-  (`LocationDirectory.tsx:212-218`), each rebuilding an index: 247 ms at 2,000
-  locations.
-- PERF2-002: saga pagination slices and recounts at every word boundary
-  (`paginate-prose.ts:171-180`): 481 ms on a 50,000-word paragraph.
-- PERF2-003: quick add subscribes to NPCs, quests, locations and notes before
-  any create (`useQuickAddCreate.ts:118-121`).
-- Pass 5: 1,200 NPC rows are 19k DOM elements and ~350–570 ms to restore; the
-  reviewers suggest paging or virtualisation.
-- **Findings**: 07, 18. **Source**: code review, 2026-10-04
+- The quest and rumour rosters still mount every row. Their groups are by
+  status and can be collapsed, and a collapsed group still mounts its rows
+  (`hidden`), so paging them has to decide what a folded group counts as.
+- `NPCDirectory` resolves each NPC's location with `resolveLocationName`,
+  which searches the location array linearly per row (`location-display.ts`).
+  An id/name index would serve every row; pass 5 could not say how much of the
+  1,200-row redraw this is.
+- **Source**: code review, 2026-10-04
 
 ### T102 — Remove unused modules; route story utilities through the barrel
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04

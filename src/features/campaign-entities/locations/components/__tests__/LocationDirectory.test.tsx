@@ -21,6 +21,7 @@ import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import LocationDirectory from '../LocationDirectory';
 import { Location } from '../../types';
+import * as highlightTarget from 'shared/hooks/useHighlightTarget';
 
 // ---------------------------------------------------------------------------
 // Mock external dependencies
@@ -855,5 +856,32 @@ describe('LocationDirectory — the knowledge ladder and ?highlight=', () => {
       openTwisty('Beleriand');
       expect(screen.getByText('Ex')).toBeInTheDocument();
     });
+  });
+});
+
+// PERF2-001: every match rebuilt an index of the whole collection to walk its
+// own ancestors -- twice per search hit -- so a broad filter over 2,000 places
+// spent a quarter of a second on ancestry alone. One index serves every walk.
+describe('LocationDirectory -- ancestry on a broad filter', () => {
+  const realm = () => [
+    makeLocation('beleriand', 'Beleriand'),
+    ...Array.from({ length: 40 }, (_, n) =>
+      makeLocation(`hall-${n}`, `Hall ${n}`, { parentId: 'beleriand' })
+    ),
+  ];
+
+  beforeEach(() => setupMocks());
+
+  it('labels every search hit with its path without re-indexing per hit', () => {
+    const walk = jest.spyOn(highlightTarget, 'ancestorIdsOf');
+    try {
+      render(<LocationDirectory locations={realm()} />);
+      fireEvent.change(searchInput(), { target: { value: 'Hall' } });
+
+      expect(screen.getAllByText(/in Beleriand/)).toHaveLength(40);
+      expect(walk).not.toHaveBeenCalled();
+    } finally {
+      walk.mockRestore();
+    }
   });
 });

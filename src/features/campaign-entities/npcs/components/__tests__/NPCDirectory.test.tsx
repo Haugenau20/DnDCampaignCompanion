@@ -819,3 +819,49 @@ describe('NPCDirectory — 15.3', () => {
     });
   });
 });
+
+// T101: the roster mounted every NPC it held. 1,200 rows were ~19,000 DOM
+// elements and half a second to redraw when a filter was cleared.
+describe('NPCDirectory -- a long roster', () => {
+  /** `count` people, in one place, named in display order. */
+  const crowd = (count: number) =>
+    Array.from({ length: count }, (_, n) =>
+      makeNPC({ id: `p-${n}`, name: `Person ${String(n).padStart(3, '0')}`, location: 'Bree' })
+    );
+  const rows = () => screen.getAllByRole('button', { name: /^Expand Person/ });
+
+  test('mounts the first hundred rows and says how many there are', () => {
+    setupMocks();
+    render(<NPCDirectory npcs={crowd(250)} />);
+
+    expect(rows()).toHaveLength(100);
+    expect(screen.getByText(/Showing 100 of 250/)).toBeInTheDocument();
+    // The group heading still counts everyone in it, as the status bar does.
+    expect(screen.getAllByText('250')).toHaveLength(2);
+  });
+
+  test('shows a hundred more at a time, until all are shown', () => {
+    setupMocks();
+    render(<NPCDirectory npcs={crowd(250)} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /show 100 more/i }));
+    expect(rows()).toHaveLength(200);
+
+    fireEvent.click(screen.getByRole('button', { name: /show 50 more/i }));
+    expect(rows()).toHaveLength(250);
+    expect(screen.queryByRole('button', { name: /show .* more/i })).not.toBeInTheDocument();
+  });
+
+  test('offers nothing more for a roster that fits', () => {
+    setupMocks();
+    render(<NPCDirectory npcs={crowd(30)} />);
+    expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+  });
+
+  test('a link to someone far down the roster still finds them', () => {
+    setupMocks({ uid: 'user-1' }, { highlight: 'p-230' });
+    render(<NPCDirectory npcs={crowd(250)} />);
+
+    expect(screen.getByRole('button', { name: /Collapse Person 230/ })).toBeInTheDocument();
+  });
+});

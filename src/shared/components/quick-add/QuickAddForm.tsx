@@ -82,7 +82,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
 }) => {
   const spec = QUICK_ADD_SPECS[entity];
   const navigate = useNavigate();
-  const create = useQuickAddCreate();
+  const create = useQuickAddCreate({ entity, parentId, noteId, carry });
 
   const [name, setName] = useState(initialName);
   const [line, setLine] = useState(initialLine);

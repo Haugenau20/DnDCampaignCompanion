@@ -36,10 +36,32 @@ export function ancestorIdsOf<T>(
   if (!parentIdOf) return [];
 
   const byId = new Map(items.map((item) => [idOf(item), item]));
+  return walkAncestors((key) => byId.get(key), id, parentIdOf);
+}
+
+/**
+ * The parent walk behind {@link ancestorIdsOf}, over a lookup the caller
+ * already holds.
+ *
+ * `ancestorIdsOf` indexes the whole collection on every call, which is right
+ * for one walk and wrong for one walk per row: a filtered location directory
+ * rebuilt that index for every match (PERF2-001). A caller walking many ids
+ * builds its index once and walks through this.
+ *
+ * @param lookup The record for an id, if it is loaded
+ * @param id Where the walk starts
+ * @param parentIdOf A record's parent id
+ * @returns Every ancestor of `id`, nearest first
+ */
+export function walkAncestors<T>(
+  lookup: (id: string) => T | undefined,
+  id: string,
+  parentIdOf: (item: T) => string | undefined
+): string[] {
   const ancestors: string[] = [];
   const visited = new Set<string>([id]);
 
-  let current = byId.get(id);
+  let current = lookup(id);
   while (current && ancestors.length < HIGHLIGHT_DEPTH_CAP) {
     const parentId = parentIdOf(current);
     if (!parentId || visited.has(parentId)) {
@@ -50,7 +72,7 @@ export function ancestorIdsOf<T>(
     }
     ancestors.push(parentId);
     visited.add(parentId);
-    current = byId.get(parentId);
+    current = lookup(parentId);
   }
 
   return ancestors;

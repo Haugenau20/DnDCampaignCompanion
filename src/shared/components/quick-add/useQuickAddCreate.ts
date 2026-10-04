@@ -102,23 +102,61 @@ export function resolveCarriedNames(
   return resolved;
 }
 
+/** What one quick-add surface is about to create, as far as its reads go. */
+export interface QuickAddReads {
+  entity: QuickAddEntity;
+  /** A location created inside another, by id. */
+  parentId?: string;
+  /** The note whose detection this converts. */
+  noteId?: string;
+  carry?: QuickAddCarry;
+}
+
+/**
+ * Which collections a create will actually read.
+ *
+ * Only what turns a carried name into an id, or marks the source note. A
+ * plain create reads none: it only writes. Opening all four lists on every
+ * mount cost four listeners -- every NPC, quest, location and note in the
+ * campaign -- for a surface that may be cancelled, and a released listener
+ * stays open for five minutes (PERF2-003).
+ *
+ * @param reads What the surface is about to create
+ */
+export function listsToRead({ entity, parentId, noteId, carry }: QuickAddReads): {
+  npcs: boolean;
+  locations: boolean;
+  notes: boolean;
+} {
+  return {
+    npcs: entity === "quest" && carry?.relatedNPCNames !== undefined,
+    locations:
+      entity === "location"
+        ? Boolean(parentId) || Boolean(carry?.parentId)
+        : Boolean(carry?.location),
+    notes: Boolean(noteId),
+  };
+}
+
 /**
  * The one write path behind all three quick-add mounts.
  *
- * All three entity contexts are read unconditionally -- hooks cannot be called
- * behind a branch -- and exactly one of them is used per call. The component
- * tree already mounts all three providers above `Layout`, so this costs a
- * subscription, not a fetch.
+ * All four contexts are read unconditionally -- hooks cannot be called behind
+ * a branch -- but a collection's listener is opened only when `reads` says
+ * the create needs it (see {@link listsToRead}). Without `reads`, every list
+ * is opened, as it was before.
  *
  * Returns the new record's id, which is what `Create & open` navigates to.
  * Nothing is caught here: a rejected write must reach the caller so the
  * surface can keep the typed text and say what happened (§7).
  */
-export function useQuickAddCreate() {
-  const { addNPC, npcs } = useNPCs();
-  const { addQuest } = useQuests();
-  const { createLocation, locations } = useLocations();
-  const { markEntityAsConverted } = useNotes();
+export function useQuickAddCreate(reads?: QuickAddReads) {
+  const lists = reads ? listsToRead(reads) : { npcs: true, locations: true, notes: true };
+  const { addNPC, npcs } = useNPCs({ subscribe: lists.npcs });
+  // Writes only, never reads: a quest's create needs no other quest.
+  const { addQuest } = useQuests({ subscribe: false });
+  const { createLocation, locations } = useLocations({ subscribe: lists.locations });
+  const { markEntityAsConverted } = useNotes({ subscribe: lists.notes });
 
   return useCallback(
     async (
