@@ -24,7 +24,6 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | critical | T080 | Users can rewrite server-owned fields on their own profiles | M | in progress | Self-granted unlimited AI usage; an admin's removal redirected to another member. Fixed rules await pasting into the console |
-| high | T082 | A save in flight lands in the campaign you switch to | M | open | Content misfiled; an image replacement deletes a still-used file |
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
 | high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
@@ -186,22 +185,6 @@ there until then. What is left:
   nobody had tampered with usage or identity fields and that nobody had ever
   renamed, so production holds no forged values and no name/reservation drift.
 - **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01).
-- **Source**: code review, 2026-10-04
-
-### T082 — A save in flight lands in whichever campaign you switch to
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Writes resolve their group and campaign *after* an await, so switching campaign
-mid-save files the content under the new one. For an image replacement it also
-deletes the original campaign's still-referenced file. High on the images focus.
-
-- **Where**: `DocumentService.ts:246` awaits attribution, then `:255` builds
-  the collection path from whatever context is current. Image side:
-  `src/shared/hooks/useImageAttachment.ts:43-59`.
-- **Findings**: DATA-002 (03), IMG-001 (04).
-- **Catch**: the fix is capturing the full path when the operation starts,
-  through every context writer that passes a bare collection name, not a patch
-  in one place.
 - **Source**: code review, 2026-10-04
 
 ### T083 — Edits send the whole record and overwrite newer changes

@@ -4,6 +4,7 @@ import { SagaData, SagaContentInput } from '../types';
 import { useFirestore } from 'features/user-management';
 import { useAuth, useGroups, useCampaigns, useUser } from 'features/user-management';
 import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 
 /**
@@ -24,6 +25,10 @@ export const useSagaData = () => {
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
   const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();
+  // The saga's collection in this render's campaign, by full path: a save
+  // reads before it writes, and a bare name followed a campaign switch in
+  // between, overwriting the other campaign's saga with this one (T082).
+  const sagaPath = useCampaignCollectionPath('saga');
 
   /**
    * Fetch saga from Firebase with appropriate group/campaign context
@@ -46,7 +51,11 @@ export const useSagaData = () => {
         return null;
       }
       
-      const data = await getDocument<SagaData>('saga', 'sagaData');
+      if (!sagaPath) {
+        setSaga(null);
+        return null;
+      }
+      const data = await getDocument<SagaData>(sagaPath, 'sagaData');
       setSaga(data);
       return data;
     } catch (err) {
@@ -57,7 +66,7 @@ export const useSagaData = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDocument, activeGroupId, activeCampaignId]);
+  }, [getDocument, activeGroupId, activeCampaignId, sagaPath]);
 
   /**
    * Save saga data to Firebase.
@@ -90,12 +99,16 @@ export const useSagaData = () => {
         throw new Error('Not authenticated');
       }
 
+      if (!sagaPath) {
+        throw new Error('No active campaign selected');
+      }
+
       // Cached state can be null even when a document exists (the initial fetch may
       // have failed), so confirm before treating this as a first save — guessing wrong
       // overwrites the original author (bug #1203).
       const existing = saga?.createdBy
         ? saga
-        : await getDocument<SagaData>('saga', 'sagaData');
+        : await getDocument<SagaData>(sagaPath, 'sagaData');
 
       const fullSagaData: SagaData = existing?.createdBy
         ? {
@@ -108,7 +121,7 @@ export const useSagaData = () => {
             ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile }),
           };
 
-      await setDocument('saga', 'sagaData', fullSagaData);
+      await setDocument(sagaPath, 'sagaData', fullSagaData);
       setSaga(fullSagaData);
       return true;
     } catch (err) {
@@ -118,7 +131,7 @@ export const useSagaData = () => {
     } finally {
       setLoading(false);
     }
-  }, [setDocument, getDocument, activeGroupId, activeCampaignId, user, activeGroupUserProfile, saga]);
+  }, [setDocument, getDocument, activeGroupId, activeCampaignId, user, activeGroupUserProfile, saga, sagaPath]);
 
   /**
    * Update saga data in Firebase.
@@ -143,12 +156,16 @@ export const useSagaData = () => {
         throw new Error('Not authenticated');
       }
 
+      if (!sagaPath) {
+        throw new Error('No active campaign selected');
+      }
+
       const fullUpdates: Partial<SagaData> = {
         ...updates,
         ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
       };
 
-      await updateDocument('saga', 'sagaData', fullUpdates);
+      await updateDocument(sagaPath, 'sagaData', fullUpdates);
       setSaga(prev => prev ? { ...prev, ...fullUpdates } : null);
       return true;
     } catch (err) {
@@ -158,7 +175,7 @@ export const useSagaData = () => {
     } finally {
       setLoading(false);
     }
-  }, [updateDocument, activeGroupId, activeCampaignId, user, activeGroupUserProfile]);
+  }, [updateDocument, activeGroupId, activeCampaignId, user, activeGroupUserProfile, sagaPath]);
 
   // Load saga on mount and when group/campaign changes
   useEffect(() => {

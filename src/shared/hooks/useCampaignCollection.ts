@@ -1,8 +1,7 @@
 // src/shared/hooks/useCampaignCollection.ts
 import { useCallback, useMemo } from 'react';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
-import { campaignCollectionPath } from 'core/services/firebase/data/campaignCollectionPath';
-import { useAuth, useGroups, useCampaigns } from 'features/user-management';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 
 /**
@@ -28,10 +27,7 @@ export function useCampaignCollection<T extends Record<string, any>>(
   arrange: (documents: T[]) => T[],
   enabled = true
 ) {
-  const { user } = useAuth();
-  const { activeGroupId } = useGroups();
-  const { activeCampaignId } = useCampaigns();
-  const scopePath = campaignCollectionPath(Boolean(user), activeGroupId, activeCampaignId, collection);
+  const scopePath = useCampaignCollectionPath(collection);
   const path = enabled ? scopePath : null;
   const { data, loading, error, retry } = useFirebaseData<T>({ collection, subscribeTo: path });
   const { isResolving, hasRequiredContext, missingContext } = useCampaignContextStatus();

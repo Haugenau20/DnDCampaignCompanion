@@ -29,6 +29,9 @@ const mockUseFirebaseData = jest.fn();
 
 // Mock the Firebase context hooks
 jest.mock('@/features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useFirestore: () => mockUseFirestore(),
@@ -935,8 +938,8 @@ describe('RumorContext Behavioral Testing', () => {
       expect(mockBatchOperations).toHaveBeenCalledTimes(1);
       const [writes] = mockBatchOperations.mock.calls[0];
       expect(writes.map((write: any) => [write.type, write.collection, write.id])).toEqual([
-        ['update', 'rumors', 'r1'],
-        ['update', 'rumors', 'r3'],
+        ['update', 'groups/group-1/campaigns/campaign-1/rumors', 'r1'],
+        ['update', 'groups/group-1/campaigns/campaign-1/rumors', 'r3'],
       ]);
       writes.forEach((write: any) => {
         expect(write.data).toEqual(expect.objectContaining({ status: 'confirmed', modifiedBy: 'test-user' }));
@@ -965,8 +968,8 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       expect(mockBatchOperations).toHaveBeenCalledWith([
-        { type: 'delete', collection: 'rumors', id: 'r1' },
-        { type: 'delete', collection: 'rumors', id: 'r2' },
+        { type: 'delete', collection: 'groups/group-1/campaigns/campaign-1/rumors', id: 'r1' },
+        { type: 'delete', collection: 'groups/group-1/campaigns/campaign-1/rumors', id: 'r2' },
       ]);
       expect(mockDeleteData).not.toHaveBeenCalled();
     });
@@ -1051,7 +1054,7 @@ describe('RumorContext Behavioral Testing', () => {
       // must go through the attribution-aware createDocument path (the
       // single write path for new documents), not the plain setDocument path.
       expect(mockCreateDocument).toHaveBeenCalledWith(
-        'quests',
+        'groups/group-1/campaigns/campaign-1/quests',
         expect.objectContaining({
           title: 'Investigate Dragon Rumors',
           description: 'Look into the dragon sightings',
@@ -1090,7 +1093,7 @@ describe('RumorContext Behavioral Testing', () => {
       expect(mockBatchOperations).toHaveBeenCalledWith([
         expect.objectContaining({
           type: 'update',
-          collection: 'rumors',
+          collection: 'groups/group-1/campaigns/campaign-1/rumors',
           id: 'rumor-to-convert',
           data: expect.objectContaining({
             convertedToQuestId: 'investigate-dragon-rumors',

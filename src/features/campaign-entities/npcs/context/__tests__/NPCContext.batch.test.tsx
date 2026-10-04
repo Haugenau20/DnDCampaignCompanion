@@ -18,6 +18,9 @@ let mockNpcs: any[] = [];
 let mockHasRequiredContext = true;
 
 jest.mock('features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => ({ user: { uid: 'user-1' } }),
   useUser: () => ({
     userProfile: { username: 'Frodo' },
@@ -98,8 +101,8 @@ describe('NPCContext.updateNPCsStatus', () => {
     expect(mockBatchOperations).toHaveBeenCalledTimes(1);
     const writes = mockBatchOperations.mock.calls[0][0];
     expect(writes.map((w: any) => [w.type, w.collection, w.id, w.data.status])).toEqual([
-      ['update', 'npcs', 'n1', 'deceased'],
-      ['update', 'npcs', 'n3', 'deceased'],
+      ['update', 'groups/group-1/campaigns/campaign-1/npcs', 'n1', 'deceased'],
+      ['update', 'groups/group-1/campaigns/campaign-1/npcs', 'n3', 'deceased'],
     ]);
     for (const write of writes) {
       expect(write.data.modifiedBy).toBe('user-1');
@@ -138,8 +141,8 @@ describe('NPCContext.deleteNPCs', () => {
 
     expect(mockBatchOperations).toHaveBeenCalledTimes(1);
     expect(mockBatchOperations).toHaveBeenCalledWith([
-      { type: 'delete', id: 'n1', collection: 'npcs' },
-      { type: 'delete', id: 'n2', collection: 'npcs' },
+      { type: 'delete', id: 'n1', collection: 'groups/group-1/campaigns/campaign-1/npcs' },
+      { type: 'delete', id: 'n2', collection: 'groups/group-1/campaigns/campaign-1/npcs' },
     ]);
     expect(mockDeleteData).not.toHaveBeenCalled();
   });

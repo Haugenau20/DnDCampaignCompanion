@@ -4,6 +4,7 @@ import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
 import { DomainData, IdentifiableContent } from 'core/types/common';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
@@ -30,8 +31,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   //
   // `autoFetch: false` because nothing renders off its `data`: the list comes
   // from `useRumorData()` above.
+  // Writes name this render's campaign by full path, so one started here
+  // lands here even if the player switches campaign before it runs -- a
+  // conversion's quest and its rumour updates included (T082).
+  const rumorsPath = useCampaignCollectionPath('rumors');
+  const questsPath = useCampaignCollectionPath('quests');
   const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Rumor>({
-    collection: 'rumors',
+    collection: rumorsPath,
     autoFetch: false
   });
   const { user } = useAuth();
@@ -49,11 +55,14 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     data?: Partial<Rumor>;
   }>) => {
     if (writes.length === 0) return;
+    if (rumorsPath === null) {
+      throw new Error('No campaign selected');
+    }
     if (writes.length > MAX_BATCH_WRITES) {
       throw new Error(`One action can change at most ${MAX_BATCH_WRITES} rumours at once.`);
     }
-    await batchOperations(writes.map(write => ({ ...write, collection: 'rumors' })));
-  }, [batchOperations]);
+    await batchOperations(writes.map(write => ({ ...write, collection: rumorsPath })));
+  }, [batchOperations, rumorsPath]);
 
   // Get rumor by ID
   const getRumorById = useCallback((id: string) => {
@@ -361,11 +370,14 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // refusal are all that tell a taken quest slug apart. A title that
     // slugifies to a non-empty string keeps that slug unless it is taken, and
     // an empty/missing title falls back to a random id.
+    if (questsPath === null) {
+      throw new Error('No campaign selected');
+    }
     const questId = await createWithUniqueEntityId({
       name: questData.title || '',
       issuedIds: issuedQuestIds.current,
       isLoaded: () => false,
-      write: (candidateId) => createDocument('quests', {
+      write: (candidateId) => createDocument(questsPath, {
         ...questData,
         id: candidateId
       }, candidateId)
@@ -391,7 +403,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     })));
 
     return questId;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocument, commitRumorWrites]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocument, commitRumorWrites, questsPath]);
 
   const value: RumorContextValue = {
     rumors,

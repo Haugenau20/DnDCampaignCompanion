@@ -15,6 +15,9 @@ const mockRemoveImage = jest.fn();
 let mockNpcs: any[] = [];
 
 jest.mock('features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => ({ user: { uid: 'user-1' } }),
   useUser: () => ({ userProfile: {}, activeGroupUserProfile: {} }),
 }));

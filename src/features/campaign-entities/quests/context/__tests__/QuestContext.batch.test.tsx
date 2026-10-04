@@ -85,8 +85,8 @@ describe('QuestContext.updateQuestsStatus', () => {
     expect(mockBatchOperations).toHaveBeenCalledTimes(1);
     const writes = mockBatchOperations.mock.calls[0][0];
     expect(writes.map((w: any) => [w.type, w.collection, w.id, w.data.status])).toEqual([
-      ['update', 'quests', 'q1', 'failed'],
-      ['update', 'quests', 'q3', 'failed'],
+      ['update', 'groups/g1/campaigns/c1/quests', 'q1', 'failed'],
+      ['update', 'groups/g1/campaigns/c1/quests', 'q3', 'failed'],
     ]);
     for (const write of writes) {
       expect(write.data.modifiedBy).toBe('user-1');
@@ -129,8 +129,8 @@ describe('QuestContext.deleteQuests', () => {
 
     expect(mockBatchOperations).toHaveBeenCalledTimes(1);
     expect(mockBatchOperations).toHaveBeenCalledWith([
-      { type: 'delete', id: 'q2', collection: 'quests' },
-      { type: 'delete', id: 'q3', collection: 'quests' },
+      { type: 'delete', id: 'q2', collection: 'groups/g1/campaigns/c1/quests' },
+      { type: 'delete', id: 'q3', collection: 'groups/g1/campaigns/c1/quests' },
     ]);
     expect(mockDeleteData).not.toHaveBeenCalled();
   });

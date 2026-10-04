@@ -806,6 +806,85 @@ describe('DocumentService', () => {
       );
     });
   });
+
+  // ─── write scope (T082) ─────────────────────────────────────────────────────
+  // A write belongs to the group and campaign that were active when it was
+  // called. Attribution is read first, and a switch can land while that read
+  // is out; the write must not follow the switch -- campaigns routinely hold
+  // records with the same id (DATA-002).
+
+  describe('write scope survives a switch while attribution is read', () => {
+    const PROFILE = { username: 'Bilbo', activeCharacterId: null, characters: [] };
+
+    /** Holds the next getDoc (the attribution profile read) until released. */
+    function holdProfileRead() {
+      let release!: () => void;
+      mockGetDoc.mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = () => resolve(makeDocSnapshot(true, PROFILE));
+        })
+      );
+      return () => release();
+    }
+
+    /** The collection paths a document reference was built under. */
+    const docParents = () =>
+      mockDoc.mock.calls
+        .map(([parent]) => (parent as { path?: string })?.path)
+        .filter((path): path is string => typeof path === 'string');
+
+    test('an edit lands in the campaign it was made in', async () => {
+      mockUpdateDoc.mockResolvedValue(undefined);
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('campaign-a');
+      const release = holdProfileRead();
+
+      const edit = svc.updateDocumentWithAttribution('npcs', 'gandalf', { description: 'meant for A' });
+      svc.setActiveCampaign('campaign-b');
+      release();
+      await edit;
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(docParents()).toContain('groups/g1/campaigns/campaign-a/npcs');
+      expect(docParents()).not.toContain('groups/g1/campaigns/campaign-b/npcs');
+    });
+
+    test("an edit is credited from the profile in the edited record's group", async () => {
+      mockUpdateDoc.mockResolvedValue(undefined);
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('campaign-a');
+      const release = holdProfileRead();
+
+      const edit = svc.updateDocumentWithAttribution('npcs', 'gandalf', { description: 'x' });
+      svc.setActiveGroup('g2');
+      release();
+      await edit;
+
+      expect(docParents()).toContain('groups/g1/campaigns/campaign-a/npcs');
+      expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'groups', 'g1', 'users', 'user-doc-test');
+      expect(mockDoc).not.toHaveBeenCalledWith(expect.anything(), 'groups', 'g2', 'users', 'user-doc-test');
+    });
+
+    test("a create is credited from the profile in the created record's group", async () => {
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('campaign-a');
+      const release = holdProfileRead();
+
+      const create = svc.createDocument('npcs', { name: 'Gandalf' }, 'gandalf');
+      // Let the transaction read the id before the switch.
+      await Promise.resolve();
+      svc.setActiveGroup('g2');
+      release();
+      await create;
+
+      expect(docParents()).toContain('groups/g1/campaigns/campaign-a/npcs');
+      expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'groups', 'g1', 'users', 'user-doc-test');
+      expect(mockDoc).not.toHaveBeenCalledWith(expect.anything(), 'groups', 'g2', 'users', 'user-doc-test');
+    });
+  });
 });
 
 export {};

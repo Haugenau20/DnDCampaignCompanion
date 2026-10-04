@@ -20,17 +20,22 @@ export interface EntityBatchWrite<T> {
  * Callers stamp attribution themselves: `DocumentService.batchOperations`
  * writes `data` exactly as given.
  *
- * @param collection - the campaign-scoped collection, e.g. `'npcs'`
+ * @param collection - the collection's full path, from the caller's render
+ *   (`useCampaignCollectionPath`), so the batch lands in the campaign the
+ *   action was taken in (T082); `null` when there is no campaign
  * @param plural - how the error names the records, e.g. `'NPCs'`
  * @param writes - the writes; an empty list commits nothing
  * @throws when there are more writes than one batch can hold
  */
 export async function commitEntityWrites<T>(
-  collection: string,
+  collection: string | null,
   plural: string,
   writes: EntityBatchWrite<T>[]
 ): Promise<void> {
   if (writes.length === 0) return;
+  if (collection === null) {
+    throw new Error('No campaign selected');
+  }
   if (writes.length > MAX_BATCH_WRITES) {
     throw new Error(`One action can change at most ${MAX_BATCH_WRITES} ${plural} at once.`);
   }

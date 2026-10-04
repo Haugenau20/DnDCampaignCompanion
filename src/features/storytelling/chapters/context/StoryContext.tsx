@@ -4,6 +4,7 @@ import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { DomainData } from 'core/types/common';
 import { useChapterData } from '../hooks/useChapterData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
@@ -54,7 +55,6 @@ interface StoryContextState {
  */
 type ChapterWrite = {
   type: 'set' | 'update' | 'delete';
-  collection: 'chapters';
   id: string;
   data?: Record<string, unknown>;
 };
@@ -62,21 +62,30 @@ type ChapterWrite = {
 /** Firestore commits at most 500 writes in one batch. */
 export const MAX_CHAPTER_WRITES = 500;
 
-/** Commits a structural change atomically, or refuses it whole. */
-const commitChapterWrites = async (writes: ChapterWrite[]): Promise<void> => {
+/**
+ * Commits a structural change atomically, or refuses it whole.
+ *
+ * @param collection The chapters' full path, from the caller's render
+ *   (`useCampaignCollectionPath`), so the change lands in the campaign it was
+ *   made in (T082); `null` when there is no campaign
+ * @param writes The writes, all to that collection
+ */
+const commitChapterWrites = async (collection: string | null, writes: ChapterWrite[]): Promise<void> => {
   if (writes.length === 0) return;
+  if (collection === null) {
+    throw new Error('No campaign selected');
+  }
   if (writes.length > MAX_CHAPTER_WRITES) {
     throw new Error(
       `This change would rewrite ${writes.length} chapters at once; one change can rewrite at most ${MAX_CHAPTER_WRITES}.`
     );
   }
-  await firebaseServices.document.batchOperations(writes);
+  await firebaseServices.document.batchOperations(writes.map(write => ({ ...write, collection })));
 };
 
 /** Moves one chapter to a new place, changing nothing else about it. */
 const moveTo = (chapter: Chapter, order: number): ChapterWrite => ({
   type: 'update',
-  collection: 'chapters',
   id: chapter.id,
   data: { order },
 });
@@ -159,8 +168,11 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   } = useChapterData({ enabled: demand.wanted });
   
   // `autoFetch: false` because nothing renders off this instance's `data`:
-  // chapters come from `useChapterData()` above.
-  const { updateData } = useFirebaseData<Chapter>({ collection: 'chapters', autoFetch: false });
+  // chapters come from `useChapterData()` above. Writes name this render's
+  // campaign by full path, so one started here lands here even if the player
+  // switches campaign before it runs (T082).
+  const chaptersPath = useCampaignCollectionPath('chapters');
+  const { updateData } = useFirebaseData<Chapter>({ collection: chaptersPath, autoFetch: false });
   
   const { user } = useAuth();
   const { activeGroupUserProfile } = useUser();
@@ -474,11 +486,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       : c.order >= newOrder && c.order < oldOrder));
     const shift = oldOrder < newOrder ? -1 : 1;
 
-    await commitChapterWrites([
+    await commitChapterWrites(chaptersPath, [
       ...passed.map(c => moveTo(c, c.order + shift)),
       {
         type: 'update',
-        collection: 'chapters',
         id: chapterId,
         data: {
           ...fields,
@@ -486,7 +497,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     ]);
-  }, [updateData, chapters, getChapterById, user, activeGroupUserProfile, hasRequiredContext]);
+  }, [updateData, chapters, getChapterById, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
 
   /**
    * Create a chapter at `chapterData.order`, or after the last one. Inserting
@@ -513,11 +524,10 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const chapterId = generateChapterId();
 
-    await commitChapterWrites([
+    await commitChapterWrites(chaptersPath, [
       ...chapters.filter(c => c.order >= newOrder).map(c => moveTo(c, c.order + 1)),
       {
         type: 'set',
-        collection: 'chapters',
         id: chapterId,
         // A genuine creation, so it carries creation attribution for the
         // current user -- the same fields `createDocument` would stamp. The
@@ -532,7 +542,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ]);
 
     return chapterId;
-  }, [chapters, user, activeGroupUserProfile, hasRequiredContext]);
+  }, [chapters, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
 
   /** Delete a chapter, and move every later chapter back by one to close the gap. */
   const deleteChapter = useCallback(async (chapterId: string) => {
@@ -549,11 +559,11 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Chapter not found');
     }
 
-    await commitChapterWrites([
-      { type: 'delete', collection: 'chapters', id: chapterId },
+    await commitChapterWrites(chaptersPath, [
+      { type: 'delete', id: chapterId },
       ...chapters.filter(c => c.order > chapter.order).map(c => moveTo(c, c.order - 1))
     ]);
-  }, [getChapterById, chapters, user, hasRequiredContext]);
+  }, [getChapterById, chapters, user, hasRequiredContext, chaptersPath]);
 
   /** Renumber the chapters 1, 2, 3, ... in their current order, closing any gaps. */
   const reorderChapters = useCallback(async () => {
@@ -567,12 +577,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const sortedChapters = [...chapters].sort((a, b) => a.order - b.order);
     await commitChapterWrites(
+      chaptersPath,
       sortedChapters
         .map((chapter, index) => ({ chapter, order: index + 1 }))
         .filter(({ chapter, order }) => chapter.order !== order)
         .map(({ chapter, order }) => moveTo(chapter, order))
     );
-  }, [chapters, user, hasRequiredContext]);
+  }, [chapters, user, hasRequiredContext, chaptersPath]);
 
   // `isLoading` means "there is nothing to show yet" (T044), so it is exactly
   // `useChapterData`'s `loading` -- which already stops counting a refetch

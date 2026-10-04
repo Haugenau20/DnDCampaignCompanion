@@ -25,6 +25,9 @@ const mockUseNPCData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
 }));

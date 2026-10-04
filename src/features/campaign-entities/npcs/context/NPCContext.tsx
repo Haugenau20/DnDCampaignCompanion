@@ -4,6 +4,7 @@ import { NPC, NPCContextValue, NPCRelationship, NPCNote, NPCStatus } from '../ty
 import { DomainData } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
@@ -38,8 +39,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // `autoFetch: false` because nothing renders off this instance's `data`:
   // the list comes from `useNPCData()` above. It used to fetch the whole
   // collection anyway, so every mount read `npcs` twice.
+  //
+  // Writes name this render's campaign by full path, so one started here
+  // lands here even if the player switches campaign before it runs (T082).
+  const npcsPath = useCampaignCollectionPath('npcs');
   const { updateData, deleteData, addData, error: writeError } = useFirebaseData<NPC>({
-    collection: 'npcs',
+    collection: npcsPath,
     autoFetch: false
   });
 
@@ -211,12 +216,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-    await commitEntityWrites<NPC>('npcs', 'NPCs', npcIds.map(id => ({
+    await commitEntityWrites<NPC>(npcsPath, 'NPCs', npcIds.map(id => ({
       type: 'update' as const,
       id,
       data: { status, ...modificationAttribution }
     })));
-  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById]);
+  }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById, npcsPath]);
 
   /** Deletes several NPCs in one batch, then their portraits, as `deleteNPC` does for one. */
   const deleteNPCs = useCallback(async (npcIds: string[]): Promise<void> => {
@@ -232,10 +237,10 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const image = getNPCById(id)?.image;
       return image ? [image.path] : [];
     });
-    await commitEntityWrites<NPC>('npcs', 'NPCs', npcIds.map(id => ({ type: 'delete' as const, id })));
+    await commitEntityWrites<NPC>(npcsPath, 'NPCs', npcIds.map(id => ({ type: 'delete' as const, id })));
     // After the documents: a failure can then only orphan files.
     imagePaths.forEach(discardImage);
-  }, [hasRequiredContext, user, getNPCById]);
+  }, [hasRequiredContext, user, getNPCById, npcsPath]);
 
   const value: NPCContextValue = {
     npcs,

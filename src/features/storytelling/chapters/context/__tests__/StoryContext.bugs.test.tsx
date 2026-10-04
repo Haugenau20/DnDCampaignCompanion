@@ -192,7 +192,7 @@ describe('StoryContext Bug Discovery Tests', () => {
       // same builder `createDocument` uses -- and is visible to this test.
       expect(committedBatch()).toContainEqual({
         type: 'set',
-        collection: 'chapters',
+        collection: 'groups/group-1/campaigns/campaign-1/chapters',
         id: chapterId,
         data: expect.objectContaining({
           title: 'Test Chapter for Attribution',
@@ -277,7 +277,7 @@ describe('StoryContext Bug Discovery Tests', () => {
       // The moved chapter carries the mover's modification attribution.
       expect(committedBatch()).toContainEqual({
         type: 'update',
-        collection: 'chapters',
+        collection: 'groups/group-1/campaigns/campaign-1/chapters',
         id: 'chapter-01',
         data: expect.objectContaining({
           order: 2,
@@ -326,7 +326,7 @@ describe('StoryContext Bug Discovery Tests', () => {
       expect(movesIn(batch)).toEqual({ 'chapter-01': 2 });
       expect(batch).toContainEqual({
         type: 'set',
-        collection: 'chapters',
+        collection: 'groups/group-1/campaigns/campaign-1/chapters',
         id: chapterId,
         data: expect.objectContaining({ title: 'Conflicting Chapter', order: 1 })
       });
@@ -354,7 +354,7 @@ describe('StoryContext Bug Discovery Tests', () => {
       expect(committedBatch()).toEqual([
         {
           type: 'set',
-          collection: 'chapters',
+          collection: 'groups/group-1/campaigns/campaign-1/chapters',
           id: chapterId,
           data: expect.objectContaining({ id: chapterId, order: 999 })
         }
@@ -394,8 +394,8 @@ describe('StoryContext Bug Discovery Tests', () => {
       // only `order` is written to the chapters it passes, and no document is
       // rewritten or deleted -- there is nothing a reorder could drop.
       const batch = committedBatch();
-      expect(batch).toContainEqual({ type: 'update', collection: 'chapters', id: 'chapter-01', data: { order: 2 } });
-      expect(batch).toContainEqual({ type: 'update', collection: 'chapters', id: 'chapter-02', data: { order: 3 } });
+      expect(batch).toContainEqual({ type: 'update', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-01', data: { order: 2 } });
+      expect(batch).toContainEqual({ type: 'update', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-02', data: { order: 3 } });
       expect(batch.every((write) => write.type === 'update')).toBe(true);
       expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
       expect(mockDeleteData).not.toHaveBeenCalled();

@@ -24,6 +24,9 @@ const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useFirestore: () => mockUseFirestore(),
@@ -149,7 +152,7 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
 
     expect(id).toBe('investigate-the-smoke-2');
     expect(mockCreateDocument).toHaveBeenLastCalledWith(
-      'quests',
+      'groups/group-1/campaigns/campaign-1/quests',
       expect.objectContaining({ id: 'investigate-the-smoke-2' }),
       'investigate-the-smoke-2'
     );

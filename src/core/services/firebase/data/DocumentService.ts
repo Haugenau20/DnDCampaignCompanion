@@ -85,25 +85,41 @@ class DocumentService extends BaseFirebaseService {
   }
 
   /**
+   * The group a collection belongs to, read from its path: the group the
+   * write lands in, and so the profile its attribution must come from. Taken
+   * from the path rather than the active group, which a switch can change
+   * while a write is in flight (T082).
+   *
+   * @param collectionRef The collection being written
+   * @returns The group's id
+   */
+  private groupOf(collectionRef: { path: string }): string {
+    const [root, groupId] = collectionRef.path.split('/');
+    if (root === 'groups' && groupId) {
+      return groupId;
+    }
+    const activeGroupId = this.getActiveGroupId();
+    if (!activeGroupId) {
+      throw new Error('No active group selected');
+    }
+    return activeGroupId;
+  }
+
+  /**
    * Get attribution metadata for document creation
    * Includes the active character information at creation time
+   * @param groupId The group the document is written in
    * @returns Attribution metadata object
    */
-  private async getCreationAttribution(): Promise<Partial<ContentAttribution>> {
+  private async getCreationAttribution(groupId: string): Promise<Partial<ContentAttribution>> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
     }
 
     try {
-      // Get active group ID
-      const activeGroupId = this.getActiveGroupId();
-      if (!activeGroupId) {
-        throw new Error('No active group selected');
-      }
-
       // The user's username and active character, cached across writes
-      const userProfile = await this.cachedGroupProfile(activeGroupId, userId);
+      const userProfile = await this.cachedGroupProfile(groupId, userId);
 
       if (!userProfile) {
         throw new Error('User profile not found');
@@ -119,23 +135,18 @@ class DocumentService extends BaseFirebaseService {
   /**
    * Get attribution metadata for document modification
    * Includes the active character information at modification time
+   * @param groupId The group the document is written in
    * @returns Attribution metadata object
    */
-  private async getModificationAttribution(): Promise<Partial<ContentAttribution>> {
+  private async getModificationAttribution(groupId: string): Promise<Partial<ContentAttribution>> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
     }
 
     try {
-      // Get active group ID
-      const activeGroupId = this.getActiveGroupId();
-      if (!activeGroupId) {
-        throw new Error('No active group selected');
-      }
-
       // The user's username and active character, cached across writes
-      const userProfile = await this.cachedGroupProfile(activeGroupId, userId);
+      const userProfile = await this.cachedGroupProfile(groupId, userId);
 
       if (!userProfile) {
         throw new Error('User profile not found');
@@ -174,13 +185,15 @@ class DocumentService extends BaseFirebaseService {
     data: T,
     id?: string
   ): Promise<string> {
-    // Create document reference
+    // Resolved before anything is awaited, so a group or campaign switch while
+    // this create is in flight cannot move it (T082).
     const collectionRef = this.getCollectionRef(collectionName);
+    const groupId = this.groupOf(collectionRef);
 
     /** The document with its creation attribution. */
     const withAttribution = async (): Promise<DocumentData> => ({
       ...data,
-      ...(await this.getCreationAttribution())
+      ...(await this.getCreationAttribution(groupId))
     });
 
     if (!id) {
@@ -241,18 +254,21 @@ class DocumentService extends BaseFirebaseService {
     documentId: string,
     data: Partial<WithFieldValue<T>>
   ): Promise<void> {
+    // The target is resolved before the attribution read is awaited. It was
+    // resolved after it, so switching campaign while that read was out sent
+    // the edit to a same-id record in the other campaign (T082).
+    const collectionRef = this.getCollectionRef(collectionName);
+    const docRef = doc(collectionRef, documentId) as DocumentReference<T>;
+
     // Get modification attribution metadata with character information
-    const attributionMetadata = await this.getModificationAttribution();
-    
+    const attributionMetadata = await this.getModificationAttribution(this.groupOf(collectionRef));
+
     // Combine data with attribution metadata
     const fullData = {
       ...data,
       ...attributionMetadata
     };
-    
-    // Update document
-    const collectionRef = this.getCollectionRef(collectionName);
-    const docRef = doc(collectionRef, documentId) as DocumentReference<T>;
+
     await updateDoc(docRef, fullData as Partial<DocumentData>);
   }
 
