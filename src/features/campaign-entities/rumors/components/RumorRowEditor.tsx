@@ -4,7 +4,11 @@ import Button from 'core/components/Button';
 import Input from 'core/components/Input';
 import Typography from 'core/components/Typography';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
-import type { AttachKind, AttachSources } from 'shared/components/attach-tray/attachCandidates';
+import {
+  attachRefs,
+  type AttachKind,
+  type AttachSources,
+} from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import { Rumor, RumorStatus, SourceType } from '../types';
@@ -77,7 +81,7 @@ export interface RumorRowEditorProps {
   onStatusChange: (status: RumorStatus) => Promise<unknown>;
   /** Attach and detach write immediately, as every other tray in the app does. */
   onAttach: (id: string, kind: AttachKind) => Promise<unknown>;
-  onDetach: (id: string) => Promise<unknown>;
+  onDetach: (id: string, kind: AttachKind) => Promise<unknown>;
   sources: AttachSources;
   /** Take the caret on mount — true for a rumour just created by the composer. */
   autoFocus?: boolean;
@@ -204,10 +208,9 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
     }
   };
 
-  const attachedIds = [
-    ...(rumor.relatedNPCs ?? []),
-    ...(rumor.relatedLocations ?? []),
-    ...(rumor.locationId ? [rumor.locationId] : []),
+  const attached = [
+    ...attachRefs('npc', rumor.relatedNPCs ?? []),
+    ...attachRefs('location', [...(rumor.relatedLocations ?? []), rumor.locationId]),
   ];
 
   return (
@@ -298,7 +301,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                 <AttachTray
                   kinds={['npc']}
                   sources={sources}
-                  attachedIds={current.sourceNpcId ? [current.sourceNpcId] : []}
+                  attached={attachRefs('npc', [current.sourceNpcId])}
                   single
                   ariaLabel={`the source of ${name}`}
                   onAttach={(id) => {
@@ -451,10 +454,10 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
           <AttachTray
             kinds={['npc', 'location']}
             sources={sources}
-            attachedIds={attachedIds}
+            attached={attached}
             ariaLabel={`what ${name} points at`}
             onAttach={(id, kind) => void onAttach(id, kind)}
-            onDetach={(id) => void onDetach(id)}
+            onDetach={(id, kind) => void onDetach(id, kind)}
           />
         </div>
 

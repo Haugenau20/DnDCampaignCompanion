@@ -1539,6 +1539,97 @@ describe("NPCDetailPage", () => {
       // Saruman is attached, and appears once: in the relationships list.
       expect(screen.getAllByText(/Saruman/)).toHaveLength(1);
     });
+
+    // DATA-008: each collection allocates its own slugs, so a place and a
+    // quest may both be `mines-of-moria`. A relation is the pair, never the id.
+    describe("when records of different kinds share an id", () => {
+      const setNPC = (npc: any) => {
+        mockNPCDataReturn = { npcs: [npc, otherNPC, bareNPC], loading: false, error: null };
+      };
+      const option = (name: string) =>
+        within(screen.getByRole("listbox")).getByRole("option", { name: new RegExp(name) });
+
+      it("attaches the quest without touching the place that shares its id", async () => {
+        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        mockQuests = [
+          ...mockQuests,
+          { id: "mines-of-moria", title: "Clear the Mines", status: "active" },
+        ];
+        renderPage();
+        openTray();
+        expect(option("Clear the Mines")).toHaveAttribute("aria-selected", "false");
+
+        fireEvent.click(option("Clear the Mines"));
+
+        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+        const written = mockUpdateNPC.mock.calls[0][0];
+        expect(written.connections.relatedQuests).toContain("mines-of-moria");
+        expect(written.locationId).toBe("mines-of-moria");
+      });
+
+      it("detaches the quest and keeps the person who shares its id", async () => {
+        setNPC({
+          ...fullNPC,
+          connections: { ...fullNPC.connections, relatedQuests: ["npc-2"] },
+        });
+        mockQuests = [{ id: "npc-2", title: "Saruman's Treachery", status: "active" }];
+        renderPage();
+        openTray();
+
+        fireEvent.click(option("Saruman's Treachery"));
+
+        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+        const written = mockUpdateNPC.mock.calls[0][0];
+        expect(written.connections.relatedQuests).toEqual([]);
+        expect(written.connections.relatedNPCs).toEqual(["npc-2", "npc-missing"]);
+      });
+
+      it("detaches the rumour and keeps the place that shares its id", async () => {
+        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        mockRumors = [
+          {
+            id: "mines-of-moria",
+            title: "Drums in the deep",
+            status: "unconfirmed",
+            relatedNPCs: ["npc-1"],
+          },
+        ];
+        renderPage();
+        openTray();
+
+        fireEvent.click(option("Drums in the deep"));
+
+        await waitFor(() =>
+          expect(mockUpdateRumor).toHaveBeenCalledWith(
+            expect.objectContaining({ id: "mines-of-moria", relatedNPCs: [] })
+          )
+        );
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
+      });
+
+      it("detaches the place and keeps the rumour that shares its id", async () => {
+        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        mockRumors = [
+          {
+            id: "mines-of-moria",
+            title: "Drums in the deep",
+            status: "unconfirmed",
+            relatedNPCs: ["npc-1"],
+          },
+        ];
+        renderPage();
+        openTray();
+
+        fireEvent.click(option("Mines of Moria"));
+
+        await waitFor(() =>
+          expect(mockUpdateNPC).toHaveBeenCalledWith(
+            expect.objectContaining({ locationId: "", location: "" })
+          )
+        );
+        expect(mockUpdateRumor).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // -------------------------------------------------------------------------

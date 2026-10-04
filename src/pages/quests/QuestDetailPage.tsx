@@ -21,6 +21,7 @@ import type { Quest, QuestStatus, QuestLocation } from 'features/campaign-entiti
 import { useNotes, displayTitle as noteDisplayTitle } from 'features/collaboration';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -477,7 +478,7 @@ const QuestDetailPage: React.FC = () => {
                   <AttachTray
                     kinds={['npc']}
                     sources={{ npc: npcs, location: locations }}
-                    attachedIds={quest.relatedNPCIds ?? []}
+                    attached={attachRefs('npc', quest.relatedNPCIds ?? [])}
                     // The list above already names each person, with their
                     // occupation and where they are. Chips under it would be
                     // the same person twice.
@@ -526,7 +527,7 @@ const QuestDetailPage: React.FC = () => {
                   <AttachTray
                     kinds={['location']}
                     sources={{ npc: npcs, location: locations }}
-                    attachedIds={quest.locationId ? [quest.locationId] : []}
+                    attached={attachRefs('location', [quest.locationId])}
                     single
                     showAttachedChips={false}
                     ariaLabel={`where ${quest.title} happens`}

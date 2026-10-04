@@ -38,14 +38,40 @@ export interface AttachCandidate {
 /** The collections, straight from the providers that already own them. */
 export type AttachSources = Partial<Record<AttachKind, readonly any[]>>;
 
+/**
+ * One record, named the only way that is unambiguous: its kind and its id.
+ *
+ * Every collection allocates its own slugs, so a place and a quest both
+ * called "Watchtower" are both `watchtower`. A bare id therefore names no
+ * record at all once a tray spans kinds (DATA-008).
+ */
+export interface AttachRef {
+  kind: AttachKind;
+  id: string;
+}
+
+/**
+ * References to records of one kind, from the ids a record stores.
+ *
+ * Takes optional ids so a single-valued field reads as one: `attachRefs(
+ * "location", [quest.locationId])`. Empty ones are dropped.
+ */
+export const attachRefs = (
+  kind: AttachKind,
+  ids: readonly (string | null | undefined)[]
+): AttachRef[] => ids.filter((id): id is string => Boolean(id)).map((id) => ({ kind, id }));
+
+/** The one key a `Set` or `Map` can hold a reference by. */
+export const attachKey = ({ kind, id }: AttachRef): string => `${kind}:${id}`;
+
 export interface BuildCandidatesOptions {
-  attachedIds?: readonly string[];
+  attached?: readonly AttachRef[];
   /**
-   * Ids the tray must never offer -- the record being edited, and for a
+   * Records the tray must never offer -- the record being edited, and for a
    * location's parent every descendant of it. An invalid choice must be
    * unofferable rather than quietly discarded.
    */
-  excludeIds?: readonly string[];
+  exclude?: readonly AttachRef[];
 }
 
 /** Human-readable location type, e.g. `poi` -> "Poi", `city` -> "City". */
@@ -84,8 +110,8 @@ export function buildCandidates(
   sources: AttachSources,
   options: BuildCandidatesOptions = {}
 ): AttachCandidate[] {
-  const attached = new Set(options.attachedIds ?? []);
-  const excluded = new Set(options.excludeIds ?? []);
+  const attached = new Set((options.attached ?? []).map(attachKey));
+  const excluded = new Set((options.exclude ?? []).map(attachKey));
 
   // Locations are needed by name to resolve an NPC's or a location's own
   // reference, whether or not the tray is offering locations.
@@ -141,14 +167,16 @@ export function buildCandidates(
   const candidates: AttachCandidate[] = [];
   kinds.forEach((kind) => {
     (sources[kind] ?? []).forEach((record: any) => {
-      if (!record?.id || excluded.has(record.id)) return;
+      if (!record?.id) return;
+      const key = attachKey({ kind, id: record.id });
+      if (excluded.has(key)) return;
       const { name, lineText } = describe(kind, record);
       candidates.push({
         id: record.id,
         kind,
         name,
         line: lineText,
-        attached: attached.has(record.id),
+        attached: attached.has(key),
         touchedAt: touchedAt(record),
       });
     });

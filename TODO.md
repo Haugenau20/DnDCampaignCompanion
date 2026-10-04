@@ -29,7 +29,7 @@ adjusted for the images focus above.
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
+| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Cycles, duplicate orders, extra quests per retry |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -224,7 +224,7 @@ failed write.
   regression sequences; consider splitting at pickup. Plan first.
 - **Source**: code review, 2026-10-04
 
-### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
+### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
 
 Each of these decides from a stale local copy, then writes:
@@ -237,9 +237,6 @@ Each of these decides from a stale local copy, then writes:
   a delete is orphaned.
 - **Chapter order** (DATA-007): `StoryContext.tsx:472-488` shifts orders from
   the local list; concurrent inserts gave 1, 2, 3, 3.
-- **Attachment kind** (DATA-008): `attachCandidates.ts:86` keys "attached" by
-  bare id, so a location and a quest sharing a slug are confused. Small and
-  independent; can go first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
 - **Source**: code review, 2026-10-04

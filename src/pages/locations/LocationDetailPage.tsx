@@ -27,6 +27,7 @@ import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -448,7 +449,7 @@ const LocationDetailPage: React.FC = () => {
                     // effect was that the tray then offered "Attach" beside
                     // someone who was already attached. `15-5` gave the tray a
                     // way to say both things at once.
-                    attachedIds={location.connectedNPCs ?? []}
+                    attached={attachRefs('npc', location.connectedNPCs ?? [])}
                     showAttachedChips={false}
                     ariaLabel={`the people in ${location.name}`}
                     onAttach={(id) =>

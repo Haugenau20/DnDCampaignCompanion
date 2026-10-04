@@ -854,6 +854,57 @@ describe('RumorDirectory', () => {
         )
       );
     });
+
+    // DATA-008: a person and a place may share a slug, each in its own
+    // collection. Detaching one must leave the other attached.
+    describe('when a person and a place share an id', () => {
+      const { useNPCs } = require('../../../npcs/context/NPCContext');
+      const npcsMock = useNPCs as jest.Mock;
+      let original: (() => unknown) | undefined;
+      beforeEach(() => {
+        original = npcsMock.getMockImplementation();
+        npcsMock.mockImplementation(() => ({
+          npcs: [{ id: 'high-pass', name: 'The Hermit', occupation: 'Recluse' }],
+          getNPCById: jest.fn(() => undefined),
+        }));
+      });
+      afterEach(() => {
+        npcsMock.mockImplementation(original);
+      });
+
+      const both = makeRumor({
+        id: 'r2',
+        title: 'Missing merchant',
+        locationId: 'high-pass',
+        relatedNPCs: ['high-pass'],
+      });
+      const detach = (name: string) => {
+        render(<RumorDirectory rumors={[both]} />);
+        openRow('Missing merchant');
+        fireEvent.click(
+          screen.getByRole('button', { name: /Attach to what Missing merchant points at/ })
+        );
+        fireEvent.click(within(screen.getByRole('listbox')).getByText(name));
+      };
+
+      test('detaching the person keeps the place', async () => {
+        detach('The Hermit');
+        await waitFor(() =>
+          expect(mockUpdateRumor).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'r2', relatedNPCs: [], locationId: 'high-pass' })
+          )
+        );
+      });
+
+      test('detaching the place keeps the person', async () => {
+        detach('The High Pass');
+        await waitFor(() =>
+          expect(mockUpdateRumor).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'r2', relatedNPCs: ['high-pass'], locationId: '' })
+          )
+        );
+      });
+    });
   });
 
   // -------------------------------------------------------------------------

@@ -32,7 +32,7 @@ import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { FieldPrompt } from 'shared/components/entity-page';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
-import type { AttachKind } from 'shared/components/attach-tray/attachCandidates';
+import { attachRefs, type AttachKind } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { Pencil, X } from 'lucide-react';
 import { rumorTitleText } from 'features/campaign-entities';
@@ -457,15 +457,18 @@ const NPCDetailPage: React.FC = () => {
    * that clicking one of them detaches, which is how a relation is removed
    * from this page at all.
    */
-  const attachedIds = useMemo(() => {
-    if (!npc) return [] as string[];
+  const attached = useMemo(() => {
+    if (!npc) return [];
     return [
-      ...(npc.locationId ? [npc.locationId] : []),
-      ...(npc.connections?.relatedNPCs ?? []),
-      ...(npc.connections?.relatedQuests ?? []),
-      ...(rumors ?? [])
-        .filter((rumor) => rumor.relatedNPCs?.includes(npc.id))
-        .map((rumor) => rumor.id),
+      ...attachRefs('location', [npc.locationId]),
+      ...attachRefs('npc', npc.connections?.relatedNPCs ?? []),
+      ...attachRefs('quest', npc.connections?.relatedQuests ?? []),
+      ...attachRefs(
+        'rumor',
+        (rumors ?? [])
+          .filter((rumor) => rumor.relatedNPCs?.includes(npc.id))
+          .map((rumor) => rumor.id)
+      ),
     ];
   }, [npc, rumors]);
 
@@ -563,7 +566,12 @@ const NPCDetailPage: React.FC = () => {
     }
   };
 
-  const detachRelation = async (id: string) => {
+  /**
+   * Remove one relation, found by its kind. Each collection allocates its own
+   * slugs, so a place, a quest and a rumour may all be `watchtower`; searching
+   * every field for the bare id removed whichever matched first (DATA-008).
+   */
+  const detachRelation = async (id: string, kind: AttachKind) => {
     if (!npc) return;
     const connections = npc.connections ?? {
       relatedNPCs: [],
@@ -571,27 +579,36 @@ const NPCDetailPage: React.FC = () => {
       relatedQuests: [],
     };
 
-    if (id === npc.locationId) {
-      await save({ locationId: '', location: '' });
-      return;
+    switch (kind) {
+      case 'location':
+        if (id === npc.locationId) await save({ locationId: '', location: '' });
+        break;
+      case 'rumor': {
+        const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
+        if (!rumor?.relatedNPCs?.includes(npc.id)) return;
+        await updateRumor({
+          ...rumor,
+          relatedNPCs: rumor.relatedNPCs.filter((existing) => existing !== npc.id),
+        });
+        break;
+      }
+      case 'npc':
+        await save({
+          connections: {
+            ...connections,
+            relatedNPCs: (connections.relatedNPCs ?? []).filter((existing) => existing !== id),
+          },
+        });
+        break;
+      case 'quest':
+        await save({
+          connections: {
+            ...connections,
+            relatedQuests: (connections.relatedQuests ?? []).filter((existing) => existing !== id),
+          },
+        });
+        break;
     }
-
-    const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
-    if (rumor?.relatedNPCs?.includes(npc.id)) {
-      await updateRumor({
-        ...rumor,
-        relatedNPCs: rumor.relatedNPCs.filter((existing) => existing !== npc.id),
-      });
-      return;
-    }
-
-    await save({
-      connections: {
-        ...connections,
-        relatedNPCs: (connections.relatedNPCs ?? []).filter((existing) => existing !== id),
-        relatedQuests: (connections.relatedQuests ?? []).filter((existing) => existing !== id),
-      },
-    });
   };
 
   const addNote = async (text: string) => {
@@ -1229,11 +1246,11 @@ const NPCDetailPage: React.FC = () => {
                         quest: quests,
                         rumor: rumors ?? [],
                       }}
-                      attachedIds={attachedIds}
+                      attached={attached}
                       showAttachedChips={false}
                       ariaLabel={`what ${npc.name} is linked to`}
                       onAttach={(id, kind) => void attachRelation(id, kind)}
-                      onDetach={(id) => void detachRelation(id)}
+                      onDetach={(id, kind) => void detachRelation(id, kind)}
                     />
                   )
                 }
