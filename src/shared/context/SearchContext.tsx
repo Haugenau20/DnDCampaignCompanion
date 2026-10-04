@@ -11,7 +11,7 @@ import { NPC } from 'features/campaign-entities';
 import type { Location } from 'features/campaign-entities';
 import { Rumor } from 'features/campaign-entities';
 import { useRumors } from 'features/campaign-entities';
-import { useNotes } from 'features/collaboration';
+import { useNotes, displayTitle as noteDisplayTitle } from 'features/collaboration';
 import type { Note } from 'features/collaboration';
 import { rumorTitleText } from 'features/campaign-entities';
 import { useListenerDemand, RetainListener } from 'shared/hooks/useListenerDemand';
@@ -22,6 +22,12 @@ interface SearchContextData {
   results: SearchResult[];
   isSearching: boolean;
   isIndexReady: boolean;
+  /**
+   * Bumped every time the index is rebuilt or cleared, so whoever shows
+   * results can run the query on screen again (REACT-007): a query typed
+   * before the data arrived would otherwise keep its empty answer.
+   */
+  indexVersion: number;
   handleSearch: (query: string) => Promise<void>;
   clearSearch: () => void;
   /**
@@ -112,7 +118,8 @@ const createRumorSearchDocuments = (rumors: Rumor[]): SearchDocument[] => {
 };
 
 /**
- * Convert notes to search documents
+ * Convert notes to search documents. A note with no title is named the way
+ * its own list names it, from its content (DUP-001); the raw title is blank.
  */
 const createNoteSearchDocuments = (notes: Note[]): SearchDocument[] => {
   return notes.map(note => ({
@@ -120,7 +127,7 @@ const createNoteSearchDocuments = (notes: Note[]): SearchDocument[] => {
     type: 'note' as SearchResultType,
     content: `${note.title} ${note.content}`,
     metadata: {
-      title: note.title
+      title: noteDisplayTitle(note) ?? 'Untitled note'
     }
   }));
 };
@@ -136,6 +143,7 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // `results` array is indistinguishable from a genuine miss -- which is the
   // state the palette must render as a skeleton rather than as "no results".
   const [isIndexReady, setIsIndexReady] = useState(false);
+  const [indexVersion, setIndexVersion] = useState(0);
 
   // Every collection comes from the provider that owns it. SearchProvider is
   // mounted inside all six (App.tsx), so building private loaders here only
@@ -148,12 +156,18 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // after, so reopening the search soon after is free.
   const searching = useListenerDemand(0);
   const reading = { subscribe: searching.wanted };
-  const { chapters } = useStory(reading);
-  const { npcs } = useNPCs(reading);
-  const { locations } = useLocations(reading);
-  const { quests } = useQuests(reading);
-  const { rumors } = useRumors(reading);
-  const { notes } = useNotes(reading);
+  const { chapters, isLoading: chaptersLoading } = useStory(reading);
+  const { npcs, isLoading: npcsLoading } = useNPCs(reading);
+  const { locations, isLoading: locationsLoading } = useLocations(reading);
+  const { quests, isLoading: questsLoading } = useQuests(reading);
+  const { rumors, isLoading: rumorsLoading } = useRumors(reading);
+  const { notes, isLoading: notesLoading } = useNotes(reading);
+  // Whether any collection is still waiting for its first snapshot -- after a
+  // campaign switch, too. An empty array alone cannot say "nothing here" from
+  // "nothing yet" (REACT-006).
+  const anyLoading = Boolean(
+    chaptersLoading || npcsLoading || locationsLoading || questsLoading || rumorsLoading || notesLoading
+  );
 
   // Initialize SearchService with options
   const searchService = useMemo(() => new SearchService({
@@ -163,39 +177,41 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fuzzyMatch: true
   }), []);
 
-  // Initialize search index with available data
+  // Build the index from what is loaded, once everything has loaded.
+  //
+  // Collections load asynchronously and independently, and any of them may
+  // be legitimately empty -- the Phandelver campaign has 0 rumours. So the
+  // gate is whether loading has finished, not whether there is data: it used
+  // to be "any document at all", which left an empty campaign's search loading
+  // forever and kept a campaign's old records searchable once it dropped to
+  // none (REACT-006). Nothing loaded means an empty index, not no index.
   useEffect(() => {
-    const initializeSearch = () => {
-      try {
-        const searchDocuments: Record<SearchResultType, SearchDocument[]> = {
-          story: createChapterSearchDocuments(chapters),
-          quest: createQuestSearchDocuments(quests),
-          npc: createNPCSearchDocuments(npcs),
-          location: createLocationSearchDocuments(locations),
-          rumors: createRumorSearchDocuments(rumors),
-          note: createNoteSearchDocuments(notes)
-        };
-
-        searchService.initializeIndex(searchDocuments);
-        setIsIndexReady(true);
-      } catch (error) {
-        console.error('Error initializing search index:', error);
-      }
-    };
-
-    // Collections load asynchronously and independently — the Phandelver
-    // campaign, for example, has 0 rumors while every other collection is
-    // populated. Gating on every collection being non-empty meant the index
-    // was never built at all for a campaign missing just one type. Build the
-    // index as soon as there is any data, and let it rebuild (safe: it
-    // replaces the index wholesale) whenever a collection's contents change,
-    // including a collection that started empty and later arrives with data.
-    const totalDocs = chapters.length + quests.length + npcs.length + locations.length + rumors.length + notes.length;
-    if (totalDocs === 0) {
+    if (anyLoading) {
+      setIsIndexReady(false);
       return;
     }
-    initializeSearch();
-  }, [searchService, chapters, quests, npcs, locations, rumors, notes]);
+    try {
+      const searchDocuments: Record<SearchResultType, SearchDocument[]> = {
+        story: createChapterSearchDocuments(chapters),
+        quest: createQuestSearchDocuments(quests),
+        npc: createNPCSearchDocuments(npcs),
+        location: createLocationSearchDocuments(locations),
+        rumors: createRumorSearchDocuments(rumors),
+        note: createNoteSearchDocuments(notes)
+      };
+      const total = Object.values(searchDocuments).reduce((sum, docs) => sum + docs.length, 0);
+      if (total === 0) {
+        searchService.clearIndex();
+      } else {
+        // Safe to repeat: it replaces the index wholesale.
+        searchService.initializeIndex(searchDocuments);
+      }
+      setIsIndexReady(true);
+      setIndexVersion(version => version + 1);
+    } catch (error) {
+      console.error('Error initializing search index:', error);
+    }
+  }, [searchService, anyLoading, chapters, quests, npcs, locations, rumors, notes]);
 
   // Tracks the most recently issued search request so a response to an
   // older, superseded query cannot overwrite a newer query's results.
@@ -239,10 +255,11 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     results,
     isSearching,
     isIndexReady,
+    indexVersion,
     handleSearch,
     clearSearch,
     retainIndex: searching.retain
-  }), [query, results, isSearching, isIndexReady, handleSearch, clearSearch, searching.retain]);
+  }), [query, results, isSearching, isIndexReady, indexVersion, handleSearch, clearSearch, searching.retain]);
 
   return (
     <SearchContext.Provider value={value}>

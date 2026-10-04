@@ -5,6 +5,7 @@
 import {clearProject, useEmulatorProject} from "./emulator";
 import {sweepOrphanedImages} from "../src/imageMaintenance/sweepOrphanedImages";
 import {imageBucket} from "../src/shared/imageBucket";
+import {File} from "@google-cloud/storage";
 
 const PROJECT = "demo-sweep-orphaned-images";
 const db = useEmulatorProject(PROJECT);
@@ -172,5 +173,76 @@ describe("sweeping orphaned images", () => {
       ].sort()
     );
     expect(result.failed).toEqual([]);
+  });
+
+  // T084 (PERF2-004): the sweep's work is bounded, however large the bucket.
+  describe("bounded work", () => {
+    const ORPHANS = [
+      FILES.npcReplaced,
+      FILES.npcDeleted,
+      FILES.npcRemoved,
+      FILES.locationOrphan,
+      FILES.bannerOrphan,
+      FILES.crestOrphan,
+      FILES.screenshot,
+    ];
+
+    it("lists the bucket a page at a time and still finds every orphan", async () => {
+      const result = await sweepOrphanedImages(later(), {pageSize: 2});
+
+      expect(result.deleted.sort()).toEqual([...ORPHANS].sort());
+      expect(result.more).toBe(false);
+      expect(await exists(FILES.npcImage)).toBe(true);
+      expect(await exists(FILES.crest)).toBe(true);
+    });
+
+    it("deletes no more than its budget in one run, and says there is more", async () => {
+      const result = await sweepOrphanedImages(later(), {maxDeletes: 3, pageSize: 2});
+
+      expect(result.deleted).toHaveLength(3);
+      expect(result.more).toBe(true);
+      const left = [];
+      for (const path of ORPHANS) if (await exists(path)) left.push(path);
+      expect(left).toHaveLength(ORPHANS.length - 3);
+    });
+
+    it("finishes the backlog over the following runs", async () => {
+      const runs = [];
+      for (let i = 0; i < 4; i += 1) {
+        runs.push(await sweepOrphanedImages(later(), {maxDeletes: 3, pageSize: 2}));
+      }
+
+      expect(runs.flatMap((run) => run.deleted).sort()).toEqual([...ORPHANS].sort());
+      expect(runs[runs.length - 1].more).toBe(false);
+      for (const path of ORPHANS) expect(await exists(path)).toBe(false);
+      expect(await exists(FILES.npcImage)).toBe(true);
+    });
+
+    it("never has more deletes in flight than its concurrency", async () => {
+      const original = File.prototype.delete;
+      let inFlight = 0;
+      let peak = 0;
+      jest.spyOn(File.prototype, "delete").mockImplementation(function(
+        this: File,
+        ...args: unknown[]
+      ) {
+        const run = original as (...a: unknown[]) => unknown;
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        // Hold each delete open for a moment, so overlapping ones overlap.
+        // `this` is the file being deleted: `delete` is a method.
+        return new Promise((resolve) => setTimeout(resolve, 20))
+          // eslint-disable-next-line no-invalid-this
+          .then(() => run.apply(this, args))
+          .finally(() => {
+            inFlight -= 1;
+          });
+      } as typeof original);
+
+      const result = await sweepOrphanedImages(later(), {concurrency: 2});
+
+      expect(result.deleted).toHaveLength(ORPHANS.length);
+      expect(peak).toBe(2);
+    });
   });
 });

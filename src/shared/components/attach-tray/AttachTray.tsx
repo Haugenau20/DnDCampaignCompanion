@@ -100,6 +100,19 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
   const listRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
+  /*
+    The hatch's callback outlives the render that made it: quick add keeps it
+    for as long as its dialog is open, and *Create & add another* calls it once
+    per record (T093). A caller's `onAttach` builds the new relation from the
+    record it rendered, so the hatch reads the latest one through this ref --
+    a callback frozen when the dialog opened would write each new record over
+    the one before it.
+  */
+  const onAttachRef = useRef(onAttach);
+  useEffect(() => {
+    onAttachRef.current = onAttach;
+  }, [onAttach]);
+
   const all = useMemo(
     () => buildCandidates(kinds, sources, { attachedIds, excludeIds }),
     [kinds, sources, attachedIds, excludeIds]
@@ -198,7 +211,7 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
           openQuickAdd(primaryKind as Parameters<typeof openQuickAdd>[0], {
             // Attach what was just created and stay put: the point of the
             // hatch is to unblock the form you are already filling.
-            onCreated: (id) => onAttach(id, kind),
+            onCreated: (id) => onAttachRef.current(id, kind),
           })
       : undefined);
 

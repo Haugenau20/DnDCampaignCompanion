@@ -160,6 +160,8 @@ jest.mock('features/campaign-entities', () => {
     useNPCs: () => ({ npcs: mockNPCs }),
     useLocations: () => ({ locations: mockLocations, createLocation: mockCreateLocation }),
     useRumors: () => ({ rumors: mockRumors }),
+    // The real helper: a rumour is named the way its own list names it.
+    rumorTitleText: jest.requireActual('shared/utils/rumor-name').rumorTitleText,
     // The real modules, not stubs: the page's contract is that the row and the
     // page say the same things about a quest.
     ...actualPresentation,
@@ -175,6 +177,7 @@ jest.mock('features/campaign-entities', () => {
 
 jest.mock('features/collaboration', () => ({
   useNotes: () => ({ notes: mockNotes }),
+  displayTitle: jest.requireActual('features/collaboration/notes/utils/note-title').displayTitle,
 }));
 
 const mockNavigateToPage = jest.fn();
@@ -476,6 +479,26 @@ describe('what points here', () => {
     ];
   });
 
+  it('names an untitled rumour and note by their content, as their own lists do (DUP-001)', () => {
+    const savedRumors = mockRumors;
+    const savedNotes = mockNotes;
+    mockRumors = [
+      { ...savedRumors[0], title: '', content: 'Ravens gather at the Mountain' },
+    ];
+    mockNotes = [
+      { ...savedNotes[0], title: 'New Note', content: 'The thrush knocked at the grey stone' },
+    ];
+    try {
+      renderPage();
+      const points = section('What points here');
+      expect(within(points).getByText('Ravens gather at the Mountain')).toBeInTheDocument();
+      expect(within(points).getByText('The thrush knocked at the grey stone')).toBeInTheDocument();
+    } finally {
+      mockRumors = savedRumors;
+      mockNotes = savedNotes;
+    }
+  });
+
   it('offers nothing editable — these belong to the records that wrote them', () => {
     renderPage();
     const points = section('What points here');
@@ -647,6 +670,39 @@ describe('editing in place', () => {
         expect.objectContaining({ description: 'Take back the mountain.' })
       )
     );
+  });
+
+  it('retracts a background that proved wrong (T094)', async () => {
+    renderPage();
+    fireEvent.click(screen.getByText(QUEST.background));
+    fireEvent.change(screen.getByLabelText('Background'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save background' }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuest).toHaveBeenCalledWith(
+        expect.objectContaining({ background: '' })
+      )
+    );
+  });
+
+  it('retracts a level range (T094)', async () => {
+    renderPage();
+    fireEvent.click(screen.getByText(`Levels ${QUEST.levelRange}`));
+    fireEvent.change(screen.getByLabelText('Level range'), { target: { value: ' ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save level range' }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuest).toHaveBeenCalledWith(
+        expect.objectContaining({ levelRange: '' })
+      )
+    );
+  });
+
+  it('still refuses an empty title', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Rename/ }));
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Save title' })).toBeDisabled();
   });
 
   it('offers no link to the edit form', () => {

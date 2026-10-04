@@ -24,19 +24,15 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
-| high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
+| high | T084 | The sweep can delete an upload whose document write is pending | M | open | Images focus; the sweep can delete a valid upload |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T086 | Failed actions give no visible reason or retry | M | open | Data survives, but the user can't tell or try again |
-| medium | T087 | AI usage: quota overrun, stale meter | M | open | Paid calls beyond the allowance; scanning blocked after reset |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
-| medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
-| medium | T093 | "Create & add another" from the attach tray doesn't attach | S | open | Says success, leaves the record unlinked |
-| medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
@@ -189,22 +185,23 @@ tabs.
   Plan first.
 - **Source**: code review, 2026-10-04
 
-### T084 — Image edge cases: offline uploads swept, the 2 MiB boundary, an unbounded sweep
+### T084 — The sweep can delete an upload whose document write is still pending
 **Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
 
-Three independent defects in the image lifecycle:
+A picture attached offline whose document write is still pending after 24 h
+is deleted by the daily sweep, which knows only object age and current
+references (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`,
+`referencedPaths` and the age guard). Reconnecting then writes a reference to
+a missing file. Needs a protocol for pending writes, not a longer grace
+period.
 
-- **Offline upload swept** (IMG-003, 04): a picture attached offline whose
-  document write is still pending after 24 h is deleted by the daily sweep,
-  which knows only object age and current references
-  (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts:50-68`).
-  Reconnecting then writes a reference to a missing file. Needs a protocol for
-  pending writes, not a longer grace period.
-- **Exactly 2 MiB** (IMG-004, TEST-006): `src/core/utils/prepare-image.ts:141`
-  refuses `> MAX_UPLOAD_BYTES`, `firebase/storage.rules.prod:81` requires
-  `< 2 MiB`, and each side's test checks only its own boundary. Small.
-- **Unbounded sweep** (PERF2-004, 07): every reference document is read and
-  every orphan delete launched at once.
+- **Findings**: IMG-003 (04).
+- **Related**: the sweep still reads every NPC, location, campaign and group
+  document daily to learn what is referenced (PERF2-004's remaining half,
+  07). Its listing and deletes are bounded now; the reads grow with all
+  content. A ledger of uploads awaiting their document would answer both:
+  the sweep would check candidates instead of everything, and could tell a
+  pending upload from an orphan.
 - **Source**: code review, 2026-10-04
 
 ### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
@@ -250,21 +247,6 @@ try again.
   retry (RECOVERY-003). The NPC provider's Try again is the working pattern.
 - **Findings**: 05, 06, 07, 08, 17, 20. **Source**: code review, 2026-10-04
 
-### T087 — AI usage: the quota can be overrun, and the meter goes stale
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- **Quota race** (SEC-003, 01): `checkAndUpdateUsage`
-  (`firebase/functions/src/entityExtraction.ts:263`) reads and then writes the
-  counters outside a transaction; four parallel calls spent the one remaining
-  slot and recorded one use.
-- **Stale meter** (AI-001, 12): a cached "exhausted" snapshot keeps scanning
-  disabled after the reset time.
-- **Zero shown as ten** (AI-003): `UsageMeter.tsx:114` picks `customLimit` by
-  truthiness, where the server uses `??` (`entityExtraction.ts:229`).
-- **Confidence out of range** (AI-002): the model schema accepts `90` or
-  `-0.4`, shown as 9000% or −40%.
-- **Source**: code review, 2026-10-04
-
 ### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
 
@@ -283,21 +265,6 @@ Each of these decides from a stale local copy, then writes:
   independent; can go first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
-- **Source**: code review, 2026-10-04
-
-### T089 — Search keeps a stale index, and untitled notes and rumours show no name
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- `SearchContext.tsx:193-196` returns early when every collection is empty, so
-  an empty campaign never becomes ready, and one that drops to zero keeps its
-  old index (REACT-006, 06).
-- A query typed before the data arrives isn't rerun when the index updates
-  (REACT-007). Probably what pass 5 saw when Search stalled at 15 of 30 results
-  (18).
-- Content-only rumours (`RumorDirectory.tsx:369` creates with `title: ''`) and
-  notes appear blank in search, the attach tray and quest backlinks: those
-  read the raw title instead of the existing `rumor-title` / `note-title`
-  helpers (DUP-001, 09).
 - **Source**: code review, 2026-10-04
 
 ### T090 — Keyboard and focus problems in shared components
@@ -329,29 +296,6 @@ Eight findings, each reproduced in Chromium (11, 19):
   precedence over a device-approval link, and after rejection there is no way
   to correct the email.
 - **Findings**: 02. That review was stopped and will not be finished.
-- **Source**: code review, 2026-10-04
-
-### T093 — "Create & add another" from the attach tray creates an unlinked record
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-From a location's attach tray, quick add's "Create & add another" saves the
-NPC and says so, but never attaches it. "Create & open" attaches correctly.
-
-- **Where**: `QuickAddForm.tsx:137-146` never calls `onCreated`, which is what
-  attaches (`AttachTray.tsx:197-202`); `handleCreateAndOpen` at `:125-129` does.
-- **Catch**: decide whether to attach on every create or drop "add another" in
-  this context. **Findings**: BROWSER-001 (14).
-- **Source**: code review, 2026-10-04
-
-### T094 — An optional fact can't be cleared once recorded
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`InlineEditor.tsx:135` refuses any empty value, so an NPC's role or a quest's
-optional field can be changed but never removed. Confirmed in the browser in
-pass 4.
-
-- **Catch**: the editor needs to be told which fields are required; the caller
-  decides. **Findings**: FUNC-003 (05).
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade

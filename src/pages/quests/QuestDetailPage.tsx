@@ -15,9 +15,10 @@ import {
   DeleteQuestDialog,
   questMetaLine,
   QUEST_STATUS_OPTIONS,
+  rumorTitleText,
 } from 'features/campaign-entities';
 import type { Quest, QuestStatus, QuestLocation } from 'features/campaign-entities';
-import { useNotes } from 'features/collaboration';
+import { useNotes, displayTitle as noteDisplayTitle } from 'features/collaboration';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import StateLadder from 'shared/components/row-controls/StateLadder';
@@ -230,7 +231,7 @@ const QuestDetailPage: React.FC = () => {
         out.push({
           key: `rumor-${rumor.id}`,
           id: rumor.id,
-          name: rumor.title,
+          name: rumorTitleText(rumor),
           detail: `rumour, ${rumor.status} — became this quest`,
           href: `/rumors?highlight=${rumor.id}`,
         })
@@ -262,7 +263,7 @@ const QuestDetailPage: React.FC = () => {
         out.push({
           key: `note-${note.id}`,
           id: note.id,
-          name: note.title || 'Untitled note',
+          name: noteDisplayTitle(note) ?? 'Untitled note',
           detail: 'note, mentions this quest',
           href: `/notes/${note.id}`,
         })
@@ -696,6 +697,7 @@ const QuestDetailPage: React.FC = () => {
                 label="Background"
                 helperText="How this came about, and what the party already knows."
                 initialValue={quest.background ?? ''}
+                optional
                 submitLabel="Save background"
                 onSubmit={(value) => save({ background: value })}
                 onSaved={() => setEditing(null)}
@@ -867,6 +869,7 @@ const QuestDetailPage: React.FC = () => {
                 label="Level range"
                 rows={1}
                 initialValue={quest.levelRange ?? ''}
+                optional
                 submitLabel="Save level range"
                 placeholder="7–9"
                 onSubmit={(value) => save({ levelRange: value })}

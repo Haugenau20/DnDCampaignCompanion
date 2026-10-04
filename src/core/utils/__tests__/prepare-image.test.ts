@@ -168,6 +168,32 @@ describe('prepareImage', () => {
     });
   });
 
+  // The Storage rules accept `size < 2 MiB`, and their suite pins an upload of
+  // exactly 2 MiB as refused. A result of exactly the limit is therefore one
+  // the upload would fail on, so it is treated as over (T084, IMG-004).
+  it('re-encodes a first result of exactly the upload limit', async () => {
+    encodeQueue = [
+      { type: 'image/webp', size: MAX_UPLOAD_BYTES },
+      { type: 'image/webp', size: MAX_UPLOAD_BYTES - 1 },
+    ];
+
+    const result = await prepareImage(makeFile('noisy.png', 'image/png'));
+
+    expect(toBlobCalls).toHaveLength(2);
+    expect(result.blob.size).toBeLessThan(MAX_UPLOAD_BYTES);
+  });
+
+  it('refuses when the lower-quality result is exactly the upload limit', async () => {
+    encodeQueue = [
+      { type: 'image/webp', size: MAX_UPLOAD_BYTES + 1 },
+      { type: 'image/webp', size: MAX_UPLOAD_BYTES },
+    ];
+
+    await expect(prepareImage(makeFile('noisy.png', 'image/png'))).rejects.toMatchObject({
+      reason: 'too-large-after-resize',
+    });
+  });
+
   it('refuses a file over the input limit before decoding it', async () => {
     const huge = makeFile('huge.jpg', 'image/jpeg', MAX_INPUT_BYTES + 1);
 

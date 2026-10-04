@@ -6,8 +6,10 @@ import { measureBrightness } from './band-dimming';
 export const MAX_INPUT_BYTES = 20 * 1024 * 1024;
 
 /**
- * Largest file that may be uploaded. The Storage rules enforce the same limit
- * (`storage.rules.prod`); keep the two equal.
+ * The upload limit, exclusive: a prepared file must be *smaller* than this.
+ * The Storage rules enforce the same bound as `size < 2 MiB`
+ * (`storage.rules.prod`), and refuse a file of exactly this size; keep the
+ * two equal.
  */
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
@@ -16,7 +18,7 @@ export const MAX_EDGE_PX = 1600;
 
 const WEBP_QUALITY = 0.82;
 const JPEG_QUALITY = 0.85;
-/** The one retry when a first encode lands over MAX_UPLOAD_BYTES. */
+/** The one retry when a first encode lands at or over MAX_UPLOAD_BYTES. */
 const RETRY_QUALITY = 0.6;
 
 /** An image ready to upload: resized, re-encoded and stripped of metadata. */
@@ -138,9 +140,9 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
     contentType = 'image/jpeg';
   }
 
-  if (blob.size > MAX_UPLOAD_BYTES) {
+  if (blob.size >= MAX_UPLOAD_BYTES) {
     blob = await encode(canvas, contentType, RETRY_QUALITY);
-    if (blob.size > MAX_UPLOAD_BYTES) {
+    if (blob.size >= MAX_UPLOAD_BYTES) {
       throw new ImagePreparationError('too-large-after-resize');
     }
   }

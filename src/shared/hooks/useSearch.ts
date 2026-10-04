@@ -54,6 +54,7 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
     results,
     isSearching,
     isIndexReady,
+    indexVersion,
     retainIndex
   } = useSearchContext();
   useRetainListener(retainIndex, userOptions.active ?? true);
@@ -73,9 +74,12 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
   // here would re-fire this effect on its own result and loop forever.
   const hasSearched = useRef(false);
 
-  // Perform search when debounced query changes. Below the minimum length,
-  // clear any results left over from a previous, longer query instead of
-  // leaving them on screen under a query that no longer matches them.
+  // Perform search when debounced query changes, and again whenever the index
+  // does: a query typed before the data arrived, or before a record changed,
+  // must not keep the answer the old index gave (REACT-007). Below the
+  // minimum length, clear any results left over from a previous, longer query
+  // instead of leaving them on screen under a query that no longer matches.
+  // `indexVersion` is read only as a trigger.
   useEffect(() => {
     if (debouncedQuery && debouncedQuery.length >= options.minQueryLength) {
       hasSearched.current = true;
@@ -84,7 +88,7 @@ export const useSearch = (userOptions: UseSearchOptions = {}) => {
       hasSearched.current = false;
       handleSearch('');
     }
-  }, [debouncedQuery, handleSearch, options.minQueryLength]);
+  }, [debouncedQuery, handleSearch, options.minQueryLength, indexVersion]);
 
   /**
    * Update search query

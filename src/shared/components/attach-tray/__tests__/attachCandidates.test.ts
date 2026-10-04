@@ -92,6 +92,22 @@ describe("attachCandidates", () => {
       expect(entries.find((e) => e.id === "r2")!.line).toBe("Confirmed");
     });
 
+    it("names a rumour with no title by what was heard, as its own list does (DUP-001)", () => {
+      const [entry] = buildCandidates(
+        ["rumor"],
+        sources({ rumor: [rumor({ title: "", content: "Traders saw a dragon near the bridge" })] })
+      );
+      expect(entry.name).toBe("Traders saw a dragon near the bridge");
+    });
+
+    it("finds an untitled rumour by the name it shows", () => {
+      const entries = buildCandidates(
+        ["rumor"],
+        sources({ rumor: [rumor({ title: "", content: "Traders saw a dragon near the bridge" })] })
+      );
+      expect(filterCandidates(entries, "Traders")).toHaveLength(1);
+    });
+
     it("never renders an id as a label", () => {
       // The quest card currently prints `bag-end` and `erebor` as if they were
       // labels. An unresolvable reference says nothing rather than leaking one.

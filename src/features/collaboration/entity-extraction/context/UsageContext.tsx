@@ -142,7 +142,34 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshUsageStatus();
   }, [user?.uid, requested, refreshUsageStatus]);
 
-    const value: UsageContextValue = {
+  /**
+   * Ask again once an exhausted allowance resets (AI-001).
+   *
+   * The status is a snapshot. Without this, a tab left open past midnight
+   * kept its "exhausted" copy, and the Scan button it disables is the only
+   * thing that would have reached the server to learn otherwise.
+   */
+  useEffect(() => {
+    if (!usageStatus?.limitExceeded || usageStatus.usage.isUnlimited) return;
+    const period = usageStatus.exceededPeriod;
+    const resetAt = Date.parse(period ? usageStatus.nextReset[period] : '');
+    if (!Number.isFinite(resetAt)) return;
+
+    // A timer longer than this overflows and fires at once; a monthly reset
+    // further off than ~24 days is checked again when this one fires.
+    const MAX_TIMER_MS = 2 ** 31 - 1;
+    // A moment past the reset, so the server's clock has crossed it too. A
+    // reset already behind this device's clock means the server has not
+    // reached it yet: wait a minute rather than ask again every second.
+    const untilReset = resetAt - Date.now();
+    const delay = Math.min(untilReset > 0 ? untilReset + 1000 : 60 * 1000, MAX_TIMER_MS);
+    const timer = setTimeout(() => {
+      void refreshUsageStatus();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [usageStatus, refreshUsageStatus]);
+
+  const value: UsageContextValue = {
     usageStatus,
     isLoadingUsage,
     isUsageLimitExceeded,
@@ -155,8 +182,8 @@ export const UsageProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isExtractionAvailable,
     hasUsageData: !!usageStatus,
     isUnlimited: usageStatus?.usage.isUnlimited ?? false,
-    hasCustomLimit: !!usageStatus?.usage.customLimit,
-    };
+    hasCustomLimit: usageStatus?.usage.customLimit != null,
+  };
 
   // Expose the setUsageLimitExceededWithInfo method for extraction errors
   (value as any).setUsageLimitExceededWithInfo = setUsageLimitExceededWithInfo;
