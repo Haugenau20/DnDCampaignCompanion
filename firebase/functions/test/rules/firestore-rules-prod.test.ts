@@ -21,6 +21,8 @@ import {
   RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {setLogLevel} from "firebase/firestore";
+import firebase from "firebase/compat/app";
+import "firebase/compat/firestore";
 import {EMULATOR_HOSTS} from "../emulator";
 
 // Every denied write is logged as a warning with a stack; here, being denied
@@ -302,5 +304,164 @@ describe("reading progress (T073)", () => {
 
   it("nor can a stranger write one into the group", async () => {
     await assertFails(as("sauron").doc(progress("sauron")).set(place));
+  });
+});
+
+// T084 (IMG-003): an upload records itself before the file is written, so the
+// daily sweep can tell an upload whose document write is still queued from an
+// orphan. The entry is the lease, so its time must be the server's.
+describe("pending uploads (T084)", () => {
+  const ID = "7d3e2b1c.webp";
+  const entry = (id = ID) => `groups/${G}/pendingUploads/${id}`;
+  const FILE = `groups/${G}/campaigns/c1/npcs/n1/${ID}`;
+  const now = () => firebase.firestore.FieldValue.serverTimestamp();
+  const record = (over: Record<string, unknown> = {}) => ({path: FILE, uid: "frodo", createdAt: now(), ...over});
+
+  it("a member records their own upload, stamped by the server", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+  });
+
+  it("and removes it once the document is written", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+    await assertSucceeds(as("frodo").doc(entry()).delete());
+  });
+
+  it("cannot record one in another member's name", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({uid: "gandalf"})));
+  });
+
+  it("cannot choose its time, which would stretch the lease", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({createdAt: new Date(Date.now() + 365 * 86400000)})));
+  });
+
+  it("must name a file in this group, under the entry's own id", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({path: `groups/mordor/campaigns/c9/npcs/n9/${ID}`})));
+    await assertFails(as("frodo").doc(entry()).set(record({path: `groups/${G}/campaigns/c1/npcs/n1/other.webp`})));
+  });
+
+  it("holds nothing but the three fields", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({note: "hello"})));
+  });
+
+  it("is not changed after the fact, nor removed or read by anyone else", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+    await assertFails(as("frodo").doc(entry()).update({path: `groups/${G}/crest/${ID}`}));
+    await assertFails(as("gandalf").doc(entry()).delete());
+    await assertFails(as("gandalf").doc(entry()).get());
+  });
+
+  it("a stranger cannot record one in the group", async () => {
+    await assertFails(as("sauron").doc(entry()).set(record({uid: "sauron"})));
+  });
+});
+
+// T084 (IMG-003), second half: the sweep deletes a file once its entry's lease
+// is over, so a document write that arrives after that would point at a
+// deleted file. The rules refuse it: pointing a document at a different file
+// needs that file's entry, still within its lease.
+describe("an image path needs its upload's live entry (T084)", () => {
+  const LEASE_MS = 30 * 24 * 60 * 60 * 1000;
+  const ID = "9a8b7c6d.webp";
+  const NPC = `groups/${G}/campaigns/c1/npcs/n1`;
+  const entry = (id = ID) => `groups/${G}/pendingUploads/${id}`;
+  const image = (path: string) => ({
+    path,
+    url: `https://firebasestorage.googleapis.com/v0/b/x/o/${encodeURIComponent(path)}?alt=media&token=t`,
+    width: 600,
+    height: 800,
+    uploadedBy: "frodo",
+    uploadedAt: "2026-10-04T12:00:00.000Z",
+  });
+  const npcFile = (id = ID) => `${NPC}/${id}`;
+  const OLD = npcFile("0ld0ld.webp");
+
+  /** Record `path` the way `ImageStorageService.upload` does. */
+  const record = (uid: string, path: string) =>
+    as(uid).doc(entry(path.split("/").pop())).set({
+      path,
+      uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(NPC).set({name: "Bilbo", image: image(OLD)});
+    });
+  });
+
+  it("a member points an NPC at a file whose upload is recorded", async () => {
+    await assertSucceeds(record("frodo", npcFile()));
+    await assertSucceeds(as("frodo").doc(NPC).update({image: image(npcFile())}));
+  });
+
+  it("cannot point it at a file with no entry", async () => {
+    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile())}));
+  });
+
+  it("nor once the entry's lease is over, when the sweep may have deleted the file", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(entry()).set({
+        path: npcFile(),
+        uid: "frodo",
+        createdAt: new Date(Date.now() - LEASE_MS - 60_000),
+      });
+    });
+    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile())}));
+  });
+
+  it("nor at a file other than the one the entry names", async () => {
+    await assertSucceeds(record("frodo", `groups/${G}/crest/${ID}`));
+    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile())}));
+  });
+
+  it("nor put back a picture that has since been replaced, whose entry is gone", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(NPC).update({image: image(npcFile())});
+    });
+    await assertFails(as("frodo").doc(NPC).set({name: "Bilbo", image: image(OLD)}));
+  });
+
+  it("an edit that leaves the picture alone needs no entry, patch or whole record", async () => {
+    await assertSucceeds(as("frodo").doc(NPC).update({name: "Bilbo Baggins"}));
+    await assertSucceeds(as("frodo").doc(NPC).set({name: "Mr Baggins", image: image(OLD)}));
+  });
+
+  it("so does one on a legacy picture with no path", async () => {
+    const legacy = {url: "https://example.com/bilbo.png"};
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(NPC).set({name: "Bilbo", image: legacy});
+    });
+    await assertSucceeds(as("frodo").doc(NPC).set({name: "Mr Baggins", image: legacy}));
+  });
+
+  it("removing the picture needs no entry", async () => {
+    await assertSucceeds(as("frodo").doc(NPC).update({image: null}));
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(NPC).update({image: image(OLD)});
+    });
+    await assertSucceeds(as("frodo").doc(NPC).update({image: firebase.firestore.FieldValue.delete()}));
+  });
+
+  it("holds for a location, created or updated", async () => {
+    const place = `groups/${G}/campaigns/c1/locations/l1`;
+    const file = `${place}/${ID}`;
+    await assertFails(as("frodo").doc(place).set({name: "Bag End", image: image(file)}));
+    await assertSucceeds(record("frodo", file));
+    await assertSucceeds(as("frodo").doc(place).set({name: "Bag End", image: image(file)}));
+  });
+
+  it("holds for a campaign's banner", async () => {
+    const campaign = `groups/${G}/campaigns/c1`;
+    const file = `${campaign}/banner/${ID}`;
+    await assertFails(as("frodo").doc(campaign).update({banner: image(file)}));
+    await assertSucceeds(record("frodo", file));
+    await assertSucceeds(as("frodo").doc(campaign).update({banner: image(file)}));
+  });
+
+  it("holds for a group's crest", async () => {
+    const file = `groups/${G}/crest/${ID}`;
+    await assertFails(as("gandalf").doc(`groups/${G}`).update({crest: image(file)}));
+    await assertSucceeds(record("gandalf", file));
+    await assertSucceeds(as("gandalf").doc(`groups/${G}`).update({crest: image(file)}));
   });
 });

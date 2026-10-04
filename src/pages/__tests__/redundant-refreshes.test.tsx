@@ -23,6 +23,7 @@ const mockGetCollection = jest.fn();
 const mockSubscribeToCollection = jest.fn();
 const mockCreateDocument = jest.fn();
 const mockUpdateDocumentWithAttribution = jest.fn();
+const mockUpdateDocumentAfterReading = jest.fn();
 const mockDeleteDocument = jest.fn();
 const mockGetDocument = jest.fn();
 
@@ -34,6 +35,7 @@ const mockFirestore = {
   subscribeToCollection: mockSubscribeToCollection,
   createDocument: mockCreateDocument,
   updateDocumentWithAttribution: mockUpdateDocumentWithAttribution,
+  updateDocumentAfterReading: mockUpdateDocumentAfterReading,
   deleteDocument: mockDeleteDocument,
   getDocument: mockGetDocument,
 };
@@ -212,6 +214,17 @@ describe("no collection read after a write", () => {
         emit(collection);
       }
     );
+    // A transaction reads the one document it changes -- by id, never the
+    // collection -- then writes like the update above (T083).
+    mockUpdateDocumentAfterReading.mockImplementation(
+      async (path: string, id: string, decide: (read: (otherId: string) => Promise<any>) => Promise<any>) => {
+        const collection = nameOf(path);
+        const read = async (otherId: string) => (store[collection] ?? []).find((d) => d.id === otherId);
+        const data = await decide(read);
+        store[collection] = (store[collection] ?? []).map((d) => (d.id === id ? { ...d, ...data } : d));
+        emit(collection);
+      }
+    );
   });
 
   test("a stance change on /npcs re-reads nothing and still shows", async () => {
@@ -252,10 +265,13 @@ describe("no collection read after a write", () => {
     const before = fetchCountFor("quests");
 
     fireEvent.click(screen.getByRole("button", { name: "Add to leads" }));
-    await waitFor(() => expect(mockUpdateDocumentWithAttribution).toHaveBeenCalled());
+    // A lead is added to the list the server holds, so the one write is a
+    // transaction that reads that one quest (T083) -- still no collection read.
+    await waitFor(() => expect(mockUpdateDocumentAfterReading).toHaveBeenCalled());
     await settle();
 
-    expect(mockUpdateDocumentWithAttribution).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDocumentAfterReading).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDocumentWithAttribution).not.toHaveBeenCalled();
     expect(fetchCountFor("quests") - before).toBe(0);
     expect(listenerCountFor("quests")).toBe(1);
     expect(await screen.findByText("Ask Balin")).toBeInTheDocument();

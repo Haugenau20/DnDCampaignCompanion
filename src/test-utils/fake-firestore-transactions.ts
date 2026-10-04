@@ -73,7 +73,10 @@ export function createFakeFirestore(options: FakeFirestoreOptions = {}) {
   async function runTransaction<T>(_db: unknown, fn: (transaction: any) => Promise<T>): Promise<T> {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       const reads = new Map<string, number>();
-      const writes = new Map<string, Record<string, any> | null>();
+      // `merge` marks an `update`: applied over what is stored at commit, and
+      // refused if nothing is, as Firestore refuses an update of a missing
+      // document.
+      const writes = new Map<string, { data: Record<string, any>; merge: boolean } | null>();
       const transaction = {
         get: async (ref: FakeRef) => {
           reads.set(ref.path, versionOf(ref.path));
@@ -82,7 +85,11 @@ export function createFakeFirestore(options: FakeFirestoreOptions = {}) {
           return result;
         },
         set: (ref: FakeRef, data: Record<string, any>) => {
-          writes.set(ref.path, { ...data });
+          writes.set(ref.path, { data: { ...data }, merge: false });
+          return transaction;
+        },
+        update: (ref: FakeRef, data: Record<string, any>) => {
+          writes.set(ref.path, { data: { ...data }, merge: true });
           return transaction;
         },
         delete: (ref: FakeRef) => {
@@ -96,9 +103,15 @@ export function createFakeFirestore(options: FakeFirestoreOptions = {}) {
       const unchanged = Array.from(reads).every(([path, version]) => versionOf(path) === version);
       if (!unchanged) continue;
 
-      for (const [path, data] of Array.from(writes)) {
-        if (data === null) docs.delete(path);
-        else docs.set(path, { data, version: nextVersion++ });
+      const missing = Array.from(writes).find(([path, write]) => write?.merge && !docs.has(path));
+      if (missing) throw new Error(`No document to update: ${missing[0]}`);
+
+      for (const [path, write] of Array.from(writes)) {
+        if (write === null) docs.delete(path);
+        else {
+          const data = write.merge ? { ...docs.get(path)!.data, ...write.data } : write.data;
+          docs.set(path, { data, version: nextVersion++ });
+        }
       }
       return result;
     }

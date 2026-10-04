@@ -767,6 +767,97 @@ describe('DocumentService', () => {
     });
   });
 
+  // ─── updateDocumentAfterReading ─────────────────────────────────────────────
+
+  describe('updateDocumentAfterReading', () => {
+    const PROFILE = { username: 'Elrond', activeCharacterId: null, characters: [] };
+
+    beforeEach(() => {
+      // Attribution is read outside the transaction, before it starts.
+      mockGetDoc.mockResolvedValue(makeDocSnapshot(true, PROFILE));
+    });
+
+    test('writes what the decision returns, with modification attribution', async () => {
+      mockFirestoreStore.seed('gondolin', { name: 'Gondolin', parentId: '' });
+      mockFirestoreStore.seed('doriath', { name: 'Doriath', parentId: '' });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.updateDocumentAfterReading<any>('locations', 'gondolin', async (read) => {
+        const parent = await read('doriath');
+        return { parentId: parent!.id };
+      });
+
+      const written = mockFirestoreStore.read('gondolin')!;
+      expect(written).toMatchObject({ name: 'Gondolin', parentId: 'doriath', modifiedByUsername: 'Elrond' });
+      expectIso8601String(written.dateModified);
+      expect(written).not.toHaveProperty('createdBy');
+    });
+
+    test('hands the decision undefined for a document that is not there', async () => {
+      mockFirestoreStore.seed('gondolin', { name: 'Gondolin' });
+      const seen: unknown[] = [];
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.updateDocumentAfterReading<any>('locations', 'gondolin', async (read) => {
+        seen.push(await read('nowhere'));
+        return {};
+      });
+
+      expect(seen).toEqual([undefined]);
+    });
+
+    test('writes nothing when the decision refuses', async () => {
+      mockFirestoreStore.seed('gondolin', { name: 'Gondolin', parentId: '' });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await expect(
+        svc.updateDocumentAfterReading<any>('locations', 'gondolin', async () => {
+          throw new Error('Refused');
+        })
+      ).rejects.toThrow('Refused');
+
+      expect(mockFirestoreStore.read('gondolin')).toEqual({ name: 'Gondolin', parentId: '' });
+    });
+
+    // DATA-006: two members move A under B and B under A at once. Each move
+    // reads the other's document, and both reads happen before either
+    // writes. The decision is made again against what the winner committed,
+    // so the loser sees the cycle it would close.
+    test('decides again on what a rival committed, so two opposite moves cannot both land', async () => {
+      let held = 0;
+      let release!: () => void;
+      const bothRead = new Promise<void>((resolve) => { release = resolve; });
+      mockFirestoreStore = createFakeFirestore({
+        afterRead: (_path, attempt) => {
+          if (attempt !== 1) return;
+          held += 1;
+          if (held === 2) release();
+          return bothRead;
+        },
+      });
+      mockFirestoreStore.seed('a', { name: 'A', parentId: '' });
+      mockFirestoreStore.seed('b', { name: 'B', parentId: '' });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      const move = (id: string, under: string) =>
+        svc.updateDocumentAfterReading<any>('locations', id, async (read) => {
+          const parent = await read(under);
+          if (parent?.parentId === id) throw new Error(`${under} is already inside ${id}`);
+          return { parentId: under };
+        });
+
+      const results = await Promise.allSettled([move('a', 'b'), move('b', 'a')]);
+
+      expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+      const parents = [mockFirestoreStore.read('a')!.parentId, mockFirestoreStore.read('b')!.parentId];
+      expect(parents.filter(Boolean)).toHaveLength(1);
+    });
+  });
+
   // ─── collection path construction ───────────────────────────────────────────
 
 

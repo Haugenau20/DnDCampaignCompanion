@@ -1,9 +1,10 @@
 // src/features/campaign-entities/rumors/context/RumorContext.tsx - updating rumor context to use character names
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
-import { DomainData, IdentifiableContent } from 'core/types/common';
+import { DomainData, IdentifiableContent, RecordChange } from 'core/types/common';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
 import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
@@ -36,7 +37,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // conversion's quest and its rumour updates included (T082).
   const rumorsPath = useCampaignCollectionPath('rumors');
   const questsPath = useCampaignCollectionPath('quests');
-  const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Rumor>({
+  const { addData, updateData, updateDataAfterReading, deleteData, error: writeError } = useFirebaseData<Rumor>({
     collection: rumorsPath,
     autoFetch: false
   });
@@ -104,20 +105,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to update rumor status');
     }
 
-    const rumor = getRumorById(rumorId);
-    if (!rumor) {
+    if (!getRumorById(rumorId)) {
       throw new Error('Rumor not found');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
-    const updatedRumor = {
-      ...rumor,
-      status,
-      ...modificationAttribution
-    };
-
-    await updateData(rumorId, updatedRumor);
+    await updateData(rumorId, { status, ...modificationAttribution });
   }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Update rumor note
@@ -139,14 +133,15 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ...creationAttribution
     };
 
-    const updatedRumor = {
-      ...rumor,
-      notes: [...rumor.notes, noteWithUser],
-      ...modificationAttribution
-    };
-
-    await updateData(rumorId, updatedRumor);
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
+    // The notes alone, appended to the list the server holds (T083).
+    await writeRecordChange(
+      { updateData, updateDataAfterReading },
+      rumorId,
+      (current) => ({ notes: [...(current.notes ?? []), noteWithUser] }),
+      'Rumor not found',
+      modificationAttribution
+    );
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, updateDataAfterReading]);
 
   // Ids issued during this session but not yet reflected in `rumors` (loaded
   // state). Two rumors can be created back-to-back within a single `act()` /
@@ -199,21 +194,18 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return id;
   }, [user, userProfile, activeGroupUserProfile, addData, isRumorLoaded]);
 
-  // Update existing rumor
-  const updateRumor = useCallback(async (rumor: Rumor) => {
+  // Update an existing rumour: only what `change` names; see `RecordChange` (T083)
+  const updateRumor = useCallback(async (rumorId: string, change: RecordChange<Rumor>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update rumors');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
-    const updatedRumor = {
-      ...rumor,
-      ...modificationAttribution
-    };
-
-    await updateData(rumor.id, updatedRumor);
-  }, [user, userProfile, activeGroupUserProfile, updateData]);
+    await writeRecordChange(
+      { updateData, updateDataAfterReading }, rumorId, change, 'Rumor not found', modificationAttribution
+    );
+  }, [user, userProfile, activeGroupUserProfile, updateData, updateDataAfterReading]);
 
   // Delete rumor
   const deleteRumor = useCallback(async (rumorId: string) => {

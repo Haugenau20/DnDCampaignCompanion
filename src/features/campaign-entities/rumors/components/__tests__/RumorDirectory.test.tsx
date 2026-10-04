@@ -4,6 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import RumorDirectory from '../RumorDirectory';
 import { Rumor, RumorStatus, SourceType } from '../../types';
+import { resolveRecordChange } from '@/test-utils/update-after-reading';
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to render inline — RumorBatchActions mounts CombineRumorsDialog
@@ -742,8 +743,8 @@ describe('RumorDirectory', () => {
 
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
+          'r1',
           expect.objectContaining({
-            id: 'r1',
             content: 'A red one, over the Lonely Mountain.',
           })
         )
@@ -848,11 +849,67 @@ describe('RumorDirectory', () => {
       );
       fireEvent.click(within(screen.getByRole('listbox')).getByText('Gandalf the Grey'));
 
-      await waitFor(() =>
-        expect(mockUpdateRumor).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'r2', relatedNPCs: ['npc-1'] })
-        )
-      );
+      await waitFor(() => expect(mockUpdateRumor).toHaveBeenCalled());
+      const [id, change] = mockUpdateRumor.mock.calls[0];
+      expect(id).toBe('r2');
+      expect(resolveRecordChange(change, r2)).toEqual({ relatedNPCs: ['npc-1'] });
+      // Worked out from the rumour as stored (T083): a person another player
+      // attached since this copy was taken stays attached.
+      expect(resolveRecordChange(change, { ...r2, relatedNPCs: ['npc-9'] })).toEqual({
+        relatedNPCs: ['npc-9', 'npc-1'],
+      });
+    });
+
+    // DATA-008: a person and a place may share a slug, each in its own
+    // collection. Detaching one must leave the other attached.
+    describe('when a person and a place share an id', () => {
+      const { useNPCs } = require('../../../npcs/context/NPCContext');
+      const npcsMock = useNPCs as jest.Mock;
+      let original: (() => unknown) | undefined;
+      beforeEach(() => {
+        original = npcsMock.getMockImplementation();
+        npcsMock.mockImplementation(() => ({
+          npcs: [{ id: 'high-pass', name: 'The Hermit', occupation: 'Recluse' }],
+          getNPCById: jest.fn(() => undefined),
+        }));
+      });
+      afterEach(() => {
+        npcsMock.mockImplementation(original);
+      });
+
+      const both = makeRumor({
+        id: 'r2',
+        title: 'Missing merchant',
+        locationId: 'high-pass',
+        relatedNPCs: ['high-pass'],
+      });
+      const detach = (name: string) => {
+        render(<RumorDirectory rumors={[both]} />);
+        openRow('Missing merchant');
+        fireEvent.click(
+          screen.getByRole('button', { name: /Attach to what Missing merchant points at/ })
+        );
+        fireEvent.click(within(screen.getByRole('listbox')).getByText(name));
+      };
+
+      test('detaching the person keeps the place', async () => {
+        detach('The Hermit');
+        await waitFor(() => expect(mockUpdateRumor).toHaveBeenCalled());
+        const [id, change] = mockUpdateRumor.mock.calls[0];
+        expect(id).toBe('r2');
+        // Exactly the list: a change that never names the place leaves it
+        // attached (T083).
+        expect(resolveRecordChange(change, both)).toEqual({ relatedNPCs: [] });
+      });
+
+      test('detaching the place keeps the person', async () => {
+        detach('The High Pass');
+        await waitFor(() =>
+          // Exactly the place: a patch that never names the people leaves them
+          // attached (T083).
+          expect(mockUpdateRumor).toHaveBeenCalledWith('r2', { locationId: '', location: '' })
+        );
+      });
     });
   });
 
@@ -1157,6 +1214,7 @@ describe('RumorDirectory', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
+          'w',
           expect.objectContaining({ title: '', content: 'Somebody said something' })
         )
       );
@@ -1236,6 +1294,7 @@ describe('RumorDirectory', () => {
 
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
+          'srcd',
           expect.objectContaining({ sourceType: null })
         )
       );

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AttachTray from "../AttachTray";
-import type { AttachSources } from "../attachCandidates";
+import { attachRefs, type AttachSources } from "../attachCandidates";
 import QuickAddContext, { type QuickAddOptions } from "shared/context/QuickAddContext";
 
 const SOURCES: AttachSources = {
@@ -44,7 +44,7 @@ function Host({
     <AttachTray
       kinds={["npc"]}
       sources={SOURCES}
-      attachedIds={ids}
+      attached={attachRefs("npc", ids)}
       onAttach={(id) => setIds((current) => [...current, id])}
       onDetach={(id) => setIds((current) => current.filter((x) => x !== id))}
       {...props}
@@ -150,7 +150,7 @@ describe("AttachTray", () => {
         <AttachTray
           kinds={["location"]}
           sources={SOURCES}
-          attachedIds={[]}
+          attached={[]}
           onAttach={onAttach}
           onDetach={jest.fn()}
           single
@@ -292,7 +292,7 @@ describe("AttachTray", () => {
         <AttachTray
           kinds={["rumor"]}
           sources={{ rumor: [] }}
-          attachedIds={[]}
+          attached={[]}
           onAttach={jest.fn()}
           onDetach={jest.fn()}
         />
@@ -337,7 +337,7 @@ describe("AttachTray", () => {
           <AttachTray
             kinds={["npc"]}
             sources={SOURCES}
-            attachedIds={ids}
+            attached={attachRefs("npc", ids)}
             // Not a functional update, on purpose: the pages build the new
             // list from the record they rendered.
             onAttach={(id) => setIds([...ids, id])}
@@ -376,9 +376,65 @@ describe("AttachTray", () => {
     });
   });
 
+  describe("a relation is a kind and an id together (DATA-008)", () => {
+    // A place and a quest both called "Watchtower" legitimately share the slug
+    // `watchtower`, each in its own collection.
+    const SHARED: AttachSources = {
+      location: [{ id: "watchtower", name: "Watchtower", type: "poi" }],
+      quest: [{ id: "watchtower", title: "Hold the Watchtower", status: "active" }],
+    };
+
+    const renderShared = () => {
+      const onAttach = jest.fn();
+      const onDetach = jest.fn();
+      render(
+        <AttachTray
+          kinds={["location", "quest"]}
+          sources={SHARED}
+          attached={attachRefs("location", ["watchtower"])}
+          onAttach={onAttach}
+          onDetach={onDetach}
+        />
+      );
+      return { onAttach, onDetach };
+    };
+
+    it("does not call a quest attached because a place with its id is", async () => {
+      renderShared();
+      await userEvent.click(screen.getByRole("button", { name: /^attach$/i }));
+      expect(screen.getByRole("option", { name: /Hold the Watchtower/ })).toHaveAttribute(
+        "aria-selected",
+        "false"
+      );
+      expect(screen.getByRole("option", { name: /^Watchtower/ })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+    });
+
+    it("attaches the quest rather than detaching the place", async () => {
+      const { onAttach, onDetach } = renderShared();
+      await userEvent.click(screen.getByRole("button", { name: /^attach$/i }));
+      await userEvent.click(screen.getByRole("option", { name: /Hold the Watchtower/ }));
+      expect(onAttach).toHaveBeenCalledWith("watchtower", "quest");
+      expect(onDetach).not.toHaveBeenCalled();
+    });
+
+    it("names the kind when it detaches, from the row and from the chip", async () => {
+      const { onDetach } = renderShared();
+      expect(screen.getAllByRole("button", { name: /^Detach/ })).toHaveLength(1);
+      await userEvent.click(screen.getByRole("button", { name: "Detach Watchtower" }));
+      expect(onDetach).toHaveBeenLastCalledWith("watchtower", "location");
+
+      await userEvent.click(screen.getByRole("button", { name: /^attach$/i }));
+      await userEvent.click(screen.getByRole("option", { name: /^Watchtower/ }));
+      expect(onDetach).toHaveBeenLastCalledWith("watchtower", "location");
+    });
+  });
+
   describe("what it never offers", () => {
     it("omits the record the tray is being filled from", async () => {
-      render(<Host excludeIds={["thorin"]} />);
+      render(<Host exclude={attachRefs("npc", ["thorin"])} />);
       await userEvent.click(screen.getByRole("button", { name: /attach/i }));
       expect(screen.queryByRole("option", { name: /Thorin/ })).not.toBeInTheDocument();
     });

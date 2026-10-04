@@ -4,6 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { NPCProvider, useNPCs } from 'features/campaign-entities/npcs/context/NPCContext';
 import { NPC, NPCNote } from 'features/campaign-entities/npcs/types';
+import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 
 /**
  * NPC Context Note Management Behavioral Testing
@@ -87,6 +88,8 @@ describe('NPCContext Note Management Behavior', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: jest.fn(),
       updateData: mockUpdateData,
+      // Lists are worked out from the record (T083): this suite's records.
+      updateDataAfterReading: updateAfterReadingThrough(mockUpdateData, (id) => mockUseNPCData()?.getNPCById?.(id)),
       deleteData: jest.fn(),
     });
 

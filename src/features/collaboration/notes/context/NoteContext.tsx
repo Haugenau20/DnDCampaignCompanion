@@ -299,15 +299,39 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   ): Promise<void> => {
     const note = getNoteById(noteId);
     if (!note) throw new Error("Note not found");
-    
-    const updatedEntities = note.extractedEntities.map(e =>
-      e.id === entityId ? { ...e, isConverted: true, convertedToId: createdId } : e
-    );
-    
-    await updateNote(noteId, {
-      extractedEntities: updatedEntities,
+
+    const mark = (entities: Note['extractedEntities']) =>
+      (entities ?? []).map(e =>
+        e.id === entityId ? { ...e, isConverted: true, convertedToId: createdId } : e
+      );
+
+    // A draft lives only in this provider's state: marked in that state as it
+    // is now, not in the copy this render saw, for the same reason as below.
+    if (isNotYetCreated(note)) {
+      const now = new Date().toISOString();
+      setDrafts(prevDrafts =>
+        prevDrafts.map(draft =>
+          draft.id === noteId
+            ? { ...draft, extractedEntities: mark(draft.extractedEntities), updatedAt: now, dateModified: now }
+            : draft
+        )
+      );
+      return;
+    }
+
+    if (!notesCollection) {
+      throw new Error("User not authenticated or no active group");
+    }
+
+    // Marked in the list as stored, read in a transaction (T083): converting
+    // the next entity before the listener has delivered this one's mark would
+    // otherwise write the unmarked list back over it.
+    await documentService.updateDocumentAfterReading<Note>(notesCollection, noteId, async (read) => {
+      const current = await read(noteId);
+      if (!current) throw new Error("Note not found");
+      return { extractedEntities: mark(current.extractedEntities), updatedAt: new Date().toISOString() };
     });
-  }, [getNoteById, updateNote]);
+  }, [getNoteById, isNotYetCreated, documentService, notesCollection]);
   
   /**
    * Convert an extracted entity to a campaign element.

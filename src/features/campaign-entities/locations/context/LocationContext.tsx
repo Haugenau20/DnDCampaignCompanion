@@ -1,10 +1,11 @@
 // src/features/campaign-entities/locations/context/LocationContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
-import { descendantIdsDeepestFirst, wouldCreateCycle } from '../utils/location-tree';
-import { DomainData } from 'core/types/common';
+import { descendantIdsDeepestFirst, parentChainReaches, wouldCreateCycle } from '../utils/location-tree';
+import { DomainData, RecordChange } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
@@ -40,7 +41,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const locationsPath = useCampaignCollectionPath('locations');
-  const { updateData, deleteData, addData, error: writeError } = useFirebaseData<Location>({
+  const { updateData, updateDataAfterReading, deleteData, addData, error: writeError } = useFirebaseData<Location>({
     collection: locationsPath,
     autoFetch: false
   });
@@ -71,24 +72,18 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return location?.parentId ? getLocationById(location.parentId) : undefined;
   }, [getLocationById]);
 
-  // Update a location
-  const updateLocation = useCallback(async (locationId: string, updatedLocation: Partial<Location>): Promise<void> => {
+  // Update a location: only what `change` names; see `RecordChange` (T083)
+  const updateLocation = useCallback(async (locationId: string, change: RecordChange<Location>): Promise<void> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to update a location');
     }
 
-    // Get the current location to update
-    const location = getLocationById(locationId);
-    if (!location) {
+    if (!getLocationById(locationId)) {
       throw new Error('Location not found');
     }
 
-    const updatedData = {
-      ...updatedLocation
-    };
-
-    await updateData(locationId, updatedData);
-  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
+    await writeRecordChange({ updateData, updateDataAfterReading }, locationId, change, 'Location not found');
+  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, updateDataAfterReading]);
 
   // Update location note
   const updateLocationNote = useCallback(async (locationId: string, note: LocationNote): Promise<void> => {
@@ -101,19 +96,15 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    const updatedLocation = {
-      ...location,
-      notes: [
-        ...(location.notes || []),
-        {
-          ...note,
-          date: toNoteDate()
-        }
-      ]
-    };
-
-    await updateData(locationId, updatedLocation);
-  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData]);
+    // The notes alone, appended to the list the server holds (T083).
+    const dated = { ...note, date: toNoteDate() };
+    await writeRecordChange(
+      { updateData, updateDataAfterReading },
+      locationId,
+      (current) => ({ notes: [...(current.notes || []), dated] }),
+      'Location not found'
+    );
+  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData, updateDataAfterReading]);
 
   // Update location status
   const updateLocationStatus = useCallback(async (locationId: string, status: LocationStatus): Promise<void> => {
@@ -121,17 +112,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('User must be authenticated and group/campaign context must be set to update location status');
     }
 
-    const location = getLocationById(locationId);
-    if (!location) {
+    if (!getLocationById(locationId)) {
       throw new Error('Location not found');
     }
 
-    const updatedLocation = {
-      ...location,
-      status
-    };
-
-    await updateData(locationId, updatedLocation);
+    await updateData(locationId, { status });
   }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
 
   /**
@@ -179,19 +164,42 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    if (wouldCreateCycle(locations, locationId, nextParentId)) {
-      const parent = nextParentId ? getLocationById(nextParentId) : undefined;
-      throw new Error(
+    /** Why `nextParentId` cannot hold this place. */
+    const cycleError = (parentName: string | undefined) =>
+      new Error(
         nextParentId === locationId
           ? `${location.name} cannot be inside itself.`
-          : `${parent?.name ?? 'That place'} is already inside ${location.name}.`
+          : `${parentName ?? 'That place'} is already inside ${location.name}.`
       );
+
+    // Refused here at once when the list on screen already shows the cycle.
+    if (wouldCreateCycle(locations, locationId, nextParentId)) {
+      throw cycleError(nextParentId ? getLocationById(nextParentId)?.name : undefined);
     }
 
     // '' rather than `undefined`: Firestore rejects `undefined`, and it is what
     // both the form and quick add already write for "no parent".
-    await updateLocation(locationId, { parentId: nextParentId ?? '' });
-  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, updateLocation]);
+    if (!nextParentId) {
+      await updateLocation(locationId, { parentId: '' });
+      return;
+    }
+
+    // The list on screen is a snapshot: another member may have moved the new
+    // parent inside this place since, and two opposite moves each pass the
+    // check above (DATA-006). The parent's chain is read again inside the
+    // transaction that writes the move, so whichever commits second sees the
+    // first and is refused.
+    await updateDataAfterReading(locationId, async (read) => {
+      const parent = await read(nextParentId);
+      if (!parent) {
+        throw new Error(`${getLocationById(nextParentId)?.name ?? 'That place'} no longer exists.`);
+      }
+      if (await parentChainReaches(read, nextParentId, locationId)) {
+        throw cycleError(parent.name);
+      }
+      return { parentId: nextParentId };
+    });
+  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, updateLocation, updateDataAfterReading]);
 
   /**
    * Delete a location, and say what happens to the places inside it.

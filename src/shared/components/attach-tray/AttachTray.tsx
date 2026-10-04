@@ -11,11 +11,13 @@ import { isQuickAddEntity } from "shared/components/quick-add/quickAddEntity";
 import {
   ATTACH_KIND_EMPTY_LABELS,
   ATTACH_KIND_NEW_LABELS,
+  attachKey,
   buildCandidates,
   filterCandidates,
   groupCandidates,
   type AttachCandidate,
   type AttachKind,
+  type AttachRef,
   type AttachSources,
 } from "./attachCandidates";
 
@@ -24,12 +26,16 @@ export interface AttachTrayProps {
   kinds: readonly AttachKind[];
   /** The collections themselves, from the providers that already own them. */
   sources: AttachSources;
-  /** What is attached now, in the order the record stores it. */
-  attachedIds: readonly string[];
+  /**
+   * What is attached now, in the order the record stores it. Typed, because
+   * two kinds may share an id (DATA-008); `attachRefs` builds them.
+   */
+  attached: readonly AttachRef[];
   onAttach: (id: string, kind: AttachKind) => void;
-  onDetach: (id: string) => void;
+  /** Told the kind too, so a caller removes that relation and no other. */
+  onDetach: (id: string, kind: AttachKind) => void;
   /** Never offer these -- the record being edited, and any invalid choice. */
-  excludeIds?: readonly string[];
+  exclude?: readonly AttachRef[];
   /**
    * A single-valued relation: attaching replaces rather than adds, and the
    * tray closes once something is picked.
@@ -81,10 +87,10 @@ export interface AttachTrayProps {
 export const AttachTray: React.FC<AttachTrayProps> = ({
   kinds,
   sources,
-  attachedIds,
+  attached,
   onAttach,
   onDetach,
-  excludeIds,
+  exclude,
   single = false,
   showAttachedChips = true,
   onCreateNew,
@@ -114,20 +120,20 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
   }, [onAttach]);
 
   const all = useMemo(
-    () => buildCandidates(kinds, sources, { attachedIds, excludeIds }),
-    [kinds, sources, attachedIds, excludeIds]
+    () => buildCandidates(kinds, sources, { attached, exclude }),
+    [kinds, sources, attached, exclude]
   );
   const visible = useMemo(() => filterCandidates(all, query), [all, query]);
   const groups = useMemo(() => groupCandidates(visible), [visible]);
   const showGroupHeadings = kinds.length > 1;
 
   /** The attached records, resolved to names -- an id is never a label (§5). */
-  const attached = useMemo(() => {
-    const byId = new Map(all.map((candidate) => [candidate.id, candidate]));
-    return attachedIds
-      .map((id) => byId.get(id))
+  const chips = useMemo(() => {
+    const byKey = new Map(all.map((candidate) => [attachKey(candidate), candidate]));
+    return attached
+      .map((ref) => byKey.get(attachKey(ref)))
       .filter((candidate): candidate is AttachCandidate => Boolean(candidate));
-  }, [all, attachedIds]);
+  }, [all, attached]);
 
   // Keep the roving focus inside the list when filtering shortens it.
   useEffect(() => {
@@ -144,7 +150,7 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
   const toggle = useCallback(
     (candidate: AttachCandidate) => {
       if (candidate.attached) {
-        onDetach(candidate.id);
+        onDetach(candidate.id, candidate.kind);
         return;
       }
       onAttach(candidate.id, candidate.kind);
@@ -259,16 +265,16 @@ export const AttachTray: React.FC<AttachTrayProps> = ({
         The already-picked chips stay visible above the list the whole time
         (§5). Removing a chip and un-attaching a row are the same operation.
       */}
-      {showAttachedChips && attached.length > 0 && (
+      {showAttachedChips && chips.length > 0 && (
         <ul className="flex flex-wrap gap-2 list-none p-0 m-0">
-          {attached.map((candidate) => (
-            <li key={candidate.id}>
+          {chips.map((candidate) => (
+            <li key={attachKey(candidate)}>
               <span className="inline-flex items-center gap-2 pl-2 pr-1 py-1 rounded-full chip">
                 <EntitySigil entityId={candidate.id} name={candidate.name} size={16} />
                 <span className="font-heading text-sm">{candidate.name}</span>
                 <button
                   type="button"
-                  onClick={() => onDetach(candidate.id)}
+                  onClick={() => onDetach(candidate.id, candidate.kind)}
                   aria-label={`Detach ${candidate.name}`}
                   // Measured at 18px square in `15-7`'s 320px pass, which is
                   // under WCAG 2.5.8's 24px floor. The icon is unchanged; only

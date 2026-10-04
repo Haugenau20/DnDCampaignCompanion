@@ -13,6 +13,13 @@ import { Loader2, AlertCircle, ArrowLeft, Archive, Trash2, Check } from 'lucide-
 interface NoteEditorProps {
   /** ID of the note to edit */
   noteId: string;
+  /**
+   * The note itself, for one the provider cannot look up: a note from another
+   * campaign, which `NotePage` fetches directly and shows read-only. The
+   * provider holds only the active campaign's notes, so without this the
+   * editor opened such a note blank (FUNC-001).
+   */
+  note?: Note;
   /** Whether the editor is read-only */
   readOnly?: boolean;
   /** Callback when note is saved (auto or manual) */
@@ -60,6 +67,7 @@ function titleToPersist(isExplicit: boolean, explicitTitle: string): string {
  */
 const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   noteId,
+  note: providedNote,
   readOnly = false,
   onSave,
   onBack,
@@ -121,7 +129,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   */
   useEffect(() => {
     if (loadedNoteIdRef.current === noteId) return;
-    const noteData = getNoteById(noteId);
+    const noteData = providedNote ?? getNoteById(noteId);
     setNote(noteData);
     if (noteData) {
       loadedNoteIdRef.current = noteId;
@@ -138,7 +146,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       // Set last saved time from note's modification date (if saved)
       setLastSaved(noteData.isUnsaved ? null : (noteData.dateModified ? new Date(noteData.dateModified) : null));
     }
-  }, [noteId, getNoteById]);
+  }, [noteId, providedNote, getNoteById]);
 
   const clearDebounceTimer = useCallback(() => {
     if (debounceTimerRef.current !== null) {

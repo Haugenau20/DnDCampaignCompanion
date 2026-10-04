@@ -100,6 +100,21 @@ export function useFirestore() {
     }
   }, [setError]);
 
+  // Update one document from a decision made inside a transaction
+  const updateDocumentAfterReading = useCallback(async <T>(
+    collectionName: string,
+    documentId: string,
+    decide: (read: (id: string) => Promise<(T & { id: string }) | undefined>) => Promise<Partial<T>>
+  ): Promise<void> => {
+    try {
+      setError(null);
+      await firebaseServices.document.updateDocumentAfterReading<any>(collectionName, documentId, decide);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update document');
+      throw err;
+    }
+  }, [setError]);
+
   // Delete document
   const deleteDocument = useCallback(async (
     collectionName: string,
@@ -174,6 +189,7 @@ export function useFirestore() {
     updateDocument,
     createDocument,
     updateDocumentWithAttribution,
+    updateDocumentAfterReading,
     deleteDocument,
     queryDocuments,
     batchOperations

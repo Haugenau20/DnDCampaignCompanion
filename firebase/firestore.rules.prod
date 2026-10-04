@@ -135,6 +135,50 @@
 // the frontend currently deployed, which still writes membership itself.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-04 -- T084, first half
+// ---------------------------------------------------------------------------
+// One addition, pinned by the "pending uploads" tests in
+// `functions/test/rules/firestore-rules-prod.test.ts`:
+//
+// 6. NEW -- `groups/{groupId}/pendingUploads/{uploadId}`. A member records an
+//    image upload before writing the file and deletes the entry once the
+//    document points at it, so the daily sweep can tell an upload whose
+//    document write is queued in an offline tab from an orphan (IMG-003).
+//    Create is for members, in their own name, at the server's time, naming
+//    a file in this group under the entry's own id; delete is owner-only.
+//
+// Deploy order does not matter for this one. Before it is pasted, the client
+// finds its entry refused and uploads as it always has; after, the sweep
+// spares pending uploads. The second half of T084 -- refusing an image path
+// with no live entry, so a write that arrives after the lease cannot point at
+// a deleted file -- is a later revision, and THAT one must follow the client.
+//
+// ---------------------------------------------------------------------------
+// REVISION 2026-10-04b -- T084, second half -- READ BEFORE DEPLOYING
+// ---------------------------------------------------------------------------
+// One change, pinned by the "an image path needs its upload's live entry"
+// tests in `functions/test/rules/firestore-rules-prod.test.ts`:
+//
+// 7. NEW -- a write that points a document at a different image file needs
+//    that file's `pendingUploads` entry, naming exactly that path and still
+//    within the 30-day lease (`imageLeased` below). It covers an NPC's or a
+//    location's `image`, a campaign's `banner` and a group's `crest`. Leaving
+//    the image as it is, or removing it, needs nothing. The daily sweep
+//    deletes a file once its entry's lease is over, so without this a document
+//    write queued for longer than that could still land and point at the
+//    deleted file (IMG-003's last case).
+//
+//    A side effect, on purpose: a write that sends back a stale copy of the
+//    whole record (T083) can no longer put back a picture that has since been
+//    replaced and deleted. It is refused instead.
+//
+// ⚠️ DEPLOY ORDER MATTERS: the frontend first, then these rules. A frontend
+// that writes no entry (anything before T084's first half) would have every
+// image change refused. Paste this once T084's client halves are live, and
+// preferably once T083 has stopped edits sending the whole record, so that a
+// stale tab's unrelated edit is not refused along with the picture it carries.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // When you change the production rules in the console, update this file in the
 // same PR as whatever motivated the change. If you are relying on these rules
@@ -174,6 +218,26 @@ service cloud.firestore {
     // usernames also allow Æ, Ø and Å (`UserService.validateGroupUsername`).
     function reservationKey(username) {
       return username.lower().replace('Æ', 'æ').replace('Ø', 'ø').replace('Å', 'å');
+    }
+
+    // Whether this write may leave `field` -- an image, `StoredImage` -- as it
+    // does (T084). Unchanged or removed needs nothing. Pointing at a different
+    // file needs that file's upload entry, below.
+    function imageLeased(groupId, field) {
+      let after = request.resource.data.get(field, null);
+      let before = resource == null ? null : resource.data.get(field, null);
+      return after == null || after == before || uploadLeased(groupId, after.path);
+    }
+
+    // Whether `path` has a `pendingUploads` entry naming exactly it, inside the
+    // 30-day lease after which the daily sweep may delete the file
+    // (`PENDING_LEASE_MS` in `functions/src/imageMaintenance/sweepOrphanedImages.ts`).
+    function uploadLeased(groupId, path) {
+      let segments = path.split('/');
+      let entry = /databases/$(database)/documents/groups/$(groupId)/pendingUploads/$(segments[segments.size() - 1]);
+      return exists(entry) &&
+             get(entry).data.path == path &&
+             get(entry).data.createdAt + duration.value(30, 'd') > request.time;
     }
 
     // Admin collection for system-wide settings
@@ -220,10 +284,11 @@ service cloud.firestore {
       allow read: if isGroupMember(groupId) || isGlobalAdmin();
 
       // Anyone signed in can create a group (they become the admin)
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && imageLeased(groupId, 'crest');
 
       // Group admins can update, global admin can do anything
-      allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+      allow update: if (isGroupAdmin(groupId) || isGlobalAdmin()) &&
+                     imageLeased(groupId, 'crest');
 
       // Only group admins or global admin can delete a group
       allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
@@ -336,6 +401,25 @@ service cloud.firestore {
         allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
       }
 
+      // Uploads whose document write may still be on its way (T084). The
+      // client records one before it uploads and deletes it once the document
+      // that points at the file is written; the daily sweep spares the file
+      // while the entry is under 30 days old, then deletes both. The entry is
+      // named after the file and stamped with the server's time, because it
+      // is a lease: a client-chosen time could hold a file forever.
+      match /pendingUploads/{uploadId} {
+        allow create: if isGroupMember(groupId) &&
+                       request.resource.data.keys().hasOnly(['path', 'uid', 'createdAt']) &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.path is string &&
+                       request.resource.data.path.matches('groups/' + groupId + '/.+/' + uploadId);
+
+        // Only its owner removes it. Nobody reads or changes one: the sweep
+        // reads them with the Admin SDK.
+        allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      }
+
       // Campaigns and all campaign content.
       //
       // This replaces the previous `match /{collection}/{docId}` wildcard. That
@@ -345,10 +429,11 @@ service cloud.firestore {
       // to the final deny rule instead of inheriting content permissions.
       match /campaigns/{campaignId} {
         allow read: if isGroupMember(groupId) || isGlobalAdmin();
-        allow create: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId) && imageLeased(groupId, 'banner');
 
         // RELAXED: any group member may edit campaign metadata.
-        allow update: if isGroupMember(groupId) || isGlobalAdmin();
+        allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
+                       imageLeased(groupId, 'banner');
 
         // Deleting a whole campaign stays admin-only -- it destroys every
         // entity and every member's notes for that campaign. See bug #1403 and
@@ -360,12 +445,15 @@ service cloud.firestore {
         // story-progress, saga -- and anything added later.
         match /{entityCollection}/{entityId} {
           allow read: if isGroupMember(groupId) || isGlobalAdmin();
-          allow create: if isGroupMember(groupId);
+          // `image` is an NPC's or a location's picture (T084); no other
+          // entity carries one, so the check passes for them.
+          allow create: if isGroupMember(groupId) && imageLeased(groupId, 'image');
 
           // RELAXED: previously `createdBy == uid || isGroupAdmin`, which the
           // UI never enforced, so members hit permission-denied on any entity
           // they had not personally created (bug #1406).
-          allow update: if isGroupMember(groupId) || isGlobalAdmin();
+          allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
+                         imageLeased(groupId, 'image');
 
           // RELAXED: previously admin-only, which meant a member could not
           // delete even their OWN entity while the UI showed them a Delete

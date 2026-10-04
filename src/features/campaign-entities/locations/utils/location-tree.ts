@@ -226,6 +226,31 @@ export function wouldCreateCycle(
   return descendantIdsOf(locations, id).includes(nextParentId);
 }
 
+/**
+ * Whether `targetId` is `startId` or one of its ancestors, walking the parent
+ * chain through `read`.
+ *
+ * `wouldCreateCycle` for a transaction, where documents are read one at a
+ * time and no list exists: making `nextParentId` the parent of `id` closes a
+ * cycle exactly when `parentChainReaches(read, nextParentId, id)`. Reads only
+ * the chain. A missing parent ends it, and so does a cycle already in the
+ * data, so the walk always terminates.
+ */
+export async function parentChainReaches(
+  read: (id: string) => Promise<Pick<Location, 'parentId'> | undefined>,
+  startId: string,
+  targetId: string
+): Promise<boolean> {
+  const seen = new Set<string>();
+  let cursor: string | undefined = startId;
+  while (cursor && !seen.has(cursor)) {
+    if (cursor === targetId) return true;
+    seen.add(cursor);
+    cursor = (await read(cursor))?.parentId || undefined;
+  }
+  return false;
+}
+
 /** How many places sit directly inside `id`. */
 export const insideCountOf = (index: LocationIndex, id: string): number =>
   childrenOf(index, id).length;

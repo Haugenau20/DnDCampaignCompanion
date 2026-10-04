@@ -4,6 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { RumorProvider, useRumors } from '../RumorContext';
 import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
+import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 
 /**
  * Rumor Context Behavioral Testing
@@ -113,6 +114,8 @@ describe('RumorContext Behavioral Testing', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: mockAddData,
       updateData: mockUpdateData,
+      // Lists are worked out from the record (T083): this suite's records.
+      updateDataAfterReading: updateAfterReadingThrough(mockUpdateData, (id) => (mockUseRumorData()?.rumors ?? []).find((r: any) => r.id === id)),
       deleteData: mockDeleteData,
     });
   });
@@ -216,7 +219,7 @@ describe('RumorContext Behavioral Testing', () => {
       };
 
       // BEHAVIOR: Should reject when not authenticated
-      await expect(rumorContext.updateRumor(rumor)).rejects.toThrow(
+      await expect(rumorContext.updateRumor(rumor.id, { title: rumor.title })).rejects.toThrow(
         'User must be authenticated to update rumors'
       );
 
@@ -661,14 +664,11 @@ describe('RumorContext Behavioral Testing', () => {
         expect(rumorContext).toBeDefined();
       });
 
-      const updatedRumor = {
-        ...mockRumors[0],
-        title: 'Updated Rumor Title',
-        content: 'Updated rumor content'
-      };
-
       await act(async () => {
-        await rumorContext.updateRumor(updatedRumor);
+        await rumorContext.updateRumor('test-rumor', {
+          title: 'Updated Rumor Title',
+          content: 'Updated rumor content'
+        });
       });
 
       // BEHAVIOR: Should update with basic metadata

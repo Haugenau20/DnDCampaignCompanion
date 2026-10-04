@@ -100,7 +100,7 @@ describe('RumorContext credits the character acting now', () => {
     );
 
     await act(async () => {
-      await context.updateRumor(mockRumors[0] as any);
+      await context.updateRumor(mockRumors[0].id, { content: 'Seen again' });
     });
 
     expect(mockUpdateData.mock.calls[0][1].modifiedByCharacterName).toBe('Gandalf the White');

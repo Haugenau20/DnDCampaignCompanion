@@ -350,7 +350,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                       onToggleObjective={(objectiveId, completed) =>
                         updateQuestObjective(quest.id, objectiveId, completed)
                       }
-                      onChangeStatus={(status) => updateQuest({ ...quest, status })}
+                      onChangeStatus={(status) => updateQuest(quest.id, { status })}
                       onOpenNPC={(npcId) => navigateToPage(`/npcs/${npcId}`)}
                       onOpenQuest={() => navigateToPage(`/quests/${quest.id}`)}
                     />

@@ -229,7 +229,7 @@ describe('NPCContext Known Bugs (FAILING TESTS)', () => {
 
       // EXPECTED BEHAVIOR: Should throw error for nonexistent NPC
       // CURRENT BUG: Resolves successfully without validation
-      await expect(npcContext.updateNPC(nonExistentNPC)).rejects.toThrow(
+      await expect(npcContext.updateNPC(nonExistentNPC.id, { name: nonExistentNPC.name })).rejects.toThrow(
         'NPC not found'
       );
     });

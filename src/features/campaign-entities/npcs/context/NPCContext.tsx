@@ -1,9 +1,10 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote, NPCStatus } from '../types';
-import { DomainData } from 'core/types/common';
+import { DomainData, RecordChange } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
@@ -43,7 +44,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const npcsPath = useCampaignCollectionPath('npcs');
-  const { updateData, deleteData, addData, error: writeError } = useFirebaseData<NPC>({
+  const { updateData, updateDataAfterReading, deleteData, addData, error: writeError } = useFirebaseData<NPC>({
     collection: npcsPath,
     autoFetch: false
   });
@@ -97,12 +98,14 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('NPC not found');
     }
 
-    const updatedNPC = {
-      ...npc,
-      notes: [...(npc.notes || []), note]
-    };
-    await updateData(npcId, updatedNPC);
-  }, [getNPCById, updateData, hasRequiredContext, user, userProfile]);
+    // The notes alone, appended to the list the server holds (T083).
+    await writeRecordChange(
+      { updateData, updateDataAfterReading },
+      npcId,
+      (current) => ({ notes: [...(current.notes || []), note] }),
+      'NPC not found'
+    );
+  }, [getNPCById, updateData, updateDataAfterReading, hasRequiredContext, user, userProfile]);
 
   // Update NPC relationship
   const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
@@ -114,16 +117,11 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update relationship');
     }
 
-    const npc = getNPCById(npcId);
-    if (!npc) {
+    if (!getNPCById(npcId)) {
       throw new Error('NPC not found');
     }
 
-    const updatedNPC = {
-      ...npc,
-      relationship
-    };
-    await updateData(npcId, updatedNPC);
+    await updateData(npcId, { relationship });
   }, [getNPCById, updateData, hasRequiredContext, user, userProfile]);
 
   // Ids issued during this session but not yet reflected in `npcs` (loaded
@@ -160,8 +158,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return id;
   }, [hasRequiredContext, user, userProfile, getNPCById, addData]);
 
-  // Update an existing NPC
-  const updateNPC = useCallback(async (npc: NPC): Promise<void> => {
+  // Update an existing NPC: only what `change` names; see `RecordChange` (T083)
+  const updateNPC = useCallback(async (npcId: string, change: RecordChange<NPC>): Promise<void> => {
     if (!hasRequiredContext) {
       throw new Error('Cannot update NPC: No group or campaign selected');
     }
@@ -170,17 +168,12 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to update an NPC');
     }
 
-    const existingNPC = getNPCById(npc.id);
-    if (!existingNPC) {
+    if (!getNPCById(npcId)) {
       throw new Error('NPC not found');
     }
 
-    const updatedNPC = {
-      ...npc
-    };
-
-    await updateData(npc.id, updatedNPC);
-  }, [hasRequiredContext, user, userProfile, getNPCById, updateData]);
+    await writeRecordChange({ updateData, updateDataAfterReading }, npcId, change, 'NPC not found');
+  }, [hasRequiredContext, user, userProfile, getNPCById, updateData, updateDataAfterReading]);
 
   // Delete an NPC
   const deleteNPC = useCallback(async (npcId: string): Promise<void> => {

@@ -23,17 +23,17 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
-| high | T084 | The sweep can delete an upload whose document write is pending | M | open | Images focus; the sweep can delete a valid upload |
+| high | T084 | A write that outlives its upload's lease points at a deleted file | S | blocked | Images focus; the code is in, the enforcing rules wait for the client to be live, then a paste |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
+| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
+| low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -156,48 +156,32 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T083 — Edits send the whole record and overwrite newer changes
-**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+### T084 — A write that arrives after its upload's lease can still point at a deleted file
+**Type** bug · **Size** S · **Status** blocked · **Verified** 2026-10-04
 
-Ticking an objective, changing a status or adding a note writes back the full
-in-memory record, so whatever anyone changed since it loaded is reverted. A
-second tick can undo the first; an unrelated write can restore an image whose
-file was already replaced and deleted. Pass 4 reproduced it in two ordinary
-tabs.
+The code is in. An upload records itself in
+`groups/{groupId}/pendingUploads/{file}` (`ImageStorageService.upload`) and
+fails without it; the daily sweep spares a file whose entry is under 30 days
+old (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`); and revision 2026-10-04b
+of `firestore.rules.prod` refuses a write that points an NPC, location,
+campaign banner or group crest at a different file unless that file's entry
+is live (`imageLeased`). Revision 2026-10-04 (the entries alone) is live.
 
-- **Where**: `src/features/campaign-entities/quests/context/QuestContext.tsx:147`
-  writes `{ ...quest, objectives }` under a doc comment saying it leaves every
-  other field alone. The NPC, location, rumour and note contexts do the same
-  (the report lists each).
-- **Findings**: DATA-003 (03), IMG-002 (04), TEST-002 (08). The duplicated
-  batch-limit helper (09, consolidation item 2) belongs with this change.
-- **Catch**: three problems under one symptom. Scalar fields need true patches,
-  arrays (objectives, notes) need stable element ids or transactions, and
-  overlapping prose edits need a decision on conflict behaviour. And
-  `QuestContext.objectives.test.tsx` asserts the stale fields: a field-only
-  patch fails four tests. They pin the defect, like #1414/#1415. **Approved
-  (maintainer, 2026-10-04): rewrite them against the requirement**, so that an
-  objective write carries only `objectives`. Say so in the PR, test by test.
-  Plan first.
-- **Source**: code review, 2026-10-04
-
-### T084 — The sweep can delete an upload whose document write is still pending
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-A picture attached offline whose document write is still pending after 24 h
-is deleted by the daily sweep, which knows only object age and current
-references (`firebase/functions/src/imageMaintenance/sweepOrphanedImages.ts`,
-`referencedPaths` and the age guard). Reconnecting then writes a reference to
-a missing file. Needs a protocol for pending writes, not a longer grace
-period.
-
-- **Findings**: IMG-003 (04).
+- **Blocked on**: pasting revision 2026-10-04b into the console, which must
+  wait for the client. **Deploy order**: the frontend that writes entries
+  first; rules first would refuse every image change from a tab still on the
+  old frontend. Until then IMG-003's last case stays open: a document write
+  queued for longer than the lease lands and points at the file the sweep
+  deleted. Preferably paste after T083's field patches too: until then a
+  stale tab's unrelated edit that carries a since-replaced picture is
+  refused along with it (better than restoring a deleted file, which is what
+  it does today).
 - **Related**: the sweep still reads every NPC, location, campaign and group
   document daily to learn what is referenced (PERF2-004's remaining half,
-  07). Its listing and deletes are bounded now; the reads grow with all
-  content. A ledger of uploads awaiting their document would answer both:
-  the sweep would check candidates instead of everything, and could tell a
-  pending upload from an orphan.
+  07). With entries required, a file with no entry and no reference is an
+  orphan by construction, but the old file of a replace has neither, so the
+  full read stays until replaces are recorded too.
+- **Findings**: IMG-003 (04).
 - **Source**: code review, 2026-10-04
 
 ### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
@@ -207,24 +191,27 @@ Authored text is lost or misfiled in several ways. Separate causes, grouped
 because the fix is one idea: a draft belongs to one record and outlives a
 failed write.
 
-- **Failed save loses the draft**: `ChapterForm.tsx:145-149` navigates away in
-  `finally`, success or not (FUNC-005). A rejected entity write sets the
-  provider error (`useFirebaseData.ts:285`) that the page gate reads, which
-  unmounts the editor, and Retry doesn't recover it (REACT-002, TEST-007).
-- **Wrong record**: going from NPC A to B keeps A's draft and saves it to B
-  (REACT-001); an offline-queued note save runs against the next note after
-  Search navigation (RECOVERY-001); a cross-campaign note's fallback survives
-  route and campaign changes (RECOVERY-002).
+- **Failed save loses the draft**: a rejected entity write sets the provider
+  error (`useFirebaseData.ts:285`) that the page gate reads, which unmounts
+  the editor, and Retry doesn't recover it (REACT-002, TEST-007).
+- **Wrong record**: a cross-campaign note's fallback survives a campaign
+  change (RECOVERY-002). Seen 2026-10-04 the other way round too: switching
+  campaign with your own note open leaves "Note Not Found" until a reload,
+  though a fresh load of the same URL shows it. A route change no longer
+  carries it: `app/RecordRoute.tsx` remounts the note page per note id. That
+  same remount should also close RECOVERY-001 (an offline-queued note save
+  running against the next note after Search navigation): the queue then
+  belongs to the old note's editor, which is the reviewers' own unmount
+  control. That is traced in the source, not re-run; re-run pass 4's
+  sequence (15) before deleting this.
 - **Draft dropped on leaving**: leaving a note before the autosave debounce
   cancels the only pending save; a reload loses an unacknowledged one
   (REACT-003).
-- **Cross-campaign note is blank**: `NotePage.tsx:229-236` passes only `noteId`
-  to the read-only editor, never the fetched note (FUNC-001, TEST-003).
 - **Findings**: 05, 06, 08, 15. **Catch**: the reviewers say these need separate
   regression sequences; consider splitting at pickup. Plan first.
 - **Source**: code review, 2026-10-04
 
-### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
+### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
 
 Each of these decides from a stale local copy, then writes:
@@ -232,16 +219,28 @@ Each of these decides from a stale local copy, then writes:
 - **Conversion** (DATA-005, 03): rumour → quest and combine create the target
   first (`RumorContext.tsx:306-311`) and mark the sources after; a failed mark
   leaves an extra quest on every retry (pass 5 reproduced it, 17).
-- **Location tree** (DATA-006): `LocationContext.tsx:178` checks for a cycle
-  against the local list, so two opposite moves make one; a child added during
-  a delete is orphaned.
+- **Location delete** (DATA-006): `deleteLocation` takes the children from
+  the local list, so a child added or moved in during a delete is orphaned,
+  and one moved out is still deleted. Moves are transactional now
+  (`updateDataAfterReading`), but a transaction reads documents, not
+  queries, so it cannot find "every child" either. Needs a design.
 - **Chapter order** (DATA-007): `StoryContext.tsx:472-488` shifts orders from
-  the local list; concurrent inserts gave 1, 2, 3, 3.
-- **Attachment kind** (DATA-008): `attachCandidates.ts:86` keys "attached" by
-  bare id, so a location and a quest sharing a slug are confused. Small and
-  independent; can go first.
+  the local list; concurrent inserts gave 1, 2, 3, 3. **Catch**: the same
+  limit. A transaction cannot read "all chapters", so serializing this needs
+  a shared document every structural change reads and writes (an order list
+  or a version, plus a rules change and a backfill for existing campaigns),
+  or a deliberate tiebreak (gaps, and a stable second key such as
+  `dateAdded`) that makes duplicates harmless. The maintainer's call; plan
+  first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
+- **Lists in those batches**: combine and convert append a note to each
+  source rumour, worked out from the local copy, so a note another player
+  added in the meantime is dropped (DATA-003's list case). Do them with the
+  conversion, which has to stop working from the local copy anyway.
+- **With the conversion**: `RumorContext`'s batch helper duplicates
+  `commitEntityWrites` (09, consolidation item 2); fold it in while touching
+  those batches.
 - **Source**: code review, 2026-10-04
 
 ### T099 — The contact form's rate limit is easy to evade
@@ -657,10 +656,10 @@ drift with nothing to notice it.
   rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
   `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
   are console-only and never deployed by CI.
-- **Catch**: the live Firestore rules were read back on 2026-10-04 and matched
-  `firestore.rules.prod`; the Storage rules have not been compared. The first
-  deploy overwrites whatever is live, so read the console back and diff it
-  first. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
+- **Catch**: the maintainer confirmed on 2026-10-04 that the live Firestore
+  and Storage rules are the `.prod` files (Firestore at T084's revision). The
+  first deploy overwrites whatever is live, so read the console back and diff
+  it first all the same. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
   or from CI decides whether the deploy service account needs rules permissions.
 - **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
   its `firestore.rules` key at `firestore.rules`; it has no such key.
@@ -693,6 +692,22 @@ Docker, and the build could be produced the same way.
 ## Decisions
 
 Open questions that block work until the maintainer answers them.
+
+### T083 — Two people saving the same text field: last one wins
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-10-04
+
+Edits write only their own fields, and every list (objectives, notes,
+relations, tags) is worked out from the record the server holds, in a
+transaction. One case is left, on purpose until decided: two people editing
+the same text field (a description, a note's text) from the same version --
+the second save replaces the first, with no warning.
+
+- **To decide**: is last-write-wins acceptable for a party's shared journal,
+  or should a save notice that the field changed since the editor opened
+  (compare the value it started from, inside the same transaction, and ask)?
+  `RecordChange` and `updateDataAfterReading` are the place it would go.
+- **Findings**: DATA-003 (03), the remaining case.
+- **Source**: code review, 2026-10-04
 
 ### T103 — Browser checks are not reproducible
 **Type** decision · **Size** L · **Status** needs scoping · **Verified** 2026-10-04

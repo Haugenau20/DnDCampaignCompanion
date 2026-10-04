@@ -14,6 +14,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LocationDetailPage from '../LocationDetailPage';
+import { resolveRecordChange } from '@/test-utils/update-after-reading';
+
+// T083: a list change goes to the context as a function of the stored
+// record. Resolve it the way the context's transaction does -- against
+// `mockStoredRecords[id]` when a test says the server holds something newer
+// than the page's copy, and against the page's own copy otherwise -- so the
+// write mocks below still see plain fields.
+const mockResolveChange = resolveRecordChange;
+let mockStoredRecords: Record<string, any> = {};
 
 // ---------------------------------------------------------------------------
 // Route
@@ -144,7 +153,11 @@ jest.mock('features/campaign-entities', () => {
       isLoading: false,
       error: null,
       refreshLocations: mockRefreshLocations,
-      updateLocation: mockUpdateLocation,
+      updateLocation: (id: string, change: any) =>
+        mockUpdateLocation(
+          id,
+          mockResolveChange(change, mockStoredRecords[id] ?? mockLocations.find((l) => l.id === id))
+        ),
       updateLocationNote: mockUpdateLocationNote,
       updateLocationStatus: mockUpdateLocationStatus,
       moveLocation: mockMoveLocation,
@@ -225,6 +238,7 @@ const hierarchy = () =>
   screen.getByText('Where this sits').closest('section') as HTMLElement;
 
 beforeEach(() => {
+  mockStoredRecords = {};
   jest.clearAllMocks();
   mockLocationId = 'gondolin';
   mockRouterState = null;
@@ -550,6 +564,20 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Remove the tag hidden/ }));
     await waitFor(() =>
       expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', { tags: [] })
+    );
+  });
+
+  // T083: the page's copy can be behind the server. A list is worked out from
+  // the location as stored, so a tag another player added stays.
+  it('removes a tag from the tags the place has now, not from the page\'s copy', async () => {
+    mockStoredRecords.gondolin = {
+      ...mockLocations.find((l: any) => l.id === 'gondolin'),
+      tags: ['hidden', 'fallen'],
+    };
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Remove the tag hidden/ }));
+    await waitFor(() =>
+      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', { tags: ['fallen'] })
     );
   });
 

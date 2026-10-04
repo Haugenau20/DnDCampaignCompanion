@@ -65,6 +65,25 @@ export function createFakeCollectionListener<T extends { id: string }>() {
       documents = documents.map((document) => (document.id === id ? { ...document, ...changes } : document));
       emit();
     },
+    /**
+     * `updateDocumentAfterReading(path, id, decide)`: `decide` reads the stored
+     * documents -- not any listener's copy -- and its fields are delivered like
+     * `update`'s. Firestore's re-run on a changed read is `DocumentService`'s
+     * to test, not this fake's.
+     */
+    updateAfterReading: async (
+      _path: string,
+      id: string,
+      decide: (read: (otherId: string) => Promise<T | undefined>) => Promise<Partial<T>>
+    ) => {
+      const read = async (otherId: string) => {
+        const found = documents.find((document) => document.id === otherId);
+        return found ? { ...found } : undefined;
+      };
+      const changes = await decide(read);
+      documents = documents.map((document) => (document.id === id ? { ...document, ...changes } : document));
+      emit();
+    },
     /** `deleteDocument(path, id)`, delivered to the listeners. */
     remove: async (_path: string, id: string) => {
       documents = documents.filter((document) => document.id !== id);

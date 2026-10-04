@@ -15,6 +15,7 @@ import {
   DocumentReference,
   writeBatch,
   onSnapshot,
+  runTransaction,
   Unsubscribe
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
@@ -270,6 +271,49 @@ class DocumentService extends BaseFirebaseService {
     };
 
     await updateDoc(docRef, fullData as Partial<DocumentData>);
+  }
+
+  /**
+   * Update one document from a decision made on documents read in the same
+   * transaction, with modification attribution.
+   *
+   * For a write whose validity depends on other records -- a location's new
+   * parent must not already sit inside it. Checked against a list read
+   * earlier, two members can each make a move that is valid alone and
+   * together form a cycle (DATA-006). Here Firestore notices if anything
+   * `decide` read changed before the commit and runs `decide` again against
+   * what was committed, so the second move sees the first.
+   *
+   * `decide` reads by id from the same collection and returns the fields to
+   * write; throwing refuses the write. It may run more than once. A query
+   * cannot take part: a transaction reads documents, not lists.
+   *
+   * Needs the server: offline, the transaction fails rather than queueing.
+   *
+   * @param collectionName Collection name or full path
+   * @param documentId The document to update; it must exist
+   * @param decide Reads what it needs and returns the fields to write
+   */
+  public async updateDocumentAfterReading<T extends DocumentData>(
+    collectionName: string,
+    documentId: string,
+    decide: (read: (id: string) => Promise<(T & { id: string }) | undefined>) => Promise<Partial<T>>
+  ): Promise<void> {
+    // Resolved before any await, as in `updateDocumentWithAttribution` (T082).
+    const collectionRef = this.getCollectionRef(collectionName);
+    const attributionMetadata = await this.getModificationAttribution(this.groupOf(collectionRef));
+
+    await runTransaction(this.db, async (transaction) => {
+      const read = async (id: string) => {
+        const snapshot = await transaction.get(doc(collectionRef, id));
+        return snapshot.exists() ? ({ ...(snapshot.data() as T), id: snapshot.id }) : undefined;
+      };
+      const fields = await decide(read);
+      transaction.update(doc(collectionRef, documentId), {
+        ...fields,
+        ...attributionMetadata
+      } as Partial<DocumentData>);
+    });
   }
 
   /**

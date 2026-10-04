@@ -1,5 +1,5 @@
 // src/features/campaign-entities/npcs/types.ts
-import { BaseContent, DomainData } from 'core/types/common';
+import { BaseContent, DomainData, RecordChange } from 'core/types/common';
 import { StoredImage } from 'core/types/storedImage';
 import { Location } from '../locations/types';
 
@@ -91,7 +91,13 @@ export interface NPCContextValue extends NPCContextState {
   updateNPCNote: (npcId: string, note: NPCNote) => void;
   updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => Promise<void>;
   addNPC: (npc: DomainData<NPC>) => Promise<string>;
-  updateNPC: (npc: NPC) => Promise<void>;
+  /**
+   * Write `change` to the NPC: the fields it names, and nothing else
+   * (T083). Never the whole record -- a copy from the listener can be behind
+   * the server. A list worked out from the old one goes as a function; see
+   * `RecordChange`.
+   */
+  updateNPC: (npcId: string, change: RecordChange<NPC>) => Promise<void>;
   deleteNPC: (npcId: string) => Promise<void>;
   /** Sets the status of several NPCs, committed as one batch. */
   updateNPCsStatus: (npcIds: string[], status: NPCStatus) => Promise<void>;

@@ -12,6 +12,16 @@ import {imageBucket} from "../shared/imageBucket";
 const MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * How long a `pendingUploads` entry holds its file (T084, IMG-003). The client
+ * writes the entry before it uploads and deletes it once the document that
+ * points at the file is written. A write queued in a tab that went offline
+ * lives only as long as that tab -- the app keeps no offline persistence -- so
+ * a month is far past any write that can still land. After it the upload is
+ * abandoned: the entry is deleted and the file judged like any other.
+ */
+const PENDING_LEASE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
  * The object paths the app writes images to (see the storage images design,
  * §3). Anything else in the bucket -- a path added later -- is not the sweep's
  * to judge, however unreferenced it looks.
@@ -64,6 +74,52 @@ export interface SweepResult {
    * may be orphans it did not reach. The next run carries on.
    */
   more: boolean;
+  /** `pendingUploads` entries whose lease was over, deleted this run. */
+  expiredUploads: number;
+}
+
+/**
+ * Reads the `pendingUploads` ledger, deletes the entries whose lease is over,
+ * and returns the paths the live ones hold.
+ *
+ * Runs before the references are read. The rules refuse an image path with
+ * no entry inside the same lease (`imageLeased` in `firestore.rules.prod`), so
+ * a document write that arrives after its entry expired is refused, and one
+ * that arrived before is among the references -- no write can land on a file
+ * this run then deletes.
+ *
+ * An entry with no readable `createdAt` counts as expired: the rules stamp it
+ * with the server's time, and an entry nobody can date must not hold a file
+ * forever.
+ *
+ * @param {Date} now The time the sweep treats as now
+ * @param {number} maxDeletes Expired entries one run may delete
+ * @return {Promise<object>} The live paths, and how many entries expired
+ */
+async function pendingUploads(
+  now: Date,
+  maxDeletes: number
+): Promise<{held: Set<string>; expired: number}> {
+  const db = admin.firestore();
+  const entries = await db.collectionGroup("pendingUploads").get();
+
+  const held = new Set<string>();
+  const expired: admin.firestore.DocumentReference[] = [];
+  entries.docs.forEach((entry) => {
+    const createdAt = entry.get("createdAt") as admin.firestore.Timestamp | undefined;
+    const age = createdAt?.toMillis ? now.getTime() - createdAt.toMillis() : Infinity;
+    const path = entry.get("path");
+    if (age < PENDING_LEASE_MS && typeof path === "string") held.add(path);
+    else if (expired.length < maxDeletes) expired.push(entry.ref);
+  });
+
+  // Firestore commits at most 500 writes in one batch.
+  for (let i = 0; i < expired.length; i += 500) {
+    const batch = db.batch();
+    expired.slice(i, i + 500).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+  return {held, expired: expired.length};
 }
 
 /**
@@ -182,7 +238,9 @@ async function deleteWithin(
  * NPC or location whose follow-up delete failed.
  *
  * The references are read before the files are listed. A file uploaded in
- * between is under a day old, so the age guard keeps it.
+ * between is under a day old, so the age guard keeps it. An older file is
+ * kept while a live `pendingUploads` entry names it: its document write may
+ * still be queued in an offline tab (T084).
  *
  * The work is bounded by `limits`: the bucket is listed a page at a time, the
  * listing stops once the run has found as many orphans as it may delete, and
@@ -197,6 +255,8 @@ export async function sweepOrphanedImages(
   limits: Partial<SweepLimits> = {}
 ): Promise<SweepResult> {
   const {pageSize, maxDeletes, concurrency} = {...DEFAULT_LIMITS, ...limits};
+  // The ledger first: see `pendingUploads`.
+  const pending = await pendingUploads(now, maxDeletes);
   const referenced = await referencedPaths();
 
   let checked = 0;
@@ -213,7 +273,8 @@ export async function sweepOrphanedImages(
       for (const file of files) {
         if (!layout.test(file.name)) continue;
         checked += 1;
-        const kept = needsReference && referenced.has(file.name);
+        const kept = needsReference &&
+          (referenced.has(file.name) || pending.held.has(file.name));
         if (!kept && isOldEnough(file, now)) {
           orphans.push(file);
           if (orphans.length >= maxDeletes) return false;
@@ -233,6 +294,7 @@ export async function sweepOrphanedImages(
     deleted: [],
     failed: [],
     more: !listedAll,
+    expiredUploads: pending.expired,
   };
   outcomes.forEach((outcome, i) => {
     const path = orphans[i].name;
@@ -256,10 +318,10 @@ export const sweepOrphanedImagesDaily = onSchedule(
     region: "europe-west1",
   },
   async () => {
-    const {checked, deleted, failed, more} = await sweepOrphanedImages();
+    const {checked, deleted, failed, more, expiredUploads} = await sweepOrphanedImages();
     console.log(
       `Orphaned image sweep: checked ${checked}, deleted ${deleted.length}, ` +
-        `failed ${failed.length}` +
+        `failed ${failed.length}, expired uploads ${expiredUploads}` +
         (more ? "; stopped at its budget, the rest is left for tomorrow." : ".")
     );
   }

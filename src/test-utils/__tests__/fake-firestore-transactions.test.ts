@@ -42,6 +42,24 @@ describe("fake Firestore transactions", () => {
     expect(await Promise.all([create("a"), create("b")])).toEqual(["created", "created"]);
   });
 
+  it("merges an update into the stored document, and refuses one with nothing to update", async () => {
+    const store = createFakeFirestore();
+    store.seed(REF.path, { name: "Gandalf", title: "The Grey" });
+
+    await store.runTransaction(null, async (transaction) => {
+      transaction.update(REF, { title: "The White" });
+    });
+    expect(store.read(REF.path)).toEqual({ name: "Gandalf", title: "The White" });
+
+    const absent = { path: "npcs/saruman", id: "saruman" };
+    await expect(
+      store.runTransaction(null, async (transaction) => {
+        transaction.update(absent, { title: "Of Many Colours" });
+      })
+    ).rejects.toThrow("No document to update");
+    expect(store.read(absent.path)).toBeUndefined();
+  });
+
   it("applies nothing from a transaction that throws", async () => {
     const store = createFakeFirestore();
     await expect(

@@ -6,6 +6,7 @@ import {
   ATTACH_KIND_LABELS,
   ATTACH_KIND_NEW_LABELS,
   ATTACH_KIND_EMPTY_LABELS,
+  attachRefs,
   type AttachKind,
 } from "../attachCandidates";
 
@@ -210,21 +211,55 @@ describe("attachCandidates", () => {
   describe("already-attached entries", () => {
     it("marks what is attached rather than hiding it", () => {
       // Selection is immediate and reversible: a picked row shows as picked.
-      const entries = buildCandidates(["npc"], sources(), { attachedIds: ["thorin"] });
+      const entries = buildCandidates(["npc"], sources(), { attached: attachRefs("npc", ["thorin"]) });
       expect(entries).toHaveLength(1);
       expect(entries[0].attached).toBe(true);
     });
 
     it("leaves everything else unattached", () => {
-      const entries = buildCandidates(["npc"], sources(), { attachedIds: ["someone-else"] });
+      const entries = buildCandidates(["npc"], sources(), { attached: attachRefs("npc", ["someone-else"]) });
       expect(entries[0].attached).toBe(false);
     });
 
     it("never offers the entity the tray is being filled from", () => {
       // A quest cannot relate to itself, and a location cannot be its own
       // parent -- offering it is how the cycle in PERF-11 becomes reachable.
-      const entries = buildCandidates(["npc"], sources(), { excludeIds: ["thorin"] });
+      const entries = buildCandidates(["npc"], sources(), { exclude: attachRefs("npc", ["thorin"]) });
       expect(entries).toHaveLength(0);
+    });
+  });
+
+  describe("an id names a record only together with its kind (DATA-008)", () => {
+    // Every collection allocates its own slugs, so a place and a quest both
+    // called "Watchtower" are both `watchtower`. That is legitimate data.
+    const shared = () =>
+      sources({
+        npc: [npc({ id: "watchtower", name: "Watchtower Warden" })],
+        location: [location({ id: "watchtower", name: "Watchtower" })],
+        quest: [quest({ id: "watchtower", title: "Hold the Watchtower" })],
+        rumor: [rumor({ id: "watchtower", title: "Lights in the Watchtower" })],
+      });
+    const ALL: AttachKind[] = ["npc", "location", "quest", "rumor"];
+
+    it("marks only the attached kind, not every record sharing its id", () => {
+      const entries = buildCandidates(ALL, shared(), {
+        attached: attachRefs("location", ["watchtower"]),
+      });
+      const attached = entries.filter((e) => e.attached).map((e) => e.kind);
+      expect(attached).toEqual(["location"]);
+    });
+
+    it("excludes only the excluded kind", () => {
+      const entries = buildCandidates(ALL, shared(), {
+        exclude: attachRefs("npc", ["watchtower"]),
+      });
+      expect(entries.map((e) => e.kind).sort()).toEqual(["location", "quest", "rumor"]);
+    });
+
+    it("builds references from optional ids, dropping the empty ones", () => {
+      expect(attachRefs("location", ["erebor", undefined, "", null])).toEqual([
+        { kind: "location", id: "erebor" },
+      ]);
     });
   });
 

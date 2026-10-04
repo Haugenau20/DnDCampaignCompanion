@@ -125,7 +125,7 @@ const Harness: React.FC = () => {
   const portrait = useImageAttachment({
     prefix: aldric ? `${mockCampaignsState.activeCampaignId}/npcs/aldric` : null,
     current: aldric?.image,
-    save: (image) => updateNPC({ ...aldric!, image }),
+    save: (image) => updateNPC(aldric!.id, { image }),
   });
   portraitUpload = aldric ? portrait.upload : undefined;
   return null;
@@ -250,7 +250,7 @@ describe('an operation finishes in the campaign it started in (T082)', () => {
     await switchTo('campaign-b', rerender);
     await waitFor(() => expect(npcs.npcs.map((npc) => npc.description)).toEqual(['Aldric of campaign-b']));
     await act(async () => {
-      await updateNPC({ ...aldricA, description: 'meant for A' });
+      await updateNPC(aldricA.id, { description: 'meant for A' });
     });
 
     expect(mockWrites.map(({ op, path, id }) => [op, path, id])).toEqual([['update', `${PATH_A}/npcs`, 'aldric']]);

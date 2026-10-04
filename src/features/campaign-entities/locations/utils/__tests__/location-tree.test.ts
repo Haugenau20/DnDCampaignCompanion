@@ -10,6 +10,7 @@ import {
   invalidParentIdsFor,
   pathLabelOf,
   wouldCreateCycle,
+  parentChainReaches,
 } from '../location-tree';
 import { Location } from '../../types';
 import { ancestorIdsOf } from 'shared/hooks/useHighlightTarget';
@@ -237,6 +238,46 @@ describe('wouldCreateCycle', () => {
     expect(wouldCreateCycle(TREE, 'kings-square', 'beleriand')).toBe(false);
     expect(wouldCreateCycle(TREE, 'gondolin', undefined)).toBe(false);
     expect(wouldCreateCycle(TREE, 'gondolin', '')).toBe(false);
+  });
+});
+
+describe('parentChainReaches', () => {
+  // The same question as `wouldCreateCycle`, asked of documents read one at a
+  // time inside a transaction (DATA-006), where no list is available.
+  const readFrom = (locations: Location[]) => {
+    const reads: string[] = [];
+    const read = async (id: string) => {
+      reads.push(id);
+      return locations.find((l) => l.id === id);
+    };
+    return { read, reads };
+  };
+
+  it('finds a place among the ancestors of another, at any depth', async () => {
+    const { read } = readFrom(TREE);
+    await expect(parentChainReaches(read, 'fountain', 'beleriand')).resolves.toBe(true);
+    await expect(parentChainReaches(read, 'gondolin', 'gondolin')).resolves.toBe(true);
+  });
+
+  it('does not find one outside the chain', async () => {
+    const { read } = readFrom(TREE);
+    await expect(parentChainReaches(read, 'doriath', 'gondolin')).resolves.toBe(false);
+    await expect(parentChainReaches(read, 'angband', 'beleriand')).resolves.toBe(false);
+  });
+
+  it('reads only the chain, never the whole campaign', async () => {
+    const { read, reads } = readFrom(TREE);
+    await parentChainReaches(read, 'fountain', 'angband');
+    expect(reads).toEqual(['fountain', 'kings-square', 'gondolin', 'beleriand']);
+  });
+
+  it('stops at a missing parent and at a cycle already written', async () => {
+    const dangling = readFrom([place('a', 'A', 'gone')]);
+    await expect(parentChainReaches(dangling.read, 'a', 'b')).resolves.toBe(false);
+
+    const looped = readFrom([place('x', 'X', 'y'), place('y', 'Y', 'x')]);
+    await expect(parentChainReaches(looped.read, 'x', 'z')).resolves.toBe(false);
+    expect(looped.reads).toEqual(['x', 'y']);
   });
 });
 

@@ -139,14 +139,16 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
         await updateChapter(chapter.id, updates);
         setSuccess('Chapter updated successfully');
       }
+
+      // Only once the write has landed. The typed text lives nowhere but this
+      // form, so leaving after a refused save threw the author's prose away
+      // along with the error that would have said why (FUNC-005).
+      navigateToPage('/story/chapters');
     } catch (err) {
       console.error('Error saving chapter:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while saving the chapter');
     } finally {
       setIsSubmitting(false);
-      
-      // Navigate back to chapters page after successful submission
-      navigateToPage('/story/chapters');
     }
   };
 

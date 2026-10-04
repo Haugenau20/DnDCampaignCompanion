@@ -394,8 +394,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
   /** Every write here re-reads through the context, as the pages do. */
   const handleSave = async (rumor: Rumor, draft: RumorDraft) => {
-    await updateRumor({
-      ...rumor,
+    await updateRumor(rumor.id, {
       title: draft.title,
       content: draft.content,
       // Normalised on the way out: see `Rumor.sourceType` for why this is
@@ -423,37 +422,46 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
    * groups by and what a reader sees first; later ones are what it points at.
    */
   const handleAttach = async (rumor: Rumor, id: string, kind: AttachKind) => {
+    // Lists are worked out from the rumour the server holds (T083), so a
+    // person another player attached a moment ago stays attached.
     if (kind === 'npc') {
-      await updateRumor({
-        ...rumor,
-        relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), id])),
-      });
+      await updateRumor(rumor.id, (current) => ({
+        relatedNPCs: Array.from(new Set([...(current.relatedNPCs ?? []), id])),
+      }));
       return;
     }
 
     const place = locations.find((candidate) => candidate.id === id);
     if (!rumor.locationId) {
-      await updateRumor({ ...rumor, locationId: id, location: place?.name ?? '' });
+      await updateRumor(rumor.id, { locationId: id, location: place?.name ?? '' });
       return;
     }
 
-    await updateRumor({
-      ...rumor,
-      relatedLocations: Array.from(new Set([...(rumor.relatedLocations ?? []), id])),
-    });
+    await updateRumor(rumor.id, (current) => ({
+      relatedLocations: Array.from(new Set([...(current.relatedLocations ?? []), id])),
+    }));
   };
 
-  const handleDetach = async (rumor: Rumor, id: string) => {
-    if (id === rumor.locationId) {
-      await updateRumor({ ...rumor, locationId: '', location: '' });
+  /**
+   * Remove one relation, found by its kind: a person and a place may share an
+   * id, and detaching one must leave the other attached (DATA-008).
+   */
+  const handleDetach = async (rumor: Rumor, id: string, kind: AttachKind) => {
+    if (kind === 'npc') {
+      await updateRumor(rumor.id, (current) => ({
+        relatedNPCs: (current.relatedNPCs ?? []).filter((existing) => existing !== id),
+      }));
       return;
     }
 
-    await updateRumor({
-      ...rumor,
-      relatedNPCs: (rumor.relatedNPCs ?? []).filter((existing) => existing !== id),
-      relatedLocations: (rumor.relatedLocations ?? []).filter((existing) => existing !== id),
-    });
+    if (id === rumor.locationId) {
+      await updateRumor(rumor.id, { locationId: '', location: '' });
+      return;
+    }
+
+    await updateRumor(rumor.id, (current) => ({
+      relatedLocations: (current.relatedLocations ?? []).filter((existing) => existing !== id),
+    }));
   };
 
   if (isLoading) {
@@ -569,7 +577,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                       onDelete={() => handleDelete(rumor.id)}
                       onStatusChange={(status) => updateRumorStatus(rumor.id, status)}
                       onAttach={(id, kind) => handleAttach(rumor, id, kind)}
-                      onDetach={(id) => handleDetach(rumor, id)}
+                      onDetach={(id, kind) => handleDetach(rumor, id, kind)}
                       sources={{ npc: npcs, location: locations }}
                       autoFocus={justAddedId === rumor.id}
                       onOpenQuest={handleQuestClick}

@@ -18,9 +18,11 @@ import {
   rumorTitleText,
 } from 'features/campaign-entities';
 import type { Quest, QuestStatus, QuestLocation } from 'features/campaign-entities';
+import type { RecordChange } from 'core/types/common';
 import { useNotes, displayTitle as noteDisplayTitle } from 'features/collaboration';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
 import { usePageGate, GatedContent } from 'shared/components/gated';
@@ -290,20 +292,22 @@ const QuestDetailPage: React.FC = () => {
   // another player changed the same record first, the refetch is where that
   // becomes visible. `updateQuest` already does that read and awaits it
   // (`QuestContext`), so asking again here fetched the whole collection twice
-  // for one edit (PERF-06).
-  const save = async (patch: Partial<Quest>) => {
+  // for one edit (PERF-06). Only what `change` names is written (T083): the
+  // copy may be behind the server, so a list worked out from the old one goes
+  // as a function and is worked out from the record the server holds.
+  const save = async (change: RecordChange<Quest>) => {
     if (!quest) return;
-    await updateQuest({ ...quest, ...patch });
+    await updateQuest(quest.id, change);
   };
 
   /** Append one line to a prep list. */
   const addTo = (field: PrepField) => (value: string) =>
-    save({ [field]: [...(quest?.[field] ?? []), value] } as Partial<Quest>);
+    save((current) => ({ [field]: [...(current[field] ?? []), value] }) as Partial<Quest>);
 
   const removeFrom = (field: PrepField, value: string) =>
-    save({
-      [field]: (quest?.[field] ?? []).filter((entry) => entry !== value),
-    } as Partial<Quest>);
+    save((current) => ({
+      [field]: (current[field] ?? []).filter((entry) => entry !== value),
+    }) as Partial<Quest>);
 
   /**
    * A place inside the quest becomes a real location -- the same promotion a
@@ -329,9 +333,9 @@ const QuestDetailPage: React.FC = () => {
       notes: [],
       tags: [],
     });
-    await save({
-      keyLocations: (quest.keyLocations ?? []).filter((entry) => entry.name !== place.name),
-    });
+    await save((current) => ({
+      keyLocations: (current.keyLocations ?? []).filter((entry) => entry.name !== place.name),
+    }));
     navigateToPage(`/locations/${newId}`);
   };
 
@@ -457,11 +461,11 @@ const QuestDetailPage: React.FC = () => {
                             type="button"
                             aria-label={`Remove ${npc ? npc.name : 'this person'} from ${quest.title}`}
                             onClick={() =>
-                              void save({
-                                relatedNPCIds: (quest.relatedNPCIds ?? []).filter(
+                              void save((current) => ({
+                                relatedNPCIds: (current.relatedNPCIds ?? []).filter(
                                   (existing) => existing !== id
                                 ),
-                              })
+                              }))
                             }
                             className="button-ghost rounded-full p-1 shrink-0"
                           >
@@ -477,25 +481,25 @@ const QuestDetailPage: React.FC = () => {
                   <AttachTray
                     kinds={['npc']}
                     sources={{ npc: npcs, location: locations }}
-                    attachedIds={quest.relatedNPCIds ?? []}
+                    attached={attachRefs('npc', quest.relatedNPCIds ?? [])}
                     // The list above already names each person, with their
                     // occupation and where they are. Chips under it would be
                     // the same person twice.
                     showAttachedChips={false}
                     ariaLabel={`the people in ${quest.title}`}
                     onAttach={(id) =>
-                      void save({
+                      void save((current) => ({
                         relatedNPCIds: Array.from(
-                          new Set([...(quest.relatedNPCIds ?? []), id])
+                          new Set([...(current.relatedNPCIds ?? []), id])
                         ),
-                      })
+                      }))
                     }
                     onDetach={(id) =>
-                      void save({
-                        relatedNPCIds: (quest.relatedNPCIds ?? []).filter(
+                      void save((current) => ({
+                        relatedNPCIds: (current.relatedNPCIds ?? []).filter(
                           (existing) => existing !== id
                         ),
-                      })
+                      }))
                     }
                   />
                 )}
@@ -526,7 +530,7 @@ const QuestDetailPage: React.FC = () => {
                   <AttachTray
                     kinds={['location']}
                     sources={{ npc: npcs, location: locations }}
-                    attachedIds={quest.locationId ? [quest.locationId] : []}
+                    attached={attachRefs('location', [quest.locationId])}
                     single
                     showAttachedChips={false}
                     ariaLabel={`where ${quest.title} happens`}
@@ -816,11 +820,11 @@ const QuestDetailPage: React.FC = () => {
                           type="button"
                           aria-label={`Remove ${place.name}`}
                           onClick={() =>
-                            void save({
-                              keyLocations: (quest.keyLocations ?? []).filter(
+                            void save((current) => ({
+                              keyLocations: (current.keyLocations ?? []).filter(
                                 (entry) => entry.name !== place.name
                               ),
-                            })
+                            }))
                           }
                           className="button-ghost rounded-full p-1 shrink-0"
                         >
@@ -843,12 +847,12 @@ const QuestDetailPage: React.FC = () => {
                   placeholder="Secret door"
                   clearOnSave
                   onSubmit={(value) =>
-                    save({
+                    save((current) => ({
                       keyLocations: [
-                        ...(quest.keyLocations ?? []),
+                        ...(current.keyLocations ?? []),
                         { name: value, description: '' },
                       ],
-                    })
+                    }))
                   }
                   onSaved={() => undefined}
                   onCancel={closeEditor}

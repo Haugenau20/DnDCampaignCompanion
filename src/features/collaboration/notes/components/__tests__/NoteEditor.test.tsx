@@ -171,6 +171,23 @@ describe('NoteEditor', () => {
       expect(screen.getByRole('button', { name: /archive/i })).toBeDisabled();
       expect(screen.getByRole('button', { name: /delete/i })).toBeDisabled();
     });
+
+    // FUNC-001: a note from another campaign is fetched by the page, and the
+    // active campaign's lookup never has it. Its text must still show.
+    test('shows a note the active campaign cannot look up, when it is handed one', () => {
+      setupMocks({ note: undefined });
+      const elsewhere = makeNote({
+        title: 'Old Quest Note',
+        content: 'Written in the side campaign.',
+        campaignId: 'campaign-other',
+      });
+      render(<NoteEditor noteId="note-1" note={elsewhere} readOnly />);
+      expect(screen.getByPlaceholderText('Untitled note')).toHaveValue('Old Quest Note');
+      expect(screen.getByPlaceholderText('Write your note here...')).toHaveValue(
+        'Written in the side campaign.'
+      );
+      expect(screen.getByText(/^5 words/)).toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------

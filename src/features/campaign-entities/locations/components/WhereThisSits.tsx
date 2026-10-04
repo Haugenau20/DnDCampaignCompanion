@@ -5,6 +5,7 @@ import { ArrowUpRight } from 'lucide-react';
 import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
+import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import { usePendingWrite } from 'shared/components/row-controls/usePendingWrite';
 import { EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
 import { Location } from '../types';
@@ -161,7 +162,7 @@ export const WhereThisSits: React.FC<WhereThisSitsProps> = ({
    * record already had and says nothing.
    */
   const unofferable = useMemo(
-    () => invalidParentIdsFor(locations, location.id, index),
+    () => attachRefs('location', invalidParentIdsFor(locations, location.id, index)),
     [locations, location.id, index]
   );
 
@@ -248,8 +249,8 @@ export const WhereThisSits: React.FC<WhereThisSitsProps> = ({
           <AttachTray
             kinds={['location']}
             sources={{ location: locations as Location[] }}
-            attachedIds={parentId ? [parentId] : []}
-            excludeIds={unofferable}
+            attached={attachRefs('location', [parentId])}
+            exclude={unofferable}
             single
             triggerLabel="Move elsewhere"
             ariaLabel={`the place holding ${location.name}`}

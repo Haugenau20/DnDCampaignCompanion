@@ -3,6 +3,15 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { MemoryRouter, matchRoutes } from "react-router-dom";
 import NPCDetailPage from "../NPCDetailPage";
+import { resolveRecordChange } from '@/test-utils/update-after-reading';
+
+// T083: a list change goes to the context as a function of the stored
+// record. Resolve it the way the context's transaction does -- against
+// `mockStoredRecords[id]` when a test says the server holds something newer
+// than the page's copy, and against the page's own copy otherwise -- so the
+// write mocks below still see plain fields.
+const mockResolveChange = resolveRecordChange;
+let mockStoredRecords: Record<string, any> = {};
 
 // ---------------------------------------------------------------------------
 // react-router-dom mocks
@@ -153,12 +162,23 @@ jest.mock("features/campaign-entities", () => ({
     ...mockNPCDataReturn,
     isLoading: mockNPCDataReturn.loading,
     refreshNPCs: mockRefreshNPCs,
-    updateNPC: mockUpdateNPC,
+    updateNPC: (id: string, change: any) =>
+      mockUpdateNPC(
+        id,
+        mockResolveChange(change, mockStoredRecords[id] ?? mockNPCDataReturn.npcs.find((n) => n.id === id))
+      ),
     updateNPCNote: mockUpdateNPCNote,
     deleteNPC: mockDeleteNPC,
   }),
   useQuests: () => ({ getQuestById: mockGetQuestById, quests: mockQuests }),
-  useRumors: () => ({ rumors: mockRumors, updateRumor: mockUpdateRumor }),
+  useRumors: () => ({
+    rumors: mockRumors,
+    updateRumor: (id: string, change: any) =>
+      mockUpdateRumor(
+        id,
+        mockResolveChange(change, mockStoredRecords[id] ?? mockRumors.find((r) => r.id === id))
+      ),
+  }),
   useLocations: () => ({ locations: mockLocations }),
   // The real resolver, not a stub: the page's contract is that it reuses the
   // directories' answer rather than inventing its own.
@@ -300,6 +320,7 @@ function identityCard(): HTMLElement {
 // ---------------------------------------------------------------------------
 describe("NPCDetailPage", () => {
   beforeEach(() => {
+  mockStoredRecords = {};
     jest.clearAllMocks();
     mockNpcId = "npc-1";
     mockUser = { uid: "user-1" };
@@ -831,12 +852,11 @@ describe("NPCDetailPage", () => {
       fireEvent.click(screen.getByText("Save description"));
 
       await waitFor(() =>
-        expect(mockUpdateNPC).toHaveBeenCalledWith(
-          expect.objectContaining({
-            id: "npc-1",
-            description: "A wizard, much changed.",
-          })
-        )
+        // The field alone (T083): sending the page's whole copy reverted
+        // whatever another player changed since it loaded.
+        expect(mockUpdateNPC).toHaveBeenCalledWith("npc-1", {
+          description: "A wizard, much changed.",
+        })
       );
     });
 
@@ -923,10 +943,10 @@ describe("NPCDetailPage", () => {
     // The listener would deliver the write; here the mock plays its part, so
     // the page re-renders the record as the server now has it.
     const persistWrites = () =>
-      mockUpdateNPC.mockImplementation(async (npc: any) => {
+      mockUpdateNPC.mockImplementation(async (npcId: string, patch: any) => {
         mockNPCDataReturn = {
           ...mockNPCDataReturn,
-          npcs: mockNPCDataReturn.npcs.map((n) => (n.id === npc.id ? npc : n)),
+          npcs: mockNPCDataReturn.npcs.map((n) => (n.id === npcId ? { ...n, ...patch } : n)),
         };
       });
 
@@ -939,7 +959,8 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "npc-1", occupation: "" })
+          "npc-1",
+          expect.objectContaining({ occupation: "" })
         )
       );
       const prompt = await screen.findByRole("button", { name: /What do they do\?/ });
@@ -954,7 +975,8 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "npc-1", title: "" })
+          "npc-1",
+          expect.objectContaining({ title: "" })
         )
       );
     });
@@ -967,7 +989,8 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "npc-1", background: "" })
+          "npc-1",
+          expect.objectContaining({ background: "" })
         )
       );
     });
@@ -1041,6 +1064,7 @@ describe("NPCDetailPage", () => {
       fireEvent.click(screen.getByText("Save description"));
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenLastCalledWith(
+          "npc-1",
           expect.objectContaining({ description: "Second time lucky." })
         )
       );
@@ -1246,12 +1270,31 @@ describe("NPCDetailPage", () => {
       fireEvent.click(screen.getByText("Save note"));
 
       await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
-      expect(mockUpdateNPC.mock.calls[0][0].notes).toEqual([
+      expect(mockUpdateNPC.mock.calls[0][0]).toBe("npc-1");
+      expect(mockUpdateNPC.mock.calls[0][1].notes).toEqual([
         { date: "2025-05-31", text: "Rode to Orthanc.", author: "Zendikarr" },
         { date: "2025-04-02", text: "An older note, no author recorded." },
       ]);
       // The listener carries the write (T032).
       expect(mockRefreshNPCs).not.toHaveBeenCalled();
+    });
+
+    it("edits the note in the notes the NPC has now, keeping one added meanwhile (T083)", async () => {
+      const added = { date: "2025-06-01", text: "Left for the Grey Havens.", author: "Elanor" };
+      mockStoredRecords["npc-1"] = { ...fullNPC, notes: [...fullNPC.notes, added] };
+      renderPage();
+      fireEvent.click(editMay());
+      fireEvent.change(screen.getByLabelText("Note from 31/05/2025"), {
+        target: { value: "Rode to Orthanc." },
+      });
+      fireEvent.click(screen.getByText("Save note"));
+
+      await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+      expect(mockUpdateNPC.mock.calls[0][1].notes).toEqual([
+        { date: "2025-05-31", text: "Rode to Orthanc.", author: "Zendikarr" },
+        { date: "2025-04-02", text: "An older note, no author recorded." },
+        added,
+      ]);
     });
 
     it("deletes a note only once the delete is confirmed", async () => {
@@ -1261,7 +1304,8 @@ describe("NPCDetailPage", () => {
 
       fireEvent.click(screen.getByText("Confirm delete"));
       await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
-      expect(mockUpdateNPC.mock.calls[0][0].notes).toEqual([
+      expect(mockUpdateNPC.mock.calls[0][0]).toBe("npc-1");
+      expect(mockUpdateNPC.mock.calls[0][1].notes).toEqual([
         { date: "2025-05-31", text: "Rode to Isengard.", author: "Zendikarr" },
       ]);
       expect(mockDeleteNPC).not.toHaveBeenCalled();
@@ -1323,7 +1367,8 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "npc-1", name: "Gandalf the White" })
+          "npc-1",
+          expect.objectContaining({ name: "Gandalf the White" })
         )
       );
     });
@@ -1338,6 +1383,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({ personality: "Short-tempered with fools." })
         )
       );
@@ -1356,6 +1402,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({ status: "deceased" })
         )
       );
@@ -1373,6 +1420,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({ relationship: "hostile" })
         )
       );
@@ -1388,6 +1436,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({ occupation: "Istari" })
         )
       );
@@ -1418,6 +1467,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({ tags: ["wizard", "istari", "grey"] })
         )
       );
@@ -1425,8 +1475,25 @@ describe("NPCDetailPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove the tag wizard" }));
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({ tags: ["istari"] })
         )
+      );
+    });
+
+    // T083: the page's copy can be behind the server. A list is worked out
+    // from the NPC as stored, so a tag another player added stays.
+    it("adds a tag to the tags the NPC has now, not to the page's copy", async () => {
+      mockStoredRecords["npc-1"] = { ...fullNPC, tags: ["wizard", "istari", "ring-finder"] };
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Add another tag/ }));
+      fireEvent.change(screen.getByLabelText("Add a tag"), { target: { value: "grey" } });
+      fireEvent.click(screen.getByText("Add tag"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith("npc-1", {
+          tags: ["wizard", "istari", "ring-finder", "grey"],
+        })
       );
     });
   });
@@ -1478,6 +1545,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({
             connections: expect.objectContaining({
               relatedQuests: ["quest-1", "quest-missing", "quest-2"],
@@ -1502,7 +1570,8 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateRumor).toHaveBeenCalledWith(
-          expect.objectContaining({ id: "rumor-1", relatedNPCs: ["npc-1"] })
+          "rumor-1",
+          expect.objectContaining({ relatedNPCs: ["npc-1"] })
         )
       );
       expect(mockUpdateNPC).not.toHaveBeenCalled();
@@ -1517,6 +1586,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({
             locationId: "mines-of-moria",
             location: "Mines of Moria",
@@ -1539,6 +1609,102 @@ describe("NPCDetailPage", () => {
       // Saruman is attached, and appears once: in the relationships list.
       expect(screen.getAllByText(/Saruman/)).toHaveLength(1);
     });
+
+    // DATA-008: each collection allocates its own slugs, so a place and a
+    // quest may both be `mines-of-moria`. A relation is the pair, never the id.
+    describe("when records of different kinds share an id", () => {
+      const setNPC = (npc: any) => {
+        mockNPCDataReturn = { npcs: [npc, otherNPC, bareNPC], loading: false, error: null };
+      };
+      const option = (name: string) =>
+        within(screen.getByRole("listbox")).getByRole("option", { name: new RegExp(name) });
+
+      it("attaches the quest without touching the place that shares its id", async () => {
+        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        mockQuests = [
+          ...mockQuests,
+          { id: "mines-of-moria", title: "Clear the Mines", status: "active" },
+        ];
+        renderPage();
+        openTray();
+        expect(option("Clear the Mines")).toHaveAttribute("aria-selected", "false");
+
+        fireEvent.click(option("Clear the Mines"));
+
+        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+        const [npcId, written] = mockUpdateNPC.mock.calls[0];
+        expect(npcId).toBe("npc-1");
+        expect(written.connections.relatedQuests).toContain("mines-of-moria");
+        // Untouched: the patch never names the place (T083).
+        expect(written).not.toHaveProperty("locationId");
+      });
+
+      it("detaches the quest and keeps the person who shares its id", async () => {
+        setNPC({
+          ...fullNPC,
+          connections: { ...fullNPC.connections, relatedQuests: ["npc-2"] },
+        });
+        mockQuests = [{ id: "npc-2", title: "Saruman's Treachery", status: "active" }];
+        renderPage();
+        openTray();
+
+        fireEvent.click(option("Saruman's Treachery"));
+
+        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+        const [npcId, written] = mockUpdateNPC.mock.calls[0];
+        expect(npcId).toBe("npc-1");
+        expect(written.connections.relatedQuests).toEqual([]);
+        expect(written.connections.relatedNPCs).toEqual(["npc-2", "npc-missing"]);
+      });
+
+      it("detaches the rumour and keeps the place that shares its id", async () => {
+        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        mockRumors = [
+          {
+            id: "mines-of-moria",
+            title: "Drums in the deep",
+            status: "unconfirmed",
+            relatedNPCs: ["npc-1"],
+          },
+        ];
+        renderPage();
+        openTray();
+
+        fireEvent.click(option("Drums in the deep"));
+
+        await waitFor(() =>
+          expect(mockUpdateRumor).toHaveBeenCalledWith(
+            "mines-of-moria",
+            expect.objectContaining({ relatedNPCs: [] })
+          )
+        );
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
+      });
+
+      it("detaches the place and keeps the rumour that shares its id", async () => {
+        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        mockRumors = [
+          {
+            id: "mines-of-moria",
+            title: "Drums in the deep",
+            status: "unconfirmed",
+            relatedNPCs: ["npc-1"],
+          },
+        ];
+        renderPage();
+        openTray();
+
+        fireEvent.click(option("Mines of Moria"));
+
+        await waitFor(() =>
+          expect(mockUpdateNPC).toHaveBeenCalledWith(
+            "npc-1",
+            expect.objectContaining({ locationId: "", location: "" })
+          )
+        );
+        expect(mockUpdateRumor).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -1558,6 +1724,7 @@ describe("NPCDetailPage", () => {
 
       return waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({
             connections: expect.objectContaining({
               affiliations: ["The Fellowship", "Istari", "The White Council"],
@@ -1575,6 +1742,7 @@ describe("NPCDetailPage", () => {
 
       await waitFor(() =>
         expect(mockUpdateNPC).toHaveBeenCalledWith(
+          "npc-1",
           expect.objectContaining({
             connections: expect.objectContaining({ affiliations: ["The Fellowship"] }),
           })
@@ -1669,7 +1837,9 @@ describe("NPCDetailPage", () => {
 
       await act(() => mockImageOptions.save(portrait));
 
-      expect(mockUpdateNPC).toHaveBeenCalledWith({ ...fullNPC, image: portrait });
+      // The portrait alone (T083, IMG-002): the whole copy would carry its
+      // other fields back over newer changes.
+      expect(mockUpdateNPC).toHaveBeenCalledWith("npc-1", { image: portrait });
       // The listener carries the write (T032).
       expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
@@ -1680,7 +1850,7 @@ describe("NPCDetailPage", () => {
 
       await act(() => mockImageOptions.save(null));
 
-      expect(mockUpdateNPC).toHaveBeenCalledWith({ ...fullNPC, image: null });
+      expect(mockUpdateNPC).toHaveBeenCalledWith("npc-1", { image: null });
     });
   });
 

@@ -175,6 +175,53 @@ describe("sweeping orphaned images", () => {
     expect(result.failed).toEqual([]);
   });
 
+  // T084 (IMG-003): an upload whose document write is still on its way --
+  // queued in a tab that went offline -- is not an orphan, however old the
+  // file. The client records it in `pendingUploads` before uploading and
+  // removes the entry once the document is written; the entry holds the file
+  // for a lease, and an abandoned one expires.
+  describe("uploads still waiting for their document", () => {
+    const PENDING = "groups/g1/campaigns/c1/npcs/n1/7d3e2b1c.webp";
+    const ENTRY = "groups/g1/pendingUploads/7d3e2b1c.webp";
+
+    beforeEach(async () => {
+      await imageBucket().file(PENDING).save(Buffer.from("x"), {contentType: "image/webp"});
+      await db.doc(ENTRY).set({path: PENDING, uid: "frodo", createdAt: new Date()});
+    });
+
+    it("keeps an unreferenced file whose upload is still pending, past the day", async () => {
+      const result = await sweepOrphanedImages(later());
+
+      expect(await exists(PENDING)).toBe(true);
+      expect(result.deleted).not.toContain(PENDING);
+      expect((await db.doc(ENTRY).get()).exists).toBe(true);
+    });
+
+    it("lets an abandoned upload go once its lease is over, entry and file", async () => {
+      const result = await sweepOrphanedImages(new Date(Date.now() + 31 * DAY));
+
+      expect(await exists(PENDING)).toBe(false);
+      expect(result.deleted).toContain(PENDING);
+      expect((await db.doc(ENTRY).get()).exists).toBe(false);
+    });
+
+    it("clears an expired entry whose document did land, and keeps the file", async () => {
+      // The client's own delete of the entry failed after its write landed.
+      await db.doc("groups/g1/campaigns/c1/npcs/n3").set({name: "Pippin", image: stored(PENDING)});
+
+      await sweepOrphanedImages(new Date(Date.now() + 31 * DAY));
+
+      expect(await exists(PENDING)).toBe(true);
+      expect((await db.doc(ENTRY).get()).exists).toBe(false);
+    });
+
+    it("lets an entry hold only the file it names", async () => {
+      await sweepOrphanedImages(later());
+
+      expect(await exists(FILES.npcReplaced)).toBe(false);
+    });
+  });
+
   // T084 (PERF2-004): the sweep's work is bounded, however large the bucket.
   describe("bounded work", () => {
     const ORPHANS = [
