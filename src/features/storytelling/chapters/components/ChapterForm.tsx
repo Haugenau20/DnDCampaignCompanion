@@ -150,8 +150,9 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
     }
   };
 
+  /** Back to the chapter being edited, or to the index when creating one. */
   const handleCancel = () => {
-    navigateToPage(`/story/chapters/${chapter?.id}`);
+    navigateToPage(chapter ? `/story/chapters/${chapter.id}` : '/story/chapters');
   };
 
   return (

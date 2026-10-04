@@ -51,7 +51,6 @@ adjusted for the images focus above.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| low | T095 | Cancelling a new chapter opens the first chapter | S | open | Confusing, nothing lost |
 | low | T096 | Note dates show the previous day west of UTC | S | open | Display only; stored value correct |
 | low | T097 | "New NPC named …" in the palette drops the name | S | open | Retype the name |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
@@ -356,16 +355,6 @@ pass 4.
 
 - **Catch**: the editor needs to be told which fields are required; the caller
   decides. **Findings**: FUNC-003 (05).
-- **Source**: code review, 2026-10-04
-
-### T095 — Cancelling a new chapter opens the first chapter
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-Cancel in `ChapterForm.tsx:154` goes to `/story/chapters/${chapter?.id}`, which
-is `undefined` in create mode, and the reader resolves that to the first
-chapter. Nothing is written.
-
-- **Findings**: BROWSER-002 (14). **Catch**: none found.
 - **Source**: code review, 2026-10-04
 
 ### T096 — Note dates show the previous day west of UTC
