@@ -248,8 +248,10 @@ tabs.
   arrays (objectives, notes) need stable element ids or transactions, and
   overlapping prose edits need a decision on conflict behaviour. And
   `QuestContext.objectives.test.tsx` asserts the stale fields: a field-only
-  patch fails four tests. They pin the defect, like #1414/#1415, and need
-  rewriting against the requirement with the maintainer's agreement. Plan first.
+  patch fails four tests. They pin the defect, like #1414/#1415. **Approved
+  (maintainer, 2026-10-04): rewrite them against the requirement**, so that an
+  objective write carries only `objectives`. Say so in the PR, test by test.
+  Plan first.
 - **Source**: code review, 2026-10-04
 
 ### T084 — Image edge cases: offline uploads swept, the 2 MiB boundary, an unbounded sweep
