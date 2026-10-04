@@ -160,6 +160,8 @@ jest.mock('features/campaign-entities', () => {
     useNPCs: () => ({ npcs: mockNPCs }),
     useLocations: () => ({ locations: mockLocations, createLocation: mockCreateLocation }),
     useRumors: () => ({ rumors: mockRumors }),
+    // The real helper: a rumour is named the way its own list names it.
+    rumorTitleText: jest.requireActual('shared/utils/rumor-name').rumorTitleText,
     // The real modules, not stubs: the page's contract is that the row and the
     // page say the same things about a quest.
     ...actualPresentation,
@@ -175,6 +177,7 @@ jest.mock('features/campaign-entities', () => {
 
 jest.mock('features/collaboration', () => ({
   useNotes: () => ({ notes: mockNotes }),
+  displayTitle: jest.requireActual('features/collaboration/notes/utils/note-title').displayTitle,
 }));
 
 const mockNavigateToPage = jest.fn();
@@ -474,6 +477,26 @@ describe('what points here', () => {
     mockRumors = [
       { id: 'r-1', title: "Signs of Smaug's activity", status: 'confirmed', convertedToQuestId: 'reclaim-erebor' },
     ];
+  });
+
+  it('names an untitled rumour and note by their content, as their own lists do (DUP-001)', () => {
+    const savedRumors = mockRumors;
+    const savedNotes = mockNotes;
+    mockRumors = [
+      { ...savedRumors[0], title: '', content: 'Ravens gather at the Mountain' },
+    ];
+    mockNotes = [
+      { ...savedNotes[0], title: 'New Note', content: 'The thrush knocked at the grey stone' },
+    ];
+    try {
+      renderPage();
+      const points = section('What points here');
+      expect(within(points).getByText('Ravens gather at the Mountain')).toBeInTheDocument();
+      expect(within(points).getByText('The thrush knocked at the grey stone')).toBeInTheDocument();
+    } finally {
+      mockRumors = savedRumors;
+      mockNotes = savedNotes;
+    }
   });
 
   it('offers nothing editable — these belong to the records that wrote them', () => {

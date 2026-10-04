@@ -1,4 +1,5 @@
 // src/shared/components/attach-tray/attachCandidates.ts
+import { rumorTitleText } from "shared/utils/rumor-name";
 
 /** The entity collections the tray can offer. */
 export type AttachKind = "npc" | "location" | "quest" | "rumor";
@@ -131,7 +132,9 @@ export function buildCandidates(
       case "quest":
         return { name: record.title, lineText: titleCase(record.status) };
       case "rumor":
-        return { name: record.title, lineText: rumorStatusLabel(record.status) };
+        // A rumour's title is optional; its name comes from what was heard,
+        // as in its own list (DUP-001). The raw title is often blank.
+        return { name: rumorTitleText(record), lineText: rumorStatusLabel(record.status) };
     }
   };
 

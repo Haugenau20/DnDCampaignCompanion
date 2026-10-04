@@ -31,7 +31,6 @@ adjusted for the images focus above.
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T086 | Failed actions give no visible reason or retry | M | open | Data survives, but the user can't tell or try again |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, attachments | L | open | Cycles, duplicate orders, extra quests per retry |
-| medium | T089 | Search keeps a stale index; untitled notes/rumours unnamed | M | open | False misses and old results |
 | medium | T090 | Keyboard and focus problems in shared components | M | open | Invisible focus on every button; keys hijacked in the attach tray |
 | medium | T091 | Auth: stale sign-in restores old user; device link blocked | M | open | Wrong context after sign-out; device approval dead-ends |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
@@ -266,21 +265,6 @@ Each of these decides from a stale local copy, then writes:
   independent; can go first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
-- **Source**: code review, 2026-10-04
-
-### T089 — Search keeps a stale index, and untitled notes and rumours show no name
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- `SearchContext.tsx:193-196` returns early when every collection is empty, so
-  an empty campaign never becomes ready, and one that drops to zero keeps its
-  old index (REACT-006, 06).
-- A query typed before the data arrives isn't rerun when the index updates
-  (REACT-007). Probably what pass 5 saw when Search stalled at 15 of 30 results
-  (18).
-- Content-only rumours (`RumorDirectory.tsx:369` creates with `title: ''`) and
-  notes appear blank in search, the attach tray and quest backlinks: those
-  read the raw title instead of the existing `rumor-title` / `note-title`
-  helpers (DUP-001, 09).
 - **Source**: code review, 2026-10-04
 
 ### T090 — Keyboard and focus problems in shared components

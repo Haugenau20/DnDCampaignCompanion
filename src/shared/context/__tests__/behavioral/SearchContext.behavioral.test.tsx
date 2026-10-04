@@ -3,6 +3,7 @@
 import React from "react";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { SearchProvider, useSearch } from "../../SearchContext";
+import { useSearch as useDebouncedSearch } from "../../../hooks/useSearch";
 
 /**
  * SearchContext Behavioral Testing
@@ -47,17 +48,21 @@ jest.mock("features/campaign-entities", () => ({
 
 jest.mock("features/collaboration", () => ({
   useNotes: () => mockUseNotes(),
+  // The real helper: a note is named the way its own list names it (DUP-001).
+  displayTitle: jest.requireActual("features/collaboration/notes/utils/note-title").displayTitle,
 }));
 
 // ---------------------------------------------------------------------------
 // Mock SearchService — we want to control what search() returns
 // ---------------------------------------------------------------------------
 const mockInitializeIndex = jest.fn();
+const mockClearIndex = jest.fn();
 const mockSearch = jest.fn();
 
 jest.mock("core/services/search/SearchService", () => ({
   SearchService: jest.fn().mockImplementation(() => ({
     initializeIndex: mockInitializeIndex,
+    clearIndex: mockClearIndex,
     search: mockSearch,
   })),
 }));
@@ -686,6 +691,86 @@ describe("SearchContext Behavioral Testing", () => {
       const [indexArg] = mockInitializeIndex.mock.calls[0];
       expect(indexArg.npc).toHaveLength(2);
       expect(indexArg.npc[1].metadata.title).toBe("Frodo");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // T089: the index follows what is loaded, including nothing (REACT-006),
+  // and the query on screen follows the index (REACT-007).
+  // -------------------------------------------------------------------------
+  describe("an index that matches the campaign", () => {
+    const allEmpty = () => {
+      mockUseChapterData.mockReturnValue({ chapters: [] });
+      mockUseNPCData.mockReturnValue({ npcs: [] });
+      mockUseLocationData.mockReturnValue({ locations: [] });
+      mockUseQuests.mockReturnValue({ quests: [] });
+      mockUseRumorData.mockReturnValue({ rumors: [] });
+      mockUseNotes.mockReturnValue({ notes: [] });
+    };
+
+    test("an empty campaign that has finished loading is ready, with nothing in it", async () => {
+      allEmpty();
+      const { result } = renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => expect(result.current.isIndexReady).toBe(true));
+      expect(mockClearIndex).toHaveBeenCalled();
+    });
+
+    test("a campaign that drops to nothing forgets the records it had", async () => {
+      const { result, rerender } = renderHook(() => useSearch(), { wrapper });
+      await waitFor(() => expect(mockInitializeIndex).toHaveBeenCalledTimes(1));
+
+      allEmpty();
+      rerender();
+
+      await waitFor(() => expect(mockClearIndex).toHaveBeenCalled());
+      expect(result.current.isIndexReady).toBe(true);
+    });
+
+    test("is not ready while a collection is still loading", async () => {
+      mockUseNPCData.mockReturnValue({ npcs: [], isLoading: true });
+      const { result, rerender } = renderHook(() => useSearch(), { wrapper });
+
+      await new Promise((r) => setTimeout(r, 50));
+      expect(result.current.isIndexReady).toBe(false);
+      expect(mockInitializeIndex).not.toHaveBeenCalled();
+
+      mockUseNPCData.mockReturnValue({ npcs: defaultNPCs, isLoading: false });
+      rerender();
+
+      await waitFor(() => expect(result.current.isIndexReady).toBe(true));
+      expect(mockInitializeIndex.mock.calls[0][0].npc).toHaveLength(1);
+    });
+
+    test("reruns the query on screen when the index changes", async () => {
+      // Typed before the NPCs arrived: the first run finds nothing.
+      mockUseNPCData.mockReturnValue({ npcs: [] });
+      mockSearch.mockImplementation(() => []);
+      const { result, rerender } = renderHook(() => useDebouncedSearch({ debounceMs: 0 }), {
+        wrapper,
+      });
+      act(() => result.current.onSearch("Gandalf"));
+      await waitFor(() => expect(mockSearch).toHaveBeenCalledWith("Gandalf"));
+      const runsBefore = mockSearch.mock.calls.length;
+
+      const hit = [{ id: "npc-1", type: "npc", title: "Gandalf", matches: [] }];
+      mockSearch.mockImplementation(() => hit);
+      mockUseNPCData.mockReturnValue({ npcs: defaultNPCs });
+      rerender();
+
+      await waitFor(() => expect(mockSearch.mock.calls.length).toBeGreaterThan(runsBefore));
+      await waitFor(() => expect(result.current.results).toEqual(hit));
+    });
+
+    test("names a note with no title by its content, as its own list does (DUP-001)", async () => {
+      mockUseNotes.mockReturnValue({
+        notes: [{ id: "note-2", title: "", content: "Met a ranger called Strider" }],
+      });
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => expect(mockInitializeIndex).toHaveBeenCalled());
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.note[0].metadata.title).toBe("Met a ranger called Strider");
     });
   });
 });
