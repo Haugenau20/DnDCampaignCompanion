@@ -211,7 +211,14 @@ import {
         if (newUsernameSnapshot.exists()) {
           throw new Error('Username is already taken in this group');
         }
-        
+
+        // Read before any write, as a transaction requires. A rename made by
+        // the profile editor before T080 wrote the name without reserving it,
+        // so the old name may be unreserved -- deleting it then is refused by
+        // the rules -- or reserved to somebody else.
+        const oldUsernameDocRef = doc(this.db, 'groups', groupId, 'usernames', currentUsernameLower);
+        const oldUsernameSnapshot = await transaction.get(oldUsernameDocRef);
+
         // Update user profile
         const userDocRef = doc(this.db, 'groups', groupId, 'users', userId);
         transaction.update(userDocRef, {
@@ -225,9 +232,10 @@ import {
           createdAt: new Date()
         });
         
-        // Delete old username reservation
-        const oldUsernameDocRef = doc(this.db, 'groups', groupId, 'usernames', currentUsernameLower);
-        transaction.delete(oldUsernameDocRef);
+        // Release the old name, only if it is this user's to release
+        if (oldUsernameSnapshot.exists() && oldUsernameSnapshot.data().userId === userId) {
+          transaction.delete(oldUsernameDocRef);
+        }
       });
       this.forgetGroupProfile(groupId, userId);
 }

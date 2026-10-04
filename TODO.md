@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| critical | T080 | Users can rewrite server-owned fields on their own profiles | M | open | Self-granted unlimited AI usage; an admin's removal redirected to another member |
+| critical | T080 | Users can rewrite server-owned fields on their own profiles | M | in progress | Self-granted unlimited AI usage; an admin's removal redirected to another member. Fixed rules await pasting into the console |
 | high | T081 | Two simultaneous same-name creates keep one record | M | open | A successful create silently disappears |
 | high | T082 | A save in flight lands in the campaign you switch to | M | open | Content misfiled; an image replacement deletes a still-used file |
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
@@ -43,7 +43,7 @@ adjusted for the images focus above.
 | medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
 | medium | T098 | Chapters with identical text share reading progress | S | open | Completion never recorded for the second |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
-| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen; its read-back is T080's prerequisite |
+| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; makes T080's hole easy to find until fixed |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
@@ -175,24 +175,28 @@ Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 ### T080 — Users can rewrite server-owned fields on their own profiles
 **Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
 
-The self-update rules refuse only a short list of keys, so a member can write
-anything else on their own documents: grant themselves unlimited AI usage,
-change the identity fields an admin's "remove member" acts on, delete their
-roster entry while keeping campaign access, or edit the username that account
-cleanup later deletes as theirs.
+`firestore.rules.prod` now limits both profiles to the fields the client
+writes, and refuses raw deletes of group profiles. Production keeps the old
+rules (read back 2026-10-04: identical to the repo before the fix) until
+they are pasted into the console, so every hole below is open there. What is
+left:
 
-- **Where**: `firebase/firestore.rules.prod:195-196` (global profile: only
-  `isAdmin` and `groups` refused, so usage counters and `isUnlimited` are
-  writable); `:235-236` (group profile: only `role` refused); raw self-delete
-  at `:245`.
-- **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01). SEC-002 also needs the
-  admin UI to target members by document path, not a profile field; SEC-005
-  needs cleanup to check who owns a reservation.
-- **Catch**: the reviews tested the repo copy, and the live rules are in the
-  Firebase console. Read them back before changing anything (T105). Once fixed,
-  audit existing usage values.
-- **Touches**: the rules, `firestore-rules-prod.test.ts`, the admin member
-  actions, `removeUserFromGroup` / `deleteUser` cleanup.
+- **Paste the rules** (maintainer): `firestore.rules.prod` into the console.
+- **Admin UI** (SEC-002): `memberId()` (`admin/types.ts:40-41`) prefers the
+  stored `userId`, and the member list spreads stored data over the document
+  id. Profiles written before the rules change can still carry a forged one,
+  so target members by document id only.
+- **Cleanup** (SEC-005): `removeUserFromGroup` / `deleteUser` delete the
+  reservation named by the profile's `username` without checking its owner.
+  Still reachable without a forged write: until the rules change, the profile
+  editor renamed without reserving, so a profile's name may be one somebody
+  else has since reserved.
+- **Audit, once the rules are live**: profiles with `entityExtractionUsage`
+  set to unlimited or with counters below the calls made; group profiles whose
+  `userId`/`id` differs from the document id; and reservations that disagree
+  with usernames (a profile name with no reservation, a reservation whose
+  owner goes by another name).
+- **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01).
 - **Source**: code review, 2026-10-04
 
 ### T081 — Two simultaneous creates of the same name keep only one record
@@ -900,10 +904,10 @@ drift with nothing to notice it.
   rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
   `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
   are console-only and never deployed by CI.
-- **Catch**: nobody has compared the `.prod` copies with the live rules; the
-  code review could not either. The first deploy overwrites whatever is live,
-  so read the console back and diff it first. That read-back is also T080's
-  prerequisite. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
+- **Catch**: the live Firestore rules were read back on 2026-10-04 and matched
+  `firestore.rules.prod`; the Storage rules have not been compared. The first
+  deploy overwrites whatever is live, so read the console back and diff it
+  first. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
   or from CI decides whether the deploy service account needs rules permissions.
 - **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
   its `firestore.rules` key at `firestore.rules`; it has no such key.

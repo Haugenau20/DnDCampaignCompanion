@@ -113,6 +113,66 @@ describe("global admin", () => {
   });
 });
 
+describe("server-owned profile fields (T080)", () => {
+  const usage = {isUnlimited: false, daily: {count: 10}, weekly: {count: 30}, monthly: {count: 100}};
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc("users/frodo").update({entityExtractionUsage: usage})
+    );
+  });
+
+  it("a member cannot grant themselves unlimited AI usage (SEC-001)", async () => {
+    await assertFails(as("frodo").doc("users/frodo").update({"entityExtractionUsage.isUnlimited": true}));
+  });
+
+  it("nor reset, remove or replace their usage counters", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc("users/frodo").update({"entityExtractionUsage.daily.count": 0}));
+    await assertFails(db.doc("users/frodo").update({entityExtractionUsage: {}}));
+    // A whole-document set is an update of every key it drops.
+    await assertFails(db.doc("users/frodo").set({id: "frodo", groups: [G], activeGroupId: G}));
+  });
+
+  it("nor add a field the client never writes", async () => {
+    await assertFails(as("frodo").doc("users/frodo").update({id: "gandalf"}));
+    await assertFails(as("frodo").doc("users/frodo").update({anything: true}));
+  });
+
+  it("a member cannot change the uid their group profile names (SEC-002)", async () => {
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo`).update({userId: "gandalf"}));
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo`).update({id: "gandalf"}));
+  });
+
+  it("nor when a legacy profile never had the field", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`groups/${G}/users/frodo`).set({username: "Frodo", role: "member"})
+    );
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo`).update({userId: "gandalf"}));
+  });
+
+  it("a member cannot take another member's name without its reservation (SEC-005)", async () => {
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo`).update({username: "Gandalf"}));
+  });
+
+  it("nor take an unreserved name without reserving it", async () => {
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo`).update({username: "MrUnderhill"}));
+  });
+
+  it("a group admin cannot rewrite another member's identity or name", async () => {
+    await assertFails(as("gandalf").doc(`groups/${G}/users/frodo`).update({userId: "gandalf"}));
+    await assertFails(as("gandalf").doc(`groups/${G}/users/frodo`).update({username: "Ringbearer"}));
+  });
+
+  it("a member cannot leave by deleting their group profile (SEC-004)", async () => {
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo`).delete());
+  });
+
+  it("a group admin cannot remove a member by deleting their profile", async () => {
+    await assertFails(as("gandalf").doc(`groups/${G}/users/frodo`).delete());
+  });
+});
+
 describe("signing in from another device", () => {
   // The requests hold a hash of the secret and the code the approving device
   // must type; reading one would hand a phisher the code.
@@ -158,6 +218,49 @@ describe("what members still do from the client", () => {
 
   it("a member updates their own group profile", async () => {
     await assertSucceeds(as("frodo").doc(`groups/${G}/users/frodo`).update({activeCampaignId: "c1"}));
+  });
+
+  it("a member edits their characters and picks one, as the roster does", async () => {
+    await assertSucceeds(as("frodo").doc(`groups/${G}/users/frodo`).update({
+      characters: [{id: "ch1", name: "Mr Underhill"}],
+      activeCharacterId: "ch1",
+    }));
+  });
+
+  it("a member renames to a name with æ/ø/å, whose reservation is lower-cased", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.runTransaction(async (transaction) => {
+      const next = db.doc(`groups/${G}/usernames/æowyn`);
+      await transaction.get(next);
+      transaction.update(db.doc(`groups/${G}/users/frodo`), {username: "Æowyn"});
+      transaction.set(next, {userId: "frodo", originalUsername: "Æowyn", createdAt: new Date()});
+      transaction.delete(db.doc(`groups/${G}/usernames/frodo`));
+    }));
+  });
+
+  it("a member renamed before T080, whose name was never reserved, can rename again", async () => {
+    // The profile editor used to write `username` alone.
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`groups/${G}/users/frodo`).update({username: "Ringbearer"})
+    );
+    const db = as("frodo");
+    const rename = (releaseOld: boolean) => db.runTransaction(async (transaction) => {
+      const next = db.doc(`groups/${G}/usernames/mrunderhill`);
+      const old = db.doc(`groups/${G}/usernames/ringbearer`);
+      await transaction.get(next);
+      await transaction.get(old);
+      transaction.update(db.doc(`groups/${G}/users/frodo`), {username: "MrUnderhill"});
+      transaction.set(next, {userId: "frodo", originalUsername: "MrUnderhill", createdAt: new Date()});
+      if (releaseOld) transaction.delete(old);
+    });
+    // Releasing the missing reservation is what changeGroupUsername used to
+    // do, and is refused; so it now skips the release.
+    await assertFails(rename(true));
+    await assertSucceeds(rename(false));
+  });
+
+  it("a member changes only the case of their name, keeping its reservation", async () => {
+    await assertSucceeds(as("frodo").doc(`groups/${G}/users/frodo`).update({username: "FRODO"}));
   });
 
   it("a member renames themselves, exactly as changeGroupUsername does", async () => {

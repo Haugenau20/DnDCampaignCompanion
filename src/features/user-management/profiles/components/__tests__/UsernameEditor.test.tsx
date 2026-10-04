@@ -6,6 +6,7 @@ import UsernameEditor from "../UsernameEditor";
 
 const mockValidateUsername = jest.fn();
 const mockUpdateGroupUserProfile = jest.fn();
+const mockChangeUsername = jest.fn();
 
 jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
@@ -39,6 +40,7 @@ function setupMocks(overrides: { profile?: any } = {}) {
   useUser.mockReturnValue({
     validateUsername: mockValidateUsername,
     updateGroupUserProfile: mockUpdateGroupUserProfile,
+    changeUsername: mockChangeUsername,
   });
 }
 
@@ -48,6 +50,7 @@ describe("UsernameEditor", () => {
     setupMocks();
     mockValidateUsername.mockResolvedValue({ isValid: true, isAvailable: true });
     mockUpdateGroupUserProfile.mockResolvedValue(undefined);
+    mockChangeUsername.mockResolvedValue(undefined);
   });
 
   test('should show "Change" button for username', () => {
@@ -163,7 +166,9 @@ describe("UsernameEditor", () => {
     await waitFor(() => expect(saveBtn).not.toBeDisabled());
   });
 
-  test("should call updateGroupUserProfile when username form is submitted", async () => {
+  // Through changeUsername, which reserves the new name in the same
+  // transaction; a bare profile write is refused by the rules (T080).
+  test("should rename through changeUsername when username form is submitted", async () => {
     render(<UsernameEditor />);
     await userEvent.click(screen.getByRole("button", { name: /change/i }));
 
@@ -177,15 +182,13 @@ describe("UsernameEditor", () => {
     await userEvent.click(saveBtn);
 
     await waitFor(() => {
-      expect(mockUpdateGroupUserProfile).toHaveBeenCalledWith(
-        "user-1",
-        expect.objectContaining({ username: "newusername" })
-      );
+      expect(mockChangeUsername).toHaveBeenCalledWith("user-1", "newusername");
     });
+    expect(mockUpdateGroupUserProfile).not.toHaveBeenCalled();
   });
 
   test("should show error when username save fails", async () => {
-    mockUpdateGroupUserProfile.mockRejectedValue(new Error("Username update failed"));
+    mockChangeUsername.mockRejectedValue(new Error("Username update failed"));
     render(<UsernameEditor />);
 
     await userEvent.click(screen.getByRole("button", { name: /change/i }));

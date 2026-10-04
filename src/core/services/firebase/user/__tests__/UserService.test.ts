@@ -414,6 +414,58 @@ describe('UserService', () => {
       await svc.changeGroupUsername('group-1', 'uid-1', 'Sam');
       expect(mockRunTransaction).toHaveBeenCalledTimes(1);
     });
+
+    /**
+     * Runs the rename against a fake transaction whose reads answer from
+     * `reservations` (path → stored data, absent = no document), and returns
+     * the transaction so its writes can be inspected.
+     */
+    async function renameWith(reservations: Record<string, Record<string, any>>) {
+      // isUsernameAvailableInGroup → available
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
+      // user profile → current username 'Frodo'
+      mockGetDoc.mockResolvedValueOnce(
+        makeDocSnapshot(true, { username: 'Frodo', role: 'member', joinedAt: '' })
+      );
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) =>
+          makeDocSnapshot(ref.path in reservations, reservations[ref.path])
+        ),
+        update: jest.fn(),
+        set: jest.fn(),
+        delete: jest.fn(),
+      };
+      mockRunTransaction.mockImplementationOnce((_db: any, fn: any) => fn(transaction));
+      await UserService.getInstance().changeGroupUsername('group-1', 'uid-1', 'Sam');
+      return transaction;
+    }
+
+    test('releases the old name when it is reserved to the user', async () => {
+      const transaction = await renameWith({ 'groups/group-1/usernames/frodo': { userId: 'uid-1' } });
+      expect(transaction.set).toHaveBeenCalledWith(
+        { path: 'groups/group-1/usernames/sam' },
+        expect.objectContaining({ userId: 'uid-1', originalUsername: 'Sam' })
+      );
+      expect(transaction.delete).toHaveBeenCalledWith({ path: 'groups/group-1/usernames/frodo' });
+    });
+
+    // A rename made by the profile editor before T080 wrote the name without
+    // reserving it. Deleting the missing reservation is refused by the rules,
+    // which would fail every later rename of that user.
+    test('still renames when the old name was never reserved', async () => {
+      const transaction = await renameWith({});
+      expect(transaction.update).toHaveBeenCalledWith(
+        { path: 'groups/group-1/users/uid-1' },
+        { username: 'Sam' }
+      );
+      expect(transaction.delete).not.toHaveBeenCalled();
+    });
+
+    test("never releases a reservation that belongs to someone else", async () => {
+      const transaction = await renameWith({ 'groups/group-1/usernames/frodo': { userId: 'uid-2' } });
+      expect(transaction.update).toHaveBeenCalled();
+      expect(transaction.delete).not.toHaveBeenCalled();
+    });
   });
 
   // ─── deleteAccount ──────────────────────────────────────────────────────────

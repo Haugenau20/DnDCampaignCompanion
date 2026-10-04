@@ -7,6 +7,7 @@ import { useUsernameEditor } from "../useUsernameEditor";
 // ---------------------------------------------------------------------------
 const mockValidateUsername = jest.fn();
 const mockUpdateGroupUserProfile = jest.fn();
+const mockChangeUsername = jest.fn();
 
 jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
@@ -38,6 +39,7 @@ function setupMocks(overrides: { user?: any; group?: any; profile?: any } = {}) 
   useUser.mockReturnValue({
     validateUsername: mockValidateUsername,
     updateGroupUserProfile: mockUpdateGroupUserProfile,
+    changeUsername: mockChangeUsername,
   });
 }
 
@@ -47,6 +49,7 @@ describe("useUsernameEditor", () => {
     setupMocks();
     mockValidateUsername.mockResolvedValue({ isValid: true, isAvailable: true });
     mockUpdateGroupUserProfile.mockResolvedValue(undefined);
+    mockChangeUsername.mockResolvedValue(undefined);
   });
 
   test("Save is disabled immediately after the editor opens", async () => {
@@ -120,7 +123,10 @@ describe("useUsernameEditor", () => {
     expect(result.current.available).toBeNull();
   });
 
-  test("submit calls updateGroupUserProfile with the new username", async () => {
+  // The name moves with its reservation, in one transaction: writing only the
+  // profile's `username` left the old name reserved and the new one free, and
+  // the rules refuse it (T080).
+  test("submit renames through changeUsername, which moves the reservation", async () => {
     const { result } = renderHook(() => useUsernameEditor());
     act(() => result.current.open());
     act(() => result.current.setValue("newusername"));
@@ -132,15 +138,13 @@ describe("useUsernameEditor", () => {
       await result.current.submit();
     });
 
-    expect(mockUpdateGroupUserProfile).toHaveBeenCalledWith(
-      "user-1",
-      expect.objectContaining({ username: "newusername" })
-    );
+    expect(mockChangeUsername).toHaveBeenCalledWith("user-1", "newusername");
+    expect(mockUpdateGroupUserProfile).not.toHaveBeenCalled();
     expect(result.current.isEditing).toBe(false);
   });
 
   test("submit surfaces a save error and keeps the editor open", async () => {
-    mockUpdateGroupUserProfile.mockRejectedValue(new Error("Username update failed"));
+    mockChangeUsername.mockRejectedValue(new Error("Username update failed"));
     const { result } = renderHook(() => useUsernameEditor());
     act(() => result.current.open());
     act(() => result.current.setValue("newusername"));
