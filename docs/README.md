@@ -30,6 +30,9 @@ diagnostics and bounded refactoring recommendations in another stacked PR.
 The [fourth-pass summary](reviews/2026-10-04/pass-4/summary.md) adds full-App
 browser workflow, recovery and legacy-data evidence, with five new findings.
 The earlier review stack is merged; the fourth pass targets main separately.
+The [fifth-pass summary](reviews/2026-10-04/pass-5/summary.md) adds four findings
+and final bounded write-failure, scale, keyboard, listener and restore evidence,
+in a PR stacked on the fourth pass.
 
 - Most of these are records of a decision or a phase, cited by name from code comments. Status
   banners reflect the state when written and may be stale; the code is the source of truth.

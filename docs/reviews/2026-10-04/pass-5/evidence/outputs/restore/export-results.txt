@@ -1,0 +1,5 @@
+⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection.
+i  Found running emulator hub for project demo-review-pass5 at http://127.0.0.1:4400
+i  Creating export directory /tmp/pass5-restore/export-fresh-20261004
+i  Exporting data to: /tmp/pass5-restore/export-fresh-20261004
+✔  Export complete

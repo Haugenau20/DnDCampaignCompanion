@@ -1,0 +1,338 @@
+[
+  {
+    "name": "restore-independent-readback-before",
+    "value": {
+      "phase": "before",
+      "docs": [
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/npcs/restore5-guide",
+          "sha256": "98f2e6d35a34e657e23e93ac1fc3bbf3f41ad3a4d387bccb6526a83773479359"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/locations/restore5-harbor",
+          "sha256": "41ab125d4c5c1bb42bcc53bed301f0e092c49ab3fb64eb3ca0df20477179cb44"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/quests/restore5-voyage",
+          "sha256": "8d35ed4ecb64f4dc8e320504d63e8b151a2ef69f1488cdf36172bd8a1a79acd6"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/chapters/restore5-arrival",
+          "sha256": "a10a648cd1faeeec23aef32b2e55db548605ff3337f3371ca4d06db5376b4066"
+        },
+        {
+          "path": "groups/pass5-group-restore/users/pass5-user-restore/notes/restore5-session",
+          "sha256": "c75c283922ac4a4ef76f55760701e0521824c86b236f72fe17f376dca6e445c7"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/saga/sagaData",
+          "sha256": "0fa164af624d8506226de8932cca9e88be7f8816a08f0a324f88ce825362772d"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/restore-diagnostics/value-types",
+          "sha256": "4fcc6dd472ba0b3a5512875eee84d05b56463d8521fb0c9d88321af02eb6236e"
+        }
+      ],
+      "storage": {
+        "sha256": "5e3d382db4dd83d59aa5742793ad6b7903409e865c83bcbc54835049f043bc15",
+        "bytes": 68,
+        "metadata": {
+          "bucket": "demo-review-pass5.appspot.com",
+          "cacheControl": "public, max-age=31536000, immutable",
+          "contentType": "image/png",
+          "md5Hash": "p12yw+He7UDYB+jSZWZ0zQ==",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "synthetic-pass5-restore-token",
+            "reviewPurpose": "pass5-synthetic-restore"
+          },
+          "name": "groups/pass5-group-restore/campaigns/review-restore/npcs/restore5-guide/restore5-image.png",
+          "size": "68"
+        }
+      }
+    }
+  },
+  {
+    "name": "restore-independent-readback-before",
+    "value": {
+      "phase": "before",
+      "docs": [
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/npcs/restore5-guide",
+          "sha256": "98f2e6d35a34e657e23e93ac1fc3bbf3f41ad3a4d387bccb6526a83773479359"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/locations/restore5-harbor",
+          "sha256": "41ab125d4c5c1bb42bcc53bed301f0e092c49ab3fb64eb3ca0df20477179cb44"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/quests/restore5-voyage",
+          "sha256": "8d35ed4ecb64f4dc8e320504d63e8b151a2ef69f1488cdf36172bd8a1a79acd6"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/chapters/restore5-arrival",
+          "sha256": "a10a648cd1faeeec23aef32b2e55db548605ff3337f3371ca4d06db5376b4066"
+        },
+        {
+          "path": "groups/pass5-group-restore/users/pass5-user-restore/notes/restore5-session",
+          "sha256": "c75c283922ac4a4ef76f55760701e0521824c86b236f72fe17f376dca6e445c7"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/saga/sagaData",
+          "sha256": "0fa164af624d8506226de8932cca9e88be7f8816a08f0a324f88ce825362772d"
+        },
+        {
+          "path": "groups/pass5-group-restore/campaigns/review-restore/restore-diagnostics/value-types",
+          "sha256": "4fcc6dd472ba0b3a5512875eee84d05b56463d8521fb0c9d88321af02eb6236e"
+        }
+      ],
+      "storage": {
+        "sha256": "5e3d382db4dd83d59aa5742793ad6b7903409e865c83bcbc54835049f043bc15",
+        "bytes": 68,
+        "metadata": {
+          "bucket": "demo-review-pass5.appspot.com",
+          "cacheControl": "public, max-age=31536000, immutable",
+          "contentType": "image/png",
+          "md5Hash": "p12yw+He7UDYB+jSZWZ0zQ==",
+          "metadata": {
+            "firebaseStorageDownloadTokens": "synthetic-pass5-restore-token",
+            "reviewPurpose": "pass5-synthetic-restore"
+          },
+          "name": "groups/pass5-group-restore/campaigns/review-restore/npcs/restore5-guide/restore5-image.png",
+          "size": "68"
+        }
+      }
+    }
+  },
+  {
+    "name": "restore-browser-before",
+    "value": {
+      "phase": "before",
+      "backend": {
+        "phase": "before",
+        "docs": [
+          {
+            "path": "groups/pass5-group-restore/campaigns/review-restore/npcs/restore5-guide",
+            "sha256": "98f2e6d35a34e657e23e93ac1fc3bbf3f41ad3a4d387bccb6526a83773479359"
+          },
+          {
+            "path": "groups/pass5-group-restore/campaigns/review-restore/locations/restore5-harbor",
+            "sha256": "41ab125d4c5c1bb42bcc53bed301f0e092c49ab3fb64eb3ca0df20477179cb44"
+          },
+          {
+            "path": "groups/pass5-group-restore/campaigns/review-restore/quests/restore5-voyage",
+            "sha256": "8d35ed4ecb64f4dc8e320504d63e8b151a2ef69f1488cdf36172bd8a1a79acd6"
+          },
+          {
+            "path": "groups/pass5-group-restore/campaigns/review-restore/chapters/restore5-arrival",
+            "sha256": "a10a648cd1faeeec23aef32b2e55db548605ff3337f3371ca4d06db5376b4066"
+          },
+          {
+            "path": "groups/pass5-group-restore/users/pass5-user-restore/notes/restore5-session",
+            "sha256": "c75c283922ac4a4ef76f55760701e0521824c86b236f72fe17f376dca6e445c7"
+          },
+          {
+            "path": "groups/pass5-group-restore/campaigns/review-restore/saga/sagaData",
+            "sha256": "0fa164af624d8506226de8932cca9e88be7f8816a08f0a324f88ce825362772d"
+          },
+          {
+            "path": "groups/pass5-group-restore/campaigns/review-restore/restore-diagnostics/value-types",
+            "sha256": "4fcc6dd472ba0b3a5512875eee84d05b56463d8521fb0c9d88321af02eb6236e"
+          }
+        ],
+        "storage": {
+          "sha256": "5e3d382db4dd83d59aa5742793ad6b7903409e865c83bcbc54835049f043bc15",
+          "bytes": 68,
+          "metadata": {
+            "bucket": "demo-review-pass5.appspot.com",
+            "cacheControl": "public, max-age=31536000, immutable",
+            "contentType": "image/png",
+            "md5Hash": "p12yw+He7UDYB+jSZWZ0zQ==",
+            "metadata": {
+              "firebaseStorageDownloadTokens": "synthetic-pass5-restore-token",
+              "reviewPurpose": "pass5-synthetic-restore"
+            },
+            "name": "groups/pass5-group-restore/campaigns/review-restore/npcs/restore5-guide/restore5-image.png",
+            "size": "68"
+          }
+        }
+      },
+      "reads": [
+        {
+          "route": "/npcs/restore5-guide",
+          "heading": "Restore5 Guide",
+          "portrait": [
+            {
+              "complete": true,
+              "width": 1,
+              "height": 1
+            }
+          ]
+        },
+        {
+          "route": "/locations/restore5-harbor",
+          "heading": "Restore5 Harbor",
+          "proseVisible": true
+        },
+        {
+          "route": "/quests/restore5-voyage",
+          "heading": "Restore5 Voyage",
+          "proseVisible": true
+        },
+        {
+          "route": "/story/chapters/restore5-arrival",
+          "heading": "Restore5 Arrival",
+          "proseVisible": true
+        },
+        {
+          "route": "/notes/restore5-session",
+          "heading": "Restore5 Session",
+          "proseVisible": true
+        },
+        {
+          "route": "/story/saga",
+          "heading": "Restore5 Saga",
+          "proseVisible": true
+        }
+      ],
+      "tokenizedMediaStatus": 200
+    }
+  },
+  {
+    "name": "restore-runtime-before",
+    "value": {
+      "blockedRemoteRequests": [
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        },
+        {
+          "origin": "https://fonts.googleapis.com",
+          "path": "/css2"
+        },
+        {
+          "origin": "https://firebase.googleapis.com",
+          "path": "/v1alpha/projects/-/apps/1:000000000000:web:syntheticreview/webConfig"
+        },
+        {
+          "origin": "https://firebaseinstallations.googleapis.com",
+          "path": "/v1/projects/demo-review-pass5/installations"
+        },
+        {
+          "origin": "https://www.googletagmanager.com",
+          "path": "/gtag/js"
+        }
+      ],
+      "pageErrors": [],
+      "exportAuthAssertions": 0,
+      "seededContentAfterImport": null
+    }
+  }
+]

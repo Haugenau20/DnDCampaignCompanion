@@ -1,0 +1,168 @@
+{
+  "npcs": {
+    "count": 40,
+    "firstId": "npcs-0000",
+    "firstData": {
+      "createdBy": "pass5-user-scale",
+      "createdByUsername": "Browser Reviewer",
+      "dateAdded": "2026-10-03T10:00:00.000Z",
+      "dateModified": "2026-10-03T10:00:00.000Z",
+      "id": "npcs-0000",
+      "name": "Scale 100 Person 0000",
+      "title": "Road traveler",
+      "race": "human",
+      "occupation": "Guide",
+      "description": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. ",
+      "background": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the traveler",
+      "appearance": "Wool coat and leather satchel.",
+      "personality": "Helpful and cautious.",
+      "status": "missing",
+      "relationship": "friendly",
+      "locationId": "locations-0000",
+      "location": "locations-0000",
+      "connections": {
+        "relatedNPCs": [
+          "npcs-0001"
+        ],
+        "relatedQuests": [
+          "quests-0000"
+        ],
+        "affiliations": [
+          "Harbor guides"
+        ]
+      },
+      "notes": [],
+      "tags": [
+        "lantern",
+        "road"
+      ]
+    }
+  },
+  "locations": {
+    "count": 20,
+    "firstId": "locations-0000",
+    "firstData": {
+      "createdBy": "pass5-user-scale",
+      "createdByUsername": "Browser Reviewer",
+      "dateAdded": "2026-10-03T10:00:00.000Z",
+      "dateModified": "2026-10-03T10:00:00.000Z",
+      "id": "locations-0000",
+      "name": "Scale 100 Place 0000",
+      "description": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. ",
+      "type": "city",
+      "status": "known",
+      "parentId": "",
+      "features": [
+        "Lantern road",
+        "Stone bridge"
+      ],
+      "connectedNPCs": [
+        "npcs-0000"
+      ],
+      "relatedQuests": [
+        "quests-0000"
+      ],
+      "notes": [],
+      "tags": [
+        "harbor"
+      ]
+    }
+  },
+  "quests": {
+    "count": 15,
+    "firstId": "quests-0000",
+    "firstData": {
+      "createdBy": "pass5-user-scale",
+      "createdByUsername": "Browser Reviewer",
+      "dateAdded": "2026-10-03T10:00:00.000Z",
+      "dateModified": "2026-10-03T10:00:00.000Z",
+      "id": "quests-0000",
+      "title": "Scale 100 Quest 0000",
+      "description": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. ",
+      "background": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern",
+      "status": "active",
+      "objectives": [
+        {
+          "id": "objective-1",
+          "description": "Find the missing lantern caravan",
+          "completed": false
+        }
+      ],
+      "leads": [],
+      "complications": [],
+      "rewards": [
+        "Safe passage"
+      ],
+      "keyLocations": [
+        "locations-0000"
+      ],
+      "relatedNPCIds": [
+        "npcs-0000"
+      ],
+      "locationId": "locations-0000",
+      "location": "locations-0000",
+      "levelRange": "3–5"
+    }
+  },
+  "rumors": {
+    "count": 10,
+    "firstId": "rumors-0000",
+    "firstData": {
+      "createdBy": "pass5-user-scale",
+      "createdByUsername": "Browser Reviewer",
+      "dateAdded": "2026-10-03T10:00:00.000Z",
+      "dateModified": "2026-10-03T10:00:00.000Z",
+      "id": "rumors-0000",
+      "title": "Scale 100 Rumour 0000",
+      "content": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. ",
+      "status": "unconfirmed",
+      "sourceType": "npc",
+      "sourceName": "Scale 100 Person 0000",
+      "sourceNpcId": "npcs-0000",
+      "locationId": "locations-0000",
+      "location": "locations-0000",
+      "relatedNPCs": [
+        "npcs-0000"
+      ],
+      "relatedLocations": [
+        "locations-0000"
+      ],
+      "notes": []
+    }
+  },
+  "notes": {
+    "count": 10,
+    "firstId": "review-scale-notes-0000",
+    "firstData": {
+      "createdBy": "pass5-user-scale",
+      "createdByUsername": "Browser Reviewer",
+      "dateAdded": "2026-10-03T10:00:00.000Z",
+      "dateModified": "2026-10-03T10:00:00.000Z",
+      "id": "notes-0000",
+      "campaignId": "review-scale",
+      "title": "Scale 100 Session 0000",
+      "content": "The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. ",
+      "updatedAt": "2026-10-03T10:00:00.000Z",
+      "status": "active",
+      "tags": [
+        "lantern"
+      ],
+      "extractedEntities": []
+    }
+  },
+  "chapters": {
+    "count": 5,
+    "firstId": "chapters-0000",
+    "firstData": {
+      "createdBy": "pass5-user-scale",
+      "createdByUsername": "Browser Reviewer",
+      "dateAdded": "2026-10-03T10:00:00.000Z",
+      "dateModified": "2026-10-03T10:00:00.000Z",
+      "id": "chapters-0000",
+      "title": "Scale 100 Chapter 0000",
+      "content": "# Along the lantern road\n\nThe party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. The party followed the lantern road from the harbor through the old forest. A guide described the bridge, the abandoned watchtower and a missing caravan. They recorded the travelers and promised to return with supplies. ",
+      "summary": "The party explores the lantern road.",
+      "order": 1
+    }
+  }
+}

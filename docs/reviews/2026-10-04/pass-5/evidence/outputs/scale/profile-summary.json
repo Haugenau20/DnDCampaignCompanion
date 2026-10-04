@@ -1,0 +1,563 @@
+[
+  {
+    "filename": "initial-scale-3000.cpuprofile",
+    "totalSampledMs": 519.316,
+    "sampleCount": 345,
+    "samplingIntervalUs": 1000,
+    "topSelfSources": [
+      {
+        "source": "(program)",
+        "microseconds": 400982,
+        "samples": 243,
+        "frames": {
+          "(program) at 0:-1": 400982
+        },
+        "selfMs": 400.982,
+        "share": 0.7721348851181169
+      },
+      {
+        "source": "../node_modules/react-dom/cjs/react-dom.production.min.js",
+        "microseconds": 30303,
+        "samples": 26,
+        "frames": {
+          "Ws at 224:9": 7746,
+          "e at 143:379": 4719,
+          "bl at 280:9": 3549,
+          "he at 46:9": 3341,
+          "w at 24:9": 3292
+        },
+        "selfMs": 30.303,
+        "share": 0.058351755000808754
+      },
+      {
+        "source": "../node_modules/@babel/runtime/helpers/esm/objectSpread2.js",
+        "microseconds": 15788,
+        "samples": 14,
+        "frames": {
+          "s at 12:9": 15788
+        },
+        "selfMs": 15.788,
+        "share": 0.03040152816396953
+      },
+      {
+        "source": "(garbage collector)",
+        "microseconds": 14208,
+        "samples": 10,
+        "frames": {
+          "(garbage collector) at 0:-1": 14208
+        },
+        "selfMs": 14.208,
+        "share": 0.027359064615763814
+      },
+      {
+        "source": "setAttribute",
+        "microseconds": 12147,
+        "samples": 11,
+        "frames": {
+          "setAttribute at 0:-1": 12147
+        },
+        "selfMs": 12.147,
+        "share": 0.023390382734211925
+      },
+      {
+        "source": "appendChild",
+        "microseconds": 9901,
+        "samples": 9,
+        "frames": {
+          "appendChild at 0:-1": 9901
+        },
+        "selfMs": 9.901,
+        "share": 0.01906546303214228
+      },
+      {
+        "source": "createElement",
+        "microseconds": 5361,
+        "samples": 5,
+        "frames": {
+          "createElement at 0:-1": 5361
+        },
+        "selfMs": 5.361,
+        "share": 0.010323194355652435
+      },
+      {
+        "source": "(idle)",
+        "microseconds": 4656,
+        "samples": 4,
+        "frames": {
+          "(idle) at 0:-1": 4656
+        },
+        "selfMs": 4.656,
+        "share": 0.008965639418003681
+      },
+      {
+        "source": "createElementNS",
+        "microseconds": 4446,
+        "samples": 4,
+        "frames": {
+          "createElementNS at 0:-1": 4446
+        },
+        "selfMs": 4.446,
+        "share": 0.00856126135147001
+      },
+      {
+        "source": "features/campaign-entities/locations/utils/location-display.ts",
+        "microseconds": 3838,
+        "samples": 3,
+        "frames": {
+          "r at 67:35": 3838
+        },
+        "selfMs": 3.838,
+        "share": 0.007390490568363
+      },
+      {
+        "source": "../node_modules/react/cjs/react-jsx-runtime.production.min.js",
+        "microseconds": 3495,
+        "samples": 3,
+        "frames": {
+          "l at 11:9": 3495
+        },
+        "selfMs": 3.495,
+        "share": 0.006730006393024671
+      },
+      {
+        "source": "querySelectorAll",
+        "microseconds": 3281,
+        "samples": 3,
+        "frames": {
+          "querySelectorAll at 0:-1": 3281
+        },
+        "selfMs": 3.281,
+        "share": 0.0063179258871284534
+      },
+      {
+        "source": "(unknown)",
+        "microseconds": 2213,
+        "samples": 2,
+        "frames": {
+          "(anonymous) at 0:-1": 2213
+        },
+        "selfMs": 2.213,
+        "share": 0.00426137457732864
+      },
+      {
+        "source": "features/campaign-entities/npcs/components/NPCDirectory.tsx",
+        "microseconds": 2208,
+        "samples": 2,
+        "frames": {
+          "(anonymous) at 312:19": 2208
+        },
+        "selfMs": 2.208,
+        "share": 0.004251746528125457
+      },
+      {
+        "source": "core/components/Typography.tsx",
+        "microseconds": 2157,
+        "samples": 2,
+        "frames": {
+          "d at 86:26": 2157
+        },
+        "selfMs": 2.157,
+        "share": 0.0041535404262529945
+      },
+      {
+        "source": "core/components/Roster.tsx",
+        "microseconds": 2127,
+        "samples": 2,
+        "frames": {
+          "x at 406:55": 1081,
+          "f at 58:63": 1046
+        },
+        "selfMs": 2.127,
+        "share": 0.004095772131033898
+      },
+      {
+        "source": "../node_modules/lucide-react/src/Icon.ts",
+        "microseconds": 1111,
+        "samples": 1,
+        "frames": {
+          "(anonymous) at 53:24": 1111
+        },
+        "selfMs": 1.111,
+        "share": 0.0021393525329471844
+      },
+      {
+        "source": "query",
+        "microseconds": 1094,
+        "samples": 1,
+        "frames": {
+          "query at 5231:20": 1094
+        },
+        "selfMs": 1.094,
+        "share": 0.0021066171656563635
+      }
+    ],
+    "limit": "self sampled CPU, includes automation and frame waits; not inclusive React component duration"
+  },
+  {
+    "filename": "scale-1000-restore-npc-list.cpuprofile",
+    "totalSampledMs": 253.026,
+    "sampleCount": 117,
+    "samplingIntervalUs": 1000,
+    "topSelfSources": [
+      {
+        "source": "(program)",
+        "microseconds": 202690,
+        "samples": 72,
+        "frames": {
+          "(program) at 0:-1": 202690
+        },
+        "selfMs": 202.69,
+        "share": 0.8010639222846664
+      },
+      {
+        "source": "../node_modules/react-dom/cjs/react-dom.production.min.js",
+        "microseconds": 15308,
+        "samples": 14,
+        "frames": {
+          "Ws at 224:9": 2568,
+          "ge at 49:9": 2171,
+          "he at 46:9": 2133,
+          "Ks at 223:9": 1823,
+          "e at 143:379": 1169
+        },
+        "selfMs": 15.308,
+        "share": 0.06049971149209963
+      },
+      {
+        "source": "(idle)",
+        "microseconds": 10137,
+        "samples": 8,
+        "frames": {
+          "(idle) at 0:-1": 10137
+        },
+        "selfMs": 10.137,
+        "share": 0.04006307652178037
+      },
+      {
+        "source": "setAttribute",
+        "microseconds": 6381,
+        "samples": 6,
+        "frames": {
+          "setAttribute at 0:-1": 6381
+        },
+        "selfMs": 6.381,
+        "share": 0.0252187522230917
+      },
+      {
+        "source": "../node_modules/@babel/runtime/helpers/esm/objectSpread2.js",
+        "microseconds": 3293,
+        "samples": 3,
+        "frames": {
+          "s at 12:9": 3293
+        },
+        "selfMs": 3.293,
+        "share": 0.01301447282097492
+      },
+      {
+        "source": "../node_modules/react/cjs/react-jsx-runtime.production.min.js",
+        "microseconds": 3269,
+        "samples": 3,
+        "frames": {
+          "l at 11:9": 3269
+        },
+        "selfMs": 3.269,
+        "share": 0.012919620908523236
+      },
+      {
+        "source": "appendChild",
+        "microseconds": 3125,
+        "samples": 3,
+        "frames": {
+          "appendChild at 0:-1": 3125
+        },
+        "selfMs": 3.125,
+        "share": 0.012350509433813125
+      },
+      {
+        "source": "core/components/Typography.tsx",
+        "microseconds": 2277,
+        "samples": 2,
+        "frames": {
+          "d at 86:26": 2277
+        },
+        "selfMs": 2.277,
+        "share": 0.008999075193853597
+      },
+      {
+        "source": "../node_modules/tailwind-merge/src/lib/lru-cache.ts",
+        "microseconds": 1151,
+        "samples": 1,
+        "frames": {
+          "get at 33:8": 1151
+        },
+        "selfMs": 1.151,
+        "share": 0.0045489396346620505
+      },
+      {
+        "source": "features/campaign-entities/locations/utils/location-display.ts",
+        "microseconds": 1106,
+        "samples": 1,
+        "frames": {
+          "(anonymous) at 75:32": 1106
+        },
+        "selfMs": 1.106,
+        "share": 0.004371092298815142
+      },
+      {
+        "source": "features/campaign-entities/npcs/components/NPCDirectory.tsx",
+        "microseconds": 1084,
+        "samples": 1,
+        "frames": {
+          "(anonymous) at 323:32": 1084
+        },
+        "selfMs": 1.084,
+        "share": 0.0042841447124010975
+      },
+      {
+        "source": "createElementNS",
+        "microseconds": 1079,
+        "samples": 1,
+        "frames": {
+          "createElementNS at 0:-1": 1079
+        },
+        "selfMs": 1.079,
+        "share": 0.004264383897306996
+      },
+      {
+        "source": "../node_modules/clsx/dist/clsx.mjs",
+        "microseconds": 1079,
+        "samples": 1,
+        "frames": {
+          "r at 1:9": 1079
+        },
+        "selfMs": 1.079,
+        "share": 0.004264383897306996
+      },
+      {
+        "source": "core/components/Roster.tsx",
+        "microseconds": 1047,
+        "samples": 1,
+        "frames": {
+          "x at 406:55": 1047
+        },
+        "selfMs": 1.047,
+        "share": 0.00413791468070475
+      }
+    ],
+    "limit": "self sampled CPU, includes automation and frame waits; not inclusive React component duration"
+  },
+  {
+    "filename": "scale-3000-restore-npc-list.cpuprofile",
+    "totalSampledMs": 542.442,
+    "sampleCount": 326,
+    "samplingIntervalUs": 1000,
+    "topSelfSources": [
+      {
+        "source": "(program)",
+        "microseconds": 405012,
+        "samples": 210,
+        "frames": {
+          "(program) at 0:-1": 405012
+        },
+        "selfMs": 405.012,
+        "share": 0.746645724335505
+      },
+      {
+        "source": "../node_modules/react-dom/cjs/react-dom.production.min.js",
+        "microseconds": 35630,
+        "samples": 33,
+        "frames": {
+          "Ws at 224:9": 6541,
+          "w at 24:9": 5507,
+          "he at 46:9": 4347,
+          "ge at 49:9": 4322,
+          "m at 141:9": 3233
+        },
+        "selfMs": 35.63,
+        "share": 0.06568444183894315
+      },
+      {
+        "source": "setAttribute",
+        "microseconds": 19689,
+        "samples": 17,
+        "frames": {
+          "setAttribute at 0:-1": 19689
+        },
+        "selfMs": 19.689,
+        "share": 0.036296968155120735
+      },
+      {
+        "source": "(garbage collector)",
+        "microseconds": 18048,
+        "samples": 12,
+        "frames": {
+          "(garbage collector) at 0:-1": 18048
+        },
+        "selfMs": 18.048,
+        "share": 0.03327175993009391
+      },
+      {
+        "source": "../node_modules/@babel/runtime/helpers/esm/objectSpread2.js",
+        "microseconds": 11667,
+        "samples": 11,
+        "frames": {
+          "s at 12:9": 11667
+        },
+        "selfMs": 11.667,
+        "share": 0.021508290287256517
+      },
+      {
+        "source": "appendChild",
+        "microseconds": 11396,
+        "samples": 10,
+        "frames": {
+          "appendChild at 0:-1": 11396
+        },
+        "selfMs": 11.396,
+        "share": 0.021008697704086334
+      },
+      {
+        "source": "features/campaign-entities/locations/utils/location-display.ts",
+        "microseconds": 7855,
+        "samples": 3,
+        "frames": {
+          "r at 67:35": 7855
+        },
+        "selfMs": 7.855,
+        "share": 0.014480810851667091
+      },
+      {
+        "source": "(idle)",
+        "microseconds": 4559,
+        "samples": 4,
+        "frames": {
+          "(idle) at 0:-1": 4559
+        },
+        "selfMs": 4.559,
+        "share": 0.008404585190674763
+      },
+      {
+        "source": "features/campaign-entities/npcs/components/NPCDirectory.tsx",
+        "microseconds": 4365,
+        "samples": 4,
+        "frames": {
+          "(anonymous) at 312:19": 3281,
+          "k at 128:50": 1084
+        },
+        "selfMs": 4.365,
+        "share": 0.008046943267667327
+      },
+      {
+        "source": "querySelectorAll",
+        "microseconds": 4236,
+        "samples": 4,
+        "frames": {
+          "querySelectorAll at 0:-1": 4236
+        },
+        "selfMs": 4.236,
+        "share": 0.007809129824018051
+      },
+      {
+        "source": "../node_modules/shared/src/utils.ts",
+        "microseconds": 3745,
+        "samples": 3,
+        "frames": {
+          "o at 29:47": 3745
+        },
+        "selfMs": 3.745,
+        "share": 0.006903963926097168
+      },
+      {
+        "source": "core/components/Roster.tsx",
+        "microseconds": 3250,
+        "samples": 3,
+        "frames": {
+          "k at 653:51": 3250
+        },
+        "selfMs": 3.25,
+        "share": 0.00599142396790809
+      },
+      {
+        "source": "createElement",
+        "microseconds": 2178,
+        "samples": 2,
+        "frames": {
+          "createElement at 0:-1": 2178
+        },
+        "selfMs": 2.178,
+        "share": 0.0040151758160319444
+      },
+      {
+        "source": "createElementNS",
+        "microseconds": 2161,
+        "samples": 2,
+        "frames": {
+          "createElementNS at 0:-1": 2161
+        },
+        "selfMs": 2.161,
+        "share": 0.0039838360598921175
+      },
+      {
+        "source": "core/components/Typography.tsx",
+        "microseconds": 2161,
+        "samples": 2,
+        "frames": {
+          "d at 86:26": 2161
+        },
+        "selfMs": 2.161,
+        "share": 0.0039838360598921175
+      },
+      {
+        "source": "../node_modules/tailwind-merge/src/lib/create-tailwind-merge.ts",
+        "microseconds": 2160,
+        "samples": 2,
+        "frames": {
+          "c at 34:13": 2160
+        },
+        "selfMs": 2.16,
+        "share": 0.003981992544825069
+      },
+      {
+        "source": "../node_modules/react/cjs/react-jsx-runtime.production.min.js",
+        "microseconds": 1115,
+        "samples": 1,
+        "frames": {
+          "l at 11:9": 1115
+        },
+        "selfMs": 1.115,
+        "share": 0.002055519299759237
+      },
+      {
+        "source": "../node_modules/clsx/dist/clsx.mjs",
+        "microseconds": 1092,
+        "samples": 1,
+        "frames": {
+          "i at 1:257": 1092
+        },
+        "selfMs": 1.092,
+        "share": 0.0020131184532171183
+      },
+      {
+        "source": "../node_modules/lucide-react/src/Icon.ts",
+        "microseconds": 1080,
+        "samples": 1,
+        "frames": {
+          "(anonymous) at 26:2": 1080
+        },
+        "selfMs": 1.08,
+        "share": 0.0019909962724125345
+      },
+      {
+        "source": "getBoundingClientRect",
+        "microseconds": 1043,
+        "samples": 1,
+        "frames": {
+          "getBoundingClientRect at 0:-1": 1043
+        },
+        "selfMs": 1.043,
+        "share": 0.0019227862149317346
+      }
+    ],
+    "limit": "self sampled CPU, includes automation and frame waits; not inclusive React component duration"
+  }
+]
