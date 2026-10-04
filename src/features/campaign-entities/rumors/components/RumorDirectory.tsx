@@ -422,10 +422,12 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
    * groups by and what a reader sees first; later ones are what it points at.
    */
   const handleAttach = async (rumor: Rumor, id: string, kind: AttachKind) => {
+    // Lists are worked out from the rumour the server holds (T083), so a
+    // person another player attached a moment ago stays attached.
     if (kind === 'npc') {
-      await updateRumor(rumor.id, {
-        relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), id])),
-      });
+      await updateRumor(rumor.id, (current) => ({
+        relatedNPCs: Array.from(new Set([...(current.relatedNPCs ?? []), id])),
+      }));
       return;
     }
 
@@ -435,9 +437,9 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       return;
     }
 
-    await updateRumor(rumor.id, {
-      relatedLocations: Array.from(new Set([...(rumor.relatedLocations ?? []), id])),
-    });
+    await updateRumor(rumor.id, (current) => ({
+      relatedLocations: Array.from(new Set([...(current.relatedLocations ?? []), id])),
+    }));
   };
 
   /**
@@ -446,9 +448,9 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
    */
   const handleDetach = async (rumor: Rumor, id: string, kind: AttachKind) => {
     if (kind === 'npc') {
-      await updateRumor(rumor.id, {
-        relatedNPCs: (rumor.relatedNPCs ?? []).filter((existing) => existing !== id),
-      });
+      await updateRumor(rumor.id, (current) => ({
+        relatedNPCs: (current.relatedNPCs ?? []).filter((existing) => existing !== id),
+      }));
       return;
     }
 
@@ -457,9 +459,9 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       return;
     }
 
-    await updateRumor(rumor.id, {
-      relatedLocations: (rumor.relatedLocations ?? []).filter((existing) => existing !== id),
-    });
+    await updateRumor(rumor.id, (current) => ({
+      relatedLocations: (current.relatedLocations ?? []).filter((existing) => existing !== id),
+    }));
   };
 
   if (isLoading) {

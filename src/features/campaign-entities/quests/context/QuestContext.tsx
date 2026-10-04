@@ -1,9 +1,10 @@
 // src/features/campaign-entities/quests/context/QuestContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Quest, QuestStatus, QuestContextValue } from '../types';
-import { DomainData } from 'core/types/common';
+import { DomainData, RecordChange } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
@@ -11,6 +12,7 @@ import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
+import { normaliseObjectives } from '../utils/quest-objectives';
 import { Location } from '../../locations/types';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
@@ -35,7 +37,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const questsPath = useCampaignCollectionPath('quests');
-  const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Quest>({
+  const { addData, updateData, updateDataAfterReading, deleteData, error: writeError } = useFirebaseData<Quest>({
     collection: questsPath,
     autoFetch: false
   });
@@ -142,15 +144,22 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById]);
 
   /**
-   * Write a new objective list, leaving every other field of the quest alone:
-   * only `objectives` is sent (T083). Sending the whole quest wrote back
-   * whatever this copy held of the title and status, over newer changes.
+   * Write a new objective list, leaving every other field of the quest alone
+   * (T083). Only `objectives` is sent, and `next` works it out from the list
+   * the server holds, read in a transaction -- normalised as the listener
+   * normalises it -- so two ticks made from copies of the same moment both
+   * land instead of the second undoing the first.
    */
   const writeObjectives = useCallback(
-    async (quest: Quest, objectives: Quest['objectives']) => {
-      await updateData(quest.id, { objectives });
+    async (questId: string, next: (objectives: Quest['objectives']) => Quest['objectives']) => {
+      await writeRecordChange(
+        { updateData, updateDataAfterReading },
+        questId,
+        (quest) => ({ objectives: next(normaliseObjectives(quest.objectives)) }),
+        'Quest not found'
+      );
     },
-    [updateData]
+    [updateData, updateDataAfterReading]
   );
 
   /**
@@ -171,13 +180,11 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * reordered or partitioned, so nothing moves under someone mid-session.
    */
   const updateQuestObjective = useCallback(async (questId: string, objectiveId: string, completed: boolean) => {
-    const quest = questForObjectiveWrite(questId);
+    questForObjectiveWrite(questId);
 
-    const updatedObjectives = quest.objectives.map(obj =>
+    await writeObjectives(questId, (objectives) => objectives.map(obj =>
       obj.id === objectiveId ? { ...obj, completed } : obj
-    );
-
-    await writeObjectives(quest, updatedObjectives);
+    ));
   }, [questForObjectiveWrite, writeObjectives]);
 
   /**
@@ -189,32 +196,29 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * record in the product (rumour notes, extracted entities) issues an id.
    */
   const addQuestObjective = useCallback(async (questId: string, description: string) => {
-    const quest = questForObjectiveWrite(questId);
+    questForObjectiveWrite(questId);
     const trimmed = description.trim();
     if (!trimmed) {
       throw new Error('An objective needs something to say.');
     }
 
-    await writeObjectives(quest, [
-      ...quest.objectives,
-      { id: crypto.randomUUID(), description: trimmed, completed: false },
-    ]);
+    // Issued once, outside the transaction, so a retried attempt appends the
+    // same objective rather than a second one.
+    const added = { id: crypto.randomUUID(), description: trimmed, completed: false };
+    await writeObjectives(questId, (objectives) => [...objectives, added]);
   }, [questForObjectiveWrite, writeObjectives]);
 
   /** Reword an objective, keeping whether it is ticked and where it sits. */
   const editQuestObjective = useCallback(async (questId: string, objectiveId: string, description: string) => {
-    const quest = questForObjectiveWrite(questId);
+    questForObjectiveWrite(questId);
     const trimmed = description.trim();
     if (!trimmed) {
       throw new Error('An objective needs something to say.');
     }
 
-    await writeObjectives(
-      quest,
-      quest.objectives.map(obj =>
-        obj.id === objectiveId ? { ...obj, description: trimmed } : obj
-      )
-    );
+    await writeObjectives(questId, (objectives) => objectives.map(obj =>
+      obj.id === objectiveId ? { ...obj, description: trimmed } : obj
+    ));
   }, [questForObjectiveWrite, writeObjectives]);
 
   /**
@@ -226,12 +230,12 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    */
   const moveQuestObjective = useCallback(async (questId: string, objectiveId: string, direction: 'up' | 'down') => {
     const quest = questForObjectiveWrite(questId);
-    const reordered = moveObjective(quest.objectives, objectiveId, direction);
-    if (reordered === quest.objectives) {
+    if (moveObjective(quest.objectives, objectiveId, direction) === quest.objectives) {
       return;
     }
 
-    await writeObjectives(quest, reordered);
+    // Moved again in the list the server holds, where it may sit elsewhere.
+    await writeObjectives(questId, (objectives) => moveObjective(objectives, objectiveId, direction));
   }, [questForObjectiveWrite, writeObjectives]);
 
   // Add quest
@@ -271,8 +275,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return id;
   }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, addData]);
 
-  // Update an existing quest: only the fields in `patch` (T083)
-  const updateQuest = useCallback(async (questId: string, patch: Partial<Quest>) => {
+  // Update an existing quest: only what `change` names; see `RecordChange` (T083)
+  const updateQuest = useCallback(async (questId: string, change: RecordChange<Quest>) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to update quests');
     }
@@ -281,8 +285,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to update quests');
     }
 
-    await updateData(questId, patch);
-  }, [user, userProfile, activeGroupId, activeCampaignId, updateData]);
+    await writeRecordChange({ updateData, updateDataAfterReading }, questId, change, 'Quest not found');
+  }, [user, userProfile, activeGroupId, activeCampaignId, updateData, updateDataAfterReading]);
 
   // Delete quest
   const deleteQuest = useCallback(async (questId: string) => {
@@ -358,18 +362,19 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const now = new Date().toISOString();
     const completionDate = dateCompleted || now;
 
-    // Mark all objectives as completed
-    const completedObjectives = quest.objectives.map(obj => ({
-      ...obj,
-      completed: true
-    }));
-
-    await updateData(questId, {
-      status: 'completed' as QuestStatus,
-      dateCompleted: completionDate,
-      objectives: completedObjectives
-    });
-  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData]);
+    // Every objective the server holds is ticked, including one added since
+    // this copy was taken (T083).
+    await writeRecordChange(
+      { updateData, updateDataAfterReading },
+      questId,
+      (current) => ({
+        status: 'completed' as QuestStatus,
+        dateCompleted: completionDate,
+        objectives: normaliseObjectives(current.objectives).map(obj => ({ ...obj, completed: true }))
+      }),
+      'Quest not found'
+    );
+  }, [user, userProfile, activeGroupId, activeCampaignId, getQuestById, updateData, updateDataAfterReading]);
 
   // Mark quest as failed
   const markQuestFailed = useCallback(async (questId: string) => {

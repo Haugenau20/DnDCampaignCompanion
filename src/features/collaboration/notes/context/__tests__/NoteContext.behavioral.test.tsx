@@ -52,6 +52,7 @@ const mockDocumentService = {
   createDocument: jest.fn(),
   updateDocument: jest.fn(),
   updateDocumentWithAttribution: jest.fn(),
+  updateDocumentAfterReading: jest.fn(),
   deleteDocument: jest.fn()
 };
 
@@ -121,6 +122,7 @@ describe('NoteContext Behavioral Tests', () => {
     notesListener.reset();
     mockDocumentService.createDocument.mockImplementation(notesListener.create);
     mockDocumentService.updateDocumentWithAttribution.mockImplementation(notesListener.update);
+    mockDocumentService.updateDocumentAfterReading.mockImplementation(notesListener.updateAfterReading);
     mockDocumentService.deleteDocument.mockImplementation(notesListener.remove);
   });
 
@@ -1038,6 +1040,62 @@ describe('NoteContext Behavioral Tests', () => {
       const updatedEntity = updatedNote.extractedEntities[0];
       expect(updatedEntity.isConverted).toBe(true);
       expect(updatedEntity.convertedToId).toBe('galadriel-the-wise');
+    });
+
+    // T083: two conversions started from the same render -- converting one
+    // extracted rumour, then the next, before the listener has delivered the
+    // first mark. Each works from the note as stored, so neither undoes the
+    // other.
+    test('two conversions in a row both stay marked', async () => {
+      const entity = (id: string): ExtractedEntity => ({
+        id,
+        text: id,
+        type: 'rumor',
+        confidence: 0.9,
+        isConverted: false,
+        createdAt: '2025-06-15T00:00:00.000Z'
+      });
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+      await act(async () => {
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
+        await capturedContext.updateNote(createdId, {
+          extractedEntities: [entity('entity-1'), entity('entity-2')]
+        });
+      });
+
+      const convertTwiceFromOneRender = async () => {
+        const sameRender = capturedContext;
+        await act(async () => {
+          await sameRender.markEntityAsConverted(createdId, 'entity-1', 'rumor-a');
+          await sameRender.markEntityAsConverted(createdId, 'entity-2', 'rumor-b');
+        });
+        return capturedContext.notes[0].extractedEntities.map((e: ExtractedEntity) => e.convertedToId);
+      };
+
+      // A draft, still only in this tab...
+      expect(await convertTwiceFromOneRender()).toEqual(['rumor-a', 'rumor-b']);
+
+      // ...and a saved note, marked in the stored list.
+      await act(async () => {
+        await capturedContext.updateNote(createdId, {
+          extractedEntities: [entity('entity-1'), entity('entity-2')]
+        });
+        await capturedContext.saveNote(createdId);
+      });
+      expect(mockDocumentService.createDocument).toHaveBeenCalled();
+      expect(await convertTwiceFromOneRender()).toEqual(['rumor-a', 'rumor-b']);
+      expect(mockDocumentService.updateDocumentAfterReading).toHaveBeenCalledTimes(2);
     });
 
     test('should throw error when marking entity in nonexistent note', async () => {

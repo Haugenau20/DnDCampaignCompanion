@@ -23,7 +23,6 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T083 | Two edits to the same list keep only one | M | open | Two ticks or two added notes at once lose one; whole-record reverts are fixed |
 | high | T084 | A write that outlives its upload's lease points at a deleted file | S | blocked | Images focus; the code is in, the enforcing rules wait for the client to be live, then a paste |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
@@ -34,6 +33,7 @@ adjusted for the images focus above.
 | medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
+| low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -156,29 +156,6 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T083 — Two edits to the same list, or the same prose, keep only one
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Every single-record writer now sends only the fields it changes
-(`updateNPC`, `updateQuest` and `updateRumor` take `(id, patch)`), so an
-edit no longer reverts the rest of the record or restores a replaced picture.
-What is left is a list or a text that two people change at once:
-
-- **Lists**: a writer still computes the whole new list from its local copy and
-  sends it -- objectives (`QuestContext.writeObjectives`), table notes on NPCs,
-  locations and rumours, a rumour's `relatedNPCs` / `relatedLocations`, an
-  NPC's `connections`, a note's extracted-entity markers
-  (`NoteContext.markEntityAsConverted`). Two ticks or two added notes from the
-  same snapshot keep only the second. Read-modify-write in a transaction
-  (`useFirebaseData.updateDataAfterReading`) closes it per record.
-- **Prose**: two people saving the same field (a description) is last write
-  wins. Whether that needs a conflict check is the maintainer's call; nothing
-  reverts a field anyone did not edit any more.
-- **Findings**: DATA-003's array half (03), TEST-002's interleaving test (08).
-  The duplicated batch-limit helper (09, consolidation item 2) moves to T088's
-  rumour work, which touches the same batches.
-- **Source**: code review, 2026-10-04
-
 ### T084 — A write that arrives after its upload's lease can still point at a deleted file
 **Type** bug · **Size** S · **Status** blocked · **Verified** 2026-10-04
 
@@ -257,6 +234,10 @@ Each of these decides from a stale local copy, then writes:
   first.
 - **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
   an id the allocator then changes.
+- **Lists in those batches**: combine and convert append a note to each
+  source rumour, worked out from the local copy, so a note another player
+  added in the meantime is dropped (DATA-003's list case). Do them with the
+  conversion, which has to stop working from the local copy anyway.
 - **With the conversion**: `RumorContext`'s batch helper duplicates
   `commitEntityWrites` (09, consolidation item 2); fold it in while touching
   those batches.
@@ -711,6 +692,22 @@ Docker, and the build could be produced the same way.
 ## Decisions
 
 Open questions that block work until the maintainer answers them.
+
+### T083 — Two people saving the same text field: last one wins
+**Type** decision · **Size** S · **Status** open · **Verified** 2026-10-04
+
+Edits write only their own fields, and every list (objectives, notes,
+relations, tags) is worked out from the record the server holds, in a
+transaction. One case is left, on purpose until decided: two people editing
+the same text field (a description, a note's text) from the same version --
+the second save replaces the first, with no warning.
+
+- **To decide**: is last-write-wins acceptable for a party's shared journal,
+  or should a save notice that the field changed since the editor opened
+  (compare the value it started from, inside the same transaction, and ask)?
+  `RecordChange` and `updateDataAfterReading` are the place it would go.
+- **Findings**: DATA-003 (03), the remaining case.
+- **Source**: code review, 2026-10-04
 
 ### T103 — Browser checks are not reproducible
 **Type** decision · **Size** L · **Status** needs scoping · **Verified** 2026-10-04

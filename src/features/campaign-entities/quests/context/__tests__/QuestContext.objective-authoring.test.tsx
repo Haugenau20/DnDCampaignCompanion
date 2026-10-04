@@ -12,6 +12,7 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { QuestProvider, useQuests } from '../QuestContext';
 import { Quest } from '../../types';
+import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
@@ -89,6 +90,8 @@ describe('QuestContext — authoring objectives', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: jest.fn(),
       updateData,
+      // Lists are worked out from the record (T083): this suite's records.
+      updateDataAfterReading: updateAfterReadingThrough(updateData, (id) => mockUseQuestData()?.getQuestById?.(id)),
       deleteData: jest.fn(),
     });
   });

@@ -1,5 +1,5 @@
 // src/features/campaign-entities/rumors/types.ts
-import { BaseContent, DomainData, IdentifiableContent } from 'core/types/common';
+import { BaseContent, DomainData, RecordChange, IdentifiableContent } from 'core/types/common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
@@ -73,11 +73,12 @@ export interface RumorContextValue extends RumorContextState {
   updateRumorNote: (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => Promise<void>;
   addRumor: (rumor: DomainData<Rumor>) => Promise<string>;
   /**
-   * Write `patch` to the rumour: the fields it names, and nothing else (T083).
-   * Never the whole record -- a copy from the listener can be behind the
-   * server, and sending it back reverts whatever changed since.
+   * Write `change` to the rumour: the fields it names, and nothing else
+   * (T083). Never the whole record -- a copy from the listener can be behind
+   * the server. A list worked out from the old one goes as a function; see
+   * `RecordChange`.
    */
-  updateRumor: (rumorId: string, patch: Partial<Rumor>) => Promise<void>;
+  updateRumor: (rumorId: string, change: RecordChange<Rumor>) => Promise<void>;
   deleteRumor: (rumorId: string) => Promise<void>;
   /** Set the status of several rumours in one atomic write (T032, `PERF-06`). */
   updateRumorsStatus: (rumorIds: string[], status: RumorStatus) => Promise<void>;

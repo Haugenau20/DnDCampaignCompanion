@@ -4,6 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import RumorDirectory from '../RumorDirectory';
 import { Rumor, RumorStatus, SourceType } from '../../types';
+import { resolveRecordChange } from '@/test-utils/update-after-reading';
 
 // ---------------------------------------------------------------------------
 // Mock Dialog to render inline — RumorBatchActions mounts CombineRumorsDialog
@@ -848,12 +849,15 @@ describe('RumorDirectory', () => {
       );
       fireEvent.click(within(screen.getByRole('listbox')).getByText('Gandalf the Grey'));
 
-      await waitFor(() =>
-        expect(mockUpdateRumor).toHaveBeenCalledWith(
-          'r2',
-          expect.objectContaining({ relatedNPCs: ['npc-1'] })
-        )
-      );
+      await waitFor(() => expect(mockUpdateRumor).toHaveBeenCalled());
+      const [id, change] = mockUpdateRumor.mock.calls[0];
+      expect(id).toBe('r2');
+      expect(resolveRecordChange(change, r2)).toEqual({ relatedNPCs: ['npc-1'] });
+      // Worked out from the rumour as stored (T083): a person another player
+      // attached since this copy was taken stays attached.
+      expect(resolveRecordChange(change, { ...r2, relatedNPCs: ['npc-9'] })).toEqual({
+        relatedNPCs: ['npc-9', 'npc-1'],
+      });
     });
 
     // DATA-008: a person and a place may share a slug, each in its own
@@ -890,11 +894,12 @@ describe('RumorDirectory', () => {
 
       test('detaching the person keeps the place', async () => {
         detach('The Hermit');
-        await waitFor(() =>
-          // Exactly the list: a patch that never names the place leaves it
-          // attached (T083).
-          expect(mockUpdateRumor).toHaveBeenCalledWith('r2', { relatedNPCs: [] })
-        );
+        await waitFor(() => expect(mockUpdateRumor).toHaveBeenCalled());
+        const [id, change] = mockUpdateRumor.mock.calls[0];
+        expect(id).toBe('r2');
+        // Exactly the list: a change that never names the place leaves it
+        // attached (T083).
+        expect(resolveRecordChange(change, both)).toEqual({ relatedNPCs: [] });
       });
 
       test('detaching the place keeps the person', async () => {

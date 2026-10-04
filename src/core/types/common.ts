@@ -58,6 +58,18 @@ export interface BaseContent extends IdentifiableContent, ContentAttribution {
 export type DomainData<T> = Omit<T, keyof ContentAttribution | 'id'>;
 
 /**
+ * What an update writes to one record (T083): the fields to set, or a
+ * function that works them out from the record as the server holds it.
+ *
+ * Use the function whenever the new value depends on the old one -- adding to
+ * or removing from a list, toggling an entry in it. The page's copy can be
+ * behind the server, and a list worked out from it drops whatever another
+ * player added since. The function runs in a transaction and may run more
+ * than once, so it must only compute.
+ */
+export type RecordChange<T> = Partial<T> | ((current: T) => Partial<T>);
+
+/**
  * Generic context state structure for content types
  */
 export interface ContentContextState<T> {

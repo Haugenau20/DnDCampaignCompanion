@@ -46,6 +46,26 @@ const mockFirestore = {
     if (!stored) throw new Error(`No document ${collection}/${id}`);
     Object.assign(stored, JSON.parse(JSON.stringify(data)));
   },
+  /**
+   * A transaction: `decide` reads the stored documents, not the listener's
+   * copy, and its fields are merged in. (Firestore re-runs it if a read
+   * changes before commit; `DocumentService`'s own tests cover that.)
+   */
+  updateDocumentAfterReading: async (
+    collection: string,
+    id: string,
+    decide: (read: (otherId: string) => Promise<Doc | undefined>) => Promise<Doc>
+  ) => {
+    const documents = mockStore[mockResolve(collection)] ?? [];
+    const read = async (otherId: string) => {
+      const found = documents.find((doc) => doc.id === otherId);
+      return found ? JSON.parse(JSON.stringify(found)) : undefined;
+    };
+    const fields = await decide(read);
+    const stored = documents.find((doc) => doc.id === id);
+    if (!stored) throw new Error(`No document ${collection}/${id}`);
+    Object.assign(stored, JSON.parse(JSON.stringify(fields)));
+  },
   createDocument: async (_collection: string, _data: Doc, id: string) => id,
   deleteDocument: async () => undefined,
   batchOperations: async () => undefined,
@@ -297,5 +317,111 @@ describe('a rumour edit leaves what it did not change (T083)', () => {
     await act(() => rumors.updateRumor('smoke', { relatedNPCs: ['aldric'] }));
     expect(stored('rumors', 'smoke').relatedNPCs).toEqual(['aldric']);
     keptTheirs();
+  });
+});
+
+// T083, the list half: a list is computed from what the server holds, so two
+// changes to the same list from copies of the same moment both survive.
+// `anotherPlayer` below stands for a change that landed after this client's
+// copy was taken -- the same race as two people clicking at once.
+describe('two changes to one list both survive (T083)', () => {
+  beforeEach(mount);
+
+  it('two objective ticks', async () => {
+    anotherPlayer('quests', 'ring', {
+      objectives: [
+        { id: 'o1', description: 'Leave the Shire', completed: false },
+        { id: 'o2', description: 'Reach Rivendell', completed: true },
+      ],
+    });
+    await act(() => quests.updateQuestObjective('ring', 'o1', true));
+    expect(stored('quests', 'ring').objectives.map((o: Doc) => o.completed)).toEqual([true, true]);
+  });
+
+  it('an objective added while another is ticked', async () => {
+    anotherPlayer('quests', 'ring', {
+      objectives: [
+        { id: 'o1', description: 'Leave the Shire', completed: false },
+        { id: 'o2', description: 'Reach Rivendell', completed: false },
+        { id: 'o3', description: 'Cross the Misty Mountains', completed: false },
+      ],
+    });
+    await act(() => quests.updateQuestObjective('ring', 'o2', true));
+    expect(stored('quests', 'ring').objectives.map((o: Doc) => o.id)).toEqual(['o1', 'o2', 'o3']);
+    expect(stored('quests', 'ring').objectives[1].completed).toBe(true);
+  });
+
+  it('an objective added by two people', async () => {
+    anotherPlayer('quests', 'ring', {
+      objectives: [
+        { id: 'o1', description: 'Leave the Shire', completed: false },
+        { id: 'o2', description: 'Reach Rivendell', completed: false },
+        { id: 'o3', description: 'Cross the Misty Mountains', completed: false },
+      ],
+    });
+    await act(() => quests.addQuestObjective('ring', 'Find a guide'));
+    expect(stored('quests', 'ring').objectives.map((o: Doc) => o.description)).toEqual([
+      'Leave the Shire', 'Reach Rivendell', 'Cross the Misty Mountains', 'Find a guide',
+    ]);
+  });
+
+  it('completing the quest ticks every objective the server holds', async () => {
+    anotherPlayer('quests', 'ring', {
+      objectives: [
+        { id: 'o1', description: 'Leave the Shire', completed: false },
+        { id: 'o2', description: 'Reach Rivendell', completed: false },
+        { id: 'o3', description: 'Cross the Misty Mountains', completed: false },
+      ],
+    });
+    await act(() => quests.markQuestCompleted('ring'));
+    expect(stored('quests', 'ring').objectives).toHaveLength(3);
+    expect(stored('quests', 'ring').objectives.every((o: Doc) => o.completed)).toBe(true);
+  });
+
+  it('two notes on an NPC', async () => {
+    anotherPlayer('npcs', 'aldric', { notes: [{ date: '2026-10-03', text: 'Mends armour' }] });
+    await act(() => npcs.updateNPCNote('aldric', { date: '2026-10-04', text: 'Owes us a sword' } as any));
+    expect(stored('npcs', 'aldric').notes.map((n: Doc) => n.text)).toEqual(['Mends armour', 'Owes us a sword']);
+  });
+
+  it('two notes on a location', async () => {
+    anotherPlayer('locations', 'bree', { notes: [{ date: '2026-10-03', text: 'Bill Ferny lurks' }] });
+    await act(() => locations.updateLocationNote('bree', { text: 'The Prancing Pony' } as any));
+    expect(stored('locations', 'bree').notes.map((n: Doc) => n.text)).toEqual(['Bill Ferny lurks', 'The Prancing Pony']);
+  });
+
+  it('two notes on a rumour', async () => {
+    anotherPlayer('rumors', 'smoke', { notes: [{ id: 'n0', content: 'Seen twice' }] });
+    await act(() => rumors.updateRumorNote('smoke', { id: 'n1', content: 'Rangers about' } as any));
+    expect(stored('rumors', 'smoke').notes.map((n: Doc) => n.id)).toEqual(['n0', 'n1']);
+  });
+
+  it('a page change worked out from the record, not the copy', async () => {
+    anotherPlayer('rumors', 'smoke', { relatedNPCs: ['barliman'] });
+    await act(() =>
+      rumors.updateRumor('smoke', (rumor) => ({ relatedNPCs: [...rumor.relatedNPCs, 'aldric'] }))
+    );
+    expect(stored('rumors', 'smoke').relatedNPCs).toEqual(['barliman', 'aldric']);
+
+    anotherPlayer('npcs', 'aldric', { tags: ['smith'] });
+    await act(() => npcs.updateNPC('aldric', (npc) => ({ tags: [...(npc.tags ?? []), 'bree'] })));
+    expect(stored('npcs', 'aldric').tags).toEqual(['smith', 'bree']);
+
+    anotherPlayer('quests', 'ring', { leads: ['Ask Gandalf'] });
+    await act(() => quests.updateQuest('ring', (quest) => ({ leads: [...(quest.leads ?? []), 'Ask Elrond'] })));
+    expect(stored('quests', 'ring').leads).toEqual(['Ask Gandalf', 'Ask Elrond']);
+
+    anotherPlayer('locations', 'bree', { features: ['The Pony'] });
+    await act(() =>
+      locations.updateLocation('bree', (place) => ({ features: [...(place.features ?? []), 'The gate'] }))
+    );
+    expect(stored('locations', 'bree').features).toEqual(['The Pony', 'The gate']);
+  });
+
+  it('a change to a record deleted meanwhile is refused, not written', async () => {
+    mockStore[`${CAMPAIGN}/npcs`] = [];
+    await expect(
+      act(() => npcs.updateNPC('aldric', (npc) => ({ tags: [...(npc.tags ?? []), 'bree'] })))
+    ).rejects.toThrow();
   });
 });

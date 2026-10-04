@@ -14,6 +14,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import QuestDetailPage from '../QuestDetailPage';
+import { resolveRecordChange } from '@/test-utils/update-after-reading';
+
+// T083: a list change goes to the context as a function of the stored
+// record. Resolve it the way the context's transaction does -- against
+// `mockStoredRecords[id]` when a test says the server holds something newer
+// than the page's copy, and against the page's own copy otherwise -- so the
+// write mocks below still see plain fields.
+const mockResolveChange = resolveRecordChange;
+let mockStoredRecords: Record<string, any> = {};
 
 // ---------------------------------------------------------------------------
 // Route
@@ -148,7 +157,11 @@ jest.mock('features/campaign-entities', () => {
       isLoading: false,
       error: null,
       refreshQuests: mockRefreshQuests,
-      updateQuest: mockUpdateQuest,
+      updateQuest: (id: string, change: any) =>
+        mockUpdateQuest(
+          id,
+          mockResolveChange(change, mockStoredRecords[id] ?? mockQuests.find((q) => q.id === id))
+        ),
       updateQuestStatus: mockUpdateQuestStatus,
       updateQuestObjective: mockUpdateQuestObjective,
       addQuestObjective: mockAddQuestObjective,
@@ -221,6 +234,7 @@ const section = (title: string) =>
   screen.getByText(title).closest('section') as HTMLElement;
 
 beforeEach(() => {
+  mockStoredRecords = {};
   jest.clearAllMocks();
   mockQuestId = 'reclaim-erebor';
   mockRouterState = null;
@@ -558,6 +572,25 @@ describe('the prep material', () => {
           leads: ['The door can only be opened on Durin’s Day', 'Ask Balin'],
         })
       )
+    );
+  });
+
+  // T083: the page's copy can be behind the server. A list is worked out from
+  // the quest as stored, so a lead another player added stays.
+  it('adds a lead to the leads the quest has now, not to the page\'s copy', async () => {
+    mockStoredRecords['reclaim-erebor'] = {
+      ...QUEST,
+      leads: ['The door can only be opened on Durin’s Day', 'Find the key'],
+    };
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Add another lead/ }));
+    fireEvent.change(screen.getByLabelText('Leads'), { target: { value: 'Ask Balin' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add to leads' }));
+
+    await waitFor(() =>
+      expect(mockUpdateQuest).toHaveBeenCalledWith('reclaim-erebor', {
+        leads: ['The door can only be opened on Durin’s Day', 'Find the key', 'Ask Balin'],
+      })
     );
   });
 

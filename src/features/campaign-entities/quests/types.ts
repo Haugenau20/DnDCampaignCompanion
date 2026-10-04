@@ -1,5 +1,5 @@
 // src/features/campaign-entities/quests/types.ts
-import { BaseContent, DomainData } from 'core/types/common';
+import { BaseContent, DomainData, RecordChange } from 'core/types/common';
 import { Location } from '../locations/types';
 
 export type QuestStatus = 'active' | 'completed' | 'failed';
@@ -74,11 +74,12 @@ export interface QuestContextValue extends QuestContextState {
   moveQuestObjective: (questId: string, objectiveId: string, direction: 'up' | 'down') => Promise<void>;
   addQuest: (quest: DomainData<Quest>) => Promise<string>;
   /**
-   * Write `patch` to the quest: the fields it names, and nothing else (T083).
-   * Never the whole record -- a copy from the listener can be behind the
-   * server, and sending it back reverts whatever changed since.
+   * Write `change` to the quest: the fields it names, and nothing else
+   * (T083). Never the whole record -- a copy from the listener can be behind
+   * the server. A list worked out from the old one goes as a function; see
+   * `RecordChange`.
    */
-  updateQuest: (questId: string, patch: Partial<Quest>) => Promise<void>;
+  updateQuest: (questId: string, change: RecordChange<Quest>) => Promise<void>;
   deleteQuest: (questId: string) => Promise<void>;
   /** Sets the status of several quests, committed as one batch. */
   updateQuestsStatus: (questIds: string[], status: QuestStatus) => Promise<void>;

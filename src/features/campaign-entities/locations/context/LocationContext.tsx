@@ -2,9 +2,10 @@
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
 import { descendantIdsDeepestFirst, parentChainReaches, wouldCreateCycle } from '../utils/location-tree';
-import { DomainData } from 'core/types/common';
+import { DomainData, RecordChange } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
@@ -71,24 +72,18 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return location?.parentId ? getLocationById(location.parentId) : undefined;
   }, [getLocationById]);
 
-  // Update a location
-  const updateLocation = useCallback(async (locationId: string, updatedLocation: Partial<Location>): Promise<void> => {
+  // Update a location: only what `change` names; see `RecordChange` (T083)
+  const updateLocation = useCallback(async (locationId: string, change: RecordChange<Location>): Promise<void> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to update a location');
     }
 
-    // Get the current location to update
-    const location = getLocationById(locationId);
-    if (!location) {
+    if (!getLocationById(locationId)) {
       throw new Error('Location not found');
     }
 
-    const updatedData = {
-      ...updatedLocation
-    };
-
-    await updateData(locationId, updatedData);
-  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData]);
+    await writeRecordChange({ updateData, updateDataAfterReading }, locationId, change, 'Location not found');
+  }, [user, activeGroupId, activeCampaignId, getLocationById, updateData, updateDataAfterReading]);
 
   // Update location note
   const updateLocationNote = useCallback(async (locationId: string, note: LocationNote): Promise<void> => {
@@ -101,17 +96,15 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    // The notes alone (T083): the rest of the copy may be behind the server.
-    await updateData(locationId, {
-      notes: [
-        ...(location.notes || []),
-        {
-          ...note,
-          date: toNoteDate()
-        }
-      ]
-    });
-  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData]);
+    // The notes alone, appended to the list the server holds (T083).
+    const dated = { ...note, date: toNoteDate() };
+    await writeRecordChange(
+      { updateData, updateDataAfterReading },
+      locationId,
+      (current) => ({ notes: [...(current.notes || []), dated] }),
+      'Location not found'
+    );
+  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData, updateDataAfterReading]);
 
   // Update location status
   const updateLocationStatus = useCallback(async (locationId: string, status: LocationStatus): Promise<void> => {

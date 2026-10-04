@@ -4,6 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { RumorProvider, useRumors } from '../RumorContext';
 import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
+import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 
 /**
  * RumorContext Bug Discovery Testing
@@ -109,6 +110,8 @@ describe('RumorContext Bug Discovery Tests', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: mockAddData,
       updateData: mockUpdateData,
+      // Lists are worked out from the record (T083): this suite's records.
+      updateDataAfterReading: updateAfterReadingThrough(mockUpdateData, (id) => (mockUseRumorData()?.rumors ?? []).find((r: any) => r.id === id)),
       deleteData: mockDeleteData,
     });
   });

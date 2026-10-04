@@ -1,5 +1,5 @@
 // src/features/campaign-entities/locations/types.ts
-import { BaseContent, DomainData } from 'core/types/common';
+import { BaseContent, DomainData, RecordChange } from 'core/types/common';
 import { StoredImage } from 'core/types/storedImage';
 
 /**
@@ -108,7 +108,8 @@ export interface LocationContextValue extends LocationContextState {
   getLocationsByStatus: (status: LocationStatus) => Location[];
   getChildLocations: (parentId: string) => Location[];
   getParentLocation: (locationId: string) => Location | undefined;
-  updateLocation: (locationId: string, updatedLocation: Partial<Location>) => Promise<void>;
+  /** Write `change` to the location: see `RecordChange` (T083). */
+  updateLocation: (locationId: string, change: RecordChange<Location>) => Promise<void>;
   updateLocationNote: (locationId: string, note: LocationNote) => Promise<void>;
   updateLocationStatus: (locationId: string, status: LocationStatus) => Promise<void>;
   /** Sets the status of several locations, committed as one batch. */

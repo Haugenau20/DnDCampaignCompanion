@@ -23,6 +23,7 @@ import {
   KNOWLEDGE_OPTIONS,
 } from 'features/campaign-entities';
 import type { Location, LocationNote, LocationType, LocationStatus } from 'features/campaign-entities';
+import type { RecordChange } from 'core/types/common';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
@@ -248,10 +249,12 @@ const LocationDetailPage: React.FC = () => {
   );
 
   // Nothing is patched locally after a write: the page shows the listener's
-  // copy, which carries both this write and any other player's (T032).
-  const save = async (patch: Partial<Location>) => {
+  // copy, which carries both this write and any other player's (T032). That
+  // copy can be behind the server, so a list worked out from the old one goes
+  // as a function and is worked out from the record the server holds (T083).
+  const save = async (change: RecordChange<Location>) => {
     if (!location) return;
-    await updateLocation(location.id, patch);
+    await updateLocation(location.id, change);
   };
 
   const picture = useImageAttachment({
@@ -278,11 +281,12 @@ const LocationDetailPage: React.FC = () => {
   };
 
   // Through `save`, like every other field. The stored array is searched, not
-  // the sorted copy on screen, so notes keep the order they were written in.
+  // the sorted copy on screen, so notes keep the order they were written in --
+  // the array the server holds (T083), so another player's new note stays.
   const editNote = async (note: LocationNote, text: string) =>
-    save({ notes: replaceNoteText(location?.notes ?? [], note, text) });
+    save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
   const deleteNote = async (note: LocationNote) =>
-    save({ notes: removeNote(location?.notes ?? [], note) });
+    save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
 
   /**
    * A feature becomes a real place (§6.4, item 7).
@@ -305,9 +309,9 @@ const LocationDetailPage: React.FC = () => {
       notes: [],
       tags: [],
     });
-    await save({
-      features: (location.features ?? []).filter((f) => f !== feature),
-    });
+    await save((current) => ({
+      features: (current.features ?? []).filter((f) => f !== feature),
+    }));
   };
 
   const handleDelete = async (childStrategy: Parameters<typeof deleteLocation>[1]) => {
@@ -424,11 +428,11 @@ const LocationDetailPage: React.FC = () => {
                             type="button"
                             aria-label={`Remove ${npc.name} from ${location.name}`}
                             onClick={() =>
-                              void save({
-                                connectedNPCs: (location.connectedNPCs ?? []).filter(
+                              void save((current) => ({
+                                connectedNPCs: (current.connectedNPCs ?? []).filter(
                                   (id) => id !== npc.id
                                 ),
-                              })
+                              }))
                             }
                             className="button-ghost rounded-full p-1 shrink-0"
                           >
@@ -453,18 +457,18 @@ const LocationDetailPage: React.FC = () => {
                     showAttachedChips={false}
                     ariaLabel={`the people in ${location.name}`}
                     onAttach={(id) =>
-                      void save({
+                      void save((current) => ({
                         connectedNPCs: Array.from(
-                          new Set([...(location.connectedNPCs ?? []), id])
+                          new Set([...(current.connectedNPCs ?? []), id])
                         ),
-                      })
+                      }))
                     }
                     onDetach={(id) =>
-                      void save({
-                        connectedNPCs: (location.connectedNPCs ?? []).filter(
+                      void save((current) => ({
+                        connectedNPCs: (current.connectedNPCs ?? []).filter(
                           (existing) => existing !== id
                         ),
-                      })
+                      }))
                     }
                   />
                 )}
@@ -521,9 +525,9 @@ const LocationDetailPage: React.FC = () => {
                           type="button"
                           aria-label={`Remove the tag ${tag}`}
                           onClick={() =>
-                            void save({
-                              tags: (location.tags ?? []).filter((t) => t !== tag),
-                            })
+                            void save((current) => ({
+                              tags: (current.tags ?? []).filter((t) => t !== tag),
+                            }))
                           }
                           className="button-ghost rounded-full p-0.5"
                         >
@@ -543,9 +547,9 @@ const LocationDetailPage: React.FC = () => {
                       placeholder="hidden"
                       clearOnSave
                       onSubmit={(value) =>
-                        save({
-                          tags: Array.from(new Set([...(location.tags ?? []), value])),
-                        })
+                        save((current) => ({
+                          tags: Array.from(new Set([...(current.tags ?? []), value])),
+                        }))
                       }
                       onSaved={closeEditor}
                       onCancel={closeEditor}
@@ -714,11 +718,11 @@ const LocationDetailPage: React.FC = () => {
                           type="button"
                           aria-label={`Remove the feature ${feature}`}
                           onClick={() =>
-                            void save({
-                              features: (location.features ?? []).filter(
+                            void save((current) => ({
+                              features: (current.features ?? []).filter(
                                 (f) => f !== feature
                               ),
-                            })
+                            }))
                           }
                           className="button-ghost rounded-full p-1 shrink-0"
                         >
@@ -741,7 +745,7 @@ const LocationDetailPage: React.FC = () => {
                   placeholder="Seven gates"
                   clearOnSave
                   onSubmit={(value) =>
-                    save({ features: [...(location.features ?? []), value] })
+                    save((current) => ({ features: [...(current.features ?? []), value] }))
                   }
                   onSaved={closeEditor}
                   onCancel={closeEditor}

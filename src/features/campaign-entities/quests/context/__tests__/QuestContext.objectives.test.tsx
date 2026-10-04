@@ -4,6 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { QuestProvider, useQuests } from '../QuestContext';
 import { Quest, QuestStatus } from '../../types';
+import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 
 /**
  * Quest Context Objective Management Behavioral Testing
@@ -87,6 +88,8 @@ describe('QuestContext Objective Management Behavior', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: jest.fn(),
       updateData: mockUpdateData,
+      // Lists are worked out from the record (T083): this suite's records.
+      updateDataAfterReading: updateAfterReadingThrough(mockUpdateData, (id) => mockUseQuestData()?.getQuestById?.(id)),
       deleteData: jest.fn(),
     });
 

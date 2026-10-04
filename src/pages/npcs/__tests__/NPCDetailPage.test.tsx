@@ -3,6 +3,15 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { MemoryRouter, matchRoutes } from "react-router-dom";
 import NPCDetailPage from "../NPCDetailPage";
+import { resolveRecordChange } from '@/test-utils/update-after-reading';
+
+// T083: a list change goes to the context as a function of the stored
+// record. Resolve it the way the context's transaction does -- against
+// `mockStoredRecords[id]` when a test says the server holds something newer
+// than the page's copy, and against the page's own copy otherwise -- so the
+// write mocks below still see plain fields.
+const mockResolveChange = resolveRecordChange;
+let mockStoredRecords: Record<string, any> = {};
 
 // ---------------------------------------------------------------------------
 // react-router-dom mocks
@@ -153,12 +162,23 @@ jest.mock("features/campaign-entities", () => ({
     ...mockNPCDataReturn,
     isLoading: mockNPCDataReturn.loading,
     refreshNPCs: mockRefreshNPCs,
-    updateNPC: mockUpdateNPC,
+    updateNPC: (id: string, change: any) =>
+      mockUpdateNPC(
+        id,
+        mockResolveChange(change, mockStoredRecords[id] ?? mockNPCDataReturn.npcs.find((n) => n.id === id))
+      ),
     updateNPCNote: mockUpdateNPCNote,
     deleteNPC: mockDeleteNPC,
   }),
   useQuests: () => ({ getQuestById: mockGetQuestById, quests: mockQuests }),
-  useRumors: () => ({ rumors: mockRumors, updateRumor: mockUpdateRumor }),
+  useRumors: () => ({
+    rumors: mockRumors,
+    updateRumor: (id: string, change: any) =>
+      mockUpdateRumor(
+        id,
+        mockResolveChange(change, mockStoredRecords[id] ?? mockRumors.find((r) => r.id === id))
+      ),
+  }),
   useLocations: () => ({ locations: mockLocations }),
   // The real resolver, not a stub: the page's contract is that it reuses the
   // directories' answer rather than inventing its own.
@@ -300,6 +320,7 @@ function identityCard(): HTMLElement {
 // ---------------------------------------------------------------------------
 describe("NPCDetailPage", () => {
   beforeEach(() => {
+  mockStoredRecords = {};
     jest.clearAllMocks();
     mockNpcId = "npc-1";
     mockUser = { uid: "user-1" };
@@ -1258,6 +1279,24 @@ describe("NPCDetailPage", () => {
       expect(mockRefreshNPCs).not.toHaveBeenCalled();
     });
 
+    it("edits the note in the notes the NPC has now, keeping one added meanwhile (T083)", async () => {
+      const added = { date: "2025-06-01", text: "Left for the Grey Havens.", author: "Elanor" };
+      mockStoredRecords["npc-1"] = { ...fullNPC, notes: [...fullNPC.notes, added] };
+      renderPage();
+      fireEvent.click(editMay());
+      fireEvent.change(screen.getByLabelText("Note from 31/05/2025"), {
+        target: { value: "Rode to Orthanc." },
+      });
+      fireEvent.click(screen.getByText("Save note"));
+
+      await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+      expect(mockUpdateNPC.mock.calls[0][1].notes).toEqual([
+        { date: "2025-05-31", text: "Rode to Orthanc.", author: "Zendikarr" },
+        { date: "2025-04-02", text: "An older note, no author recorded." },
+        added,
+      ]);
+    });
+
     it("deletes a note only once the delete is confirmed", async () => {
       renderPage();
       fireEvent.click(deleteApril());
@@ -1439,6 +1478,22 @@ describe("NPCDetailPage", () => {
           "npc-1",
           expect.objectContaining({ tags: ["istari"] })
         )
+      );
+    });
+
+    // T083: the page's copy can be behind the server. A list is worked out
+    // from the NPC as stored, so a tag another player added stays.
+    it("adds a tag to the tags the NPC has now, not to the page's copy", async () => {
+      mockStoredRecords["npc-1"] = { ...fullNPC, tags: ["wizard", "istari", "ring-finder"] };
+      renderPage();
+      fireEvent.click(screen.getByRole("button", { name: /Add another tag/ }));
+      fireEvent.change(screen.getByLabelText("Add a tag"), { target: { value: "grey" } });
+      fireEvent.click(screen.getByText("Add tag"));
+
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith("npc-1", {
+          tags: ["wizard", "istari", "ring-finder", "grey"],
+        })
       );
     });
   });

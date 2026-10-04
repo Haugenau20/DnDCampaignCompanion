@@ -14,6 +14,7 @@ import {
   resolveLocationName,
 } from 'features/campaign-entities';
 import type { NPC, NPCNote, NPCRelationship, NPCStatus } from 'features/campaign-entities';
+import type { RecordChange } from 'core/types/common';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
@@ -203,6 +204,9 @@ const SideCard: React.FC<{
 );
 
 /** The kinds of thing an NPC can be connected to, in the order they are shown. */
+/** An NPC with no `connections` stored yet. */
+const NO_CONNECTIONS = { relatedNPCs: [], affiliations: [], relatedQuests: [] };
+
 const RELATION_GROUPS = [
   { kind: 'people', label: 'People' },
   { kind: 'places', label: 'Places' },
@@ -482,12 +486,29 @@ const NPCDetailPage: React.FC = () => {
    * Nothing is patched locally after a write: the page shows the listener's
    * copy (T032), so it shows what was *written* rather than what was typed,
    * and another player's change to the same record arrives the same way.
-   * Only `patch` is written (T083): the copy may be behind the server.
+   * Only what `change` names is written (T083): the copy may be behind the
+   * server. A list worked out from the old one goes as a function, so it is
+   * worked out from the record the server holds (`RecordChange`).
    */
-  const save = async (patch: Partial<NPC>) => {
+  const save = async (change: RecordChange<NPC>) => {
     if (!npc) return;
-    await updateNPC(npc.id, patch);
+    await updateNPC(npc.id, change);
   };
+
+  /**
+   * Change one of the NPC's `connections` lists, worked out from the record the
+   * server holds (T083): attaching a quest keeps a person another player
+   * attached a moment ago. `connections` is one stored map, so the other two
+   * lists are written back from that same record.
+   */
+  const changeConnections = (
+    list: keyof NonNullable<NPC['connections']>,
+    next: (ids: string[]) => string[]
+  ) =>
+    save((current) => {
+      const connections = current.connections ?? NO_CONNECTIONS;
+      return { connections: { ...connections, [list]: next(connections[list] ?? []) } };
+    });
 
   const portrait = useImageAttachment({
     prefix:
@@ -523,28 +544,13 @@ const NPCDetailPage: React.FC = () => {
    */
   const attachRelation = async (id: string, kind: AttachKind) => {
     if (!npc) return;
-    const connections = npc.connections ?? {
-      relatedNPCs: [],
-      affiliations: [],
-      relatedQuests: [],
-    };
 
     switch (kind) {
       case 'npc':
-        await save({
-          connections: {
-            ...connections,
-            relatedNPCs: Array.from(new Set([...(connections.relatedNPCs ?? []), id])),
-          },
-        });
+        await changeConnections('relatedNPCs', (ids) => Array.from(new Set([...ids, id])));
         break;
       case 'quest':
-        await save({
-          connections: {
-            ...connections,
-            relatedQuests: Array.from(new Set([...(connections.relatedQuests ?? []), id])),
-          },
-        });
+        await changeConnections('relatedQuests', (ids) => Array.from(new Set([...ids, id])));
         break;
       case 'location': {
         // Where someone is, is one place. Attaching another replaces it rather
@@ -558,9 +564,9 @@ const NPCDetailPage: React.FC = () => {
       case 'rumor': {
         const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
         if (!rumor) return;
-        await updateRumor(rumor.id, {
-          relatedNPCs: Array.from(new Set([...(rumor.relatedNPCs ?? []), npc.id])),
-        });
+        await updateRumor(rumor.id, (current) => ({
+          relatedNPCs: Array.from(new Set([...(current.relatedNPCs ?? []), npc.id])),
+        }));
         break;
       }
     }
@@ -573,11 +579,6 @@ const NPCDetailPage: React.FC = () => {
    */
   const detachRelation = async (id: string, kind: AttachKind) => {
     if (!npc) return;
-    const connections = npc.connections ?? {
-      relatedNPCs: [],
-      affiliations: [],
-      relatedQuests: [],
-    };
 
     switch (kind) {
       case 'location':
@@ -586,26 +587,16 @@ const NPCDetailPage: React.FC = () => {
       case 'rumor': {
         const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
         if (!rumor?.relatedNPCs?.includes(npc.id)) return;
-        await updateRumor(rumor.id, {
-          relatedNPCs: rumor.relatedNPCs.filter((existing) => existing !== npc.id),
-        });
+        await updateRumor(rumor.id, (current) => ({
+          relatedNPCs: (current.relatedNPCs ?? []).filter((existing) => existing !== npc.id),
+        }));
         break;
       }
       case 'npc':
-        await save({
-          connections: {
-            ...connections,
-            relatedNPCs: (connections.relatedNPCs ?? []).filter((existing) => existing !== id),
-          },
-        });
+        await changeConnections('relatedNPCs', (ids) => ids.filter((existing) => existing !== id));
         break;
       case 'quest':
-        await save({
-          connections: {
-            ...connections,
-            relatedQuests: (connections.relatedQuests ?? []).filter((existing) => existing !== id),
-          },
-        });
+        await changeConnections('relatedQuests', (ids) => ids.filter((existing) => existing !== id));
         break;
     }
   };
@@ -627,12 +618,15 @@ const NPCDetailPage: React.FC = () => {
 
   /**
    * Both go through `save`, so the page re-reads what was written. The stored
-   * array is found in, not the sorted copy on screen: order is kept as written.
+   * array is found in, not the sorted copy on screen: order is kept as written
+   * -- and it is the array the server holds (T083), so a note another player
+   * added meanwhile stays, and one they changed first is refused rather than
+   * guessed at (`NOTE_CHANGED_MESSAGE`).
    */
   const editNote = async (note: NPCNote, text: string) =>
-    save({ notes: replaceNoteText(npc?.notes ?? [], note, text) });
+    save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
   const deleteNote = async (note: NPCNote) =>
-    save({ notes: removeNote(npc?.notes ?? [], note) });
+    save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
 
   const handleDelete = async () => {
     if (!npc) return;
@@ -1330,18 +1324,9 @@ const NPCDetailPage: React.FC = () => {
                                       type="button"
                                       aria-label={`Remove the affiliation ${relation.name}`}
                                       onClick={() =>
-                                        void save({
-                                          connections: {
-                                            ...(npc.connections ?? {
-                                              relatedNPCs: [],
-                                              affiliations: [],
-                                              relatedQuests: [],
-                                            }),
-                                            affiliations: (
-                                              npc.connections?.affiliations ?? []
-                                            ).filter((existing) => existing !== relation.name),
-                                          },
-                                        })
+                                        void changeConnections('affiliations', (names) =>
+                                          names.filter((existing) => existing !== relation.name)
+                                        )
                                       }
                                       className="button-ghost rounded-full p-1 ml-auto shrink-0"
                                     >
@@ -1379,18 +1364,9 @@ const NPCDetailPage: React.FC = () => {
                       placeholder="The Fellowship"
                       clearOnSave
                       onSubmit={(value) =>
-                        save({
-                          connections: {
-                            ...(npc.connections ?? {
-                              relatedNPCs: [],
-                              affiliations: [],
-                              relatedQuests: [],
-                            }),
-                            affiliations: Array.from(
-                              new Set([...(npc.connections?.affiliations ?? []), value])
-                            ),
-                          },
-                        })
+                        changeConnections('affiliations', (names) =>
+                          Array.from(new Set([...names, value]))
+                        )
                       }
                       onSaved={() => setEditingAffiliation(false)}
                       onCancel={() => setEditingAffiliation(false)}
@@ -1418,9 +1394,9 @@ const NPCDetailPage: React.FC = () => {
                             type="button"
                             aria-label={`Remove the tag ${tag}`}
                             onClick={() =>
-                              void save({
-                                tags: (npc.tags ?? []).filter((existing) => existing !== tag),
-                              })
+                              void save((current) => ({
+                                tags: (current.tags ?? []).filter((existing) => existing !== tag),
+                              }))
                             }
                             className="button-ghost rounded-full p-0.5"
                           >
@@ -1447,7 +1423,9 @@ const NPCDetailPage: React.FC = () => {
                       placeholder="wizard"
                       clearOnSave
                       onSubmit={(value) =>
-                        save({ tags: Array.from(new Set([...(npc.tags ?? []), value])) })
+                        save((current) => ({
+                          tags: Array.from(new Set([...(current.tags ?? []), value])),
+                        }))
                       }
                       onSaved={() => setEditingTag(false)}
                       onCancel={() => setEditingTag(false)}
