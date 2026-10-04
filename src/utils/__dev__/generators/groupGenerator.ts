@@ -50,7 +50,9 @@ export const addUsersToGroups = async (db: any, users: UserData[], groups: { gro
         username: user.username,
         role: isAdmin ? 'admin' : 'member',
         joinedAt: formattedDate,
-        characters: isAdmin ? [] : [`${user.username}'s Character`],
+        // `{id, name}` entries, as `CharacterNameEntry` and the profile page
+        // expect; a bare string crashed the page's character row.
+        characters: isAdmin ? [] : [{ id: `${user.id}-character`, name: `${user.username}'s Character` }],
         activeCampaignId: groupId === groups.group1Id ? 'campaign1-1' : 'campaign2-1', // Set default active campaign
         preferences: { theme: 'dark', notifications: true }
       };

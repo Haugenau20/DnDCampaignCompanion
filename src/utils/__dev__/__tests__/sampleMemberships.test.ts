@@ -76,4 +76,18 @@ describe("sample memberships", () => {
       expect({ user: user.username, groups: joined }).toEqual({ user: user.username, groups: listed });
     }
   });
+
+  // The app reads characters as `{id, name}` entries (`CharacterNameEntry`).
+  // The seed wrote bare strings, and the profile page crashed on the first
+  // one: its character row hashes the missing id.
+  it("seeds characters in the shape the app reads", async () => {
+    await addUsersToGroups({}, users, { group1Id: "group1", group2Id: "group2" }, "2026-09-24");
+
+    const profiles = Object.entries(writes()).filter(([path]) => /^groups\/[^/]+\/users\/[^/]+$/.test(path));
+    const characters = profiles.flatMap(([, data]) => data.characters);
+    expect(characters.length).toBeGreaterThan(0);
+    for (const character of characters) {
+      expect(character).toEqual({ id: expect.any(String), name: expect.any(String) });
+    }
+  });
 });
