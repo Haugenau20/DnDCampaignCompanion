@@ -74,9 +74,9 @@ export function supportScreenshotPrefix(uid: string): string {
 }
 
 /**
- * How long an upload waits for its pending entry before going on without it.
- * The entry needs the server; a client that cannot reach it should still get
- * an answer rather than a progress bar that never moves.
+ * How long an upload waits for its pending entry before failing. The entry
+ * needs the server; a client that cannot reach it should still get an answer
+ * rather than a progress bar that never moves.
  */
 const PENDING_ENTRY_TIMEOUT_MS = 10_000;
 
@@ -164,10 +164,22 @@ class ImageStorageService extends BaseFirebaseService {
     // The entry is written alongside the bytes, and waited for before the
     // image is handed back: the caller's document write must not reach the
     // server ahead of it, or the daily sweep could take a file whose write
-    // is queued in an offline tab for an orphan (IMG-003).
+    // is queued in an offline tab for an orphan (IMG-003). Without its entry
+    // the image could never be saved -- the rules refuse a document that
+    // points at it (T084) -- so the upload fails and takes its bytes with it.
     const recorded = this.recordPendingUpload(path, uid);
+    // Awaited below; this only stops a refusal that arrives while the bytes
+    // are still on their way from being reported as unhandled.
+    recorded.catch(() => undefined);
     const objectRef = await this.put(path, image, onProgress, IMMUTABLE_CACHE_CONTROL);
-    await recorded;
+    try {
+      await recorded;
+    } catch (error) {
+      this.remove(path).catch((cleanup) =>
+        console.warn(`Could not delete ${path}, whose upload failed; the sweep will.`, cleanup)
+      );
+      throw error;
+    }
 
     return {
       path,
@@ -222,26 +234,24 @@ class ImageStorageService extends BaseFirebaseService {
   /**
    * Record `path` as an upload whose document is still to be written.
    *
-   * Best effort, for now: until the production rules allow the entry, it is
-   * refused and the upload goes on as it always has (T084's first half). It
-   * also gives up waiting after {@link PENDING_ENTRY_TIMEOUT_MS}.
+   * Required: the rules refuse a document write that points at a file with no
+   * live entry (T084), so this rejects when the entry is refused, and when it
+   * has not answered within {@link PENDING_ENTRY_TIMEOUT_MS}.
    */
   private async recordPendingUpload(path: string, uid: string): Promise<void> {
     const { collection, id } = pendingUploadOf(path);
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const timedOut = new Promise<void>((resolve) => {
-      timer = setTimeout(() => {
-        console.warn(`The pending entry for ${path} did not answer; uploading without waiting.`);
-        resolve();
-      }, PENDING_ENTRY_TIMEOUT_MS);
+    const timedOut = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`The pending entry for ${path} did not answer.`)),
+        PENDING_ENTRY_TIMEOUT_MS
+      );
     });
     try {
       await Promise.race([
         setDoc(doc(this.db, collection, id), { path, uid, createdAt: serverTimestamp() }),
         timedOut
       ]);
-    } catch (error) {
-      console.warn(`Could not record ${path} as a pending upload.`, error);
     } finally {
       clearTimeout(timer);
     }

@@ -82,10 +82,11 @@ export interface SweepResult {
  * Reads the `pendingUploads` ledger, deletes the entries whose lease is over,
  * and returns the paths the live ones hold.
  *
- * Runs before the references are read. Once the rules refuse an image path
- * with no live entry (the second half of T084), a document write that arrives
- * after its entry is deleted is refused, and one that arrived before is among
- * the references -- so no write can land on a file this run then deletes.
+ * Runs before the references are read. The rules refuse an image path with
+ * no entry inside the same lease (`imageLeased` in `firestore.rules.prod`), so
+ * a document write that arrives after its entry expired is refused, and one
+ * that arrived before is among the references -- no write can land on a file
+ * this run then deletes.
  *
  * An entry with no readable `createdAt` counts as expired: the rules stamp it
  * with the server's time, and an entry nobody can date must not hold a file

@@ -24,7 +24,7 @@ adjusted for the images focus above.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
-| high | T084 | A write that outlives its upload's lease points at a deleted file | M | open | Images focus; the first half's rules are live, the enforcing half is left |
+| high | T084 | A write that outlives its upload's lease points at a deleted file | S | blocked | Images focus; the code is in, the enforcing rules wait for the client to be live, then a paste |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
@@ -182,25 +182,25 @@ tabs.
 - **Source**: code review, 2026-10-04
 
 ### T084 — A write that arrives after its upload's lease can still point at a deleted file
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
+**Type** bug · **Size** S · **Status** blocked · **Verified** 2026-10-04
 
-The first half is in: an upload records itself in
-`groups/{groupId}/pendingUploads/{file}` before the document write
-(`ImageStorageService.upload`), the hook clears it once the write lands, and
-the daily sweep spares a file whose entry is under 30 days old, then deletes
-entry and file (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`). The rule for
-the collection is revision 2026-10-04 of `firestore.rules.prod`, pasted into
-the console by the maintainer on 2026-10-04.
+The code is in. An upload records itself in
+`groups/{groupId}/pendingUploads/{file}` (`ImageStorageService.upload`) and
+fails without it; the daily sweep spares a file whose entry is under 30 days
+old (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`); and revision 2026-10-04b
+of `firestore.rules.prod` refuses a write that points an NPC, location,
+campaign banner or group crest at a different file unless that file's entry
+is live (`imageLeased`). Revision 2026-10-04 (the entries alone) is live.
 
-- **Left**: a document write queued for longer than the lease still lands
-  and points at the file the sweep deleted (IMG-003's last case). Close it
-  in the rules: an NPC, location, campaign banner or group crest write that
-  changes the image path must find a live entry for it (`exists()` on
-  `pendingUploads/{last path segment}`), and the client must then treat the
-  entry as required. **Deploy order**: client first, then those rules --
-  rules first would refuse every upload from a client that writes no entry.
-  The sweep already deletes expired entries before it reads references, so
-  a refused late write is the only outcome left.
+- **Blocked on**: pasting revision 2026-10-04b into the console, which must
+  wait for the client. **Deploy order**: the frontend that writes entries
+  first; rules first would refuse every image change from a tab still on the
+  old frontend. Until then IMG-003's last case stays open: a document write
+  queued for longer than the lease lands and points at the file the sweep
+  deleted. Preferably paste after T083's field patches too: until then a
+  stale tab's unrelated edit that carries a since-replaced picture is
+  refused along with it (better than restoring a deleted file, which is what
+  it does today).
 - **Related**: the sweep still reads every NPC, location, campaign and group
   document daily to learn what is referenced (PERF2-004's remaining half,
   07). With entries required, a file with no entry and no reference is an

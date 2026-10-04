@@ -318,31 +318,50 @@ describe('ImageStorageService.upload -- the pending entry', () => {
     expect(done).toBe(true);
   });
 
-  it('uploads as it always has when the entry is refused', async () => {
-    // Before the rules for it are pasted into the console, production refuses
-    // the entry; the upload must not depend on it yet.
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    mockSetDoc.mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }));
+  // T084, second half: the rules refuse a document write that points at a
+  // file with no live entry, so an upload without one can never be saved.
+  // It fails here, where the user can still try again, and takes its bytes
+  // with it.
 
-    await expect(uploadAndFinish()).resolves.toMatchObject({ url: 'u' });
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+  /** The path the bytes went to, as the upload asked Storage for it. */
+  const uploadedPath = () => mockUploadBytesResumable.mock.calls[0][0].fullPath as string;
+
+  it('fails when the entry is refused, and deletes the bytes it wrote', async () => {
+    const refused = Object.assign(new Error('denied'), { code: 'permission-denied' });
+    mockSetDoc.mockRejectedValue(refused);
+
+    await expect(uploadAndFinish()).rejects.toBe(refused);
+    expect(mockDeleteObject).toHaveBeenCalledWith({ fullPath: uploadedPath() });
+    expect(mockGetDownloadURL).not.toHaveBeenCalled();
   });
 
-  it('does not wait forever for an entry that never answers', async () => {
+  it('gives up on an entry that never answers rather than hang, and deletes the bytes', async () => {
     jest.useFakeTimers();
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     mockSetDoc.mockReturnValue(new Promise(() => undefined));
     try {
       const pending = uploadAndFinish();
+      // Caught now, so the rejection the clock triggers is never unhandled.
+      const outcome = pending.then(() => null, (error: Error) => error);
       // Let the upload reach its wait for the entry, then run out the clock.
       for (let i = 0; i < 5; i += 1) await Promise.resolve();
       jest.advanceTimersByTime(10_000);
-      await expect(pending).resolves.toMatchObject({ url: 'u' });
+      expect((await outcome)?.message).toMatch(/did not answer/);
+      expect(mockDeleteObject).toHaveBeenCalledWith({ fullPath: uploadedPath() });
     } finally {
-      warn.mockRestore();
       jest.useRealTimers();
     }
+  });
+
+  it('reports the failed bytes, not the entry, when both fail', async () => {
+    mockSetDoc.mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }));
+    const { task, observer } = fakeTask();
+    mockUploadBytesResumable.mockReturnValue(task);
+
+    const pending = service.upload('groups/g1/campaigns/c1/npcs/n1', prepared);
+    observer.error!(Object.assign(new Error('quota'), { code: 'storage/quota-exceeded' }));
+
+    await expect(pending).rejects.toMatchObject({ code: 'storage/quota-exceeded' });
+    expect(mockDeleteObject).not.toHaveBeenCalled();
   });
 });
 
