@@ -38,6 +38,9 @@ const mockRumors = [
 ];
 
 jest.mock('features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => ({ user: mockUser }),
   useUser: () => ({ userProfile: mockUserProfile, activeGroupUserProfile: mockGroupProfile }),
   useFirestore: () => ({ createDocument: mockCreateDocument }),

@@ -6,7 +6,15 @@ import { DomainData } from 'core/types/common';
 import { DocumentAlreadyExistsError } from 'core/services/firebase/data/DocumentAlreadyExistsError';
 
 interface UseFirebaseDataOptions<T> {
-  collection: string;
+  /**
+   * The collection the write methods (and fetch mode) act on. Pass the full
+   * path a campaign's providers get from `useCampaignCollectionPath`, not the
+   * bare name: each write method is bound to the path of the render it was
+   * created in, so an operation that started in one campaign finishes there
+   * even if the player switches meanwhile (T082). `null` means there is no
+   * campaign to write to: writes refuse, and a fetch finds nothing.
+   */
+  collection: string | null;
   idField?: keyof T;
   /**
    * Whether this instance owns a copy of the collection.
@@ -63,6 +71,9 @@ interface UseFirebaseDataOptions<T> {
 
 /** One shared empty list, so an unscoped instance's `data` keeps its identity across renders. */
 const EMPTY: never[] = [];
+
+/** What a write says when there is no campaign to write to. */
+const NO_CAMPAIGN = 'No campaign selected';
 
 export function useFirebaseData<T extends Record<string, any>>(
   options: UseFirebaseDataOptions<T>
@@ -151,6 +162,11 @@ export function useFirebaseData<T extends Record<string, any>>(
       return new Promise<T[]>(resolve => {
         snapshotWaiters.current.push(resolve);
       });
+    }
+
+    if (options.collection === null) {
+      setData([]);
+      return [];
     }
 
     setLoading(true);
@@ -246,6 +262,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     setLoading(true);
     setError(null);
     try {
+      if (options.collection === null) throw new Error(NO_CAMPAIGN);
       const id = documentId ||
                 (options.idField ? (newData as unknown as T)[options.idField] as string : crypto.randomUUID());
 
@@ -273,6 +290,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     setLoading(true);
     setError(null);
     try {
+      if (options.collection === null) throw new Error(NO_CAMPAIGN);
       await updateDocumentWithAttribution(options.collection, id, updatedData);
       if (!subscribing) {
         setData(prevData =>
@@ -294,6 +312,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     setLoading(true);
     setError(null);
     try {
+      if (options.collection === null) throw new Error(NO_CAMPAIGN);
       await deleteDocument(options.collection, id);
       if (!subscribing) {
         setData(prevData => prevData.filter(item => 'id' in item && item.id !== id));

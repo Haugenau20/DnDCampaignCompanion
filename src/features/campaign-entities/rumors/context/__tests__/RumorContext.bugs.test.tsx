@@ -25,6 +25,9 @@ const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
+  // The provider's writes name the active group and campaign by full path (T082).
+  useGroups: () => ({ activeGroupId: 'group-1' }),
+  useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
   useFirestore: () => mockUseFirestore(),
@@ -564,7 +567,7 @@ describe('RumorContext Bug Discovery Tests', () => {
       // That attribution behavior is covered separately in
       // RumorContext.behavioral.test.tsx > 'Rumor Convert To Quest Behavior'.
       expect(mockCreateDocument).toHaveBeenCalledWith(
-        'quests',
+        'groups/group-1/campaigns/campaign-1/quests',
         expect.objectContaining({
           title: 'Investigate Dragon Rumors',
           description: 'Look into the dragon sightings',
@@ -579,7 +582,7 @@ describe('RumorContext Bug Discovery Tests', () => {
       expect(mockBatchOperations).toHaveBeenCalledWith([
         expect.objectContaining({
           type: 'update',
-          collection: 'rumors',
+          collection: 'groups/group-1/campaigns/campaign-1/rumors',
           id: 'rumor-to-convert',
           data: expect.objectContaining({
             convertedToQuestId: 'investigate-dragon-rumors',
@@ -640,7 +643,7 @@ describe('RumorContext Bug Discovery Tests', () => {
       // Re-seamed to createDocument (see note above) -- same sanitized-ID
       // assertion, just against the collaborator the context now calls.
       expect(mockCreateDocument).toHaveBeenCalledWith(
-        'quests',
+        'groups/group-1/campaigns/campaign-1/quests',
         expect.objectContaining({
           id: 'quest-with-special-characters' // Should be sanitized ID
         }),

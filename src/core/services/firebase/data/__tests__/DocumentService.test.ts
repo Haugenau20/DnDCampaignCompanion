@@ -9,6 +9,11 @@
 
 // ─── Firestore SDK mocks ──────────────────────────────────────────────────────
 
+import { createFakeFirestore, readBarrier } from '@/test-utils/fake-firestore-transactions';
+
+// The transactional store behind `runTransaction`; fresh for every test.
+let mockFirestoreStore = createFakeFirestore();
+
 const mockSetDoc = jest.fn();
 const mockUpdateDoc = jest.fn();
 const mockDeleteDoc = jest.fn();
@@ -53,6 +58,7 @@ jest.mock('firebase/firestore', () => ({
   query: function() { return (mockQuery as Function).apply(null, arguments); },
   where: function() { return (mockWhere as Function).apply(null, arguments); },
   writeBatch: function() { return (mockWriteBatch as Function).apply(null, arguments); },
+  runTransaction: function() { return (mockFirestoreStore.runTransaction as Function).apply(null, arguments); },
 }));
 
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
@@ -136,6 +142,7 @@ describe('DocumentService', () => {
       query: function() { return (mockQuery as Function).apply(null, arguments); },
       where: function() { return (mockWhere as Function).apply(null, arguments); },
       writeBatch: function() { return (mockWriteBatch as Function).apply(null, arguments); },
+      runTransaction: function() { return (mockFirestoreStore.runTransaction as Function).apply(null, arguments); },
     }));
     jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
     jest.doMock('firebase/auth', () => ({
@@ -173,6 +180,7 @@ describe('DocumentService', () => {
      mockBatchSet, mockBatchUpdate, mockBatchDelete, mockBatchCommit].forEach(m => m.mockReset());
     mockWriteBatch.mockReturnValue(mockBatchObj);
     mockBatchCommit.mockResolvedValue(undefined);
+    mockFirestoreStore = createFakeFirestore();
 
     DocumentService = require('../DocumentService').default;
     DocumentAlreadyExistsError = require('../DocumentAlreadyExistsError').DocumentAlreadyExistsError;
@@ -432,20 +440,17 @@ describe('DocumentService', () => {
       );
     });
 
-    test('should call setDoc when creating with an explicit id', async () => {
-      // 1st getDoc: collision-guard existence check -> not found
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
-      // 2nd getDoc: attribution getDoc for user profile
+    test('should store the document under an explicit id', async () => {
+      // getDoc: attribution profile fetch
       mockGetDoc.mockResolvedValueOnce(
         makeDocSnapshot(true, { username: 'Bilbo', activeCharacterId: null, characters: [] })
       );
-      mockSetDoc.mockResolvedValueOnce(undefined);
 
       const svc = DocumentService.getInstance();
       svc.setActiveGroup('g1');
       const id = await svc.createDocument('npcs', { name: 'Gandalf' }, 'explicit-id');
       expect(id).toBe('explicit-id');
-      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+      expect(mockFirestoreStore.read('explicit-id')).toMatchObject({ name: 'Gandalf' });
     });
 
     test('should throw when user profile not found during createDocument', async () => {
@@ -461,9 +466,7 @@ describe('DocumentService', () => {
     // ─── attribution content ────────────────────────────────────────────────
 
     test('should write full creation attribution onto the document, preserving caller data', async () => {
-      // 1st getDoc: collision-guard existence check -> not found
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
-      // 2nd getDoc: attribution getDoc for user profile
+      // getDoc: attribution profile fetch
       mockGetDoc.mockResolvedValueOnce(
         makeDocSnapshot(true, {
           username: 'Bilbo',
@@ -474,13 +477,12 @@ describe('DocumentService', () => {
           ],
         })
       );
-      mockSetDoc.mockResolvedValueOnce(undefined);
 
       const svc = DocumentService.getInstance();
       svc.setActiveGroup('g1');
       await svc.createDocument('npcs', { name: 'Gandalf', race: 'Maia' }, 'explicit-id');
 
-      const [, data] = mockSetDoc.mock.calls[0];
+      const data = mockFirestoreStore.read('explicit-id')!;
 
       // caller's own data fields survive
       expect(data.name).toBe('Gandalf');
@@ -558,36 +560,41 @@ describe('DocumentService', () => {
   });
 
   // ─── createDocument collision guard ─────────────────────────────────────────
-  // setDoc is a full overwrite. When an explicit id is supplied and it already
-  // names a document, createDocument must refuse rather than silently destroy
-  // the existing document (the mechanism behind bugs #002/#004/#009/#012).
+  // A create must never replace a document already at its id. When an explicit
+  // id is supplied and it already names a document, createDocument must refuse
+  // rather than silently destroy the existing document (the mechanism behind
+  // bugs #002/#004/#009/#012) -- including when the other document is being
+  // created at the same moment (T081).
 
   describe('createDocument collision guard', () => {
+    const PROFILE = { username: 'Bilbo', activeCharacterId: null, characters: [] };
+
+    /**
+     * Serves every read and write from one store, plain `getDoc`/`setDoc`
+     * included, and holds each first read of `gandalf` until two have
+     * happened -- so the race runs the same against any implementation.
+     */
+    function useRacingStore() {
+      mockFirestoreStore = createFakeFirestore({ afterRead: readBarrier(2, 'gandalf') });
+      mockFirestoreStore.seed('groups/g1/users/user-doc-test', PROFILE);
+      mockGetDoc.mockImplementation((ref: any) => mockFirestoreStore.getDoc(ref));
+      mockSetDoc.mockImplementation((ref: any, data: any) => mockFirestoreStore.setDoc(ref, data));
+    }
+
     test('should create successfully when the explicit id is free', async () => {
-      // 1st getDoc: existence check -> not found
-      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(false));
-      // 2nd getDoc: attribution profile fetch
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { username: 'Bilbo', activeCharacterId: null, characters: [] })
-      );
-      mockSetDoc.mockResolvedValueOnce(undefined);
+      // getDoc: attribution profile fetch
+      mockGetDoc.mockResolvedValueOnce(makeDocSnapshot(true, PROFILE));
 
       const svc = DocumentService.getInstance();
       svc.setActiveGroup('g1');
       const id = await svc.createDocument('npcs', { name: 'Gandalf' }, 'free-id');
 
       expect(id).toBe('free-id');
-      expect(mockGetDoc).toHaveBeenCalledTimes(2);
-      expect(mockSetDoc).toHaveBeenCalledTimes(1);
+      expect(mockFirestoreStore.read('free-id')).toMatchObject({ name: 'Gandalf', createdByUsername: 'Bilbo' });
     });
 
-    test('should throw a clear, actionable error naming the collection and id, and never call setDoc, when the explicit id is already taken', async () => {
-      // Existence check finds a document already there. Since the guard
-      // short-circuits before fetching attribution, only one getDoc call
-      // should ever happen.
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { name: 'Existing NPC' }, 'taken-id')
-      );
+    test('should throw a clear, actionable error naming the collection and id, and leave the existing document alone, when the explicit id is already taken', async () => {
+      mockFirestoreStore.seed('taken-id', { name: 'Existing NPC' });
 
       const svc = DocumentService.getInstance();
       svc.setActiveGroup('g1');
@@ -602,14 +609,13 @@ describe('DocumentService', () => {
       expect(caughtError).not.toBeNull();
       expect(caughtError!.message).toContain('taken-id');
       expect(caughtError!.message).toContain('npcs');
-      expect(mockSetDoc).not.toHaveBeenCalled();
-      expect(mockGetDoc).toHaveBeenCalledTimes(1);
+      expect(mockFirestoreStore.read('taken-id')).toEqual({ name: 'Existing NPC' });
+      // Refused before attribution is fetched: no profile is needed to fail.
+      expect(mockGetDoc).not.toHaveBeenCalled();
     });
 
     test('should throw a typed DocumentAlreadyExistsError, so callers can tell a taken id from any other failure (#1402)', async () => {
-      mockGetDoc.mockResolvedValueOnce(
-        makeDocSnapshot(true, { name: 'Existing NPC' }, 'taken-id')
-      );
+      mockFirestoreStore.seed('taken-id', { name: 'Existing NPC' });
 
       const svc = DocumentService.getInstance();
       svc.setActiveGroup('g1');
@@ -625,7 +631,51 @@ describe('DocumentService', () => {
       expect((caught as TakenError).userMessage).not.toMatch(
         /updateDocumentWithAttribution|setDocument|createDocument/
       );
-      expect(mockSetDoc).not.toHaveBeenCalled();
+      expect(mockFirestoreStore.read('taken-id')).toEqual({ name: 'Existing NPC' });
+    });
+
+    // T081 (DATA-001, TEST-001). Two members create the same name at once:
+    // both look for the id before either writes. Checked as a read and then a
+    // write, both saw it free and the second write replaced the first record,
+    // author and all. Each read is held until both have happened.
+    test('two simultaneous creates of one id: one succeeds, the other is refused, nothing is overwritten', async () => {
+      useRacingStore();
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      const outcomes = await Promise.allSettled([
+        svc.createDocument('npcs', { name: 'Gandalf', by: 'first' }, 'gandalf'),
+        svc.createDocument('npcs', { name: 'Gandalf', by: 'second' }, 'gandalf'),
+      ]);
+
+      const fulfilled = outcomes.filter((o) => o.status === 'fulfilled');
+      const rejected = outcomes.filter((o): o is PromiseRejectedResult => o.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0].reason).toBeInstanceOf(DocumentAlreadyExistsError);
+      // The stored record is the one whose create reported success.
+      const winner = outcomes[0].status === 'fulfilled' ? 'first' : 'second';
+      expect(mockFirestoreStore.read('gandalf')).toMatchObject({ by: winner });
+    });
+
+    test('two simultaneous creates of one name both survive, under distinct ids (#1402 retry)', async () => {
+      const { createWithUniqueEntityId } = require('../../../../utils/entity-id');
+      useRacingStore();
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      // Two sessions: each has only its own issued ids and nothing loaded.
+      const create = (by: string) => createWithUniqueEntityId({
+        name: 'Gandalf',
+        issuedIds: new Set<string>(),
+        isLoaded: () => false,
+        write: (id: string) => svc.createDocument('npcs', { name: 'Gandalf', by }, id),
+      });
+      const ids: string[] = await Promise.all([create('first'), create('second')]);
+
+      expect(ids.slice().sort()).toEqual(['gandalf', 'gandalf-2']);
+      const authors = ids.map((id) => mockFirestoreStore.read(id)!.by).sort();
+      expect(authors).toEqual(['first', 'second']);
     });
 
     test('should leave the auto-generated-id path unaffected: no existence check runs when id is omitted', async () => {
@@ -754,6 +804,85 @@ describe('DocumentService', () => {
         expect.anything(),
         'groups', 'g1', 'npcs'
       );
+    });
+  });
+
+  // ─── write scope (T082) ─────────────────────────────────────────────────────
+  // A write belongs to the group and campaign that were active when it was
+  // called. Attribution is read first, and a switch can land while that read
+  // is out; the write must not follow the switch -- campaigns routinely hold
+  // records with the same id (DATA-002).
+
+  describe('write scope survives a switch while attribution is read', () => {
+    const PROFILE = { username: 'Bilbo', activeCharacterId: null, characters: [] };
+
+    /** Holds the next getDoc (the attribution profile read) until released. */
+    function holdProfileRead() {
+      let release!: () => void;
+      mockGetDoc.mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = () => resolve(makeDocSnapshot(true, PROFILE));
+        })
+      );
+      return () => release();
+    }
+
+    /** The collection paths a document reference was built under. */
+    const docParents = () =>
+      mockDoc.mock.calls
+        .map(([parent]) => (parent as { path?: string })?.path)
+        .filter((path): path is string => typeof path === 'string');
+
+    test('an edit lands in the campaign it was made in', async () => {
+      mockUpdateDoc.mockResolvedValue(undefined);
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('campaign-a');
+      const release = holdProfileRead();
+
+      const edit = svc.updateDocumentWithAttribution('npcs', 'gandalf', { description: 'meant for A' });
+      svc.setActiveCampaign('campaign-b');
+      release();
+      await edit;
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(docParents()).toContain('groups/g1/campaigns/campaign-a/npcs');
+      expect(docParents()).not.toContain('groups/g1/campaigns/campaign-b/npcs');
+    });
+
+    test("an edit is credited from the profile in the edited record's group", async () => {
+      mockUpdateDoc.mockResolvedValue(undefined);
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('campaign-a');
+      const release = holdProfileRead();
+
+      const edit = svc.updateDocumentWithAttribution('npcs', 'gandalf', { description: 'x' });
+      svc.setActiveGroup('g2');
+      release();
+      await edit;
+
+      expect(docParents()).toContain('groups/g1/campaigns/campaign-a/npcs');
+      expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'groups', 'g1', 'users', 'user-doc-test');
+      expect(mockDoc).not.toHaveBeenCalledWith(expect.anything(), 'groups', 'g2', 'users', 'user-doc-test');
+    });
+
+    test("a create is credited from the profile in the created record's group", async () => {
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('campaign-a');
+      const release = holdProfileRead();
+
+      const create = svc.createDocument('npcs', { name: 'Gandalf' }, 'gandalf');
+      // Let the transaction read the id before the switch.
+      await Promise.resolve();
+      svc.setActiveGroup('g2');
+      release();
+      await create;
+
+      expect(docParents()).toContain('groups/g1/campaigns/campaign-a/npcs');
+      expect(mockDoc).toHaveBeenCalledWith(expect.anything(), 'groups', 'g1', 'users', 'user-doc-test');
+      expect(mockDoc).not.toHaveBeenCalledWith(expect.anything(), 'groups', 'g2', 'users', 'user-doc-test');
     });
   });
 });

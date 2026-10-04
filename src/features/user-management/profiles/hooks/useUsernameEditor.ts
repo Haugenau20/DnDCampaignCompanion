@@ -56,7 +56,7 @@ export interface UseUsernameEditorResult {
 export function useUsernameEditor(): UseUsernameEditorResult {
   const { user } = useAuth();
   const { activeGroup, activeGroupUserProfile } = useGroups();
-  const { validateUsername, updateGroupUserProfile } = useUser();
+  const { validateUsername, changeUsername } = useUser();
 
   const [value, setValue] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -145,7 +145,10 @@ export function useUsernameEditor(): UseUsernameEditorResult {
       setSaving(true);
       setSaveError(null);
 
-      await updateGroupUserProfile(user.uid, { username: value });
+      // Moves the reservation with the name, in one transaction. Writing the
+      // profile's `username` alone left the old name reserved and the new one
+      // free, and the rules now refuse it (T080).
+      await changeUsername(user.uid, value);
 
       setIsEditing(false);
     } catch (err) {

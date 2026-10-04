@@ -175,7 +175,7 @@ describe('useSagaData', () => {
       const { result } = renderHook(() => useSagaData());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(mockGetDocument).toHaveBeenCalledWith('saga', 'sagaData');
+      expect(mockGetDocument).toHaveBeenCalledWith('groups/group-1/campaigns/campaign-1/saga', 'sagaData');
     });
 
     test('should set saga state after successful fetch', async () => {
@@ -230,7 +230,7 @@ describe('useSagaData', () => {
       });
 
       expect(mockSetDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           title: 'New Saga',
@@ -350,7 +350,7 @@ describe('useSagaData', () => {
       });
 
       expect(mockSetDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           createdBy: 'user-2',
@@ -385,7 +385,7 @@ describe('useSagaData', () => {
       });
 
       expect(mockSetDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           createdBy: 'user-original',
@@ -416,7 +416,7 @@ describe('useSagaData', () => {
       });
 
       expect(mockSetDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           modifiedBy: 'user-editor',
@@ -469,7 +469,7 @@ describe('useSagaData', () => {
 
       expect(mockGetDocument).toHaveBeenCalledTimes(2);
       expect(mockSetDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           createdBy: 'user-A',
@@ -517,7 +517,7 @@ describe('useSagaData', () => {
 
       expect(mockGetDocument).toHaveBeenCalledTimes(2);
       expect(mockSetDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           createdBy: 'user-new',
@@ -547,7 +547,7 @@ describe('useSagaData', () => {
       });
 
       expect(mockUpdateDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           title: 'New Title',
@@ -665,7 +665,7 @@ describe('useSagaData', () => {
       });
 
       expect(mockUpdateDocument).toHaveBeenCalledWith(
-        'saga',
+        'groups/group-1/campaigns/campaign-1/saga',
         'sagaData',
         expect.objectContaining({
           title: 'New Title',

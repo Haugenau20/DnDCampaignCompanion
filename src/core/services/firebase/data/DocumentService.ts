@@ -21,6 +21,7 @@ import BaseFirebaseService from '../core/BaseFirebaseService';
 import { ContentAttribution } from '../../../types/common';
 import { buildCreationAttribution, buildModificationAttribution } from '../../../attribution';
 import { DocumentAlreadyExistsError } from './DocumentAlreadyExistsError';
+import { createDocumentIfAbsent } from './createDocumentIfAbsent';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents
@@ -84,25 +85,41 @@ class DocumentService extends BaseFirebaseService {
   }
 
   /**
+   * The group a collection belongs to, read from its path: the group the
+   * write lands in, and so the profile its attribution must come from. Taken
+   * from the path rather than the active group, which a switch can change
+   * while a write is in flight (T082).
+   *
+   * @param collectionRef The collection being written
+   * @returns The group's id
+   */
+  private groupOf(collectionRef: { path: string }): string {
+    const [root, groupId] = collectionRef.path.split('/');
+    if (root === 'groups' && groupId) {
+      return groupId;
+    }
+    const activeGroupId = this.getActiveGroupId();
+    if (!activeGroupId) {
+      throw new Error('No active group selected');
+    }
+    return activeGroupId;
+  }
+
+  /**
    * Get attribution metadata for document creation
    * Includes the active character information at creation time
+   * @param groupId The group the document is written in
    * @returns Attribution metadata object
    */
-  private async getCreationAttribution(): Promise<Partial<ContentAttribution>> {
+  private async getCreationAttribution(groupId: string): Promise<Partial<ContentAttribution>> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
     }
 
     try {
-      // Get active group ID
-      const activeGroupId = this.getActiveGroupId();
-      if (!activeGroupId) {
-        throw new Error('No active group selected');
-      }
-
       // The user's username and active character, cached across writes
-      const userProfile = await this.cachedGroupProfile(activeGroupId, userId);
+      const userProfile = await this.cachedGroupProfile(groupId, userId);
 
       if (!userProfile) {
         throw new Error('User profile not found');
@@ -118,23 +135,18 @@ class DocumentService extends BaseFirebaseService {
   /**
    * Get attribution metadata for document modification
    * Includes the active character information at modification time
+   * @param groupId The group the document is written in
    * @returns Attribution metadata object
    */
-  private async getModificationAttribution(): Promise<Partial<ContentAttribution>> {
+  private async getModificationAttribution(groupId: string): Promise<Partial<ContentAttribution>> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
     }
 
     try {
-      // Get active group ID
-      const activeGroupId = this.getActiveGroupId();
-      if (!activeGroupId) {
-        throw new Error('No active group selected');
-      }
-
       // The user's username and active character, cached across writes
-      const userProfile = await this.cachedGroupProfile(activeGroupId, userId);
+      const userProfile = await this.cachedGroupProfile(groupId, userId);
 
       if (!userProfile) {
         throw new Error('User profile not found');
@@ -154,12 +166,14 @@ class DocumentService extends BaseFirebaseService {
    * already exists, that document is silently destroyed. When no `id` is
    * supplied, a fresh Firestore-generated id is used and collision is
    * impossible, so no check is needed. When the caller *does* supply an
-   * explicit `id` (e.g. one derived by slugifying a name), this method reads
-   * the document first and refuses to proceed if it already exists — this is
-   * the write-layer guard against the class of bugs where two different
-   * inputs slugify to the same id and the second create quietly overwrites
-   * the first (#002/#004/#009/#012). Re-keying an *existing* document under a
-   * new id on purpose must keep going through `setDocument`, not this method.
+   * explicit `id` (e.g. one derived by slugifying a name), this method creates
+   * the document only if nothing is there, in one transaction, and otherwise
+   * throws {@link DocumentAlreadyExistsError} — the write-layer guard against
+   * the class of bugs where two different inputs slugify to the same id and
+   * the second create quietly overwrites the first (#002/#004/#009/#012),
+   * including when two members create at the same moment (T081). Re-keying an
+   * *existing* document under a new id on purpose must keep going through
+   * `setDocument`, not this method.
    *
    * @param collectionName Collection name or full path
    * @param data Document data
@@ -171,40 +185,38 @@ class DocumentService extends BaseFirebaseService {
     data: T,
     id?: string
   ): Promise<string> {
-    // Create document reference
+    // Resolved before anything is awaited, so a group or campaign switch while
+    // this create is in flight cannot move it (T082).
     const collectionRef = this.getCollectionRef(collectionName);
-    let docId = id;
+    const groupId = this.groupOf(collectionRef);
 
-    if (!docId) {
-      // Generate a new document ID
-      docId = doc(collectionRef).id;
-    } else {
-      // An explicit id was supplied - guard against silently overwriting an
-      // existing document. Checked before fetching attribution so a
-      // collision fails fast without requiring a valid user profile.
-      const existingSnap = await getDoc(doc(collectionRef, docId));
-      if (existingSnap.exists()) {
-        // A typed error (same developer message as before) so callers that
-        // derived the id from a name can pick the next free one (#1402).
-        throw new DocumentAlreadyExistsError(collectionName, docId);
-      }
+    /** The document with its creation attribution. */
+    const withAttribution = async (): Promise<DocumentData> => ({
+      ...data,
+      ...(await this.getCreationAttribution(groupId))
+    });
+
+    if (!id) {
+      // A generated id is fresh, so nothing can be there to overwrite.
+      const docRef = doc(collectionRef);
+      await setDoc(docRef, await withAttribution());
+      return docRef.id;
     }
 
-    // Get attribution metadata with character information
-    const attributionMetadata = await this.getCreationAttribution();
+    // An explicit id was supplied (usually derived from a name) - refuse
+    // rather than overwrite an existing document. The check and the write are
+    // one transaction: as two steps, two members creating the same name at
+    // once both passed the check and one record silently replaced the other
+    // (T081). Attribution is fetched only once the id is known to be free, so
+    // a collision fails fast without requiring a valid user profile.
+    const created = await createDocumentIfAbsent(this.db, doc(collectionRef, id), withAttribution);
+    if (!created) {
+      // A typed error (same developer message as before) so callers that
+      // derived the id from a name can pick the next free one (#1402).
+      throw new DocumentAlreadyExistsError(collectionName, id);
+    }
 
-    const docRef = doc(collectionRef, docId);
-
-    // Combine data with attribution metadata
-    const fullData = {
-      ...data,
-      ...attributionMetadata
-    };
-
-    // Save document
-    await setDoc(docRef, fullData as DocumentData);
-
-    return docId;
+    return id;
   }
 
   /**
@@ -242,18 +254,21 @@ class DocumentService extends BaseFirebaseService {
     documentId: string,
     data: Partial<WithFieldValue<T>>
   ): Promise<void> {
+    // The target is resolved before the attribution read is awaited. It was
+    // resolved after it, so switching campaign while that read was out sent
+    // the edit to a same-id record in the other campaign (T082).
+    const collectionRef = this.getCollectionRef(collectionName);
+    const docRef = doc(collectionRef, documentId) as DocumentReference<T>;
+
     // Get modification attribution metadata with character information
-    const attributionMetadata = await this.getModificationAttribution();
-    
+    const attributionMetadata = await this.getModificationAttribution(this.groupOf(collectionRef));
+
     // Combine data with attribution metadata
     const fullData = {
       ...data,
       ...attributionMetadata
     };
-    
-    // Update document
-    const collectionRef = this.getCollectionRef(collectionName);
-    const docRef = doc(collectionRef, documentId) as DocumentReference<T>;
+
     await updateDoc(docRef, fullData as Partial<DocumentData>);
   }
 

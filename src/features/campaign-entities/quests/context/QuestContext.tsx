@@ -4,6 +4,7 @@ import { Quest, QuestStatus, QuestContextValue } from '../types';
 import { DomainData } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
@@ -31,8 +32,11 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // the list comes from `useQuestData()` above. Its `error` is bound as
   // `writeError` so write failures are not conflated with read failures
   // (bug #1401).
+  // Writes name this render's campaign by full path, so one started here
+  // lands here even if the player switches campaign before it runs (T082).
+  const questsPath = useCampaignCollectionPath('quests');
   const { addData, updateData, deleteData, error: writeError } = useFirebaseData<Quest>({
-    collection: 'quests',
+    collection: questsPath,
     autoFetch: false
   });
   const { user } = useAuth();
@@ -316,7 +320,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-    await commitEntityWrites<Quest>('quests', 'quests', questIds.map(id => ({
+    await commitEntityWrites<Quest>(questsPath, 'quests', questIds.map(id => ({
       type: 'update' as const,
       id,
       data: {
@@ -325,7 +329,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...modificationAttribution
       }
     })));
-  }, [user, userProfile, activeGroupUserProfile, activeGroupId, activeCampaignId, getQuestById]);
+  }, [user, userProfile, activeGroupUserProfile, activeGroupId, activeCampaignId, getQuestById, questsPath]);
 
   /** Deletes several quests in one batch. */
   const deleteQuests = useCallback(async (questIds: string[]) => {
@@ -337,8 +341,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Group and campaign context must be set to delete quests');
     }
 
-    await commitEntityWrites<Quest>('quests', 'quests', questIds.map(id => ({ type: 'delete' as const, id })));
-  }, [user, activeGroupId, activeCampaignId]);
+    await commitEntityWrites<Quest>(questsPath, 'quests', questIds.map(id => ({ type: 'delete' as const, id })));
+  }, [user, activeGroupId, activeCampaignId, questsPath]);
 
   // Mark quest as completed
   const markQuestCompleted = useCallback(async (questId: string, dateCompleted?: string) => {

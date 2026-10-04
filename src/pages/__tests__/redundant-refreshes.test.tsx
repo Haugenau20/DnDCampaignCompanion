@@ -146,6 +146,12 @@ let store: Record<string, Array<Record<string, any>>>;
 /** Open listeners, by collection name. */
 let listeners: Record<string, Array<(documents: unknown[]) => void>>;
 
+/**
+ * The collection a path names: its last segment. Writes pass the full path
+ * (`groups/g/campaigns/c/npcs`, T082) as the listeners already do.
+ */
+const nameOf = (path: string) => path.split("/").pop() as string;
+
 /** Delivers a collection's current documents to everyone listening to it. */
 const emit = (collection: string) => {
   (listeners[collection] ?? []).forEach((onNext) => onNext([...(store[collection] ?? [])]));
@@ -200,7 +206,8 @@ describe("no collection read after a write", () => {
     });
     mockGetDocument.mockResolvedValue(null);
     mockUpdateDocumentWithAttribution.mockImplementation(
-      async (collection: string, id: string, data: Record<string, any>) => {
+      async (path: string, id: string, data: Record<string, any>) => {
+        const collection = nameOf(path);
         store[collection] = (store[collection] ?? []).map((d) => (d.id === id ? { ...d, ...data } : d));
         emit(collection);
       }
@@ -257,7 +264,8 @@ describe("no collection read after a write", () => {
   test("deleting the only NPC empties the list, with no re-read", async () => {
     // The list used to ignore an empty snapshot and rely on a re-read to clear
     // it; with the re-reads gone, the last record would have stayed on screen.
-    mockDeleteDocument.mockImplementation(async (collection: string, id: string) => {
+    mockDeleteDocument.mockImplementation(async (path: string, id: string) => {
+      const collection = nameOf(path);
       store[collection] = (store[collection] ?? []).filter((d) => d.id !== id);
       emit(collection);
     });
@@ -271,7 +279,7 @@ describe("no collection read after a write", () => {
     const before = fetchCountFor("npcs");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Aldric" }));
-    await waitFor(() => expect(mockDeleteDocument).toHaveBeenCalledWith("npcs", "aldric"));
+    await waitFor(() => expect(mockDeleteDocument).toHaveBeenCalledWith("groups/group-1/campaigns/campaign-1/npcs", "aldric"));
     await settle();
 
     expect(screen.queryByText("Aldric")).not.toBeInTheDocument();

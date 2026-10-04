@@ -5,6 +5,7 @@ import { descendantIdsDeepestFirst, wouldCreateCycle } from '../utils/location-t
 import { DomainData } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
@@ -36,8 +37,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // the list comes from `useLocationData()` above. Its `error` is bound as
   // `writeError` so write failures are not conflated with read failures
   // (bug #1401).
+  // Writes name this render's campaign by full path, so one started here
+  // lands here even if the player switches campaign before it runs (T082).
+  const locationsPath = useCampaignCollectionPath('locations');
   const { updateData, deleteData, addData, error: writeError } = useFirebaseData<Location>({
-    collection: 'locations',
+    collection: locationsPath,
     autoFetch: false
   });
 
@@ -145,12 +149,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-    await commitEntityWrites<Location>('locations', 'locations', locationIds.map(id => ({
+    await commitEntityWrites<Location>(locationsPath, 'locations', locationIds.map(id => ({
       type: 'update' as const,
       id,
       data: { status, ...modificationAttribution }
     })));
-  }, [user, activeGroupUserProfile, activeGroupId, activeCampaignId, getLocationById]);
+  }, [user, activeGroupUserProfile, activeGroupId, activeCampaignId, getLocationById, locationsPath]);
 
   /**
    * Move a location under a new parent.

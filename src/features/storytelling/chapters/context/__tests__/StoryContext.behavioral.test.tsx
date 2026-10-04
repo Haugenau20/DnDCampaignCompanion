@@ -116,9 +116,12 @@ describe('StoryContext Behavioral Testing', () => {
       activeGroupUserProfile: null,
     });
 
-    mockUseCampaigns.mockReturnValue({
-      activeCampaignId: null,
-    });
+    // A campaign exists exactly when the test says the context is ready. Set
+    // separately, the two could claim a ready context with no campaign -- a
+    // state the app never has, in which writes now refuse (T082).
+    mockUseCampaigns.mockImplementation(() => ({
+      activeCampaignId: mockUseChapterData().hasRequiredContext ? 'campaign-1' : null,
+    }));
 
     mockUseChapterData.mockReturnValue({
       chapters: [],
@@ -394,7 +397,7 @@ describe('StoryContext Behavioral Testing', () => {
       expect(committedBatch()).toEqual([
         {
           type: 'set',
-          collection: 'chapters',
+          collection: 'groups/group-1/campaigns/campaign-1/chapters',
           id: chapterId,
           data: expect.objectContaining({
             title: 'The Beginning',
@@ -487,7 +490,7 @@ describe('StoryContext Behavioral Testing', () => {
       expect(movesIn(batch)).toEqual({ 'chapter-02': 3 });
       expect(batch).toContainEqual({
         type: 'set',
-        collection: 'chapters',
+        collection: 'groups/group-1/campaigns/campaign-1/chapters',
         id: chapterId,
         data: expect.objectContaining({ title: 'Inserted Chapter', order: 2 })
       });
@@ -517,7 +520,7 @@ describe('StoryContext Behavioral Testing', () => {
       const [write] = committedBatch();
       expect(write).toEqual({
         type: 'set',
-        collection: 'chapters',
+        collection: 'groups/group-1/campaigns/campaign-1/chapters',
         id: chapterId,
         data: expect.objectContaining({
           title: 'The Beginning',
@@ -594,8 +597,8 @@ describe('StoryContext Behavioral Testing', () => {
       // The chapters it passes only change place: their documents get
       // `order` and nothing else, so A's created* and modified* fields
       // cannot be touched -- reordering never reattributes (#1203).
-      expect(batch).toContainEqual({ type: 'update', collection: 'chapters', id: 'chapter-02', data: { order: 1 } });
-      expect(batch).toContainEqual({ type: 'update', collection: 'chapters', id: 'chapter-03', data: { order: 2 } });
+      expect(batch).toContainEqual({ type: 'update', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-02', data: { order: 1 } });
+      expect(batch).toContainEqual({ type: 'update', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-03', data: { order: 2 } });
 
       // The chapter B actually moved gets B's modification stamp, and no
       // created* field at all -- so A's creation survives.
@@ -1035,8 +1038,8 @@ describe('StoryContext Behavioral Testing', () => {
       // BEHAVIOR: one batch deletes the chapter and moves the later one back
       // into its place, keeping its id.
       expect(committedBatch()).toEqual([
-        { type: 'delete', collection: 'chapters', id: 'chapter-01' },
-        { type: 'update', collection: 'chapters', id: 'chapter-02', data: { order: 1 } }
+        { type: 'delete', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-01' },
+        { type: 'update', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-02', data: { order: 1 } }
       ]);
       // The listener carries the write (T032): nothing re-reads the collection.
       expect(mockRefreshChapters).not.toHaveBeenCalled();

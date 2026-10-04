@@ -47,8 +47,9 @@ jest.mock('features/storytelling/chapters/hooks/useChapterData', () => ({
 }));
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
-  useFirebaseData: ({ collection }: { collection: string }) =>
-    collection === 'chapters'
+  // Writers pass the chapters' full path (T082).
+  useFirebaseData: ({ collection }: { collection: string | null }) =>
+    collection?.endsWith('/chapters')
       ? { updateData: mockUpdateData, deleteData: mockDeleteData }
       : { data: mockProgressData, getData: mockRefreshProgress },
 }));

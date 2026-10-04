@@ -4,6 +4,7 @@ import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 import {LAST_ADMIN_MESSAGE, wouldStrandGroup} from "../shared/groupAdmins";
+import {releaseUsernames} from "../shared/usernameReservations";
 
 export const removeUserFromGroup = functions.onCall(
   {
@@ -72,22 +73,6 @@ export const removeUserFromGroup = functions.onCall(
         }
       }
       
-      // Get the user's profile
-      const userProfileRef = admin
-        .firestore()
-        .collection("groups")
-        .doc(groupId)
-        .collection("users")
-        .doc(userId);
-      
-      const userProfile = await userProfileRef.get();
-      
-      // Get username to delete reservation
-      let username = null;
-      if (userProfile.exists && userProfile.data()?.username) {
-        username = userProfile.data()?.username;
-      }
-      
       // Execute as a batch to ensure atomicity
       const batch = admin.firestore().batch();
       
@@ -109,17 +94,9 @@ export const removeUserFromGroup = functions.onCall(
         });
       }
       
-      // Delete username reservation if it exists
-      if (username) {
-        const usernameRef = admin
-          .firestore()
-          .collection("groups")
-          .doc(groupId)
-          .collection("usernames")
-          .doc(username.toLowerCase());
-        
-        batch.delete(usernameRef);
-      }
+      // Release the user's name reservations -- found by owner, never by
+      // the profile's client-written `username` (SEC-005, T080).
+      await releaseUsernames(batch, groupId, userId);
       
       // Leaving a group takes your private notes with you; they live in a
       // subcollection of this document, which a batched delete would orphan.
@@ -130,7 +107,7 @@ export const removeUserFromGroup = functions.onCall(
       // notes orphaned with no way back: the leave-group path no longer sees
       // the membership, so nothing would retry the subtree deletion. Failing
       // before the commit leaves the user in the group and the operation
-      // retryable. The username was already read above, so deleting the
+      // retryable. The reservations were already read above, so deleting the
       // profile document here costs the batch nothing.
       await deleteGroupUserDocument(groupId, userId);
 

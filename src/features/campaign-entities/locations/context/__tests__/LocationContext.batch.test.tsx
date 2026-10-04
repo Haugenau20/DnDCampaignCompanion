@@ -83,8 +83,8 @@ describe('LocationContext.updateLocationsStatus', () => {
     expect(mockBatchOperations).toHaveBeenCalledTimes(1);
     const writes = mockBatchOperations.mock.calls[0][0];
     expect(writes.map((w: any) => [w.type, w.collection, w.id, w.data.status])).toEqual([
-      ['update', 'locations', 'gondolin', 'explored'],
-      ['update', 'locations', 'bree', 'explored'],
+      ['update', 'groups/g1/campaigns/c1/locations', 'gondolin', 'explored'],
+      ['update', 'groups/g1/campaigns/c1/locations', 'bree', 'explored'],
     ]);
     for (const write of writes) {
       expect(write.data.modifiedBy).toBe('user-1');

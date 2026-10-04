@@ -17,15 +17,12 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T080–T102 and T037's rise were triaged 2026-10-04 from the code
+The rows for T083–T102 and T037's rise were triaged 2026-10-04 from the code
 review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
 adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| critical | T080 | Users can rewrite server-owned fields on their own profiles | M | open | Self-granted unlimited AI usage; an admin's removal redirected to another member |
-| high | T081 | Two simultaneous same-name creates keep one record | M | open | A successful create silently disappears |
-| high | T082 | A save in flight lands in the campaign you switch to | M | open | Content misfiled; an image replacement deletes a still-used file |
 | high | T083 | Edits send the whole record and overwrite newer changes | L | open | Ordinary collaboration reverts other people's edits; restores deleted images |
 | high | T084 | Image edge cases: offline upload swept, 2 MiB boundary, unbounded sweep | M | open | Images focus; the sweep can delete a valid upload |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
@@ -43,9 +40,9 @@ adjusted for the images focus above.
 | medium | T094 | An optional fact can't be cleared once recorded | S | open | Wrong data can't be removed |
 | medium | T098 | Chapters with identical text share reading progress | S | open | Completion never recorded for the second |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
-| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen; its read-back is T080's prerequisite |
+| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
-| medium | T106 | Should the production rules be public? | S | open | Public repo; makes T080's hole easy to find until fixed |
+| medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -111,7 +108,7 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding is covered by an entry: T080–T102, plus T037.
+- Every confirmed finding not yet fixed is covered by an entry: T083–T102, plus T037.
 - **Not filed**: the reviews' unverified leads, and the optional refactors
   other than ARCH-M01/M02 (T102). They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
@@ -171,63 +168,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T080 — Users can rewrite server-owned fields on their own profiles
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-The self-update rules refuse only a short list of keys, so a member can write
-anything else on their own documents: grant themselves unlimited AI usage,
-change the identity fields an admin's "remove member" acts on, delete their
-roster entry while keeping campaign access, or edit the username that account
-cleanup later deletes as theirs.
-
-- **Where**: `firebase/firestore.rules.prod:195-196` (global profile: only
-  `isAdmin` and `groups` refused, so usage counters and `isUnlimited` are
-  writable); `:235-236` (group profile: only `role` refused); raw self-delete
-  at `:245`.
-- **Findings**: SEC-001, SEC-002, SEC-004, SEC-005 (01). SEC-002 also needs the
-  admin UI to target members by document path, not a profile field; SEC-005
-  needs cleanup to check who owns a reservation.
-- **Catch**: the reviews tested the repo copy, and the live rules are in the
-  Firebase console. Read them back before changing anything (T105). Once fixed,
-  audit existing usage values.
-- **Touches**: the rules, `firestore-rules-prod.test.ts`, the admin member
-  actions, `removeUserFromGroup` / `deleteUser` cleanup.
-- **Source**: code review, 2026-10-04
-
-### T081 — Two simultaneous creates of the same name keep only one record
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Two members or tabs creating an NPC, quest, location or rumour whose name maps
-to the same unused id both succeed; the second write replaces the first, author
-and all. #1402's retry handles an id that already exists, not two creates
-racing.
-
-- **Where**: `src/core/services/firebase/data/DocumentService.ts:185` reads for
-  existence, `:205` writes; nothing makes the pair atomic.
-  `CampaignService.createCampaign` has the same check-then-set (per the report;
-  not opened).
-- **Findings**: DATA-001 (03), TEST-001 (08).
-- **Catch**: the cross-session test fake is itself atomic (TEST-001), so the
-  suite cannot see the race. The regression test must hold both reads before
-  either write.
-- **Source**: code review, 2026-10-04
-
-### T082 — A save in flight lands in whichever campaign you switch to
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Writes resolve their group and campaign *after* an await, so switching campaign
-mid-save files the content under the new one. For an image replacement it also
-deletes the original campaign's still-referenced file. High on the images focus.
-
-- **Where**: `DocumentService.ts:246` awaits attribution, then `:255` builds
-  the collection path from whatever context is current. Image side:
-  `src/shared/hooks/useImageAttachment.ts:43-59`.
-- **Findings**: DATA-002 (03), IMG-001 (04).
-- **Catch**: the fix is capturing the full path when the operation starts,
-  through every context writer that passes a bare collection name, not a patch
-  in one place.
-- **Source**: code review, 2026-10-04
 
 ### T083 — Edits send the whole record and overwrite newer changes
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
@@ -328,8 +268,7 @@ try again.
   truthiness, where the server uses `??` (`entityExtraction.ts:229`).
 - **Confidence out of range** (AI-002): the model schema accepts `90` or
   `-0.4`, shown as 9000% or −40%.
-- **Catch**: T080 must stop clients editing usage fields first, or the counters
-  mean nothing. **Source**: code review, 2026-10-04
+- **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order, attachments and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
@@ -900,10 +839,10 @@ drift with nothing to notice it.
   rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
   `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
   are console-only and never deployed by CI.
-- **Catch**: nobody has compared the `.prod` copies with the live rules; the
-  code review could not either. The first deploy overwrites whatever is live,
-  so read the console back and diff it first. That read-back is also T080's
-  prerequisite. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
+- **Catch**: the live Firestore rules were read back on 2026-10-04 and matched
+  `firestore.rules.prod`; the Storage rules have not been compared. The first
+  deploy overwrites whatever is live, so read the console back and diff it
+  first. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
   or from CI decides whether the deploy service account needs rules permissions.
 - **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
   its `firestore.rules` key at `firestore.rules`; it has no such key.
@@ -980,11 +919,10 @@ in the repo, so this is console work plus whatever copy is decided.
   hard-coded uid or email.
 - **What it changes**: the Firebase web config is public by design, and the
   rules are what protect the data. Hiding them protects nothing that correct
-  rules don't. But public rules make an open hole easy to find, and T080 is
-  one today.
+  rules don't. But public rules make any open hole easy to find.
 - **To decide**: keep them public, or make the repo private (moving them
-  elsewhere would break T105's deploy-from-repo). Either way, T080 is the
-  actual exposure.
+  elsewhere would break T105's deploy-from-repo). Either way, the exposure
+  is a hole in the rules, not their visibility.
 - **Source**: todo.txt, 2026-10-04
 
 ---

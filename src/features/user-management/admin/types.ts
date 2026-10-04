@@ -13,14 +13,12 @@ export interface GroupMember {
    *
    * Group profiles live at `groups/{groupId}/users/{userId}`, so the id of the
    * document is the uid of the person. `GroupService.getGroupUsers` maps it to
-   * `id`; use {@link memberId} rather than reaching for either field directly.
+   * `id`; use {@link memberId} rather than reaching for it directly.
    */
   id?: string;
   /**
-   * A `userId` field on the document itself, which in practice is absent.
-   *
-   * Kept because nothing guarantees it always will be, and honoured first by
-   * {@link memberId} where it exists.
+   * The same document id: `getGroupUsers` overwrites whatever `userId` the
+   * document stores, which is client-written. Never read it for identity.
    */
   userId?: string;
   username?: string;
@@ -29,16 +27,19 @@ export interface GroupMember {
 }
 
 /**
- * The uid for a member, from whichever field carries it.
+ * The uid for a member: the document id, and nothing the document stores.
  *
  * Exists because getting this wrong is silent and expensive. The view this
  * replaced read `userData.userId`, which no group-user document actually
  * carries -- so it was `undefined` for everyone, nobody ever matched the
  * signed-in user, and the consequences were that the Remove button appeared on
- * your own row and that pressing it called `deleteUser(undefined)`.
+ * your own row and that pressing it called `deleteUser(undefined)`. Preferring
+ * a stored `userId` where one existed was worse: a member could write another
+ * member's uid there, and removing the forger's row removed the other member
+ * (SEC-002, T080).
  */
 export function memberId(member: GroupMember): string | undefined {
-  return member.userId ?? member.id;
+  return member.id;
 }
 
 /**

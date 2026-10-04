@@ -2,9 +2,7 @@
 import {
     collection,
     doc,
-    getDoc,
     getDocs,
-    setDoc,
     updateDoc,
     getCountFromServer
   } from 'firebase/firestore';
@@ -13,6 +11,14 @@ import {
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
   import { Campaign } from '../../../types/user';
+  import { createDocumentIfAbsent } from '../data/createDocumentIfAbsent';
+
+  /**
+   * How many ids `createCampaign` tries before giving up: the slug, then the
+   * slug with a timestamp. Only a run of simultaneous same-name creates can
+   * use more than two.
+   */
+  const MAX_CAMPAIGN_ID_ATTEMPTS = 5;
 
   /**
    * How much a campaign holds. Used to tell two campaigns apart in the
@@ -65,28 +71,33 @@ import {
       }
       
       // Generate a campaign ID from the name (slug format)
-      let campaignId = name.toLowerCase()
+      const slug = name.toLowerCase()
         .trim()
         .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
         .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
-      
-      // Ensure the ID is unique
-      const campaignRef = doc(this.db, 'groups', groupId, 'campaigns', campaignId);
-      const existingDoc = await getDoc(campaignRef);
-      
-      // If a document with this ID already exists, append a timestamp
-      if (existingDoc.exists()) {
-        campaignId = `${campaignId}-${Date.now()}`;
-      }
-      
-      // Create the campaign document
-      await setDoc(doc(this.db, 'groups', groupId, 'campaigns', campaignId), {
+
+      // The slug if it is free, else the slug and a timestamp. Each candidate
+      // is claimed with an atomic create: a read and then a write let two
+      // admins creating the same name at once both take the slug, and the
+      // second replaced the first campaign's metadata (T081).
+      const campaignData = {
         name,
         description: description || '',
         createdAt: new Date(),
         createdBy: userId,
         isActive: true
-      });
+      };
+      let campaignId: string | undefined;
+      for (let attempt = 0; attempt < MAX_CAMPAIGN_ID_ATTEMPTS && !campaignId; attempt++) {
+        const candidate = attempt === 0 ? slug : `${slug}-${Date.now()}`;
+        const candidateRef = doc(this.db, 'groups', groupId, 'campaigns', candidate);
+        if (await createDocumentIfAbsent(this.db, candidateRef, () => campaignData)) {
+          campaignId = candidate;
+        }
+      }
+      if (!campaignId) {
+        throw new Error('Could not find a free name for this campaign. Please try again.');
+      }
       
       // Set as active campaign for the user
       if (userProfileDoc) {
