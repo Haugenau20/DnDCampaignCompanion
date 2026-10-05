@@ -178,6 +178,9 @@
 // preferably once T083 has stopped edits sending the whole record, so that a
 // stale tab's unrelated edit is not refused along with the picture it carries.
 //
+// LIVE: the maintainer pasted this revision into the console on 2026-10-05,
+// after both client halves of T084 and T083's field patches had shipped.
+//
 // ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // When you change the production rules in the console, update this file in the

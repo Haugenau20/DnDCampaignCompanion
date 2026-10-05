@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T084 | A write that outlives its upload's lease points at a deleted file | S | blocked | Images focus; the code is in, the enforcing rules wait for the client to be live, then a paste |
+| high | T084 | The image sweep reads every document daily | M | open | Images focus; the leases are enforced now, so only an unrecorded replace still needs the full read |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
@@ -156,33 +156,26 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T084 — A write that arrives after its upload's lease can still point at a deleted file
-**Type** bug · **Size** S · **Status** blocked · **Verified** 2026-10-04
+### T084 — The orphaned-image sweep reads every image-bearing document, every day
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-05
 
-The code is in. An upload records itself in
-`groups/{groupId}/pendingUploads/{file}` (`ImageStorageService.upload`) and
-fails without it; the daily sweep spares a file whose entry is under 30 days
-old (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`); and revision 2026-10-04b
-of `firestore.rules.prod` refuses a write that points an NPC, location,
-campaign banner or group crest at a different file unless that file's entry
-is live (`imageLeased`). Revision 2026-10-04 (the entries alone) is live.
+IMG-003 is closed: revision 2026-10-04b of `firestore.rules.prod`, which
+refuses a write pointing at a file without a live `pendingUploads` entry
+(`imageLeased`), was pasted into the console on 2026-10-05. What is left is
+the cost of the sweep it made safe (PERF2-004's remaining half, 07).
 
-- **Blocked on**: pasting revision 2026-10-04b into the console, which must
-  wait for the client. **Deploy order**: the frontend that writes entries
-  first; rules first would refuse every image change from a tab still on the
-  old frontend. Until then IMG-003's last case stays open: a document write
-  queued for longer than the lease lands and points at the file the sweep
-  deleted. Preferably paste after T083's field patches too: until then a
-  stale tab's unrelated edit that carries a since-replaced picture is
-  refused along with it (better than restoring a deleted file, which is what
-  it does today).
-- **Related**: the sweep still reads every NPC, location, campaign and group
-  document daily to learn what is referenced (PERF2-004's remaining half,
-  07). With entries required, a file with no entry and no reference is an
-  orphan by construction, but the old file of a replace has neither, so the
-  full read stays until replaces are recorded too.
-- **Findings**: IMG-003 (04).
-- **Source**: code review, 2026-10-04
+- **Where**: `sweepOrphanedImages.ts` (`referencedPaths`) reads every NPC,
+  location, campaign and group document daily to learn what is referenced,
+  then lists the whole bucket. Both grow with the data, not with what changed.
+- **Why it still has to**: an upload has an entry and a referenced file has a
+  document, but the old file of a replace (or a removed picture, or a deleted
+  NPC's) has neither once the client's follow-up delete fails. Only the full
+  read finds it.
+- **Decided (maintainer, 2026-10-05)**: record the file a write drops, in the
+  same batch as that write, so the daily run reads only the records; keep the
+  full read as a **monthly** reconcile for files that predate the records or
+  that a stale tab's write dropped without one.
+- **Source**: code review, 2026-10-04; narrowed when T084's rules went live
 
 ### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
