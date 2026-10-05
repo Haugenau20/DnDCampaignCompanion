@@ -1574,4 +1574,120 @@ describe('NoteContext Behavioral Tests', () => {
       consoleSpy.mockRestore();
     });
   });
+  // T088 (DATA-005): converting a note's entity creates the record and marks
+  // the entity in one commit. Created first and marked after, a failed mark
+  // left the record behind and the note still offered to convert it again.
+  describe('Converting into one commit (convertInto)', () => {
+    const entity: ExtractedEntity = {
+      id: 'entity-1',
+      text: 'Strider',
+      type: 'npc' as EntityType,
+      confidence: 0.9,
+      isConverted: false,
+      createdAt: '2025-06-15T00:00:00.000Z',
+      extraData: { name: 'Strider' },
+    };
+    const NOTES = 'groups/test-group/users/test-user/notes';
+
+    /** Mounts the provider with one note holding `entity`, saved or a draft. */
+    async function noteWithEntity(saved: boolean) {
+      let context: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => context = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(context.isLoading).toBe(false));
+      await act(async () => {
+        createdId = await context.createNote('Session 12', 'Met a ranger');
+      });
+      await act(async () => {
+        await context.updateNote(createdId, { extractedEntities: [entity] });
+      });
+      if (saved) {
+        await act(async () => {
+          await context.saveNote(createdId);
+        });
+      }
+      return () => context;
+    }
+
+    test("hands a saved note's mark to the create, to commit with it", async () => {
+      const context = await noteWithEntity(true);
+      const create = jest.fn().mockResolvedValue('strider');
+
+      let id = '';
+      await act(async () => {
+        id = await context().convertInto(createdId, 'entity-1', create);
+      });
+
+      expect(id).toBe('strider');
+      const alongside = create.mock.calls[0][0];
+      expect(alongside).toMatchObject({ collection: NOTES, id: createdId });
+      const stored = { ...context().getNoteById(createdId), id: createdId };
+      expect(alongside.change(stored, 'strider').extractedEntities).toEqual([
+        expect.objectContaining({ id: 'entity-1', isConverted: true, convertedToId: 'strider' }),
+      ]);
+      // No second write: the mark is the create's.
+      expect(mockDocumentService.updateDocumentAfterReading).not.toHaveBeenCalled();
+    });
+
+    test('refuses an entity the stored note has already converted', async () => {
+      const context = await noteWithEntity(true);
+      const create = jest.fn().mockResolvedValue('strider');
+      await act(async () => {
+        await context().convertInto(createdId, 'entity-1', create);
+      });
+      const alongside = create.mock.calls[0][0];
+      const converted = {
+        id: createdId,
+        extractedEntities: [{ ...entity, isConverted: true, convertedToId: 'strider' }],
+      };
+
+      expect(() => alongside.change(converted, 'strider-2')).toThrow(/already/i);
+      expect(() => alongside.change(undefined, 'strider-2')).toThrow(/not found/i);
+    });
+
+    test('marks a draft in place once the record exists, since a draft has nothing stored to commit with', async () => {
+      const context = await noteWithEntity(false);
+      const create = jest.fn().mockResolvedValue('strider');
+
+      await act(async () => {
+        await context().convertInto(createdId, 'entity-1', create);
+      });
+
+      expect(create).toHaveBeenCalledWith();
+      expect(context().getNoteById(createdId).extractedEntities[0])
+        .toMatchObject({ isConverted: true, convertedToId: 'strider' });
+    });
+
+    test('leaves a draft unmarked when the create fails', async () => {
+      const context = await noteWithEntity(false);
+      const create = jest.fn().mockRejectedValue(new Error('offline'));
+
+      await act(async () => {
+        await expect(context().convertInto(createdId, 'entity-1', create)).rejects.toThrow('offline');
+      });
+
+      expect(context().getNoteById(createdId).extractedEntities[0].isConverted).toBe(false);
+    });
+
+    test('writes a rumour and its mark as one commit', async () => {
+      const context = await noteWithEntity(true);
+      await act(async () => {
+        await context().updateNote(createdId, {
+          extractedEntities: [{ ...entity, type: 'rumor', extraData: { title: 'Lights', content: 'In the woods' } }],
+        });
+      });
+      mockDocumentService.updateDocumentAfterReading.mockClear();
+
+      await act(async () => {
+        await context().convertEntity(createdId, 'entity-1', 'rumor');
+      });
+
+      const [, alongside] = mockAddRumor.mock.calls[mockAddRumor.mock.calls.length - 1];
+      expect(alongside).toMatchObject({ collection: NOTES, id: createdId });
+      expect(mockDocumentService.updateDocumentAfterReading).not.toHaveBeenCalled();
+    });
+  });
 });

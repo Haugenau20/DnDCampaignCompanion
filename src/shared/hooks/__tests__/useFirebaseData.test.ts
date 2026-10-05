@@ -11,6 +11,7 @@ const mockGetCollection = jest.fn();
 const mockCreateDocument = jest.fn();
 const mockUpdateDocumentWithAttribution = jest.fn();
 const mockDeleteDocument = jest.fn();
+const mockCreateDocumentWithUpdates = jest.fn();
 
 jest.mock('@/features/user-management', () => ({
   useFirestore: jest.fn(),
@@ -34,6 +35,7 @@ const defaultFirestoreMock = () => {
     createDocument: mockCreateDocument,
     updateDocumentWithAttribution: mockUpdateDocumentWithAttribution,
     deleteDocument: mockDeleteDocument,
+    createDocumentWithUpdates: mockCreateDocumentWithUpdates,
   });
 };
 
@@ -366,6 +368,101 @@ describe('useFirebaseData', () => {
       Object.defineProperty(global, 'crypto', {
         value: { randomUUID: originalRandomUUID },
         configurable: true,
+      });
+    });
+
+    // T088 (DATA-005): a create that also changes another record -- a note's
+    // entity marked converted, a feature taken off its place -- commits both
+    // or neither, so a failed second half cannot leave the new record behind.
+    describe('with a change alongside', () => {
+      interface Source { id: string; marks: string[] }
+
+      async function addAlongside(stored: Source | undefined) {
+        const commits: unknown[] = [];
+        mockCreateDocumentWithUpdates.mockImplementation(
+          async (collection, id, sourceCollection, decide) => {
+            const decided = await decide(async (readId: string) =>
+              readId === 'src-1' ? stored : undefined
+            );
+            commits.push({ collection, id, sourceCollection, decided });
+          }
+        );
+        const { result } = renderHook(() =>
+          useFirebaseData<TestItem>({ collection: 'items', autoFetch: false })
+        );
+        const newItem: TestItem = { id: 'new-1', name: 'NewItem' };
+        let returned: string | undefined;
+        await act(async () => {
+          returned = await result.current.addData(newItem, 'new-1', {
+            collection: 'sources',
+            id: 'src-1',
+            change: (current: Source | undefined, createdId: string) => {
+              if (!current) throw new Error('Source not found');
+              return { marks: [...current.marks, createdId] };
+            },
+          });
+        });
+        return { commits, returned, result };
+      }
+
+      test('creates the record and changes the other in one commit', async () => {
+        const { commits, returned } = await addAlongside({ id: 'src-1', marks: ['old'] });
+
+        expect(mockCreateDocument).not.toHaveBeenCalled();
+        expect(returned).toBe('new-1');
+        expect(commits).toEqual([{
+          collection: 'items',
+          id: 'new-1',
+          sourceCollection: 'sources',
+          decided: {
+            create: { id: 'new-1', name: 'NewItem' },
+            updates: [{ id: 'src-1', data: { marks: ['old', 'new-1'] } }],
+          },
+        }]);
+      });
+
+      test('works the change out from the other record as the server holds it', async () => {
+        const { commits } = await addAlongside({ id: 'src-1', marks: ['added-elsewhere'] });
+
+        expect((commits[0] as any).decided.updates[0].data.marks)
+          .toEqual(['added-elsewhere', 'new-1']);
+      });
+
+      test('commits nothing when the change refuses, and says why', async () => {
+        mockCreateDocumentWithUpdates.mockImplementation(async (_c, _i, _s, decide) => {
+          await decide(async () => undefined);
+        });
+        const { result } = renderHook(() =>
+          useFirebaseData<TestItem>({ collection: 'items', autoFetch: false })
+        );
+
+        await act(async () => {
+          await expect(result.current.addData({ id: 'new-1', name: 'X' }, 'new-1', {
+            collection: 'sources',
+            id: 'src-1',
+            change: (current: Source | undefined) => {
+              if (!current) throw new Error('Source not found');
+              return {};
+            },
+          })).rejects.toThrow('Source not found');
+        });
+        expect(result.current.error).toBe('Source not found');
+        expect(mockCreateDocument).not.toHaveBeenCalled();
+      });
+
+      test('passes a taken id on, so the caller can pick the next one (#1402)', async () => {
+        mockCreateDocumentWithUpdates.mockRejectedValue(
+          new DocumentAlreadyExistsError('items', 'new-1')
+        );
+        const { result } = renderHook(() =>
+          useFirebaseData<TestItem>({ collection: 'items', autoFetch: false })
+        );
+
+        await act(async () => {
+          await expect(result.current.addData({ id: 'new-1', name: 'X' }, 'new-1', {
+            collection: 'sources', id: 'src-1', change: () => ({}),
+          })).rejects.toBeInstanceOf(DocumentAlreadyExistsError);
+        });
       });
     });
 

@@ -681,22 +681,28 @@ describe('LocationDetailPage — features are not children (§6.4, item 7)', () 
     expect(features.getByText('White towers')).toBeInTheDocument();
   });
 
-  it('promotes a feature into a real place inside this one', async () => {
+  // CHANGED for T088 (DATA-005): the feature used to come off the parent in
+  // a second write after the create, so a failed second write left the new
+  // place behind and a retry made another. It now commits with the create.
+  it('promotes a feature into a real place inside this one, taking it off the parent in the same write', async () => {
     renderPage();
     const row = screen.getByText('White towers').closest('li') as HTMLElement;
     fireEvent.click(within(row).getByRole('button', { name: 'Make it a place' }));
 
     await waitFor(() => expect(mockCreateLocation).toHaveBeenCalled());
-    expect(mockCreateLocation.mock.calls[0][0]).toMatchObject({
-      name: 'White towers',
-      parentId: 'gondolin',
+    const [place, alongside] = mockCreateLocation.mock.calls[0];
+    expect(place).toMatchObject({ name: 'White towers', parentId: 'gondolin' });
+    expect(alongside).toMatchObject({
+      collection: 'groups/group-1/campaigns/campaign-1/locations',
+      id: 'gondolin',
     });
-    // ...and it stops being a line of scenery on the parent.
-    await waitFor(() =>
-      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', {
-        features: ['Seven gates'],
-      })
-    );
+    // ...and it stops being a line of scenery on the parent, worked out from
+    // the parent as the server holds it: a feature added meanwhile stays.
+    expect(alongside.change(
+      { id: 'gondolin', features: ['Seven gates', 'White towers', 'The fountain'] },
+      'white-towers'
+    )).toEqual({ features: ['Seven gates', 'The fountain'] });
+    expect(mockUpdateLocation).not.toHaveBeenCalled();
   });
 
   it('adds a feature without creating a location', async () => {

@@ -1,7 +1,7 @@
 // Updated src/features/collaboration/notes/types.ts
 
 // src/features/collaboration/notes/types.ts
-import { BaseContent } from "core/types/common";
+import { BaseContent, CreateAlongside } from "core/types/common";
 
 /**
  * Entity types that can be extracted from notes
@@ -129,6 +129,22 @@ export interface NoteContextValue {
    * @returns Promise resolving when update is complete
    */
   markEntityAsConverted: (noteId: string, entityId: string, createdId: string) => Promise<void>;
+
+  /**
+   * Create the record an extracted entity becomes and mark the entity
+   * converted into it, as one commit (T088). `create` receives the mark as
+   * the change to commit with the record -- `undefined` for a draft note,
+   * which is marked once the record exists -- and returns the record's id.
+   * @param noteId ID of the note
+   * @param entityId ID of the entity being converted
+   * @param create Creates the record, given the change to commit with it
+   * @returns The new record's id
+   */
+  convertInto: (
+    noteId: string,
+    entityId: string,
+    create: (alongside?: CreateAlongside<Note>) => Promise<string>
+  ) => Promise<string>;
   
   /**
    * Update a note (for unsaved notes, updates locally; for saved notes, saves to Firebase)

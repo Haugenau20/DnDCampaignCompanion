@@ -631,10 +631,38 @@ describe('places inside this quest', () => {
           name: 'Secret door',
           parentId: 'erebor',
           relatedQuests: ['reclaim-erebor'],
-        })
+        }),
+        expect.anything()
       )
     );
     await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/secret-door'));
+  });
+
+  // T088 (DATA-005): the place comes off the quest in the same commit as the
+  // location is created, so a failed second write cannot leave the location
+  // behind with the place still offering to be promoted again.
+  it('takes the place off the quest in the same write as the location', async () => {
+    renderPage();
+    fireEvent.click(
+      within(section('Places inside this quest')).getByRole('button', {
+        name: 'Make it a location',
+      })
+    );
+
+    await waitFor(() => expect(mockCreateLocation).toHaveBeenCalled());
+    const [, alongside] = mockCreateLocation.mock.calls[0];
+    expect(alongside).toMatchObject({
+      collection: 'groups/group-1/campaigns/campaign-1/quests',
+      id: 'reclaim-erebor',
+    });
+    expect(alongside.change(
+      {
+        id: 'reclaim-erebor',
+        keyLocations: [{ name: 'Secret door' }, { name: 'Added meanwhile' }],
+      },
+      'secret-door'
+    )).toEqual({ keyLocations: [{ name: 'Added meanwhile' }] });
+    expect(mockUpdateQuest).not.toHaveBeenCalled();
   });
 });
 

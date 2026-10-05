@@ -21,7 +21,15 @@ jest.mock("react-router-dom", () => ({
 const mockAddNPC = jest.fn();
 const mockAddQuest = jest.fn();
 const mockCreateLocation = jest.fn();
-const mockMarkEntityAsConverted = jest.fn();
+/*
+  `convertInto` hands the create the note's mark to commit with (T088). The
+  stand-in passes a token through, so a test can see the record's write
+  carried it rather than a second write following it.
+*/
+const MARK = { collection: "notes", id: "note-7", change: () => ({}) };
+const mockConvertInto = jest.fn(
+  (_noteId: string, _entityId: string, create: (alongside?: unknown) => Promise<string>) => create(MARK)
+);
 
 /*
   The collections, not just the writers. `useQuickAddCreate` reads both to turn
@@ -68,7 +76,7 @@ jest.mock("features/campaign-entities", () => ({
 jest.mock("features/collaboration", () => ({
   useNotes: (options: unknown) => {
     mockReadOf("notes")(options);
-    return { markEntityAsConverted: mockMarkEntityAsConverted };
+    return { convertInto: mockConvertInto };
   },
 }));
 
@@ -94,7 +102,6 @@ beforeEach(() => {
   mockAddNPC.mockResolvedValue("npc-1");
   mockAddQuest.mockResolvedValue("quest-1");
   mockCreateLocation.mockResolvedValue("location-1");
-  mockMarkEntityAsConverted.mockResolvedValue(undefined);
 });
 
 describe("QuickAddForm", () => {
@@ -429,19 +436,19 @@ describe("QuickAddForm", () => {
   // Note conversion
   // -------------------------------------------------------------------------
   describe("note conversion", () => {
-    it("marks the source entity converted, with the new record's id", async () => {
+    // CHANGED for T088: the mark used to be a second write after the
+    // record's, so a failed mark left the record behind. It now commits with
+    // the record, so the assertion is on the record's own write.
+    it("marks the source entity converted in the same write as the record", async () => {
       renderForm({ noteId: "note-7", entityId: "entity-3" });
       await userEvent.type(nameField(), "Thorin");
       await userEvent.type(lineField(), "Exiled king");
       await userEvent.click(createAndOpen());
 
       await waitFor(() =>
-        expect(mockMarkEntityAsConverted).toHaveBeenCalledWith(
-          "note-7",
-          "entity-3",
-          "npc-1"
-        )
+        expect(mockConvertInto).toHaveBeenCalledWith("note-7", "entity-3", expect.any(Function))
       );
+      expect(mockAddNPC).toHaveBeenCalledWith(expect.objectContaining({ name: "Thorin" }), MARK);
     });
 
     it("does not mark anything when the surface was not opened from a note", async () => {
@@ -451,7 +458,8 @@ describe("QuickAddForm", () => {
       await userEvent.click(createAndOpen());
 
       await waitFor(() => expect(mockAddNPC).toHaveBeenCalled());
-      expect(mockMarkEntityAsConverted).not.toHaveBeenCalled();
+      expect(mockConvertInto).not.toHaveBeenCalled();
+      expect(mockAddNPC.mock.calls[0]).toHaveLength(1);
     });
 
     it("writes the carried fields the surface never showed", async () => {

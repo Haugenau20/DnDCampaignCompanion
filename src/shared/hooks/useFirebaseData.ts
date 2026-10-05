@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFirestore } from 'features/user-management';
 import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
-import { DomainData } from 'core/types/common';
+import { CreateAlongside, DomainData } from 'core/types/common';
 import { DocumentAlreadyExistsError } from 'core/services/firebase/data/DocumentAlreadyExistsError';
 
 interface UseFirebaseDataOptions<T> {
@@ -99,6 +99,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     createDocument,
     updateDocumentWithAttribution,
     updateDocumentAfterReading,
+    createDocumentWithUpdates,
     deleteDocument
   } = useFirestore();
 
@@ -259,7 +260,11 @@ export function useFirebaseData<T extends Record<string, any>>(
    * optimistic appends, never a fetched collection, and reading it would be a
    * mistake the option name warns against.
    */
-  const addData = useCallback(async (newData: DomainData<T> & { id?: string }, documentId?: string) => {
+  const addData = useCallback(async (
+    newData: DomainData<T> & { id?: string },
+    documentId?: string,
+    alongside?: CreateAlongside
+  ) => {
     setLoading(true);
     setError(null);
     try {
@@ -267,7 +272,15 @@ export function useFirebaseData<T extends Record<string, any>>(
       const id = documentId ||
                 (options.idField ? (newData as unknown as T)[options.idField] as string : crypto.randomUUID());
 
-      await createDocument(options.collection, newData, id);
+      if (alongside) {
+        // One transaction: the record and the change commit together (T088).
+        await createDocumentWithUpdates(options.collection, id, alongside.collection, async (read) => ({
+          create: newData,
+          updates: [{ id: alongside.id, data: alongside.change(await read(alongside.id), id) }],
+        }));
+      } else {
+        await createDocument(options.collection, newData, id);
+      }
       if (!subscribing) {
         setData(prevData => [...prevData, { ...newData, id } as unknown as T]);
       }
@@ -285,7 +298,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [subscribing, options.collection, options.idField, createDocument]);
+  }, [subscribing, options.collection, options.idField, createDocument, createDocumentWithUpdates]);
 
   const updateData = useCallback(async (id: string, updatedData: Partial<T>) => {
     setLoading(true);

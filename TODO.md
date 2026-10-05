@@ -25,7 +25,7 @@ adjusted for the images focus above.
 |---|---|---|---|---|---|
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, an extra record per retry of a note conversion or promotion |
+| medium | T088 | Concurrent structural edits corrupt locations and chapter order | L | open | Orphaned places, duplicate orders |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
@@ -149,7 +149,7 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
+### T088 — Concurrent structural edits corrupt locations and chapter order
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-05
 
 Each of these decides from a stale local copy, then writes:
@@ -167,18 +167,6 @@ Each of these decides from a stale local copy, then writes:
   or a deliberate tiebreak (gaps, and a stable second key such as
   `dateAdded`) that makes duplicates harmless. The maintainer's call; plan
   first.
-- **The other conversions** (DATA-005, 03; pass 5 reproduced the first, 17):
-  each creates the new record, then marks its source in a second write, so
-  a failed mark leaves the record behind and a retry makes another.
-  Converting a note's detected entity (`useQuickAddCreate.ts:158-179` then
-  `NoteContext.markEntityAsConverted`), a note into a rumour, and promoting
-  free text into a place (`promoteFeature`, `LocationDetailPage.tsx:298`;
-  `promotePlace`, `QuestDetailPage.tsx:320`). Rumour conversions already
-  commit both halves as one transaction
-  (`DocumentService.createDocumentWithUpdates`); that is the tool, but each
-  of these crosses a context: the note is a private document under `users/`,
-  and the create runs through another entity's context (NPC, location), so
-  the two halves have to meet in one call first.
 - **Source**: code review, 2026-10-04
 
 ---

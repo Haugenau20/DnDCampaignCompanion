@@ -2,6 +2,7 @@
 import { useCallback } from "react";
 import { useNPCs, useQuests, useLocations } from "features/campaign-entities";
 import { useNotes } from "features/collaboration";
+import type { CreateAlongside } from "core/types/common";
 import {
   resolveNameToId,
   resolveNamesToIds,
@@ -18,8 +19,8 @@ import {
  * What a create needs beyond the two typed fields.
  *
  * `noteId`/`entityId` are note conversion's existing handoff and are passed
- * straight through to `markEntityAsConverted`. `15-1` forbids changing that
- * wiring, so this carries it rather than reshaping it.
+ * straight through to `convertInto`, which commits the note's mark with the
+ * record (T088).
  */
 export interface QuickAddCreateOptions {
   noteId?: string;
@@ -156,7 +157,7 @@ export function useQuickAddCreate(reads?: QuickAddReads) {
   // Writes only, never reads: a quest's create needs no other quest.
   const { addQuest } = useQuests({ subscribe: false });
   const { createLocation, locations } = useLocations({ subscribe: lists.locations });
-  const { markEntityAsConverted } = useNotes({ subscribe: lists.notes });
+  const { convertInto } = useNotes({ subscribe: lists.notes });
 
   return useCallback(
     async (
@@ -193,30 +194,28 @@ export function useQuickAddCreate(reads?: QuickAddReads) {
           : values;
       const document = QUICK_ADD_SPECS[entity].buildDocument(resolvedValues, carry);
 
-      let id: string;
-      switch (entity) {
-        case "npc":
-          id = await addNPC(document as Parameters<typeof addNPC>[0]);
-          break;
-        case "quest":
-          id = await addQuest(document as Parameters<typeof addQuest>[0]);
-          break;
-        case "location":
-          id = await createLocation(document as Parameters<typeof createLocation>[0]);
-          break;
-      }
+      /** The write, with a change to commit alongside it when there is one. */
+      const create = (alongside?: CreateAlongside): Promise<string> => {
+        const extra = alongside ? [alongside] : [];
+        switch (entity) {
+          case "npc":
+            return addNPC(document as Parameters<typeof addNPC>[0], ...extra);
+          case "quest":
+            return addQuest(document as Parameters<typeof addQuest>[0], ...extra);
+          case "location":
+            return createLocation(document as Parameters<typeof createLocation>[0], ...extra);
+        }
+      };
 
-      // Mark the source note's extracted entity as converted, exactly as the
-      // four existing create forms do. Deliberately after the write and before
-      // the caller navigates, so a failure here surfaces rather than stranding
-      // a note that still offers to convert something already created.
+      // Opened from a note: the record and the note's mark commit together
+      // (T088). Created first and marked after, a failed mark left the record
+      // behind while the note still offered to convert it again.
       if (options.noteId && options.entityId) {
-        await markEntityAsConverted(options.noteId, options.entityId, id);
+        return convertInto(options.noteId, options.entityId, create);
       }
-
-      return id;
+      return create();
     },
-    [addNPC, addQuest, createLocation, markEntityAsConverted, npcs, locations]
+    [addNPC, addQuest, createLocation, convertInto, npcs, locations]
   );
 }
 

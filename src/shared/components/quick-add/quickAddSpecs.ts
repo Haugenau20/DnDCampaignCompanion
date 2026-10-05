@@ -291,7 +291,7 @@ export interface QuickAddInitialValues {
  * type and parent. Two of those keys become the fields quick add shows; every
  * other key rides along untouched so the extraction's work is not thrown away.
  * `noteId` and `entityId` are not part of this: they travel beside the payload
- * and are passed to `markEntityAsConverted` unchanged.
+ * and are passed to `convertInto` unchanged.
  */
 export function splitInitialData(
   entity: QuickAddEntity,

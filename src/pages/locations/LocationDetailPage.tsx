@@ -40,6 +40,7 @@ import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
 import { useInlineEditing } from 'shared/hooks/useInlineEditing';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 
 /** The eight kinds a place can be, as the select offers them. */
 const TYPE_OPTIONS: LocationType[] = [
@@ -133,6 +134,7 @@ const LocationDetailPage: React.FC = () => {
     deleteLocation,
     createLocation,
   } = useLocations();
+  const locationsPath = useCampaignCollectionPath('locations');
   const { npcs } = useNPCs();
   const { quests } = useQuests();
   const { rumors } = useRumors();
@@ -296,7 +298,10 @@ const LocationDetailPage: React.FC = () => {
    * for when the party actually arrives somewhere that was a line of scenery.
    */
   const promoteFeature = async (feature: string) => {
-    if (!location) return;
+    if (!location || !locationsPath) return;
+    // The feature comes off this place in the same commit as the new place is
+    // created (T088): as a second write, a failure left the new place behind
+    // and the feature still offering to be promoted again.
     await createLocation({
       name: feature,
       type: 'poi',
@@ -308,10 +313,14 @@ const LocationDetailPage: React.FC = () => {
       relatedQuests: [],
       notes: [],
       tags: [],
+    }, {
+      collection: locationsPath,
+      id: location.id,
+      change: (current) => {
+        if (!current) throw new Error('Location not found');
+        return { features: (current.features ?? []).filter((f: string) => f !== feature) };
+      },
     });
-    await save((current) => ({
-      features: (current.features ?? []).filter((f) => f !== feature),
-    }));
   };
 
   const handleDelete = async (childStrategy: Parameters<typeof deleteLocation>[1]) => {

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
 import { descendantIdsDeepestFirst, parentChainReaches, wouldCreateCycle } from '../utils/location-tree';
-import { DomainData, RecordChange } from 'core/types/common';
+import { DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { writeRecordChange } from '../../shared/writeRecordChange';
@@ -285,7 +285,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const issuedIds = useRef<Set<string>>(new Set());
 
   // Create a new location
-  const createLocation = useCallback(async (locationData: DomainData<Location>): Promise<string> => {
+  const createLocation = useCallback(async (locationData: DomainData<Location>, alongside?: CreateAlongside): Promise<string> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to create a location');
     }
@@ -297,7 +297,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       name: locationData.name,
       issuedIds: issuedIds.current,
       isLoaded: (candidateId) => Boolean(getLocationById(candidateId)),
-      write: (candidateId) => addData({ ...locationData, id: candidateId }, candidateId)
+      write: (candidateId) => addData({ ...locationData, id: candidateId }, candidateId, ...(alongside ? [alongside] : []))
     });
 
     return locationId;
