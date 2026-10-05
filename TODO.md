@@ -459,8 +459,9 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 **What is left of the deletions that exist** (code review, 2026-10-04). Since
 2026-10-05 `deleteCampaign` is resumable: it keeps a record in
 `groups/{g}/campaignDeletions/{c}` until every stage has succeeded, checks
-each member-cleanup write, and deletes pictures after documents. One finding
-remains, and it needs a decision:
+each member-cleanup write, and deletes pictures after documents; a daily job
+(`resumeCampaignDeletionsDaily`) finishes any deletion nobody retried. One
+finding remains, and it needs a decision:
 
 - **A campaign being deleted still accepts writes** (DATA-010, 03). A note
   saved, or an entity created, after the cleanup has passed it survives the
