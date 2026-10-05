@@ -11,7 +11,9 @@ export { deleteCampaign, resumeCampaignDeletionsDaily } from "./campaignManageme
 export { sweepOrphanedImagesDaily } from "./imageMaintenance";
 export {
   createGroup,
+  deleteGroup,
   redeemInvitation,
+  resumeGroupDeletionsDaily,
   setMemberRole,
 } from "./groupManagement";
 export { gateAccountCreation, reserveSignUp } from "./signUp";

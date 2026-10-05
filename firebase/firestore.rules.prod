@@ -233,6 +233,24 @@
 // deleting campaign, nor writes `deleting`, so nothing it does is refused.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-05c -- T037, group deletion
+// ---------------------------------------------------------------------------
+// Pinned by the "deleting a group is the deleteGroup function's" tests:
+//
+// 10. CHANGED -- no client deletes a group document. It used to be open to a
+//     group admin, and deleting it left every campaign, profile and note
+//     beneath it stored and unreachable. The `deleteGroup` Cloud Function
+//     deletes the lot.
+// 11. NEW -- the group's `deleting` mark, as for campaigns: clients may not
+//     write it, and a marked group takes no edits. The function closes the
+//     group's content to writes by taking the group off every member's
+//     `groups` first, so no further rule is needed for what is beneath it.
+//
+// Deploy order: the function deploys before these rules, as the workflow
+// does. The live frontend never deletes a group document nor writes
+// `deleting`, so nothing it does is refused.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // Change the production rules here, in the same PR as whatever motivated the
 // change, never in the console. Every merge to `main` redeploys this file, so a
@@ -346,14 +364,19 @@ service cloud.firestore {
       allow read: if isGroupMember(groupId) || isGlobalAdmin();
 
       // Anyone signed in can create a group (they become the admin)
-      allow create: if isSignedIn() && imageLeased(groupId, 'crest');
+      allow create: if isSignedIn() && imageLeased(groupId, 'crest') &&
+                     !request.resource.data.keys().hasAny(['deleting']);
 
-      // Group admins can update, global admin can do anything
+      // Group admins can update, global admin can do anything -- not once its
+      // deletion has started, and never the `deleting` mark (T037).
       allow update: if (isGroupAdmin(groupId) || isGlobalAdmin()) &&
-                     imageLeased(groupId, 'crest');
+                     imageLeased(groupId, 'crest') &&
+                     resource.data.get('deleting', false) != true &&
+                     !request.resource.data.keys().hasAny(['deleting']);
 
-      // Only group admins or global admin can delete a group
-      allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+      // No client deletes a group: the `deleteGroup` Cloud Function does,
+      // with everything beneath it (T037).
+      allow delete: if false;
 
       // Group user profiles
       match /users/{userId} {

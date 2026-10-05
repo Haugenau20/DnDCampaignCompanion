@@ -1,6 +1,10 @@
 // functions/src/campaignManagement/deleteCampaign.ts
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+// The modular import, not `admin.firestore.FieldValue`: inside the functions
+// emulator the namespaced `admin.firestore` is a wrapped stand-in without
+// `FieldValue`, so the call failed there before writing anything.
+import {FieldValue} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {
   campaignDeletionRef,
@@ -112,7 +116,7 @@ export const deleteCampaign = functions.onCall(
         if (!deletionDoc.exists) {
           transaction.create(deletionRef, {
             requestedBy: callerUid,
-            requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+            requestedAt: FieldValue.serverTimestamp(),
           });
         }
       });

@@ -60,13 +60,22 @@ export const reserveSignUp = functions.onCall(
     const db = admin.firestore();
 
     try {
-      const tokenDoc = await db
-        .doc(`groups/${groupId}/registrationTokens/${token}`)
-        .get();
+      const [tokenDoc, groupDoc] = await Promise.all([
+        db.doc(`groups/${groupId}/registrationTokens/${token}`).get(),
+        db.doc(`groups/${groupId}`).get(),
+      ]);
       if (!tokenDoc.exists) {
         throw new functions.HttpsError(
           "not-found",
           "This invitation does not exist. Ask for a new link."
+        );
+      }
+      // No reservation, which holds an email, for a group being deleted
+      // (T037); `redeemInvitation` would refuse the account it was for.
+      if (groupDoc.get("deleting") === true) {
+        throw new functions.HttpsError(
+          "failed-precondition",
+          "This group is being deleted."
         );
       }
       const problem = registrationTokenProblem(tokenDoc.data() ?? {});

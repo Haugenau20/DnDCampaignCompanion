@@ -682,3 +682,29 @@ describe("a campaign being deleted takes no writes (T037)", () => {
       .set({title: "Loose", content: "no campaign"}));
   });
 });
+
+describe("deleting a group is the deleteGroup function's (T037)", () => {
+  const markDeleting = () => env.withSecurityRulesDisabled((context) =>
+    context.firestore().doc(`groups/${G}`).update({deleting: true})
+  );
+
+  it("control: an admin can still rename the group", async () => {
+    await assertSucceeds(as("gandalf").doc(`groups/${G}`).update({name: "The Nine Walkers"}));
+  });
+
+  it("refuses a client deleting the group document, which would orphan all beneath it", async () => {
+    await assertFails(as("gandalf").doc(`groups/${G}`).delete());
+  });
+
+  it("never lets a client write the mark", async () => {
+    await assertFails(as("gandalf").doc(`groups/${G}`).update({deleting: true}));
+    await assertFails(as("sauron").doc("groups/mordor").set({name: "Mordor", deleting: false}));
+    await markDeleting();
+    await assertFails(as("gandalf").doc(`groups/${G}`).update({deleting: false}));
+  });
+
+  it("refuses an edit to a group once it is marked", async () => {
+    await markDeleting();
+    await assertFails(as("gandalf").doc(`groups/${G}`).update({name: "Renamed"}));
+  });
+});
