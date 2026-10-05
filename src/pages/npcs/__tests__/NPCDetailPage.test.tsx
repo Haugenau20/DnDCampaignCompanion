@@ -1004,6 +1004,33 @@ describe("NPCDetailPage", () => {
   });
 
   describe("when a save fails", () => {
+    // T085 (REACT-002): the real provider also publishes a rejected write as
+    // its `error`. That used to switch the page to its error state, unmounting
+    // the editor and the typed text with it.
+    it("keeps the editor and its text when the provider reports the failed write", async () => {
+      mockUpdateNPC.mockImplementation(async () => {
+        mockNPCDataReturn = { ...mockNPCDataReturn, error: "Network unavailable" };
+        throw new Error("Network unavailable");
+      });
+      const { rerender } = renderPage();
+      fireEvent.click(screen.getByRole("button", { name: "Edit description" }));
+      fireEvent.change(screen.getByLabelText("Description"), {
+        target: { value: "Hard-won sentence." },
+      });
+      fireEvent.click(screen.getByText("Save description"));
+
+      expect(await screen.findByText("Not saved")).toBeInTheDocument();
+      // The provider's state change re-renders the page; this mock is not
+      // stateful, so do it by hand.
+      rerender(
+        <MemoryRouter>
+          <NPCDetailPage />
+        </MemoryRouter>
+      );
+      expect(screen.getByLabelText("Description")).toHaveValue("Hard-won sentence.");
+      expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
+    });
+
     it("keeps every character the user typed", async () => {
       mockUpdateNPC.mockRejectedValue(new Error("Network unavailable"));
       renderPage();

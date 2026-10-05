@@ -16,9 +16,9 @@ import { Plus } from "lucide-react";
  */
 const LocationsPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { locations, isLoading, error } = useLocations();
+  const { locations, isLoading, loadError } = useLocations();
 
-  const gate = usePageGate("locations", { loading: isLoading, error });
+  const gate = usePageGate("locations", { loading: isLoading, error: loadError });
 
   return (
     <PageShell

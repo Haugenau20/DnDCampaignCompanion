@@ -18,9 +18,9 @@ import { Plus } from "lucide-react";
  */
 const QuestsPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
-  const { quests, isLoading, error } = useQuests();
+  const { quests, isLoading, loadError } = useQuests();
 
-  const gate = usePageGate("quests", { loading: isLoading, error });
+  const gate = usePageGate("quests", { loading: isLoading, error: loadError });
 
   return (
     <PageShell

@@ -271,7 +271,7 @@ const NPCDetailPage: React.FC = () => {
   // Reads the provider this page writes through, rather than a second loader
   // of its own. Two independently fetched copies meant a write updated one
   // and the page rendered the other (T046).
-  const { npcs, isLoading, error, refreshNPCs, updateNPC, updateNPCNote, deleteNPC } = useNPCs();
+  const { npcs, isLoading, loadError, refreshNPCs, updateNPC, updateNPCNote, deleteNPC } = useNPCs();
   const { getQuestById, quests } = useQuests();
   const { rumors, updateRumor } = useRumors();
   const { locations } = useLocations();
@@ -294,7 +294,7 @@ const NPCDetailPage: React.FC = () => {
       one that is simply still on its way.
     */
     loading: isLoading && !npc,
-    error,
+    error: loadError,
     onRetry: () => {
       void refreshNPCs();
     },

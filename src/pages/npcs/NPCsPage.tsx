@@ -25,11 +25,11 @@ const NPCsPage: React.FC = () => {
   // Reads the provider this page writes through, rather than a second loader
   // of its own. Two independently fetched copies meant a write updated one and
   // the page rendered the other (T046).
-  const { npcs, isLoading, error, refreshNPCs } = useNPCs();
+  const { npcs, isLoading, loadError, refreshNPCs } = useNPCs();
 
   const gate = usePageGate("npcs", {
     loading: isLoading,
-    error,
+    error: loadError,
     onRetry: () => {
       void refreshNPCs();
     },

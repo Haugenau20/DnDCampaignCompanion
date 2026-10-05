@@ -124,7 +124,7 @@ const LocationDetailPage: React.FC = () => {
   const {
     locations,
     isLoading,
-    error,
+    loadError,
     refreshLocations,
     updateLocation,
     updateLocationNote,
@@ -152,7 +152,7 @@ const LocationDetailPage: React.FC = () => {
       one that is simply still on its way.
     */
     loading: isLoading && !location,
-    error,
+    error: loadError,
     onRetry: () => {
       void refreshLocations();
     },

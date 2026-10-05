@@ -54,6 +54,7 @@ interface RumorContextMock {
   rumors: any[];
   isLoading: boolean;
   error: string | null;
+  loadError?: string | null;
 }
 
 let mockRumorContext: RumorContextMock = {
@@ -233,7 +234,7 @@ describe("RumorsPage", () => {
     // Rewritten: the old inline error copy is gone; GatedContent's error
     // panel names the noun and the real error message instead.
     it("shows the shared error panel, not the old inline copy, on a fetch error", () => {
-      mockRumorContext = { ...mockRumorContext, error: "Firebase error" };
+      mockRumorContext = { ...mockRumorContext, error: "Firebase error", loadError: "Firebase error" };
       renderPage();
       expect(
         screen.queryByText("Error Loading Rumors. Sign in to view content.")
@@ -243,6 +244,15 @@ describe("RumorsPage", () => {
       expect(
         screen.queryByTestId("rumor-directory")
       ).not.toBeInTheDocument();
+    });
+
+    // T085 (REACT-002): a rejected write is reported through `error`, but the
+    // records loaded fine, so the page stays up.
+    it("keeps the rumours on the page when only a write failed", () => {
+      mockRumorContext = { ...mockRumorContext, error: "Write refused", loadError: null };
+      renderPage();
+      expect(screen.getByTestId("rumor-directory")).toBeInTheDocument();
+      expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
     });
   });
 

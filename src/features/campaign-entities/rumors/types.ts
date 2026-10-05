@@ -61,7 +61,18 @@ export interface Rumor extends BaseContent {
 export interface RumorContextState {
   rumors: Rumor[];
   isLoading: boolean;
+  /**
+   * The last failure, a read or a write. A write failure is reported here as
+   * well as rejected (#1401), so it is observable, but it says nothing about
+   * whether the page can show its records: gate on `loadError` for that.
+   */
   error: string | null;
+  /**
+   * Why the records could not be loaded, or null. Only this may replace a page
+   * with its error state: a rejected write leaves the loaded records, and the
+   * editor holding the unsaved text, on screen (T085, REACT-002).
+   */
+  loadError: string | null;
 }
 
 export interface RumorContextValue extends RumorContextState {

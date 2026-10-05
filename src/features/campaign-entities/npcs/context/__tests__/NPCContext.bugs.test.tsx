@@ -341,6 +341,43 @@ describe('NPCContext Known Bugs (FAILING TESTS)', () => {
       });
     });
   });
+
+  // T085 (REACT-002): the page gates on `loadError`, which a write never sets,
+  // so a rejected save cannot take down the page holding the editor.
+  describe('T085: a write failure is not a load failure', () => {
+    test('a rejecting addData leaves useNPCs().loadError null', async () => {
+      mockUseFirebaseData.mockImplementation(() => {
+        const [writeError, setWriteError] = React.useState<string | null>(null);
+        const addData = async (...args: any[]) => {
+          try {
+            return await mockAddData(...args);
+          } catch (err) {
+            setWriteError(err instanceof Error ? err.message : 'Failed to add data');
+            throw err;
+          }
+        };
+        return { addData, updateData: mockUpdateData, deleteData: jest.fn(), error: writeError };
+      });
+      mockAddData.mockRejectedValue(new Error('Simulated write failure'));
+
+      renderNPCContext();
+      await waitFor(() => expect(npcContext).toBeDefined());
+
+      await act(async () => {
+        await expect(npcContext.addNPC({
+          name: 'Doomed NPC',
+          description: '',
+          status: 'alive' as NPCStatus,
+          relationship: 'neutral' as NPCRelationship,
+          connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
+          notes: [],
+        })).rejects.toThrow('Simulated write failure');
+      });
+
+      await waitFor(() => expect(npcContext.error).toBe('Simulated write failure'));
+      expect(npcContext.loadError).toBeNull();
+    });
+  });
 });
 
 /**

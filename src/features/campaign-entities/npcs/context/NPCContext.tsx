@@ -253,6 +253,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // said, and only the page knows which one it is in. `usePageGate` makes
     // that distinction and `gated-page-copy.ts` holds the words.
     error: error || writeError || null,
+    // The read alone: a rejected write must not take the page down (T085).
+    loadError: error || null,
     getNPCById,
     getNPCsByQuest,
     getNPCsByLocation,

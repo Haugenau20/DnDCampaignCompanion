@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
+| high | T085 | Editors carry the wrong record's draft, or lose it on leaving | L | in progress | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
@@ -154,16 +154,14 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
-**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+### T085 — Editors carry the wrong record's draft, or lose the draft on leaving
+**Type** bug · **Size** L · **Status** in progress · **Verified** 2026-10-05
 
 Authored text is lost or misfiled in several ways. Separate causes, grouped
 because the fix is one idea: a draft belongs to one record and outlives a
-failed write.
+failed write. A failed entity save no longer unmounts its editor (REACT-002):
+the entity pages gate on the contexts' `loadError`, which a write never sets.
 
-- **Failed save loses the draft**: a rejected entity write sets the provider
-  error (`useFirebaseData.ts:285`) that the page gate reads, which unmounts
-  the editor, and Retry doesn't recover it (REACT-002, TEST-007).
 - **Wrong record**: a cross-campaign note's fallback survives a campaign
   change (RECOVERY-002). Seen 2026-10-04 the other way round too: switching
   campaign with your own note open leaves "Note Not Found" until a reload,
@@ -177,8 +175,11 @@ failed write.
 - **Draft dropped on leaving**: leaving a note before the autosave debounce
   cancels the only pending save; a reload loses an unacknowledged one
   (REACT-003).
-- **Findings**: 05, 06, 08, 15. **Catch**: the reviewers say these need separate
-  regression sequences; consider splitting at pickup. Plan first.
+- **Findings**: 05, 06, 08, 15. Being closed one cause per PR (2026-10-05).
+- **Decided (maintainer, 2026-10-05)** for the dropped draft: leaving a note
+  in the app saves it at once (an error and the kept text if that fails);
+  closing or reloading the tab with unsaved text asks first. Nothing is
+  kept in browser storage.
 - **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
