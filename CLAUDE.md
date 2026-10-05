@@ -17,10 +17,13 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 
 ## Running the Project
 
-- Start: **`.\scripts\start-dev.ps1 -Action start`** — Firebase emulators, then `npm start`, both
-  directly on the host. **No Docker.**
+- Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
+  Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
+  the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
-  emulator data to `firebase/emulator-data`; `start` re-imports it if present)
+  emulator data to `firebase/emulator-data`; `start` re-imports it if present). A failed export
+  stops nothing; `-Force` stops anyway and loses the changes since the last export. `stop` ends only
+  what listens on this project's ports (and what those processes started), not every `java`.
 - Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
 - **Never stop a dev server or the emulators you did not start in this session.** The maintainer
   usually has them running. Need to switch branches under a running dev server? Ask first, or use a
@@ -54,7 +57,6 @@ the errors name files from whichever branch you visited.
   tries `::1` first and outlasts the 2 s timeout. Symptoms, if they return: `start`/`restart` claims
   the emulators "failed to start within 45 seconds" and never runs `npm start`, `stop` **silently
   skips the export**, and `status` says nothing is running. Check ports 3000/4000/5001/8080/9099/9199.
-- `-Action stop` can leave an orphaned `react-scripts` holding port 3000.
 - Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
   in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
 - The header overflows horizontally below ~380px on **every** route (tracked in `TODO.md`). If your

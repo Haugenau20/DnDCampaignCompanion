@@ -25,7 +25,6 @@ adjusted for the images focus above.
 |---|---|---|---|---|---|
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
@@ -439,7 +438,9 @@ the **global** CLI:
 
 - `npm i -g firebase-tools@15.22.4`, then one `start-dev.ps1` start/stop round
   trip. The PowerShell script itself was not run; only the import/export it
-  performs was.
+  performs was. The round trip also checks what was only run with stubs on
+  2026-10-05: start compiling `firebase/functions` first, and stop exporting
+  before it ends this project's port listeners (and nothing else).
 - **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
   through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
   proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
@@ -467,21 +468,6 @@ time anyone edits it.
   them or keep the fallback on purpose.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted
-
-### T100 — `start-dev.ps1` stop can lose data and kills unrelated Java; start skips compiling Functions
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- OPS-001: `scripts/start-dev.ps1:128-129` runs the export and prints "Data
-  exported successfully" regardless: `firebase` is a native command, so a
-  failed export never reaches the `catch`. Then it shuts the emulators down.
-- OPS-002: `:148-152` force-stops every `java` process on the machine.
-- OPS-004: start never builds `firebase/functions`, so the emulators can run
-  missing or stale compiled code while the UI looks ready.
-- OPS-003: the sample-data generator logs a failure, then announces completion
-  and exits 0, which `manage-dev-data.ps1` trusts.
-- **Findings**: 13. OPS-001/002 are source-only; the reviewers could not run
-  PowerShell. **Catch**: do it with T065's start/stop round trip.
-- **Source**: code review, 2026-10-04
 
 ---
 
