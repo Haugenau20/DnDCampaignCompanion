@@ -708,3 +708,68 @@ describe("deleting a group is the deleteGroup function's (T037)", () => {
     await assertFails(as("gandalf").doc(`groups/${G}`).update({name: "Renamed"}));
   });
 });
+
+describe("a location being deleted takes no new places (T088)", () => {
+  const LOC = `groups/${G}/campaigns/c1/locations`;
+  const place = (name: string, parentId = "") => ({name, parentId, type: "poi", status: "known"});
+
+  beforeEach(() => env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await db.doc(`${LOC}/beleriand`).set(place("Beleriand"));
+    await db.doc(`${LOC}/gondolin`).set(place("Gondolin", "beleriand"));
+    await db.doc(`${LOC}/kings-square`).set(place("King's square", "gondolin"));
+    await db.doc(`${LOC}/doriath`).set(place("Doriath", "beleriand"));
+  }));
+
+  const mark = () => env.withSecurityRulesDisabled((context) =>
+    context.firestore().doc(`${LOC}/gondolin`).update({deleting: "delete-subtree"})
+  );
+
+  it("control: an unmarked place takes a new place, a moved one and an edit", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.doc(`${LOC}/fountain`).set(place("Fountain", "gondolin")));
+    await assertSucceeds(db.doc(`${LOC}/doriath`).update({parentId: "gondolin"}));
+    await assertSucceeds(db.doc(`${LOC}/gondolin`).update({name: "Ondolindë"}));
+  });
+
+  it("lets a member mark a place, with either way of deleting it", async () => {
+    await assertSucceeds(as("frodo").doc(`${LOC}/gondolin`).update({deleting: "delete-subtree"}));
+    await assertSucceeds(as("frodo").doc(`${LOC}/doriath`).update({deleting: "promote-to-grandparent"}));
+  });
+
+  it("refuses any other mark, and a place created marked", async () => {
+    await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({deleting: true}));
+    await assertFails(as("frodo").doc(`${LOC}/fountain`).set({...place("Fountain"), deleting: "delete-subtree"}));
+  });
+
+  describe("once marked", () => {
+    beforeEach(mark);
+
+    it("refuses a new place inside it", async () => {
+      await assertFails(as("frodo").doc(`${LOC}/fountain`).set(place("Fountain", "gondolin")));
+    });
+
+    it("refuses a place moved into it", async () => {
+      await assertFails(as("frodo").doc(`${LOC}/doriath`).update({parentId: "gondolin"}));
+    });
+
+    it("refuses an edit to it, and clearing the mark", async () => {
+      await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({name: "Ondolindë"}));
+      await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({deleting: firebase.firestore.FieldValue.delete()}));
+    });
+
+    it("still lets a place inside it move out, and edits to it, so its children can be kept", async () => {
+      await assertSucceeds(as("frodo").doc(`${LOC}/kings-square`).update({name: "Square of the King"}));
+      await assertSucceeds(as("frodo").doc(`${LOC}/kings-square`).update({parentId: "beleriand"}));
+    });
+
+    it("still lets it be deleted", async () => {
+      await assertSucceeds(as("frodo").doc(`${LOC}/gondolin`).delete());
+    });
+
+    it("leaves other places, and other kinds of record, alone", async () => {
+      await assertSucceeds(as("frodo").doc(`${LOC}/fountain`).set(place("Fountain", "doriath")));
+      await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n1`).update({name: "Bilbo Baggins"}));
+    });
+  });
+});

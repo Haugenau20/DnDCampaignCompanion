@@ -441,6 +441,49 @@ describe('LocationDetailPage — deleting a parent (§6.2, item 6)', () => {
     ).toBeInTheDocument();
   });
 
+  // T088: a deletion that failed partway leaves its mark, and a marked place
+  // takes no edit. The page says so, and offers the one thing that works.
+  describe('a place whose deletion stopped partway', () => {
+    beforeEach(() => {
+      mockLocations = TREE.map((l) =>
+        l.id === 'gondolin' ? { ...l, deleting: 'promote-to-grandparent' } : l
+      );
+    });
+
+    it('says so, and offers to finish instead of to delete', () => {
+      renderPage();
+      expect(screen.getByText(/Deleting Gondolin stopped partway/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Finish deleting' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete location' })).not.toBeInTheDocument();
+    });
+
+    it('offers no edit, since the rules refuse every one', () => {
+      renderPage();
+      expect(screen.queryByRole('button', { name: /Rename/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Move elsewhere/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Add another feature/ })).not.toBeInTheDocument();
+    });
+
+    it('finishes it the way it started, without asking again, then leaves the page', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Finish deleting' }));
+
+      await waitFor(() =>
+        expect(mockDeleteLocation).toHaveBeenCalledWith('gondolin', 'promote-to-grandparent')
+      );
+      await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledWith('/locations'));
+    });
+
+    it('stays, and says why, when finishing fails too', async () => {
+      mockDeleteLocation.mockRejectedValueOnce(new Error('You are offline.'));
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Finish deleting' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('You are offline.');
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+  });
+
   it('promotes by default, because losing a subtree is the irreversible answer', async () => {
     const dialog = openDelete();
     fireEvent.click(dialog.getByRole('button', { name: /Delete Gondolin/ }));

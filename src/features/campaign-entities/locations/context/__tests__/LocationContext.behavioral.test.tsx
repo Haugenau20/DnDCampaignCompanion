@@ -4,7 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { LocationProvider, useLocations } from '../LocationContext';
 import { Location, LocationStatus, LocationType, LocationNote } from '../../types';
-import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
+import { serverThrough, updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 
 /**
  * Location Context Behavioral Testing
@@ -104,6 +104,8 @@ describe('LocationContext Behavioral Testing', () => {
       updateData: mockUpdateData,
       // Lists are worked out from the record (T083): this suite's records.
       updateDataAfterReading: updateAfterReadingThrough(mockUpdateData, (id) => (mockUseLocationData()?.locations ?? []).find((l: any) => l.id === id)),
+      // The server, for a delete (T088): this suite's records.
+      ...serverThrough<Location>(mockUpdateData, () => mockUseLocationData()?.locations ?? []),
       deleteData: mockDeleteData,
     });
   });

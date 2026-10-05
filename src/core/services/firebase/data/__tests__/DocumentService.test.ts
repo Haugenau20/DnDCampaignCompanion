@@ -20,6 +20,7 @@ const mockDeleteDoc = jest.fn();
 const mockGetDoc = jest.fn();
 const mockGetDocs = jest.fn();
 const mockGetCountFromServer = jest.fn();
+const mockGetDocsFromServer = jest.fn();
 const mockQuery = jest.fn((_ref: any, ...args: any[]) => ({ ref: _ref, constraints: args }));
 const mockWhere = jest.fn((...args: any[]) => ({ type: 'where', args }));
 const mockWriteBatch = jest.fn();
@@ -52,6 +53,7 @@ jest.mock('firebase/firestore', () => ({
   getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
   getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
   getCountFromServer: function() { return (mockGetCountFromServer as Function).apply(null, arguments); },
+  getDocsFromServer: function() { return (mockGetDocsFromServer as Function).apply(null, arguments); },
   setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
   updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
   deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
@@ -136,6 +138,7 @@ describe('DocumentService', () => {
       getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
       getDocs: function() { return (mockGetDocs as Function).apply(null, arguments); },
       getCountFromServer: function() { return (mockGetCountFromServer as Function).apply(null, arguments); },
+      getDocsFromServer: function() { return (mockGetDocsFromServer as Function).apply(null, arguments); },
       setDoc: function() { return (mockSetDoc as Function).apply(null, arguments); },
       updateDoc: function() { return (mockUpdateDoc as Function).apply(null, arguments); },
       deleteDoc: function() { return (mockDeleteDoc as Function).apply(null, arguments); },
@@ -970,6 +973,78 @@ describe('DocumentService', () => {
 
   // ─── collection path construction ───────────────────────────────────────────
 
+
+  // ─── updateDocumentsAfterReading (T088) ─────────────────────────────────────
+
+  // Several documents changed from a decision made on what the transaction
+  // read: marking a location's children for deletion only if each is still
+  // inside it.
+  describe('updateDocumentsAfterReading', () => {
+    const PROFILE = { username: 'Elrond', activeCharacterId: null, characters: [] };
+
+    beforeEach(() => {
+      mockGetDoc.mockResolvedValue(makeDocSnapshot(true, PROFILE));
+    });
+
+    test('writes every update the decision returns, each with modification attribution', async () => {
+      mockFirestoreStore.seed('kings-square', { name: "King's square", parentId: 'gondolin' });
+      mockFirestoreStore.seed('fountain', { name: 'Fountain', parentId: 'gondolin' });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.updateDocumentsAfterReading<any>('locations', async (read) => {
+        const both = await Promise.all([read('kings-square'), read('fountain')]);
+        return both.map((place) => ({ id: place!.id, data: { deleting: 'delete-subtree' } }));
+      });
+
+      for (const id of ['kings-square', 'fountain']) {
+        expect(mockFirestoreStore.read(id)).toMatchObject({ deleting: 'delete-subtree', modifiedByUsername: 'Elrond' });
+      }
+    });
+
+    test('writes nothing for an empty decision', async () => {
+      mockFirestoreStore.seed('fountain', { name: 'Fountain' });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.updateDocumentsAfterReading<any>('locations', async (read) => {
+        await read('fountain');
+        return [];
+      });
+
+      expect(mockFirestoreStore.read('fountain')).toEqual({ name: 'Fountain' });
+    });
+
+    test('writes nothing when the decision refuses', async () => {
+      mockFirestoreStore.seed('fountain', { name: 'Fountain' });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await expect(svc.updateDocumentsAfterReading<any>('locations', async () => {
+        throw new Error('Refused');
+      })).rejects.toThrow('Refused');
+
+      expect(mockFirestoreStore.read('fountain')).toEqual({ name: 'Fountain' });
+    });
+  });
+
+  // ─── queryFromServer (T088) ──────────────────────────────────────────────────
+
+  describe('queryFromServer', () => {
+    test('asks the server, never the cache, for the documents whose field matches', async () => {
+      mockGetDocsFromServer.mockResolvedValue(makeQuerySnapshot([
+        makeDocSnapshot(true, { name: "King's square", parentId: 'gondolin' }, 'kings-square'),
+      ]));
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      const found = await svc.queryFromServer<any>('groups/g1/campaigns/c1/locations', 'parentId', 'gondolin');
+
+      expect(found).toEqual([{ id: 'kings-square', name: "King's square", parentId: 'gondolin' }]);
+      expect(mockWhere).toHaveBeenCalledWith('parentId', '==', 'gondolin');
+      expect(mockGetDocs).not.toHaveBeenCalled();
+    });
+  });
 
   describe('collection path construction', () => {
     test('should use full path directly when collection name contains "/"', async () => {

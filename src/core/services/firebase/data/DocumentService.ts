@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -314,6 +315,63 @@ class DocumentService extends BaseFirebaseService {
         ...attributionMetadata
       } as Partial<DocumentData>);
     });
+  }
+
+  /**
+   * Update several documents in one collection from a decision made on
+   * documents read in the same transaction, each with modification
+   * attribution (T088).
+   *
+   * `updateDocumentAfterReading` for a change that spans documents: marking
+   * a location's children for deletion only if each is still inside it.
+   * `decide` reads by id and returns the updates, possibly none; throwing
+   * refuses them all. It may run more than once. At most 500 updates.
+   *
+   * Needs the server: offline, the transaction fails rather than queueing.
+   *
+   * @param collectionName Collection name or full path
+   * @param decide Reads what it needs and returns the updates
+   */
+  public async updateDocumentsAfterReading<T extends DocumentData>(
+    collectionName: string,
+    decide: (read: (id: string) => Promise<(T & { id: string }) | undefined>) => Promise<Array<{ id: string; data: Partial<T> }>>
+  ): Promise<void> {
+    // Resolved before any await, as in `updateDocumentWithAttribution` (T082).
+    const collectionRef = this.getCollectionRef(collectionName);
+    const attributionMetadata = await this.getModificationAttribution(this.groupOf(collectionRef));
+
+    await runTransaction(this.db, async (transaction) => {
+      const read = async (id: string) => {
+        const snapshot = await transaction.get(doc(collectionRef, id));
+        return snapshot.exists() ? ({ ...(snapshot.data() as T), id: snapshot.id }) : undefined;
+      };
+      const updates = await decide(read);
+      for (const update of updates) {
+        transaction.update(doc(collectionRef, update.id), {
+          ...update.data,
+          ...attributionMetadata
+        } as Partial<DocumentData>);
+      }
+    });
+  }
+
+  /**
+   * The documents whose `field` equals `value`, as the server holds them now
+   * -- never the local cache, which can miss a document another member wrote
+   * a moment ago (T088). Offline, it fails.
+   *
+   * @param collectionName Collection name or full path
+   * @param field The field to match
+   * @param value The value it must equal
+   */
+  public async queryFromServer<T>(
+    collectionName: string,
+    field: string,
+    value: unknown
+  ): Promise<Array<T & { id: string }>> {
+    const collectionRef = this.getCollectionRef(collectionName);
+    const snapshot = await getDocsFromServer(query(collectionRef, where(field, '==', value)));
+    return snapshot.docs.map(document => ({ ...(document.data() as T), id: document.id }));
   }
 
   /**

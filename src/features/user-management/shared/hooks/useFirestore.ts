@@ -115,6 +115,35 @@ export function useFirestore() {
     }
   }, [setError]);
 
+  // Update several documents from a decision made inside a transaction (T088)
+  const updateDocumentsAfterReading = useCallback(async <T>(
+    collectionName: string,
+    decide: (read: (id: string) => Promise<(T & { id: string }) | undefined>) => Promise<Array<{ id: string; data: Partial<T> }>>
+  ): Promise<void> => {
+    try {
+      setError(null);
+      await firebaseServices.document.updateDocumentsAfterReading<any>(collectionName, decide);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update documents');
+      throw err;
+    }
+  }, [setError]);
+
+  // The documents whose field matches, from the server, never the cache (T088)
+  const queryFromServer = useCallback(async <T>(
+    collectionName: string,
+    field: string,
+    value: unknown
+  ): Promise<Array<T & { id: string }>> => {
+    try {
+      setError(null);
+      return await firebaseServices.document.queryFromServer<T>(collectionName, field, value);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to query documents');
+      throw err;
+    }
+  }, [setError]);
+
   // Create one document and update others, in one transaction
   const createDocumentWithUpdates = useCallback(async <T, S>(
     collectionName: string,
@@ -211,6 +240,8 @@ export function useFirestore() {
     createDocument,
     updateDocumentWithAttribution,
     updateDocumentAfterReading,
+    updateDocumentsAfterReading,
+    queryFromServer,
     createDocumentWithUpdates,
     deleteDocument,
     queryDocuments,

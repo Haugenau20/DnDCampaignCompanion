@@ -25,7 +25,6 @@ adjusted for the images focus above.
 |---|---|---|---|---|---|
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Deleting a location races concurrent edits | M | open | A child added or moved in during a delete is orphaned |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
@@ -149,16 +148,6 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T088 — Deleting a location races concurrent edits
-**Type** bug · **Size** M · **Status** open · **Verified** 2026-10-05
-
-- **Location delete** (DATA-006): `deleteLocation` takes the children from
-  the local list, so a child added or moved in during a delete is orphaned,
-  and one moved out is still deleted. Moves are transactional now
-  (`updateDataAfterReading`), but a transaction reads documents, not
-  queries, so it cannot find "every child" either. Needs a design.
-- **Source**: code review, 2026-10-04
-
 ---
 
 ## Features and enhancements
@@ -177,6 +166,8 @@ neither.
   confirmation has to say how many places that removes in total. One batch is
   atomic, so the descendants-first ordering `deleteLocation` keeps for its
   sequential writes stops mattering. Delete pictures after the documents.
+  It must still mark each place `deleting` and ask the server what is inside
+  it, as `deleteLocation` does, or a place added inside meanwhile is orphaned.
 - **The pattern to copy**: `shared/hooks/useSelection` (mode and ticked ids),
   `campaign-entities/shared/EntityBatchActions.tsx` (the bar: statuses, an
   optional Delete and its confirmation), and a batched pair on the context that

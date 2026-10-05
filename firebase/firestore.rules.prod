@@ -251,6 +251,26 @@
 // `deleting`, so nothing it does is refused.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-05d -- T088, DATA-006
+// ---------------------------------------------------------------------------
+// Pinned by the "a location being deleted takes no new places" tests:
+//
+// 12. NEW -- a location's `deleting` mark. Deleting a place marks it (and, for
+//     a whole subtree, each place inside it, level by level) before finding
+//     what is inside it, and a marked place takes no new place, no place
+//     moved into it, and no edit. A place created or moved in meanwhile was
+//     orphaned when its parent went; now the write is refused. A member may
+//     set the mark -- the delete runs in the client -- but only to one of the
+//     two ways of deleting, and never clear it. Places inside a marked one
+//     may still move out: that is how its children are kept.
+//
+//     Cost: one more document read for a location written with a parent, or
+//     moved to one; none for anything else.
+//
+// Deploy order does not matter: the live frontend never writes `deleting`
+// on a location, and never writes into a marked one, since none exists.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // Change the production rules here, in the same PR as whatever motivated the
 // change, never in the console. Every merge to `main` redeploys this file, so a
@@ -318,6 +338,33 @@ service cloud.firestore {
     function campaignOpen(groupId, campaignId) {
       let campaign = /databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId);
       return exists(campaign) && get(campaign).data.get('deleting', false) != true;
+    }
+
+    // Whether a location may sit inside `parentId` (T088): it names no place,
+    // or a place that is not being deleted.
+    function parentTakesPlaces(groupId, campaignId, parentId) {
+      return parentId == null || parentId == '' ||
+             parentOpen(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/locations/$(parentId));
+    }
+
+    // Whether the place at `path`, if there is one, is not being deleted.
+    function parentOpen(path) {
+      return !exists(path) || get(path).data.get('deleting', null) == null;
+    }
+
+    // What a write leaves a location as, against its `deleting` mark (T088).
+    // Any other kind of record passes. A marked place takes no edit; the mark
+    // is one of the two ways of deleting; a new parent must take places.
+    function locationFenceHolds(groupId, campaignId, entityCollection) {
+      let after = request.resource.data;
+      let parentChanged = resource == null ||
+                          after.get('parentId', '') != resource.data.get('parentId', '');
+      return entityCollection != 'locations' || (
+        (resource == null || resource.data.get('deleting', null) == null) &&
+        (resource != null || after.get('deleting', null) == null) &&
+        after.get('deleting', null) in [null, 'delete-subtree', 'promote-to-grandparent'] &&
+        (!parentChanged || parentTakesPlaces(groupId, campaignId, after.get('parentId', '')))
+      );
     }
 
     // Admin collection for system-wide settings
@@ -561,14 +608,16 @@ service cloud.firestore {
           // entity carries one, so the check passes for them.
           // Only into a campaign that takes writes (T037, DATA-010).
           allow create: if isGroupMember(groupId) && imageLeased(groupId, 'image') &&
-                         campaignOpen(groupId, campaignId);
+                         campaignOpen(groupId, campaignId) &&
+                         locationFenceHolds(groupId, campaignId, entityCollection);
 
           // RELAXED: previously `createdBy == uid || isGroupAdmin`, which the
           // UI never enforced, so members hit permission-denied on any entity
           // they had not personally created (bug #1406).
           allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
                          imageLeased(groupId, 'image') &&
-                         campaignOpen(groupId, campaignId);
+                         campaignOpen(groupId, campaignId) &&
+                         locationFenceHolds(groupId, campaignId, entityCollection);
 
           // RELAXED: previously admin-only, which meant a member could not
           // delete even their OWN entity while the UI showed them a Delete

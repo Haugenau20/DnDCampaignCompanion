@@ -79,3 +79,36 @@ export function createWithUpdatesThrough<S>(
     }
   );
 }
+
+/**
+ * `queryData` and `updateManyAfterReading` for suites that mock
+ * `useFirebaseData` (T088).
+ *
+ * The suite's records stand in for the server: a query filters them, and a
+ * transaction reads them. What the transaction decides goes to the suite's
+ * own `updateData` mock, one call per record, so a payload assertion on
+ * `updateData` reads the same however the write was made.
+ *
+ * @param updateData - the suite's `updateData` mock
+ * @param records - the records the suite serves, read at each call
+ */
+export function serverThrough<T extends { id: string }>(
+  updateData: (id: string, fields: Partial<T>) => unknown,
+  records: () => T[]
+) {
+  return {
+    queryData: jest.fn(async (field: string, value: unknown) =>
+      records().filter((record) => (record as Record<string, unknown>)[field] === value)
+    ),
+    updateManyAfterReading: jest.fn(
+      async (
+        decide: (read: (id: string) => Promise<T | undefined>) => Promise<Array<{ id: string; data: Partial<T> }>>
+      ) => {
+        const updates = await decide(async (id) => records().find((record) => record.id === id));
+        for (const update of updates) {
+          await updateData(update.id, update.data);
+        }
+      }
+    ),
+  };
+}

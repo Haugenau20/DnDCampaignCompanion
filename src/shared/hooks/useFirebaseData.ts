@@ -99,6 +99,8 @@ export function useFirebaseData<T extends Record<string, any>>(
     createDocument,
     updateDocumentWithAttribution,
     updateDocumentAfterReading,
+    updateDocumentsAfterReading,
+    queryFromServer,
     createDocumentWithUpdates,
     deleteDocument
   } = useFirestore();
@@ -345,6 +347,37 @@ export function useFirebaseData<T extends Record<string, any>>(
     }
   }, [options.collection, updateDocumentAfterReading]);
 
+  /**
+   * `updateDataAfterReading` for several records at once: `decide` reads by
+   * id inside one transaction and returns the updates, possibly none (T088).
+   * See `DocumentService.updateDocumentsAfterReading`.
+   */
+  const updateManyAfterReading = useCallback(async (
+    decide: (read: (id: string) => Promise<T | undefined>) => Promise<Array<{ id: string; data: Partial<T> }>>
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (options.collection === null) throw new Error(NO_CAMPAIGN);
+      await updateDocumentsAfterReading<T>(options.collection, decide);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update data';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [options.collection, updateDocumentsAfterReading]);
+
+  /**
+   * The records whose `field` equals `value`, as the server holds them now,
+   * never the local cache (T088). Offline, it fails.
+   */
+  const queryData = useCallback(async (field: string, value: unknown): Promise<T[]> => {
+    if (options.collection === null) throw new Error(NO_CAMPAIGN);
+    return queryFromServer<T>(options.collection, field, value);
+  }, [options.collection, queryFromServer]);
+
   const deleteData = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -372,6 +405,8 @@ export function useFirebaseData<T extends Record<string, any>>(
     addData,
     updateData,
     updateDataAfterReading,
+    updateManyAfterReading,
+    queryData,
     deleteData,
     setDocument: addData // Backward compatibility
   };

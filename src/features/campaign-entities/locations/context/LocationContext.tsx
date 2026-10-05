@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
 import { descendantIdsDeepestFirst, parentChainReaches, wouldCreateCycle } from '../utils/location-tree';
+import { HIGHLIGHT_DEPTH_CAP } from 'shared/hooks/useHighlightTarget';
 import { DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
@@ -16,6 +17,9 @@ import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
+
+/** Children marked or moved per transaction, under its 500-write limit. */
+const CLAIMS_PER_TRANSACTION = 400;
 
 /**
  * Who is reading this provider's list right now (T032, `PERF-03`): the
@@ -41,7 +45,9 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const locationsPath = useCampaignCollectionPath('locations');
-  const { updateData, updateDataAfterReading, deleteData, addData, error: writeError } = useFirebaseData<Location>({
+  const {
+    updateData, updateDataAfterReading, updateManyAfterReading, queryData, deleteData, addData, error: writeError
+  } = useFirebaseData<Location>({
     collection: locationsPath,
     autoFetch: false
   });
@@ -214,6 +220,21 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    * written before this question existed already does. Every caller that asks
    * passes a strategy explicitly.
    */
+  /**
+   * Delete a place, and either everything inside it or nothing (its children
+   * move up a level).
+   *
+   * Decided from the server, not from this client's list (T088, DATA-006).
+   * The place is marked first, in a transaction that also confirms it still
+   * exists; from then on the rules refuse a new place inside it, a place moved
+   * into it, and any edit to it. Only then is the server asked what is inside
+   * it, and each child is marked (or moved) in a transaction that reads it
+   * again, so one moved out meanwhile stays where it went. A whole subtree is
+   * marked level by level, each level asked for once its parent is marked.
+   *
+   * A deletion that fails partway leaves its marks, and calling this again
+   * finishes it, the way it started: nothing is marked twice.
+   */
   const deleteLocation = useCallback(async (
     locationId: string,
     childStrategy: LocationChildStrategy = 'delete-subtree'
@@ -222,24 +243,55 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('User must be authenticated and group/campaign context must be set to delete a location');
     }
 
-    const location = getLocationById(locationId);
-    if (!location) {
-      throw new Error('Location not found');
-    }
+    // 1. The mark. A place already marked keeps the way its deletion began.
+    let root: Location | undefined;
+    await updateManyAfterReading(async (read) => {
+      root = await read(locationId);
+      if (!root) throw new Error('Location not found');
+      return root.deleting ? [] : [{ id: locationId, data: { deleting: childStrategy } }];
+    });
+    const place = root!;
+    const strategy = place.deleting ?? childStrategy;
 
-    if (childStrategy === 'promote-to-grandparent') {
-      const grandparentId = location.parentId || '';
-      const directChildren = locations.filter(loc => loc.parentId === locationId);
+    /**
+     * Marks or moves the children the server lists under `parentId`, each
+     * only if the transaction still finds it there, and returns those it
+     * found there. `change` returns null for a child it should not write: the
+     * rules refuse an edit to a place already marked.
+     */
+    const claimChildren = async (
+      parentId: string,
+      change: (child: Location) => Partial<Location> | null,
+      skip: ReadonlySet<string> = new Set()
+    ): Promise<Location[]> => {
+      const listed = (await queryData('parentId', parentId)).filter(child => !skip.has(child.id));
+      const claimed: Location[] = [];
+      // One transaction commits at most 500 writes.
+      for (let start = 0; start < listed.length; start += CLAIMS_PER_TRANSACTION) {
+        const chunk = listed.slice(start, start + CLAIMS_PER_TRANSACTION);
+        let inside: Location[] = [];
+        await updateManyAfterReading(async (read) => {
+          const current = await Promise.all(chunk.map(child => read(child.id)));
+          inside = current.filter((child): child is Location => child?.parentId === parentId);
+          return inside.flatMap(child => {
+            const data = change(child);
+            return data ? [{ id: child.id, data }] : [];
+          });
+        });
+        claimed.push(...inside);
+      }
+      return claimed;
+    };
 
+    if (strategy === 'promote-to-grandparent') {
       // The children are re-homed *before* the parent goes. The other order
       // leaves a window in which a reader loading the campaign sees children
       // pointing at an id that no longer resolves -- the dangling-parent state
       // #303 catalogued, created deliberately by the fix for orphaning.
-      for (const child of directChildren) {
-        await updateData(child.id, { parentId: grandparentId });
-      }
+      const grandparentId = place.parentId || '';
+      await claimChildren(locationId, () => ({ parentId: grandparentId }));
 
-      const discard = location.image ? releaseImage(location.image.path) : undefined;
+      const discard = place.image ? releaseImage(place.image.path) : undefined;
       await deleteData(locationId);
       // After the document: a failure can then only orphan the file, which the
       // released record lets the daily sweep find.
@@ -247,34 +299,47 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
-    // Every descendant, deepest first: the ordering bug #010 was filed about,
-    // unchanged. What changed is that the walk now carries a visited set and a
-    // depth cap -- the recursion it replaces had neither, so a parent cycle
-    // meant deleting a location never returned.
-    const childrenIds = descendantIdsDeepestFirst(locations, locationId);
+    // 2. Every descendant, marked level by level. The visited set and the
+    // depth cap keep a parent cycle from looping (PERF-11).
+    const subtree: Location[] = [place];
+    const seen = new Set<string>([locationId]);
+    let level = [locationId];
+    for (let depth = 0; level.length > 0 && depth <= HIGHLIGHT_DEPTH_CAP; depth++) {
+      const next: Location[] = [];
+      for (const parentId of level) {
+        const children = await claimChildren(
+          parentId,
+          child => (child.deleting ? null : { deleting: 'delete-subtree' }),
+          seen
+        );
+        children.forEach(child => seen.add(child.id));
+        next.push(...children);
+      }
+      subtree.push(...next);
+      level = next.map(child => child.id);
+    }
+
+    // Deepest first: the ordering bug #010 was filed about, unchanged.
+    const childrenIds = descendantIdsDeepestFirst(subtree, locationId);
 
     // Every picture in the subtree is recorded as released up front: a delete
     // that fails partway leaves some places gone, and their files are then
     // the daily sweep's to find.
-    const discards = [...childrenIds, locationId].flatMap(id => {
-      const image = getLocationById(id)?.image;
-      return image ? [releaseImage(image.path)] : [];
-    });
+    const discards = subtree.flatMap(location =>
+      location.image ? [releaseImage(location.image.path)] : []
+    );
 
-    // Sequential (rather than Promise.all) execution is required here: it is the
-    // only way to guarantee descendants are actually removed from the database
-    // before their ancestors. This trades throughput (N round trips instead of
-    // one batch) for that guarantee.
+    // Sequential (rather than Promise.all) execution is required here: it is
+    // the only way to guarantee descendants are actually removed from the
+    // database before their ancestors.
     for (const id of childrenIds) {
       await deleteData(id);
     }
-
-    // Then delete the parent location
     await deleteData(locationId);
 
     // Every deleted place's picture, once all the documents are gone.
     discards.forEach(discard => discard());
-  }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, updateData]);
+  }, [user, activeGroupId, activeCampaignId, deleteData, queryData, updateManyAfterReading]);
 
   // Ids issued during this session but not yet reflected in `locations`. Two
   // locations can be created back-to-back within a single `act()` / event

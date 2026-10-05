@@ -165,6 +165,7 @@ const LocationDetailPage: React.FC = () => {
     'name' | 'description' | 'feature' | 'tag'
   >();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   const index = useMemo(() => buildLocationIndex(locations), [locations]);
   const insideCount = location ? insideCountOf(index, location.id) : 0;
@@ -329,7 +330,9 @@ const LocationDetailPage: React.FC = () => {
     navigateToPage('/locations');
   };
 
-  const canAct = gate.canAct;
+  // A place being deleted takes no edit -- the rules refuse every one (T088)
+  // -- so none is offered; only finishing the deletion is.
+  const canAct = gate.canAct && !location?.deleting;
 
   return (
     <>
@@ -581,7 +584,36 @@ const LocationDetailPage: React.FC = () => {
                 */}
                 <AttributionInfo item={location} />
 
-                {canAct && (
+                {/* A deletion that failed partway leaves its mark, and the rules
+                    refuse every edit to a marked place (T088): the one thing
+                    left to do is finish it, the way it started. */}
+                {gate.canAct && location.deleting && (
+                  <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
+                    <Typography variant="body-sm" color="secondary">
+                      Deleting {location.name} stopped partway. It takes no
+                      changes until it is finished.
+                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="delete-button"
+                      onClick={() => {
+                        setFinishError(null);
+                        handleDelete(location.deleting).catch((err: unknown) =>
+                          setFinishError(err instanceof Error ? err.message : 'Could not finish deleting')
+                        );
+                      }}
+                    >
+                      Finish deleting
+                    </Button>
+                    {finishError && (
+                      <Typography variant="body-sm" color="error" role="alert">
+                        {finishError}
+                      </Typography>
+                    )}
+                  </div>
+                )}
+                {canAct && !location.deleting && (
                   <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
                     <Button
                       variant="ghost"

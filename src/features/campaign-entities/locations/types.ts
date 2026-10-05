@@ -51,6 +51,13 @@ export interface Location extends BaseContent {
   lastVisited?: string;
   /** A picture of the place; null once removed (Firestore cannot store undefined) */
   image?: StoredImage | null;
+  /**
+   * Set when this place's deletion has started, to the way it is being
+   * deleted (T088). A marked place takes no edit and nothing new inside it;
+   * the rules hold that. Still set means a deletion failed partway and can
+   * be finished.
+   */
+  deleting?: LocationChildStrategy;
 }
 
 /**

@@ -4,6 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { LocationProvider, useLocations } from '../LocationContext';
 import { Location, LocationStatus, LocationType, LocationNote } from '../../types';
+import { serverThrough } from '@/test-utils/update-after-reading';
 
 /**
  * LocationContext Bug Discovery Testing
@@ -112,6 +113,8 @@ describe('LocationContext Bug Discovery Tests', () => {
     mockUseFirebaseData.mockReturnValue({
       addData: mockAddData,
       updateData: mockUpdateData,
+      // The server, for a delete (T088): this suite's records.
+      ...serverThrough<Location>(mockUpdateData, () => mockUseLocationData()?.locations ?? []),
       deleteData: mockDeleteData,
     });
   });
