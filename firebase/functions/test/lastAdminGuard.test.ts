@@ -7,6 +7,7 @@ import * as admin from "firebase-admin";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {removeUserFromGroup} from "../src/userManagement/removeUserFromGroup";
 import {deleteUser} from "../src/userManagement/deleteUser";
+import {setMemberRole} from "../src/groupManagement/setMemberRole";
 
 const PROJECT = "demo-last-admin-guard";
 const db = useEmulatorProject(PROJECT);
@@ -106,5 +107,136 @@ describe("a member's reading progress (T073)", () => {
     await deleteAccount("frodo");
 
     expect((await progress("frodo").get()).exists).toBe(false);
+  });
+});
+
+/**
+ * Holds every caller at its first query of the group's members until
+ * `parties` callers have made one, then lets them all go on.
+ *
+ * That forces the interleaving AUTH-001 needs: each admin reads the roster
+ * before the other has changed it. Patching `Query._get` catches the read
+ * whether it runs in a transaction or not, so the same barrier exercises
+ * the guard before and after it moved into one. Retries (a transaction
+ * that lost a conflict) pass straight through once the barrier has opened.
+ *
+ * @param {number} parties How many callers to hold
+ * @return {() => number} How many callers have arrived so far
+ */
+function holdRosterReads(parties: number): () => number {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const proto = admin.firestore.Query.prototype as any;
+  const original = proto._get;
+  let arrived = 0;
+  let open: () => void = () => undefined;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  const watchdog = setTimeout(open, 5000);
+  // `this` is the query being read: the patch has to be a method.
+  /* eslint-disable no-invalid-this, @typescript-eslint/no-explicit-any */
+  jest.spyOn(proto, "_get").mockImplementation(async function(this: any, ...args: unknown[]) {
+    const result = await original.apply(this, args);
+    const isRoster = this._queryOptions?.collectionId === "users" &&
+      this._queryOptions?.parentPath?.relativeName?.endsWith(`groups/${GROUP}`);
+    if (isRoster && arrived < parties) {
+      if (++arrived === parties) {
+        clearTimeout(watchdog);
+        open();
+      }
+      await opened;
+    }
+    return result;
+  });
+  /* eslint-enable no-invalid-this, @typescript-eslint/no-explicit-any */
+  return () => arrived;
+}
+
+const rolesInGroup = async () => Object.fromEntries(
+  (await db.collection(`groups/${GROUP}/users`).get()).docs
+    .map((doc) => [doc.id, doc.data().role])
+);
+
+describe("two admins stepping away at once (AUTH-001)", () => {
+  // Each pair passed the guard separately and together left Sam's group
+  // with no admin. Afterwards, at least one admin must remain whenever
+  // anybody does.
+  const seedTwoAdmins = () =>
+    seed({gandalf: "admin", aragorn: "admin", sam: "member"});
+
+  const ways: Record<string, (uid: string) => Promise<unknown>> = {
+    "demote themselves": (uid) =>
+      call(setMemberRole, {groupId: GROUP, userId: uid, role: "member"}, uid),
+    "leave": leave,
+    "delete their accounts": deleteAccount,
+  };
+
+  it.each(Object.keys(ways))("cannot both %s", async (way) => {
+    await seedTwoAdmins();
+    const arrived = holdRosterReads(2);
+
+    const results = await Promise.allSettled(
+      ["gandalf", "aragorn"].map((uid) => ways[way](uid))
+    );
+
+    expect(arrived()).toBe(2);
+    expect(Object.values(await rolesInGroup())).toContain("admin");
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(refused.reason.code).toBe("failed-precondition");
+  });
+
+  it("cannot demote each other", async () => {
+    await seedTwoAdmins();
+    const arrived = holdRosterReads(2);
+
+    await Promise.allSettled([
+      call(setMemberRole, {groupId: GROUP, userId: "aragorn", role: "member"}, "gandalf"),
+      call(setMemberRole, {groupId: GROUP, userId: "gandalf", role: "member"}, "aragorn"),
+    ]);
+
+    expect(arrived()).toBe(2);
+    expect(Object.values(await rolesInGroup())).toContain("admin");
+  });
+
+  it("cannot both leave in different ways", async () => {
+    await seedTwoAdmins();
+    const arrived = holdRosterReads(2);
+
+    await Promise.allSettled([leave("gandalf"), deleteAccount("aragorn")]);
+
+    expect(arrived()).toBe(2);
+    expect(Object.values(await rolesInGroup())).toContain("admin");
+  });
+});
+
+describe("an admin who passes the guard", () => {
+  it("is demoted before the rest of leaving, so a failed leave can be retried", async () => {
+    // The demotion commits before the member's documents are touched; if
+    // what follows fails, they stay behind as a member, and the retry
+    // passes the guard instead of counting them as the admin who remains.
+    await seed({gandalf: "admin", aragorn: "admin", sam: "member"});
+    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+      .mockRejectedValueOnce(new Error("injected"));
+
+    await expectHttpsError(leave("gandalf"), "internal");
+    expect((await rolesInGroup()).gandalf).toBe("member");
+
+    await leave("gandalf");
+    expect(await isMember("gandalf")).toBe(false);
+    expect((await rolesInGroup()).aragorn).toBe("admin");
+  });
+
+  it("is demoted in none of their groups when one of them refuses", async () => {
+    await seed({gandalf: "admin", aragorn: "admin", sam: "member"});
+    await db.doc("groups/g2").set({name: "Rohan"});
+    await db.doc("groups/g2/users/gandalf").set({userId: "gandalf", username: "gandalf", role: "admin"});
+    await db.doc("groups/g2/users/eowyn").set({userId: "eowyn", username: "eowyn", role: "member"});
+    await db.doc("users/gandalf").update({groups: [GROUP, "g2"]});
+
+    await expectHttpsError(deleteAccount("gandalf"), "failed-precondition");
+
+    expect((await rolesInGroup()).gandalf).toBe("admin");
+    expect((await db.doc("groups/g2/users/gandalf").get()).data()?.role).toBe("admin");
   });
 });

@@ -3,7 +3,7 @@ import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
-import {LAST_ADMIN_MESSAGE, wouldStrandGroup} from "../shared/groupAdmins";
+import {LAST_ADMIN_MESSAGE, stepDownAsAdmin} from "../shared/groupAdmins";
 import {releaseUsernames} from "../shared/usernameReservations";
 
 interface DeleteUserData {
@@ -66,17 +66,18 @@ export const deleteUser = functions.onCall(
 
       // Deleting an account is the third door out of a group, after leaving
       // and demotion, and needs the same guard (T035). Checked before anything
-      // is deleted, so a refusal changes nothing.
-      for (const groupId of groups) {
-        if (await wouldStrandGroup(groupId, userIdToDelete, true)) {
-          throw new functions.HttpsError(
-            "failed-precondition",
-            isSelfDeletion ?
-              LAST_ADMIN_MESSAGE :
-              "This user is the only admin of one of their groups. Make " +
-                "another member of that group an admin first."
-          );
-        }
+      // is deleted, so a refusal changes nothing. Where it passes, the person
+      // is demoted in every group in the same transaction as the check, so two
+      // admins deleting their accounts at once cannot both count the other
+      // (AUTH-001).
+      if (await stepDownAsAdmin(groups, userIdToDelete)) {
+        throw new functions.HttpsError(
+          "failed-precondition",
+          isSelfDeletion ?
+            LAST_ADMIN_MESSAGE :
+            "This user is the only admin of one of their groups. Make " +
+              "another member of that group an admin first."
+        );
       }
 
       // Create a batch for Firestore operations

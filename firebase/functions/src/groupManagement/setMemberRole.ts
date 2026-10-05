@@ -2,7 +2,11 @@
 import * as functions from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import {rethrowHttpsError} from "../shared/httpsErrors";
-import {LAST_ADMIN_MESSAGE, wouldStrandGroup} from "../shared/groupAdmins";
+import {
+  LAST_ADMIN_MESSAGE,
+  readAdmins,
+  strandsGroup,
+} from "../shared/groupAdmins";
 
 type Role = "admin" | "member";
 
@@ -46,6 +50,7 @@ export const setMemberRole = functions.onCall(
       );
     }
 
+    const callerUid = request.auth.uid;
     try {
       const usersRef = admin
         .firestore()
@@ -53,35 +58,39 @@ export const setMemberRole = functions.onCall(
         .doc(groupId)
         .collection("users");
 
-      const caller = await usersRef.doc(request.auth.uid).get();
-      if (!caller.exists || caller.data()?.role !== "admin") {
-        throw new functions.HttpsError(
-          "permission-denied",
-          "Only group admins can change a member's role."
-        );
-      }
+      // One transaction for the caller's standing, the guard and the write:
+      // two admins demoting each other at once would otherwise each pass a
+      // guard that counted the other (AUTH-001), and a caller demoted a
+      // moment ago could still act as an admin.
+      await admin.firestore().runTransaction(async (transaction) => {
+        const snapshot = await readAdmins(transaction, groupId, userId);
+        const caller = await transaction.get(usersRef.doc(callerUid));
+        if (!caller.exists || caller.data()?.role !== "admin") {
+          throw new functions.HttpsError(
+            "permission-denied",
+            "Only group admins can change a member's role."
+          );
+        }
 
-      const targetRef = usersRef.doc(userId);
-      const target = await targetRef.get();
-      if (!target.exists) {
-        throw new functions.HttpsError(
-          "not-found",
-          "That person is not a member of this group."
-        );
-      }
+        const target = snapshot.self;
+        if (!target.exists) {
+          throw new functions.HttpsError(
+            "not-found",
+            "That person is not a member of this group."
+          );
+        }
 
-      if (target.data()?.role === role) {
-        return {success: true};
-      }
+        if (target.data()?.role === role) return;
 
-      if (role === "member" && await wouldStrandGroup(groupId, userId, false)) {
-        throw new functions.HttpsError(
-          "failed-precondition",
-          LAST_ADMIN_MESSAGE
-        );
-      }
+        if (role === "member" && strandsGroup(snapshot, userId, false)) {
+          throw new functions.HttpsError(
+            "failed-precondition",
+            LAST_ADMIN_MESSAGE
+          );
+        }
 
-      await targetRef.update({role});
+        transaction.update(target.ref, {role});
+      });
       return {success: true};
     } catch (error) {
       rethrowHttpsError(

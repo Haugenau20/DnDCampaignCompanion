@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
+| high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
@@ -466,9 +466,6 @@ first:
   `recursiveDelete` can remove the root after a failed child, after which a
   retry is refused. The campaign stays writable during cleanup. DATA-004,
   DATA-010 (03), IMG-005 (04), TEST-005 (08).
-- The last-admin guard (`firebase/functions/src/shared/groupAdmins.ts:29-42`)
-  reads the roster outside a transaction: two admins leaving at once both pass
-  and leave the group with none. AUTH-001 (02).
 - `deleteUser` (`deleteUser.ts:110-129`) deletes the profile before the Auth
   account, so an Auth failure becomes unretryable (AUTH-002). A retried group
   removal has lost the username it should release (DATA-009, 03).
