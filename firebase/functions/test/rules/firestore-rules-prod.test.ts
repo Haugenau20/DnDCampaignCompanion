@@ -518,3 +518,95 @@ describe("an image path needs its upload's live entry (T084)", () => {
     await assertSucceeds(as("gandalf").doc(`groups/${G}`).update({crest: image(file)}));
   });
 });
+
+// T037 (DATA-010): `deleteCampaign` marks the campaign `deleting` before its
+// cleanup, which reads each member's notes once. A note, reading progress or
+// content written after that would survive the deletion under a campaign
+// nobody can open, so the rules refuse it -- and refuse it too once the
+// campaign document is gone, which covers writes queued offline.
+describe("a campaign being deleted takes no writes (T037)", () => {
+  const NOTE = `groups/${G}/users/frodo/notes/n1`;
+  const PROGRESS = `groups/${G}/users/frodo/story-progress/c1`;
+  const NPC = `groups/${G}/campaigns/c1/npcs/n1`;
+  const note = {campaignId: "c1", title: "Bree", content: "The Prancing Pony"};
+  const place = {currentChapter: "chapter-02", lastRead: new Date(), chapterProgress: {}};
+
+  const markDeleting = () => env.withSecurityRulesDisabled((context) =>
+    context.firestore().doc(`groups/${G}/campaigns/c1`).update({deleting: true})
+  );
+  const removeCampaignDocument = () => env.withSecurityRulesDisabled((context) =>
+    context.firestore().doc(`groups/${G}/campaigns/c1`).delete()
+  );
+  const seedNoteAndProgress = () => env.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc(NOTE).set(note);
+    await context.firestore().doc(PROGRESS).set(place);
+  });
+
+  it("control: an open campaign takes all of them", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.doc(NOTE).set(note));
+    await assertSucceeds(db.doc(NOTE).update({content: "Strider"}));
+    await assertSucceeds(db.doc(PROGRESS).set(place));
+    await assertSucceeds(db.doc(NPC).update({name: "Bilbo Baggins"}));
+    await assertSucceeds(db.doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam"}));
+  });
+
+  describe.each([
+    ["marked deleting", markDeleting],
+    ["whose document is gone", removeCampaignDocument],
+  ])("a campaign %s", (_label, makeUnavailable) => {
+    beforeEach(async () => {
+      await seedNoteAndProgress();
+      await makeUnavailable();
+    });
+
+    it("refuses a new note and an edit to an existing one", async () => {
+      const db = as("frodo");
+      await assertFails(db.doc(`groups/${G}/users/frodo/notes/n2`).set(note));
+      await assertFails(db.doc(NOTE).update({content: "Strider"}));
+    });
+
+    it("refuses reading progress", async () => {
+      await assertFails(as("frodo").doc(PROGRESS).set(place));
+    });
+
+    it("refuses new content and edits", async () => {
+      await assertFails(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam"}));
+      await assertFails(as("frodo").doc(NPC).update({name: "Bilbo Baggins"}));
+    });
+
+    it("still lets the owner delete their note and progress, and a member delete content", async () => {
+      const db = as("frodo");
+      await assertSucceeds(db.doc(NOTE).delete());
+      await assertSucceeds(db.doc(PROGRESS).delete());
+      await assertSucceeds(db.doc(NPC).delete());
+    });
+  });
+
+  it("refuses an edit to the campaign itself once it is marked", async () => {
+    await markDeleting();
+    await assertFails(as("gandalf").doc(`groups/${G}/campaigns/c1`).update({name: "Renamed"}));
+  });
+
+  it("never lets a client write the mark", async () => {
+    await assertFails(as("gandalf").doc(`groups/${G}/campaigns/c1`).update({deleting: true}));
+    await assertFails(as("frodo").doc(`groups/${G}/campaigns/c2`).set({name: "New", deleting: false}));
+    await markDeleting();
+    await assertFails(as("gandalf").doc(`groups/${G}/campaigns/c1`).update({deleting: false}));
+  });
+
+  it("keeps other campaigns open", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`groups/${G}/campaigns/c2`).set({name: "Rohan"})
+    );
+    await markDeleting();
+    await assertSucceeds(as("frodo").doc(`groups/${G}/users/frodo/notes/n3`)
+      .set({...note, campaignId: "c2"}));
+    await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c2/npcs/n3`).set({name: "Eowyn"}));
+  });
+
+  it("refuses a note that names no campaign", async () => {
+    await assertFails(as("frodo").doc(`groups/${G}/users/frodo/notes/n4`)
+      .set({title: "Loose", content: "no campaign"}));
+  });
+});

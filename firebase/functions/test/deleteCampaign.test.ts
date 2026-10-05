@@ -1,6 +1,7 @@
 // functions/test/deleteCampaign.test.ts
 //
 // T021: deleting a campaign also deletes its images -- and nobody else's.
+import * as admin from "firebase-admin";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {deleteCampaign} from "../src/campaignManagement/deleteCampaign";
 import {imageBucket} from "../src/shared/imageBucket";
@@ -107,5 +108,127 @@ describe("members' reading progress (T073)", () => {
     await remove("gandalf");
 
     expect((await progress("frodo", "c2").get()).exists).toBe(true);
+  });
+});
+
+describe("a deletion that fails partway (T037)", () => {
+  // Every stage can fail. Whatever failed, calling again must finish the
+  // job, and a failure must never leave a live campaign whose pictures are
+  // gone (DATA-004, IMG-005, TEST-005).
+  const campaign = db.doc(`groups/${GROUP}/campaigns/c1`);
+  const npc = db.doc(`groups/${GROUP}/campaigns/c1/npcs/n1`);
+  const record = db.doc(`groups/${GROUP}/campaignDeletions/c1`);
+  const note = db.doc(`groups/${GROUP}/users/frodo/notes/note-c1`);
+  const otherNote = db.doc(`groups/${GROUP}/users/frodo/notes/note-c2`);
+  const isThere = async (ref: admin.firestore.DocumentReference) =>
+    (await ref.get()).exists;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bulkWriterProto = admin.firestore.BulkWriter.prototype as any;
+
+  /** Fails the next BulkWriter delete of `path`, the way a write that has
+   * exhausted its retries does: its own promise rejects, `close()` does not. */
+  const failNextDeleteOf = (path: string) => {
+    const original = bulkWriterProto.delete;
+    let failed = false;
+    jest.spyOn(bulkWriterProto, "delete").mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function(this: unknown, ...args: any[]) {
+        if (!failed && args[0].path === path) {
+          failed = true;
+          return Promise.reject(new Error("injected: delete failed"));
+        }
+        // eslint-disable-next-line no-invalid-this
+        return original.apply(this, args);
+      }
+    );
+  };
+
+  beforeEach(async () => {
+    await note.set({campaignId: "c1", title: "Bree", content: "secret"});
+    await otherNote.set({campaignId: "c2", title: "Rohan", content: "kept"});
+    await db.doc(`groups/${GROUP}/users/frodo`).update({activeCampaignId: "c1"});
+  });
+
+  it("control: a clean run removes the descendants, the notes and the record", async () => {
+    await remove("gandalf");
+
+    expect(await isThere(npc)).toBe(false);
+    expect(await isThere(note)).toBe(false);
+    expect(await isThere(otherNote)).toBe(true);
+    expect((await db.doc(`groups/${GROUP}/users/frodo`).get()).data()?.activeCampaignId)
+      .toBeNull();
+    expect(await isThere(record)).toBe(false);
+  });
+
+  it("stops at a member's note it could not delete, and a retry finishes", async () => {
+    failNextDeleteOf(note.path);
+
+    await expectHttpsError(remove("gandalf"), "internal");
+    // Nothing past the failed stage happened, and the campaign stays closed
+    // to writes until a retry finishes it (DATA-010).
+    expect(await isThere(note)).toBe(true);
+    expect(await isThere(campaign)).toBe(true);
+    expect((await campaign.get()).data()?.deleting).toBe(true);
+    expect(await exists(FILES.npcImage)).toBe(true);
+
+    await remove("gandalf");
+    expect(await isThere(note)).toBe(false);
+    expect(await isThere(campaign)).toBe(false);
+    expect(await exists(FILES.npcImage)).toBe(false);
+    expect(await isThere(record)).toBe(false);
+  });
+
+  it("finishes on retry after the campaign document went but a descendant did not", async () => {
+    // The real recursiveDelete deletes the root even when a child failed.
+    failNextDeleteOf(npc.path);
+
+    await expectHttpsError(remove("gandalf"), "internal");
+    expect(await isThere(campaign)).toBe(false);
+    expect(await isThere(npc)).toBe(true);
+
+    await remove("gandalf");
+    expect(await isThere(npc)).toBe(false);
+    expect(await exists(FILES.npcImage)).toBe(false);
+    expect(await isThere(record)).toBe(false);
+  });
+
+  it("keeps the pictures while the documents that show them could not be deleted", async () => {
+    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+      .mockRejectedValueOnce(new Error("injected: backend unavailable"));
+
+    await expectHttpsError(remove("gandalf"), "internal");
+    expect(await isThere(npc)).toBe(true);
+    expect(await exists(FILES.npcImage)).toBe(true);
+    expect(await exists(FILES.locationImage)).toBe(true);
+  });
+
+  it("finishes on retry after the pictures could not be deleted", async () => {
+    const bucketProto = Object.getPrototypeOf(imageBucket());
+    jest.spyOn(bucketProto, "deleteFiles")
+      .mockRejectedValueOnce(new Error("injected: storage unavailable"));
+
+    await expectHttpsError(remove("gandalf"), "internal");
+    expect(await isThere(campaign)).toBe(false);
+    expect(await exists(FILES.npcImage)).toBe(true);
+    expect(await isThere(record)).toBe(true);
+
+    await remove("gandalf");
+    expect(await exists(FILES.npcImage)).toBe(false);
+    expect(await exists(FILES.siblingCampaign)).toBe(true);
+    expect(await isThere(record)).toBe(false);
+  });
+
+  it("still refuses a plain member, even with a deletion under way", async () => {
+    failNextDeleteOf(npc.path);
+    await expectHttpsError(remove("gandalf"), "internal");
+
+    await expectHttpsError(remove("frodo"), "permission-denied");
+    expect(await isThere(npc)).toBe(true);
+  });
+
+  it("answers not-found once a finished deletion is asked for again", async () => {
+    await remove("gandalf");
+    await expectHttpsError(remove("gandalf"), "not-found");
   });
 });

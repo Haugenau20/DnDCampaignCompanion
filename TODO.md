@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
+| high | T037 | A group cannot be deleted | L | open | Members' data cannot be removed with their group. Decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
@@ -90,11 +90,13 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding not yet fixed is covered by an entry: T083–T101, plus T037.
+- Every confirmed finding not yet fixed is covered by an entry: T083–T101.
+  The ones filed under T037 were closed on 2026-10-05.
 - **Not filed**: the reviews' unverified leads, and the optional refactors.
   They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its open findings are filed under T037; the rest
+  (maintainer, 2026-10-04). Its open findings were filed under T037 (closed
+  2026-10-05); the rest
   of that scope stays unreviewed by decision.
 - App source was byte-identical to the reviewed commit `64fe195` when these were
   filed, and each entry's primary location was opened on 2026-10-04.
@@ -453,25 +455,16 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 
 ---
 
-### T037 — Deletions cannot recover from a failure, and a group cannot be deleted
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-04
+### T037 — A group cannot be deleted
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-05
 
-**The deletions that exist leave data behind when they fail** (code review,
-2026-10-04). Group deletion would be built on them, so the plan covers these
-first:
-
-- `deleteCampaign` (`firebase/functions/src/campaignManagement/deleteCampaign.ts:107-150`)
-  deletes member notes through a BulkWriter whose individual failures
-  `close()` does not reject, deletes images before documents, and
-  `recursiveDelete` can remove the root after a failed child, after which a
-  retry is refused. The campaign stays writable during cleanup. DATA-004,
-  DATA-010 (03), IMG-005 (04), TEST-005 (08).
-- The last-admin guard (`firebase/functions/src/shared/groupAdmins.ts:29-42`)
-  reads the roster outside a transaction: two admins leaving at once both pass
-  and leave the group with none. AUTH-001 (02).
-- `deleteUser` (`deleteUser.ts:110-129`) deletes the profile before the Auth
-  account, so an Auth failure becomes unretryable (AUTH-002). A retried group
-  removal has lost the username it should release (DATA-009, 03).
+The deletions it would build on are sound since 2026-10-05: the last-admin
+guard is transactional, a failed account deletion can be retried, and
+`deleteCampaign` is resumable (a record in `groups/{g}/campaignDeletions/{c}`,
+a daily `resumeCampaignDeletionsDaily` for deletions nobody retried) and
+closed to writes while it runs (the campaign's `deleting` mark, enforced by
+`campaignOpen` in the production rules). Uploads are not fenced: a picture
+uploaded into a campaign being deleted is left to the image sweeps.
 
 **Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
 plan to write, not something to start without one. The maintainer's reason is
@@ -487,7 +480,9 @@ means cascading through its campaigns (each with its own subcollections), its
 member's notes for every campaign in it.
 
 - **Precedent**: `deleteCampaign`, an Admin SDK `recursiveDelete` in a
-  callable, but with the failure modes above. Its doc comment at
+  callable, resumable through a deletion record outside the subtree it
+  deletes. Group deletion needs the same: the group document cannot record
+  its own unfinished deletion. Its doc comment at
   `src/core/services/firebase/campaign/CampaignService.ts:225` explains why a
   client cannot do this itself.
 - **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
