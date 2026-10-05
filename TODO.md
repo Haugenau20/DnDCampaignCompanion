@@ -23,7 +23,6 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T085 | A note editor can carry the wrong record's draft | M | in progress | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
@@ -153,30 +152,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T085 — A note editor can carry the wrong record's draft
-**Type** bug · **Size** M · **Status** in progress · **Verified** 2026-10-05
-
-Authored text is lost or misfiled in several ways. Separate causes, grouped
-because the fix is one idea: a draft belongs to one record and outlives a
-failed write. A failed entity save no longer unmounts its editor (REACT-002):
-the entity pages gate on the contexts' `loadError`, which a write never sets.
-Leaving a note saves it, and closing the tab with unsaved text asks first
-(REACT-003); a save on leaving that fails is kept in `NoteContext`'s memory
-and restored when the note is reopened.
-
-- **Wrong record**: a cross-campaign note's fallback survives a campaign
-  change (RECOVERY-002). Seen 2026-10-04 the other way round too: switching
-  campaign with your own note open leaves "Note Not Found" until a reload,
-  though a fresh load of the same URL shows it. A route change no longer
-  carries it: `app/RecordRoute.tsx` remounts the note page per note id. That
-  same remount should also close RECOVERY-001 (an offline-queued note save
-  running against the next note after Search navigation): the queue then
-  belongs to the old note's editor, which is the reviewers' own unmount
-  control. That is traced in the source, not re-run; re-run pass 4's
-  sequence (15) before deleting this.
-- **Findings**: 05, 06, 08, 15. Being closed one cause per PR (2026-10-05).
-- **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04

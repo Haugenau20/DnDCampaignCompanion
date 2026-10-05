@@ -68,6 +68,10 @@ jest.mock("core/services/firebase", () => ({
 const mockDeleteNote = jest.fn().mockResolvedValue(undefined);
 const mockArchiveNote = jest.fn().mockResolvedValue(undefined);
 const mockGetNoteById = jest.fn();
+/** `useNotes().isLoading`: the active campaign's list is still on its way. */
+let mockNotesLoading = false;
+/** How many times an editor has mounted, to tell a fresh one from a reused one. */
+let mockEditorMounts = 0;
 
 const mockNavigateToPage = jest.fn();
 
@@ -99,7 +103,9 @@ jest.mock("core/services/firebase/data/DocumentService", () => ({
 // collaboration domain barrel, so they are mocked together in a single factory.
 jest.mock("features/collaboration", () => {
   const React = require("react");
-  const NoteEditorMock = React.forwardRef((props: any, _ref: any) => (
+  const NoteEditorMock = React.forwardRef((props: any, _ref: any) => {
+    React.useEffect(() => { mockEditorMounts += 1; }, []);
+    return (
     <div
       data-testid="note-editor"
       data-readonly={props.readOnly ? "true" : "false"}
@@ -117,7 +123,8 @@ jest.mock("features/collaboration", () => {
         Trigger Save
       </button>
     </div>
-  ));
+    );
+  });
   NoteEditorMock.displayName = "NoteEditor";
 
   const CampaignLinksPanelMock = (props: any) => (
@@ -149,7 +156,7 @@ jest.mock("features/collaboration", () => {
       deleteNote: mockDeleteNote,
       archiveNote: mockArchiveNote,
       getNoteById: mockGetNoteById,
-      isLoading: false,
+      isLoading: mockNotesLoading,
     }),
   };
 });
@@ -193,6 +200,8 @@ describe("NotePage", () => {
     mockGroups = [{ id: "group-1", name: "The Fellowship" }];
     mockGetNoteById.mockReturnValue(sampleNote);
     mockGetDocument.mockResolvedValue(null);
+    mockNotesLoading = false;
+    mockEditorMounts = 0;
     mockDeleteNote.mockResolvedValue(undefined);
     mockArchiveNote.mockResolvedValue(undefined);
   });
@@ -388,6 +397,117 @@ describe("NotePage", () => {
           screen.queryByTestId("campaign-links-panel")
         ).not.toBeInTheDocument();
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // T085 (RECOVERY-002): the direct read answers one question -- this user,
+  // this note, under this campaign -- and its answer is used for no other.
+  // -------------------------------------------------------------------------
+  describe("a campaign switch on the same note", () => {
+    const noteFrom = (campaignId: string) => ({
+      ...sampleNote,
+      title: `Note of ${campaignId}`,
+      content: `Written in ${campaignId}`,
+      campaignId,
+    });
+    const switchTo = (campaignId: string) => {
+      mockActiveCampaignId = campaignId;
+      mockActiveCampaign = { id: campaignId, name: campaignId };
+    };
+    const rerenderPage = (rerender: (ui: React.ReactElement) => void) =>
+      rerender(
+        <MemoryRouter>
+          <NotePage />
+        </MemoryRouter>
+      );
+
+    beforeEach(() => {
+      mockCampaignsList = [
+        { id: "campaign-1", name: "campaign-1" },
+        { id: "campaign-2", name: "campaign-2" },
+        { id: "campaign-3", name: "campaign-3" },
+      ];
+    });
+
+    it("does not let a 'not found' from one campaign stick in another", async () => {
+      mockGetNoteById.mockReturnValue(undefined);
+      mockGetDocument.mockResolvedValue(null);
+      const { rerender } = renderPage();
+      expect(await screen.findByText("Note Not Found")).toBeInTheDocument();
+
+      // Under campaign 3 the same id is a note from campaign 2.
+      mockGetDocument.mockResolvedValue(noteFrom("campaign-2"));
+      switchTo("campaign-3");
+      rerenderPage(rerender);
+
+      await waitFor(() =>
+        expect(screen.getByTestId("note-editor")).toHaveAttribute("data-note-content", "Written in campaign-2")
+      );
+      expect(screen.queryByText("Note Not Found")).not.toBeInTheDocument();
+    });
+
+    it("reads the note again under the new campaign rather than keeping the old copy", async () => {
+      mockGetNoteById.mockReturnValue(undefined);
+      mockGetDocument.mockResolvedValue(noteFrom("campaign-2"));
+      const { rerender } = renderPage();
+      await screen.findByText("Note from Different Campaign");
+      expect(mockGetDocument).toHaveBeenCalledTimes(1);
+
+      switchTo("campaign-3");
+      rerenderPage(rerender);
+
+      await waitFor(() => expect(mockGetDocument).toHaveBeenCalledTimes(2));
+    });
+
+    it("drops an answer that arrives after the campaign changed", async () => {
+      mockGetNoteById.mockReturnValue(undefined);
+      let answerFirst: (note: unknown) => void = () => undefined;
+      mockGetDocument.mockImplementationOnce(() => new Promise((resolve) => { answerFirst = resolve; }));
+      const { rerender } = renderPage();
+
+      // Switch before the first read answers; the second read finds nothing.
+      mockGetDocument.mockResolvedValueOnce(null);
+      switchTo("campaign-3");
+      rerenderPage(rerender);
+      expect(await screen.findByText("Note Not Found")).toBeInTheDocument();
+
+      await act(async () => { answerFirst(noteFrom("campaign-2")); });
+      expect(screen.queryByTestId("note-editor")).not.toBeInTheDocument();
+      expect(screen.getByText("Note Not Found")).toBeInTheDocument();
+    });
+
+    it("does not look the note up while the campaign's own list is still loading", () => {
+      mockGetNoteById.mockReturnValue(undefined);
+      mockNotesLoading = true;
+      renderPage();
+      expect(mockGetDocument).not.toHaveBeenCalled();
+    });
+
+    it("gives a note that turns read-only a fresh editor, so the editable one leaves and saves", async () => {
+      // Under campaign 2, the note is campaign 1's: read once, shown read-only.
+      switchTo("campaign-2");
+      mockGetNoteById.mockReturnValue(undefined);
+      mockGetDocument.mockResolvedValue(sampleNote);
+      const { rerender } = renderPage();
+      await waitFor(() =>
+        expect(screen.getByTestId("note-editor")).toHaveAttribute("data-readonly", "true")
+      );
+
+      // Back in campaign 1 it is the user's own note again, editable.
+      switchTo("campaign-1");
+      mockGetNoteById.mockReturnValue(sampleNote);
+      rerenderPage(rerender);
+      expect(screen.getByTestId("note-editor")).toHaveAttribute("data-readonly", "false");
+      const mountsWhileEditable = mockEditorMounts;
+
+      // And campaign 2 again: its answer is already known, so no loading
+      // state comes between -- the editor itself must be replaced.
+      switchTo("campaign-2");
+      mockGetNoteById.mockReturnValue(undefined);
+      rerenderPage(rerender);
+      expect(screen.getByTestId("note-editor")).toHaveAttribute("data-readonly", "true");
+      expect(mockEditorMounts).toBe(mountsWhileEditable + 1);
     });
   });
 

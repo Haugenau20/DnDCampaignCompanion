@@ -610,6 +610,56 @@ describe('NoteEditor', () => {
   });
 
   // -------------------------------------------------------------------------
+  // T085 (RECOVERY-001): pass 4's sequence, in jsdom. Note A's second Ctrl+S is
+  // queued behind a first that has not answered (offline); the user opens
+  // note B. The route remounts the editor per note id (`RecordRoute`), so the
+  // queue belongs to A's editor: A's latest text must reach A, and B must get
+  // no write and none of A's save state.
+  // -------------------------------------------------------------------------
+  describe('a save queued on one note when another is opened', () => {
+    test("finishes against its own note, with that note's latest text", async () => {
+      const noteA = makeNote({ id: 'note-a', title: 'A', content: 'Original A.' });
+      const noteB = makeNote({ id: 'note-b', title: 'B', content: 'Original B.' });
+      const calls: Array<{ id: string; content?: string; release: () => void }> = [];
+      const held = (id: string, updates: Partial<Note>) =>
+        new Promise<void>((resolve) => { calls.push({ id, content: updates.content, release: resolve }); });
+      (useNotes as jest.Mock).mockImplementation(() => ({
+        getNoteById: (id: string) => [noteA, noteB].find((n) => n.id === id),
+        updateNote: held,
+        saveNote: held,
+        getUnsavedEdit: mockGetUnsavedEdit,
+        setUnsavedEdit: mockSetUnsavedEdit,
+      }));
+      // What `RecordRoute` does: one editor instance per note id.
+      const Route = ({ id }: { id: string }) => <NoteEditor key={id} noteId={id} />;
+      const { rerender } = render(<Route id="note-a" />);
+      const body = () => screen.getByLabelText('Note content');
+
+      fireEvent.change(body(), { target: { value: 'First submitted version of A.' } });
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      fireEvent.change(body(), { target: { value: 'Latest submitted version of A.' } });
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      expect(calls).toHaveLength(1);
+
+      rerender(<Route id="note-b" />);
+      expect(body()).toHaveValue('Original B.');
+
+      // Reconnect: the first save answers, and the queued one runs.
+      await act(async () => { calls[0].release(); });
+      await act(async () => { jest.advanceTimersByTime(0); });
+
+      expect(calls.map((c) => c.id)).toEqual(['note-a', 'note-a']);
+      expect(calls[1].content).toBe('Latest submitted version of A.');
+      await act(async () => { calls[1].release(); });
+
+      // B was never written and shows none of A's save state.
+      expect(calls.some((c) => c.id === 'note-b')).toBe(false);
+      expect(screen.queryByText(/saving/i)).not.toBeInTheDocument();
+      expect(body()).toHaveValue('Original B.');
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // useImperativeHandle ref (line 55 — getCurrentContent / saveCurrentContent)
   // -------------------------------------------------------------------------
   describe('imperative ref methods', () => {

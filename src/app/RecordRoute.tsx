@@ -19,8 +19,10 @@ export interface RecordRouteProps {
  * (RECOVERY-001). Keying the page by the id makes "a different record" mean
  * "a different page": nothing typed for one record can reach another.
  *
- * What is typed and unsaved is discarded on the way out, as it is when
- * leaving for any other page. A query string such as `?highlight=` changes
+ * What is typed and unsaved goes with the old page, as it does when leaving
+ * for any other page: a note editor saves it on the way out (T085), and a
+ * queued note save finishes against its own note (RECOVERY-001, pinned in
+ * `NoteEditor.test.tsx`). A query string such as `?highlight=` changes
  * nothing here, because the record is the same.
  */
 export const RecordRoute: React.FC<RecordRouteProps> = ({ param, children }) => {
