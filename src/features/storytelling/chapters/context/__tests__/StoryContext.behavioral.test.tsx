@@ -983,6 +983,107 @@ describe('StoryContext Behavioral Testing', () => {
     });
   });
 
+  // T088 (DATA-007): two people inserting at once both write the same order
+  // -- concurrent inserts gave 1, 2, 3, 3. A shared order is made harmless
+  // rather than prevented: readers see chapters numbered by place, with a
+  // fixed tiebreak, and every structural change rewrites whatever is out of
+  // place, so the duplicate is gone after the next one.
+  describe('A shared order is harmless, and the next change heals it (T088)', () => {
+    const at = (id: string, order: number, dateAdded = '2026-01-01T00:00:00.000Z') => ({
+      id, title: id, content: 'Text', order, createdBy: 'test-user', createdByUsername: 'Test User', dateAdded,
+    });
+    // `d` and `c` share order 3; `c` was written first. Listed out of order,
+    // as a listener may deliver them.
+    const STORED = [
+      at('a', 1),
+      at('d', 3, '2026-02-01T00:00:00.000Z'),
+      at('b', 2),
+      at('c', 3, '2026-01-15T00:00:00.000Z'),
+    ];
+
+    const withStored = async () => {
+      mockUseAuth.mockReturnValue({ user: { uid: 'test-user' } });
+      mockUseChapterData.mockReturnValue({
+        chapters: STORED,
+        loading: false,
+        error: null,
+        refreshChapters: mockRefreshChapters,
+        hasRequiredContext: true,
+      });
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+    };
+
+    test('readers see every chapter numbered by its place, the one written first first', async () => {
+      await withStored();
+
+      expect(storyContext.chapters.map((c: Chapter) => [c.id, c.order])).toEqual([
+        ['a', 1], ['b', 2], ['c', 3], ['d', 4],
+      ]);
+      expect(storyContext.getChapterById('d').order).toBe(4);
+    });
+
+    test('adding a chapter at the end puts it after all four, and heals the shared order', async () => {
+      await withStored();
+      await act(async () => {
+        await storyContext.createChapter({ title: 'New', content: 'Text' });
+      });
+
+      const batch = committedBatch();
+      expect(movesIn(batch)).toEqual({ d: 4 });
+      expect(batch.find((write) => write.type === 'set')?.data.order).toBe(5);
+    });
+
+    test('inserting at a place moves everything after it on, by place', async () => {
+      await withStored();
+      await act(async () => {
+        await storyContext.createChapter({ title: 'New', content: 'Text', order: 2 });
+      });
+
+      const batch = committedBatch();
+      expect(movesIn(batch)).toEqual({ b: 3, c: 4, d: 5 });
+      expect(batch.find((write) => write.type === 'set')?.data.order).toBe(2);
+    });
+
+    test('deleting closes the gap and heals the shared order', async () => {
+      await withStored();
+      await act(async () => {
+        await storyContext.deleteChapter('b');
+      });
+
+      // `d` stores 3 and is now third: already in place, so not written.
+      expect(movesIn(committedBatch())).toEqual({ c: 2 });
+    });
+
+    test('moving the last chapter to the front renumbers every other one by place', async () => {
+      await withStored();
+      await act(async () => {
+        await storyContext.updateChapter('d', { order: 1 });
+      });
+
+      expect(movesIn(committedBatch())).toEqual({ d: 1, a: 2, b: 3, c: 4 });
+    });
+
+    test('moving a chapter to the place it already shows writes no other chapter', async () => {
+      await withStored();
+      await act(async () => {
+        await storyContext.updateChapter('d', { order: 4, title: 'Renamed' });
+      });
+
+      expect(mockFirebaseServices.document.batchOperations).not.toHaveBeenCalled();
+      expect(mockUpdateData).toHaveBeenCalledWith('d', expect.objectContaining({ title: 'Renamed' }));
+    });
+
+    test('renumbering writes only the chapters out of place', async () => {
+      await withStored();
+      await act(async () => {
+        await storyContext.reorderChapters();
+      });
+
+      expect(movesIn(committedBatch())).toEqual({ d: 4 });
+    });
+  });
+
   describe('Chapter Deletion Behavior', () => {
     beforeEach(() => {
       const mockChapters = [
