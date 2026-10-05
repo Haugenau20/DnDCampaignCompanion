@@ -210,6 +210,29 @@
 // the monthly full sweep still finds what it would have recorded.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-05b -- T037, DATA-010
+// ---------------------------------------------------------------------------
+// One change, pinned by the "a campaign being deleted takes no writes" tests
+// in `functions/test/rules/firestore-rules-prod.test.ts`:
+//
+// 9. NEW -- a campaign must exist and not be marked `deleting` to take a
+//    write: its content (create, update), a member's note for it and a
+//    member's reading progress in it (create, update). The `deleteCampaign`
+//    Cloud Function marks the campaign before its cleanup starts, so a write
+//    can no longer land behind the cleanup and survive the deletion under a
+//    campaign nobody can open. Requiring the campaign to exist covers the
+//    time after its document is gone, offline writes queued before it
+//    included. Deletes stay open: removing something never strands it.
+//    Clients may not write `deleting` themselves.
+//
+//    Cost: one more document read per such write (`campaignOpen`); its
+//    `exists` and `get` of the same document count once.
+//
+// Deploy order: the function that sets the mark deploys before these rules,
+// as the workflow does. The live frontend never writes into a missing or
+// deleting campaign, nor writes `deleting`, so nothing it does is refused.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // Change the production rules here, in the same PR as whatever motivated the
 // change, never in the console. Every merge to `main` redeploys this file, so a
@@ -268,6 +291,15 @@ service cloud.firestore {
       return exists(entry) &&
              get(entry).data.path == path &&
              get(entry).data.createdAt + duration.value(30, 'd') > request.time;
+    }
+
+    // Whether a campaign takes writes: it exists and is not being deleted
+    // (T037, DATA-010). The `deleteCampaign` function sets `deleting`; a
+    // note or reading progress for a campaign it has marked or removed would
+    // otherwise survive the deletion.
+    function campaignOpen(groupId, campaignId) {
+      let campaign = /databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId);
+      return exists(campaign) && get(campaign).data.get('deleting', false) != true;
     }
 
     // Admin collection for system-wide settings
@@ -373,8 +405,13 @@ service cloud.firestore {
         // "private" that an admin can read is not private. If a future feature
         // lets a user SHARE a note, it should copy or publish it into a
         // campaign-scoped collection rather than widening this rule.
+        //
+        // A note is written only into a campaign that takes writes (T037,
+        // DATA-010); it names its campaign in a field, not in its path.
         match /notes/{noteId} {
-          allow read, write: if isSignedIn() && request.auth.uid == userId;
+          allow read, delete: if isSignedIn() && request.auth.uid == userId;
+          allow create, update: if isSignedIn() && request.auth.uid == userId &&
+                                 campaignOpen(groupId, request.resource.data.campaignId);
         }
 
         // A reader's place in each campaign's story, one document per campaign
@@ -385,7 +422,9 @@ service cloud.firestore {
         // no invitation write into any group's subtree under its own uid.
         match /story-progress/{campaignId} {
           allow read: if isSignedIn() && request.auth.uid == userId;
-          allow write: if isSignedIn() && request.auth.uid == userId && isGroupMember(groupId);
+          allow delete: if isSignedIn() && request.auth.uid == userId && isGroupMember(groupId);
+          allow create, update: if isSignedIn() && request.auth.uid == userId && isGroupMember(groupId) &&
+                                 campaignOpen(groupId, campaignId);
         }
       }
 
@@ -475,11 +514,15 @@ service cloud.firestore {
       // to the final deny rule instead of inheriting content permissions.
       match /campaigns/{campaignId} {
         allow read: if isGroupMember(groupId) || isGlobalAdmin();
-        allow create: if isGroupMember(groupId) && imageLeased(groupId, 'banner');
+        allow create: if isGroupMember(groupId) && imageLeased(groupId, 'banner') &&
+                       !request.resource.data.keys().hasAny(['deleting']);
 
-        // RELAXED: any group member may edit campaign metadata.
+        // RELAXED: any group member may edit campaign metadata -- not once
+        // its deletion has started, and never the `deleting` mark (T037).
         allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
-                       imageLeased(groupId, 'banner');
+                       imageLeased(groupId, 'banner') &&
+                       resource.data.get('deleting', false) != true &&
+                       !request.resource.data.keys().hasAny(['deleting']);
 
         // Deleting a whole campaign stays admin-only -- it destroys every
         // entity and every member's notes for that campaign. See bug #1403 and
@@ -493,13 +536,16 @@ service cloud.firestore {
           allow read: if isGroupMember(groupId) || isGlobalAdmin();
           // `image` is an NPC's or a location's picture (T084); no other
           // entity carries one, so the check passes for them.
-          allow create: if isGroupMember(groupId) && imageLeased(groupId, 'image');
+          // Only into a campaign that takes writes (T037, DATA-010).
+          allow create: if isGroupMember(groupId) && imageLeased(groupId, 'image') &&
+                         campaignOpen(groupId, campaignId);
 
           // RELAXED: previously `createdBy == uid || isGroupAdmin`, which the
           // UI never enforced, so members hit permission-denied on any entity
           // they had not personally created (bug #1406).
           allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
-                         imageLeased(groupId, 'image');
+                         imageLeased(groupId, 'image') &&
+                         campaignOpen(groupId, campaignId);
 
           // RELAXED: previously admin-only, which meant a member could not
           // delete even their OWN entity while the UI showed them a Delete

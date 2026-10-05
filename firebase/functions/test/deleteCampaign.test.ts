@@ -165,9 +165,11 @@ describe("a deletion that fails partway (T037)", () => {
     failNextDeleteOf(note.path);
 
     await expectHttpsError(remove("gandalf"), "internal");
-    // Nothing past the failed stage happened.
+    // Nothing past the failed stage happened, and the campaign stays closed
+    // to writes until a retry finishes it (DATA-010).
     expect(await isThere(note)).toBe(true);
     expect(await isThere(campaign)).toBe(true);
+    expect((await campaign.get()).data()?.deleting).toBe(true);
     expect(await exists(FILES.npcImage)).toBe(true);
 
     await remove("gandalf");

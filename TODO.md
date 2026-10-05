@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T037 | A deleting campaign stays writable; a group cannot be deleted | L | open | Late writes survive a campaign deletion (needs a decision). Group deletion decided 2026-10-02, plan first |
+| high | T037 | A group cannot be deleted | L | open | Members' data cannot be removed with their group. Decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
@@ -90,11 +90,13 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding not yet fixed is covered by an entry: T083–T101, plus T037.
+- Every confirmed finding not yet fixed is covered by an entry: T083–T101.
+  The ones filed under T037 were closed on 2026-10-05.
 - **Not filed**: the reviews' unverified leads, and the optional refactors.
   They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its open findings are filed under T037; the rest
+  (maintainer, 2026-10-04). Its open findings were filed under T037 (closed
+  2026-10-05); the rest
   of that scope stays unreviewed by decision.
 - App source was byte-identical to the reviewed commit `64fe195` when these were
   filed, and each entry's primary location was opened on 2026-10-04.
@@ -453,25 +455,16 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 
 ---
 
-### T037 — A deleting campaign stays writable, and a group cannot be deleted
+### T037 — A group cannot be deleted
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-10-05
 
-**What is left of the deletions that exist** (code review, 2026-10-04). Since
-2026-10-05 `deleteCampaign` is resumable: it keeps a record in
-`groups/{g}/campaignDeletions/{c}` until every stage has succeeded, checks
-each member-cleanup write, and deletes pictures after documents; a daily job
-(`resumeCampaignDeletionsDaily`) finishes any deletion nobody retried. One
-finding remains, and it needs a decision:
-
-- **A campaign being deleted still accepts writes** (DATA-010, 03). A note
-  saved, or an entity created, after the cleanup has passed it survives the
-  deletion, under a campaign nobody can open. Notes are outside the campaign
-  subtree and keyed by a `campaignId` field, and no rule checks that a
-  campaign exists or is being deleted. **To decide**: fence writes in the
-  rules (`!exists(.../campaignDeletions/$(campaignId))` on every campaign
-  content and note write: one extra billed read per write), or keep the
-  deletion record as a tombstone and re-sweep it later, as the image sweep
-  does (no per-write cost; late writes live until the sweep).
+The deletions it would build on are sound since 2026-10-05: the last-admin
+guard is transactional, a failed account deletion can be retried, and
+`deleteCampaign` is resumable (a record in `groups/{g}/campaignDeletions/{c}`,
+a daily `resumeCampaignDeletionsDaily` for deletions nobody retried) and
+closed to writes while it runs (the campaign's `deleting` mark, enforced by
+`campaignOpen` in the production rules). Uploads are not fenced: a picture
+uploaded into a campaign being deleted is left to the image sweeps.
 
 **Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
 plan to write, not something to start without one. The maintainer's reason is

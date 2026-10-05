@@ -93,19 +93,28 @@ export const deleteCampaign = functions.onCall(
       // this record exists, campaign or no campaign, and the record goes
       // last, once every stage has succeeded. Clients cannot read or write
       // `campaignDeletions`; the rules' default deny covers it.
+      //
+      // The same transaction marks the campaign `deleting`, which closes it
+      // to writes (DATA-010): the production rules refuse any note, reading
+      // progress or content written into a campaign that is marked, or that
+      // no longer exists, so nothing can land behind the cleanup's back.
       await admin.firestore().runTransaction(async (transaction) => {
         const [campaignDoc, deletionDoc] = await Promise.all([
           transaction.get(campaignRef),
           transaction.get(deletionRef),
         ]);
-        if (deletionDoc.exists) return;
-        if (!campaignDoc.exists) {
+        if (!deletionDoc.exists && !campaignDoc.exists) {
           throw new functions.HttpsError("not-found", "Campaign not found.");
         }
-        transaction.create(deletionRef, {
-          requestedBy: callerUid,
-          requestedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        if (campaignDoc.exists && campaignDoc.get("deleting") !== true) {
+          transaction.update(campaignRef, {deleting: true});
+        }
+        if (!deletionDoc.exists) {
+          transaction.create(deletionRef, {
+            requestedBy: callerUid,
+            requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
       });
 
       await finishCampaignDeletion(groupId, campaignId);
