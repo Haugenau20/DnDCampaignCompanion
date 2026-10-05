@@ -34,7 +34,7 @@ jobs:
           cache: npm
 
       # --legacy-peer-deps: CRA's peer ranges no longer resolve (T059); the
-      # production Dockerfile installs the same way.
+      # Hosting workflows' build installs the same way.
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
@@ -106,10 +106,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      # `CI: false` as the shipping build has it: that one runs in Docker
-      # (docker/Dockerfile.frontend.prod), where CI is unset, and under CI=true
-      # react-scripts fails on any warning. A PR must not fail a build that the
-      # deploy would pass; lint already holds app code to zero warnings.
+      # `CI: false` as the shipping build has it (the Hosting workflows): under
+      # CI=true react-scripts fails on any warning. A PR must not fail a build
+      # that the deploy would pass; lint already holds app code to zero warnings.
       - name: Build
         run: npm run build
         env:

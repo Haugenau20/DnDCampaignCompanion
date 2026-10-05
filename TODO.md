@@ -41,7 +41,6 @@ adjusted for the images focus above.
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
-| low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -504,9 +503,8 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
 - **Measured**: `react-scripts@5.0.1` declares TypeScript `^3.2.1 || ^4` against
   the project's `^5.7.3`; its `jest-watch-typeahead@1.1.0` wants Jest 27/28
   against `^29.7.0`. CRA itself is no longer maintained, so no upgrade of it fixes this.
-- **Where**: `package.json:21`; CI installs in `docker/Dockerfile.frontend.prod:8`
-  (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not
-  enforced; T107 would drop that Docker build).
+- **Where**: `package.json:21`; CI installs with `npm ci --legacy-peer-deps`
+  in `test.yml` and in both Hosting workflows' build.
 - **Decided (maintainer, 2026-10-02): move to Vite**, planned before any code.
   It touches the build, env-var names (`REACT_APP_*` → `VITE_*`), jest config
   (stay on jest, or move to Vitest — the plan decides) and the four-resolvers
@@ -569,28 +567,6 @@ time anyone edits it.
 - **Findings**: 13. OPS-001/002 are source-only; the reviewers could not run
   PowerShell. **Catch**: do it with T065's start/stop round trip.
 - **Source**: code review, 2026-10-04
-
-### T107 — CI builds the site inside a Docker image only to copy the files out
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
-
-Docker is not needed for development (none exists), but it is not unused:
-both Hosting workflows build the shipped site with it
-(`firebase-hosting-merge.yml:81`, `firebase-hosting-pull-request.yml:38`).
-They then `docker cp` the files out, so the Dockerfile's nginx stage and
-`docker/config/nginx.conf` serve nothing. `test.yml` already builds without
-Docker, and the build could be produced the same way.
-
-- **Catch**: the shipped build is not the one CI checked. `Dockerfile.frontend.prod:8`
-  runs `npm install --legacy-peer-deps`, which ignores the lockfile, while
-  `test.yml` builds from `npm ci`. A direct build must keep `CI: false` (see
-  `test.yml`'s Build step) and the `.env` the workflow writes from secrets.
-- **Touches**: both Hosting workflows, `docker/`, `.dockerignore`, `CLAUDE.md:27-29`,
-  T059's `Where` line. Local leftovers `docker/emulators/{data,logs}` are
-  untracked and can simply be deleted.
-- **More Docker instead?** The note also asked this. Development already moved
-  off Docker on purpose (`CLAUDE.md`: "No Docker"); the remaining use adds a
-  layer and buys nothing that `actions/setup-node` doesn't.
-- **Source**: todo.txt, 2026-10-04
 
 ---
 

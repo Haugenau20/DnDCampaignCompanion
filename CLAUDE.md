@@ -31,9 +31,8 @@ names the **production** rulesets (`*.rules.prod`, which CI deploys), while the 
 permissive ones. Starting emulators by hand? Pass `--config firebase.emulators.json` too, or they
 enforce production rules against dev data and Storage (9199) is missing.
 
-`docker/` holds only what CI uses: it builds the frontend with `docker/Dockerfile.frontend.prod`
-(`npm install --legacy-peer-deps`, then `npm run build` — see T059). There is no Docker setup for
-local development.
+There is no Docker anywhere: CI builds the shipped site directly, from the lockfile
+(`npm ci --legacy-peer-deps`, then `npm run build` with `CI: false` — see T059 and T107).
 
 ### If the dev server reports errors that `tsc` and `npm run build` do not
 Almost certainly a stale cache. `npm start` and `npm run build` keep **separate** webpack caches, so
