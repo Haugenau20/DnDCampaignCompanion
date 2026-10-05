@@ -466,9 +466,6 @@ first:
   `recursiveDelete` can remove the root after a failed child, after which a
   retry is refused. The campaign stays writable during cleanup. DATA-004,
   DATA-010 (03), IMG-005 (04), TEST-005 (08).
-- `deleteUser` (`deleteUser.ts:110-129`) deletes the profile before the Auth
-  account, so an Auth failure becomes unretryable (AUTH-002). A retried group
-  removal has lost the username it should release (DATA-009, 03).
 
 **Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
 plan to write, not something to start without one. The maintainer's reason is

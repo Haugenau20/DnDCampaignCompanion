@@ -10,6 +10,24 @@ interface DeleteUserData {
   userId: string;
 }
 
+/**
+ * Deletes the Auth account of a user whose profile is already gone.
+ *
+ * @param {string} userId The account to delete
+ * @return {Promise<void>} Resolves once the account is gone
+ * @throws {functions.HttpsError} `not-found` when there is no account either
+ */
+async function finishAuthDeletion(userId: string): Promise<void> {
+  try {
+    await admin.auth().deleteUser(userId);
+  } catch (error) {
+    if ((error as {code?: string}).code === "auth/user-not-found") {
+      throw new functions.HttpsError("not-found", "User profile not found.");
+    }
+    throw error;
+  }
+}
+
 export const deleteUser = functions.onCall(
   {
     region: "europe-west1",
@@ -55,10 +73,14 @@ export const deleteUser = functions.onCall(
         .get();
       
       if (!userDoc.exists) {
-        throw new functions.HttpsError(
-          "not-found",
-          "User profile not found."
-        );
+        // The global profile is the last Firestore record this function
+        // deletes -- it lists the groups to clean up, so it goes only once
+        // they are gone -- and the Auth account goes after it. A missing
+        // profile with an Auth account still standing is therefore an earlier
+        // call that failed at its last step: finish it, rather than refuse
+        // the only retry there is (AUTH-002).
+        await finishAuthDeletion(userIdToDelete);
+        return {success: true, message: "User deleted successfully"};
       }
       
       const userData = userDoc.data();
