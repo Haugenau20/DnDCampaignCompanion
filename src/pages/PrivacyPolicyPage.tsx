@@ -296,7 +296,11 @@ const PrivacyPolicyPage: React.FC = () => {
               send through the contact form are kept only until your question is
               resolved, and are never used to market anything at you. A
               screenshot you attach is deleted from our storage as soon as the
-              email is sent, or after a day if the message never is.
+              email is sent, or after a day if the message never is. To stop
+              the form being used to flood us, we note when it was used for an
+              hour: against your account if you are signed in, otherwise
+              against a hash of your network address, never the address
+              itself. That note is deleted within a day of the hour ending.
             </Typography>
           </Section>
 

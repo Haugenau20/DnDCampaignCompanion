@@ -40,7 +40,6 @@ adjusted for the images focus above.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -183,17 +182,6 @@ Each of these decides from a stale local copy, then writes:
   of these crosses a context: the note is a private document under `users/`,
   and the create runs through another entity's context (NPC, location), so
   the two halves have to meet in one call first.
-- **Source**: code review, 2026-10-04
-
-### T099 — The contact form's rate limit is easy to evade
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`firebase/functions/src/contact.ts:78-106` throttles in process memory, keyed
-for anonymous callers by the address they supply. A new address, or a new
-function instance, resets it.
-
-- **Findings**: SEC-006 (01). **Catch**: identifying an anonymous caller (App
-  Check, IP) is the design question.
 - **Source**: code review, 2026-10-04
 
 ---

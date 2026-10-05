@@ -134,6 +134,8 @@ The reason is recorded in that file.
   the month. `now` is injected because the Storage emulator cannot backdate a file's `timeCreated`.
   `resumeCampaignDeletionsDaily` likewise: its body `resumeCampaignDeletions(now)` finishes campaign
   deletions that failed and were never retried (their record in `groups/{g}/campaignDeletions`).
+  `sweepContactThrottleDaily` too: `sweepContactThrottle(now)` deletes the contact form's expired
+  budgets (`contactThrottle`), which the privacy page promises are gone within a day.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.

@@ -21,12 +21,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-09-28";
+export const PRIVACY_LAST_UPDATED = "2026-10-05";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "Your place in each campaign's story (the chapter you are on, how far you have read and what you have finished) is now kept for you alone. It used to be one record per campaign, shared by everyone in it.",
-  "Nobody else in your group can see it, and it is deleted when you leave the group, delete your account, or the campaign is deleted.",
+  "To stop the contact form being used to flood us, we now note the times it was used for an hour: against your account if you are signed in, otherwise against a hash of your network address.",
+  "Nobody sees that record, the address itself is never kept, and the record is deleted within a day of the hour ending.",
 ]
 
 /**
@@ -139,7 +139,7 @@ export const PRIVACY_TABLE_ROWS: readonly PrivacyTableRow[] = [
     what: "Messages you send us, and any screenshot you attach",
     why: "To answer you",
     where: "Email, via a Cloud Function; a screenshot passes through Google Cloud Storage in the United States on the way",
-    howLong: "Until your question is resolved; the uploaded screenshot is deleted once it is sent, or after a day",
+    howLong: "Until your question is resolved; the uploaded screenshot is deleted once it is sent, or after a day; the note of when you used the form, a day and an hour at most",
   },
 ];
 

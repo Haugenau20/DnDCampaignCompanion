@@ -5,6 +5,7 @@ admin.initializeApp();
 // Export all functions
 export { extractEntities, getUsageStatus } from "./entityExtraction";
 export { sendContactEmail } from "./contact";
+export { sweepContactThrottleDaily } from "./contactThrottle";
 export { deleteUser, removeUserFromGroup } from "./userManagement";
 export { deleteCampaign, resumeCampaignDeletionsDaily } from "./campaignManagement";
 export { sweepOrphanedImagesDaily } from "./imageMaintenance";

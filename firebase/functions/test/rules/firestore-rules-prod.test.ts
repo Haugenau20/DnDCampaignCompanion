@@ -524,6 +524,22 @@ describe("an image path needs its upload's live entry (T084)", () => {
 // content written after that would survive the deletion under a campaign
 // nobody can open, so the rules refuse it -- and refuse it too once the
 // campaign document is gone, which covers writes queued offline.
+describe("the contact form's budgets (T099)", () => {
+  // Only `sendContactEmail` writes them, through the Admin SDK. A client that
+  // could would reset its own budget, or exhaust everyone else's.
+  it("no client reads, writes or deletes one, signed in or not", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc("contactThrottle/anonymous").set({sent: []})
+    );
+    for (const db of [as("frodo"), env.unauthenticatedContext().firestore()]) {
+      await assertFails(db.doc("contactThrottle/anonymous").get());
+      await assertFails(db.doc("contactThrottle/anonymous").set({sent: []}));
+      await assertFails(db.doc("contactThrottle/account_frodo").set({sent: []}));
+      await assertFails(db.doc("contactThrottle/anonymous").delete());
+    }
+  });
+});
+
 describe("turning rumours into a quest is one transaction (T088)", () => {
   const C = `groups/${G}/campaigns/c1`;
 
