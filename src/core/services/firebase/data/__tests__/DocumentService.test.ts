@@ -858,6 +858,116 @@ describe('DocumentService', () => {
     });
   });
 
+  // ─── createDocumentWithUpdates ──────────────────────────────────────────────
+  // T088 (DATA-005): turning rumours into a quest created the quest, then
+  // marked the rumours in a second commit. A failed mark left the quest
+  // behind, and every retry made another. Now one transaction does both.
+
+  describe('createDocumentWithUpdates', () => {
+    const PROFILE = { username: 'Sam', activeCharacterId: null, characters: [] };
+    const note = (id: string) => ({ id, content: id });
+
+    beforeEach(() => {
+      mockGetDoc.mockResolvedValue(makeDocSnapshot(true, PROFILE));
+    });
+
+    /** Marks every source as converted, appending to the notes it holds. */
+    const convert = (sourceIds: string[]) => async (read: (id: string) => Promise<any>) => {
+      const sources = await Promise.all(sourceIds.map((id) => read(id)));
+      if (sources.some((source) => !source)) throw new Error('One or more rumors not found');
+      return {
+        create: { title: 'Find the fire' },
+        updates: sources.map((source) => ({
+          id: source.id,
+          data: { convertedToQuestId: 'find-the-fire', notes: [...source.notes, note(`converted-${source.id}`)] },
+        })),
+      };
+    };
+
+    test('creates the document and updates the others in one commit, each with its attribution', async () => {
+      mockFirestoreStore.seed('smoke', { title: 'Smoke', notes: [] });
+      mockFirestoreStore.seed('ash', { title: 'Ash', notes: [] });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.createDocumentWithUpdates<any, any>('quests', 'find-the-fire', 'rumors', convert(['smoke', 'ash']));
+
+      const quest = mockFirestoreStore.read('find-the-fire')!;
+      expect(quest).toMatchObject({ title: 'Find the fire', createdByUsername: 'Sam' });
+      expectIso8601String(quest.dateAdded);
+      for (const id of ['smoke', 'ash']) {
+        const rumor = mockFirestoreStore.read(id)!;
+        expect(rumor).toMatchObject({ convertedToQuestId: 'find-the-fire', modifiedByUsername: 'Sam' });
+        expect(rumor.notes).toEqual([note(`converted-${id}`)]);
+        expect(rumor).not.toHaveProperty('createdBy');
+      }
+    });
+
+    test('refuses a taken id with DocumentAlreadyExistsError and writes nothing', async () => {
+      mockFirestoreStore.seed('find-the-fire', { title: 'Someone else\'s quest' });
+      mockFirestoreStore.seed('smoke', { title: 'Smoke', notes: [] });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      const caught = await svc
+        .createDocumentWithUpdates<any, any>('quests', 'find-the-fire', 'rumors', convert(['smoke']))
+        .then(() => null, (e: unknown) => e);
+
+      expect(caught).toBeInstanceOf(DocumentAlreadyExistsError);
+      expect((caught as TakenError).documentId).toBe('find-the-fire');
+      expect(mockFirestoreStore.read('find-the-fire')).toEqual({ title: 'Someone else\'s quest' });
+      expect(mockFirestoreStore.read('smoke')).toEqual({ title: 'Smoke', notes: [] });
+    });
+
+    test('creates nothing when the decision refuses, e.g. a source has gone', async () => {
+      mockFirestoreStore.seed('smoke', { title: 'Smoke', notes: [] });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await expect(
+        svc.createDocumentWithUpdates<any, any>('quests', 'find-the-fire', 'rumors', convert(['smoke', 'deleted']))
+      ).rejects.toThrow('One or more rumors not found');
+
+      expect(mockFirestoreStore.paths().sort()).toEqual(['smoke']);
+      expect(mockFirestoreStore.read('smoke')).toEqual({ title: 'Smoke', notes: [] });
+    });
+
+    test('creates nothing when an update cannot be applied', async () => {
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await expect(
+        svc.createDocumentWithUpdates<any, any>('quests', 'find-the-fire', 'rumors', async () => ({
+          create: { title: 'Find the fire' },
+          updates: [{ id: 'nowhere', data: { convertedToQuestId: 'find-the-fire' } }],
+        }))
+      ).rejects.toThrow();
+
+      expect(mockFirestoreStore.read('find-the-fire')).toBeUndefined();
+    });
+
+    // A player adds a note to the rumour while it is being converted. The
+    // conversion read the rumour before the note landed, so Firestore runs it
+    // again and the appended list keeps the other player's note.
+    test('decides again on a source a rival changed, so the rival\'s note is kept', async () => {
+      let rivalWrote = false;
+      mockFirestoreStore = createFakeFirestore({
+        afterRead: (path, attempt) => {
+          if (path !== 'smoke' || attempt !== 1 || rivalWrote) return;
+          rivalWrote = true;
+          mockFirestoreStore.seed('smoke', { title: 'Smoke', notes: [note('rival')] });
+        },
+      });
+      mockFirestoreStore.seed('smoke', { title: 'Smoke', notes: [] });
+
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      await svc.createDocumentWithUpdates<any, any>('quests', 'find-the-fire', 'rumors', convert(['smoke']));
+
+      expect(mockFirestoreStore.read('smoke')!.notes).toEqual([note('rival'), note('converted-smoke')]);
+      expect(mockFirestoreStore.read('find-the-fire')).toMatchObject({ title: 'Find the fire' });
+    });
+  });
+
   // ─── collection path construction ───────────────────────────────────────────
 
 

@@ -4,22 +4,22 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { RumorProvider, useRumors } from '../RumorContext';
 import { DocumentAlreadyExistsError } from 'core/services/firebase/data/DocumentAlreadyExistsError';
+import { createWithUpdatesThrough } from '@/test-utils/update-after-reading';
 
 /**
  * Bug #1402 for rumors: another session already took the slug.
  *
  * Three paths derive an id from a title and so can hit the write-layer guard:
- * `addRumor`, `combineRumors` (both write to `rumors` through `addData`) and
- * `convertToQuest` (writes to `quests` through `createDocument`). The fake
- * server refuses ids it holds, like `DocumentService.createDocument`, while
- * this client's loaded lists stay stale.
+ * `addRumor` (writes to `rumors` through `addData`), `combineRumors` and
+ * `convertToQuest` (write to `rumors` and `quests` through
+ * `createDocumentWithUpdates`, with the marks on their sources, T088). The
+ * fake server refuses ids it holds, like `DocumentService` does, while this
+ * client's loaded lists stay stale.
  */
 
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
 const mockUseFirestore = jest.fn();
-/** One commit for every multi-rumour write (T032, PERF-06). */
-const mockBatchOperations = jest.fn().mockResolvedValue(undefined);
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
@@ -66,7 +66,7 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
   let rumorServerIds: Set<string>;
   let questServerIds: Set<string>;
   let mockAddData: jest.Mock;
-  let mockCreateDocument: jest.Mock;
+  let mockCommit: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -79,10 +79,11 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
       rumorServerIds.add(id);
       return id;
     });
-    mockCreateDocument = jest.fn(async (_collection: string, _data: unknown, id: string) => {
-      if (questServerIds.has(id)) throw new DocumentAlreadyExistsError('quests', id);
-      questServerIds.add(id);
-      return id;
+    // Combine and conversion: the new record, refused if its id is taken.
+    mockCommit = jest.fn(async (collection: string, id: string) => {
+      const serverIds = collection.endsWith('/quests') ? questServerIds : rumorServerIds;
+      if (serverIds.has(id)) throw new DocumentAlreadyExistsError(collection, id);
+      serverIds.add(id);
     });
 
     mockUseAuth.mockReturnValue({ user: { uid: 'u1' } });
@@ -90,7 +91,12 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
       userProfile: { uid: 'u1' },
       activeGroupUserProfile: { username: 'Pip', activeCharacterId: null, characters: [] },
     });
-    mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations, createDocument: mockCreateDocument });
+    mockUseFirestore.mockReturnValue({
+      createDocumentWithUpdates: createWithUpdatesThrough(
+        (id) => [existingRumor('rumor-a'), existingRumor('rumor-b')].find((rumor) => rumor.id === id),
+        mockCommit
+      ),
+    });
     mockUseRumorData.mockReturnValue({
       rumors: [existingRumor('rumor-a'), existingRumor('rumor-b')],
       loading: false,
@@ -139,6 +145,12 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
     });
 
     expect(id).toBe('combined-report-2');
+    expect(mockCommit).toHaveBeenLastCalledWith(
+      'groups/group-1/campaigns/campaign-1/rumors',
+      'combined-report-2',
+      'groups/group-1/campaigns/campaign-1/rumors',
+      expect.objectContaining({ create: expect.objectContaining({ id: 'combined-report-2' }) })
+    );
   });
 
   test('convertToQuest takes the next free quest id when another session already took the slug', async () => {
@@ -151,10 +163,11 @@ describe('RumorContext: cross-session id collision (#1402)', () => {
     });
 
     expect(id).toBe('investigate-the-smoke-2');
-    expect(mockCreateDocument).toHaveBeenLastCalledWith(
+    expect(mockCommit).toHaveBeenLastCalledWith(
       'groups/group-1/campaigns/campaign-1/quests',
-      expect.objectContaining({ id: 'investigate-the-smoke-2' }),
-      'investigate-the-smoke-2'
+      'investigate-the-smoke-2',
+      'groups/group-1/campaigns/campaign-1/rumors',
+      expect.objectContaining({ create: expect.objectContaining({ id: 'investigate-the-smoke-2' }) })
     );
   });
 

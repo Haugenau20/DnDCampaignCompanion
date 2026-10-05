@@ -317,6 +317,74 @@ class DocumentService extends BaseFirebaseService {
   }
 
   /**
+   * Create one document under an explicit id and update others, as one
+   * transaction, from a decision made on the others as the server holds them.
+   *
+   * For an operation that turns records into a new one -- rumours into a
+   * quest, several rumours into one. Created first and marked after, a failed
+   * mark left the new record behind, and every retry made another (DATA-005).
+   * Here the new record and the marks commit together or not at all, and a
+   * list the marks extend (a rumour's notes) is extended from the copy the
+   * server holds, so a note another player added meanwhile is kept.
+   *
+   * `decide` reads by id from `sourceCollection` and returns the new document
+   * and the updates; throwing refuses the whole operation. It may run more
+   * than once. The new document gets creation attribution and each update
+   * modification attribution, as `createDocument` and
+   * `updateDocumentAfterReading` stamp them.
+   *
+   * Needs the server: offline, the transaction fails rather than queueing.
+   *
+   * @param collectionName Where the new document goes: collection name or full path
+   * @param id The new document's id
+   * @param sourceCollection Where the documents `decide` reads and updates live
+   * @param decide Reads what it needs and returns the new document and the updates
+   * @throws {DocumentAlreadyExistsError} if `id` is taken; nothing is written
+   */
+  public async createDocumentWithUpdates<T extends DocumentData, S extends DocumentData>(
+    collectionName: string,
+    id: string,
+    sourceCollection: string,
+    decide: (read: (id: string) => Promise<(S & { id: string }) | undefined>) => Promise<{
+      create: T;
+      updates: Array<{ id: string; data: Partial<S> }>;
+    }>
+  ): Promise<void> {
+    // Resolved before any await, as in `createDocument` (T082).
+    const collectionRef = this.getCollectionRef(collectionName);
+    const sourceRef = this.getCollectionRef(sourceCollection);
+    const groupId = this.groupOf(collectionRef);
+
+    const created = await runTransaction(this.db, async (transaction) => {
+      const targetRef = doc(collectionRef, id);
+      if ((await transaction.get(targetRef)).exists()) {
+        return false;
+      }
+      const read = async (sourceId: string) => {
+        const snapshot = await transaction.get(doc(sourceRef, sourceId));
+        return snapshot.exists() ? ({ ...(snapshot.data() as S), id: snapshot.id }) : undefined;
+      };
+      const { create, updates } = await decide(read);
+      // Attribution only once the id is known to be free, as in `createDocument`.
+      const creation = await this.getCreationAttribution(groupId);
+      const modification = await this.getModificationAttribution(groupId);
+
+      transaction.set(targetRef, { ...create, ...creation });
+      for (const update of updates) {
+        transaction.update(doc(sourceRef, update.id), {
+          ...update.data,
+          ...modification
+        } as Partial<DocumentData>);
+      }
+      return true;
+    });
+
+    if (!created) {
+      throw new DocumentAlreadyExistsError(collectionName, id);
+    }
+  }
+
+  /**
    * Update specific fields in a document without attribution metadata
    * Use updateDocumentWithAttribution for automatic attribution
    */

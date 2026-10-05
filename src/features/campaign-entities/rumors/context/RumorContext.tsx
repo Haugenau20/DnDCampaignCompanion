@@ -11,9 +11,36 @@ import { buildCreationAttribution, buildModificationAttribution } from 'core/att
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { rumorParagraph } from '../utils/rumor-title';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
-import { MAX_BATCH_WRITES } from '../../shared/commitEntityWrites';
+import { commitEntityWrites, EntityBatchWrite, MAX_BATCH_WRITES } from '../../shared/commitEntityWrites';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
+
+/**
+ * Refuses a conversion or combination before anything is written when one
+ * transaction could not hold it: the new record plus one update per rumour
+ * (DATA-005). Checked after the commit instead, the new record was already
+ * there and every retry made another.
+ */
+const assertFitsOneCommit = (rumorCount: number): void => {
+  if (rumorCount + 1 > MAX_BATCH_WRITES) {
+    throw new Error(`One action can change at most ${MAX_BATCH_WRITES - 1} rumours at once.`);
+  }
+};
+
+/**
+ * Reads every rumour of a conversion inside its transaction, as the server
+ * holds it, refusing if one has gone since the page's copy was taken.
+ */
+const readAll = async (
+  read: (id: string) => Promise<Rumor | undefined>,
+  rumorIds: string[]
+): Promise<Rumor[]> => {
+  const current = await Promise.all(rumorIds.map(id => read(id)));
+  if (current.some(rumor => !rumor)) {
+    throw new Error('One or more rumors not found');
+  }
+  return current as Rumor[];
+};
 
 /**
  * Who is reading this provider's list right now (T032, `PERF-03`): the
@@ -43,27 +70,17 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const { user } = useAuth();
   const { userProfile, activeGroupUserProfile } = useUser();
-  const { createDocument, batchOperations } = useFirestore();
+  const { createDocumentWithUpdates } = useFirestore();
 
   /**
    * Writes to several rumours, committed as one batch (T032, `PERF-06`): one
    * round trip instead of one per rumour, and all or nothing, so a batch
    * action can never stop halfway through the selection.
    */
-  const commitRumorWrites = useCallback(async (writes: Array<{
-    type: 'update' | 'delete';
-    id: string;
-    data?: Partial<Rumor>;
-  }>) => {
-    if (writes.length === 0) return;
-    if (rumorsPath === null) {
-      throw new Error('No campaign selected');
-    }
-    if (writes.length > MAX_BATCH_WRITES) {
-      throw new Error(`One action can change at most ${MAX_BATCH_WRITES} rumours at once.`);
-    }
-    await batchOperations(writes.map(write => ({ ...write, collection: rumorsPath })));
-  }, [batchOperations, rumorsPath]);
+  const commitRumorWrites = useCallback(
+    (writes: EntityBatchWrite<Rumor>[]) => commitEntityWrites(rumorsPath, 'rumours', writes),
+    [rumorsPath]
+  );
 
   // Get rumor by ID
   const getRumorById = useCallback((id: string) => {
@@ -247,155 +264,150 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to combine rumors');
     }
-  
-    const rumorsToMerge = rumorIds.map(id => getRumorById(id)).filter(Boolean) as Rumor[];
-    if (rumorsToMerge.length !== rumorIds.length) {
+    if (rumorsPath === null) {
+      throw new Error('No campaign selected');
+    }
+    assertFitsOneCommit(rumorIds.length);
+
+    if (rumorIds.some(id => !getRumorById(id))) {
       throw new Error('One or more rumors not found');
     }
-  
-    // Create the combined rumor content if not provided
-    const combinedContent = newRumorData.content || 
-      rumorsToMerge.map(rumor => 
-        rumorParagraph(rumor, { attributed: true })
-      ).join('\n\n');
-  
-    // Gather all related NPCs and locations
-    const relatedNPCs = [...new Set(
-      rumorsToMerge.flatMap(rumor => 
-        Array.isArray(rumor.relatedNPCs) ? rumor.relatedNPCs : []
-      )
-    )];
-    
-    const relatedLocations = [...new Set(
-      rumorsToMerge.flatMap(rumor => 
-        Array.isArray(rumor.relatedLocations) ? rumor.relatedLocations : []
-      )
-    )];
-  
+
     // Use the provided title or generate one
     const title = newRumorData.title || `Combined Rumor (${new Date().toLocaleDateString()})`;
 
-    // Compute attribution once and reuse across the new rumor, its initial
-    // note, and every original rumor updated below so the whole combine
-    // operation is attributed to a single actor/timestamp pair.
+    // Computed once, so the new rumour's note and every original's note name
+    // one author and moment however often the transaction runs. The
+    // documents' own attribution is stamped by the write.
     const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
-    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+    const combinedNoteId = crypto.randomUUID();
+    const sourceNoteIds = new Map(rumorIds.map(id => [id, crypto.randomUUID()]));
 
-    // Initialize the notes array with a new note about the combination
-    const initialNotes = [{
-      id: crypto.randomUUID(),
-      content: `Combined from rumors: ${rumorIds.join(', ')}`,
-      ...creationAttribution
-    }];
+    /**
+     * The combined rumour and the marks on its sources, worked out from the
+     * sources as the server holds them (T088): their notes, links and text as
+     * they are at the commit, not as this page last saw them.
+     */
+    const decide = (candidateId: string) => async (read: (id: string) => Promise<Rumor | undefined>) => {
+      const rumorsToMerge = await readAll(read, rumorIds);
 
-    const buildCombinedRumor = (candidateId: string): Rumor => ({
-      id: candidateId,
-      title,
-      content: combinedContent,
-      status: newRumorData.status || 'unconfirmed',
-      sourceType: newRumorData.sourceType || 'other',
-      sourceName: newRumorData.sourceName || 'Multiple Sources',
-      ...creationAttribution,
-      relatedNPCs,
-      relatedLocations,
-      notes: initialNotes  // Use our explicit notes array
-    });
+      const combinedContent = newRumorData.content ||
+        rumorsToMerge.map(rumor => rumorParagraph(rumor, { attributed: true })).join('\n\n');
+      const relatedNPCs = [...new Set(
+        rumorsToMerge.flatMap(rumor => Array.isArray(rumor.relatedNPCs) ? rumor.relatedNPCs : [])
+      )];
+      const relatedLocations = [...new Set(
+        rumorsToMerge.flatMap(rumor => Array.isArray(rumor.relatedLocations) ? rumor.relatedLocations : [])
+      )];
 
-    // Generate ID from title, disambiguating on collision -- including with a
-    // rumor another session wrote that the listener has not delivered yet (#1402) -- and add the
-    // new combined rumor with the explicit ID
-    const id = await createWithUniqueEntityId({
+      const create: Rumor = {
+        id: candidateId,
+        title,
+        content: combinedContent,
+        status: newRumorData.status || 'unconfirmed',
+        sourceType: newRumorData.sourceType || 'other',
+        sourceName: newRumorData.sourceName || 'Multiple Sources',
+        relatedNPCs,
+        relatedLocations,
+        notes: [{
+          id: combinedNoteId,
+          content: `Combined from rumors: ${rumorIds.join(', ')}`,
+          ...creationAttribution
+        }]
+      } as Rumor;
+
+      // Each original is confirmed and linked to the new one. Only the
+      // fields that change are written.
+      const updates = rumorsToMerge.map(rumor => ({
+        id: rumor.id,
+        data: {
+          status: 'confirmed' as RumorStatus,
+          notes: [
+            ...(Array.isArray(rumor.notes) ? rumor.notes : []),
+            {
+              id: sourceNoteIds.get(rumor.id)!,
+              content: `Combined into rumor: ${candidateId}`,
+              ...creationAttribution
+            }
+          ]
+        }
+      }));
+      return { create, updates };
+    };
+
+    // The new rumour and the marks commit together (DATA-005), under an id
+    // from the title, disambiguated on collision -- including with a rumour
+    // another session wrote that the listener has not delivered yet (#1402).
+    return createWithUniqueEntityId({
       name: title,
       issuedIds: issuedIds.current,
       isLoaded: isRumorLoaded,
-      write: (candidateId) => addData(buildCombinedRumor(candidateId), candidateId)
+      write: (candidateId) => createDocumentWithUpdates<Rumor, Rumor>(
+        rumorsPath, candidateId, rumorsPath, decide(candidateId)
+      )
     });
-
-    // Mark the original rumours as confirmed and linked to the new one -- all
-    // of them in one batch, so a failure cannot leave some marked and some
-    // not (T032, PERF-06). Only the fields that change are written.
-    await commitRumorWrites(rumorsToMerge.map(rumor => ({
-      type: 'update' as const,
-      id: rumor.id,
-      data: {
-        status: 'confirmed' as RumorStatus,
-        ...modificationAttribution,
-        notes: [
-          // Make sure the notes array is defined before trying to spread it
-          ...(Array.isArray(rumor.notes) ? rumor.notes : []),
-          {
-            id: crypto.randomUUID(),
-            content: `Combined into rumor: ${id}`,
-            ...creationAttribution
-          }
-        ]
-      }
-    })));
-
-    return id;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, addData, commitRumorWrites, isRumorLoaded]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocumentWithUpdates, isRumorLoaded, rumorsPath]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to convert rumors to quest');
     }
+    if (questsPath === null || rumorsPath === null) {
+      throw new Error('No campaign selected');
+    }
+    assertFitsOneCommit(rumorIds.length);
 
-    const rumorsToConvert = rumorIds.map(id => getRumorById(id)).filter(Boolean) as Rumor[];
-    if (rumorsToConvert.length !== rumorIds.length) {
+    if (rumorIds.some(id => !getRumorById(id))) {
       throw new Error('One or more rumors not found');
     }
 
-    // Compute attribution once and reuse across the new quest document and
-    // every original rumor updated below so the whole conversion operation
-    // is attributed to a single actor/timestamp pair.
+    // Computed once, as in `combineRumors`.
     const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
-    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
+    const noteIds = new Map(rumorIds.map(id => [id, crypto.randomUUID()]));
 
-    // Use the attribution-aware create path: this genuinely creates a new
-    // quest document, so DocumentService.createDocument stamps attribution
-    // for it (rather than the context hand-rolling it via creationAttribution).
-    //
-    // The ID comes from the title. This writes into the `quests` collection, a
-    // different id-space than this context loads, so there is no loaded-state
-    // lookup to consult (never was): `issuedQuestIds` and the write layer's
-    // refusal are all that tell a taken quest slug apart. A title that
-    // slugifies to a non-empty string keeps that slug unless it is taken, and
-    // an empty/missing title falls back to a random id.
-    if (questsPath === null) {
-      throw new Error('No campaign selected');
-    }
-    const questId = await createWithUniqueEntityId({
+    /**
+     * The quest, and every rumour marked as converted into it, from the
+     * rumours as the server holds them (T088). Only the fields that change
+     * are written.
+     */
+    const decide = (questId: string) => async (read: (id: string) => Promise<Rumor | undefined>) => {
+      const rumorsToConvert = await readAll(read, rumorIds);
+      return {
+        create: { ...questData, id: questId },
+        updates: rumorsToConvert.map(rumor => ({
+          id: rumor.id,
+          data: {
+            convertedToQuestId: questId,
+            notes: [
+              ...(Array.isArray(rumor.notes) ? rumor.notes : []),
+              {
+                id: noteIds.get(rumor.id)!,
+                content: `Converted to quest: ${questId}`,
+                ...creationAttribution
+              }
+            ]
+          }
+        }))
+      };
+    };
+
+    // The quest and the marks commit together (DATA-005). The ID comes from
+    // the title. This writes into the `quests` collection, a different
+    // id-space than this context loads, so there is no loaded-state lookup to
+    // consult (never was): `issuedQuestIds` and the write's refusal of a taken
+    // id are all that tell a taken quest slug apart. A title that slugifies to
+    // a non-empty string keeps that slug unless it is taken, and an
+    // empty/missing title falls back to a random id.
+    return createWithUniqueEntityId({
       name: questData.title || '',
       issuedIds: issuedQuestIds.current,
       isLoaded: () => false,
-      write: (candidateId) => createDocument(questsPath, {
-        ...questData,
-        id: candidateId
-      }, candidateId)
+      write: (questId) => createDocumentWithUpdates<Record<string, unknown>, Rumor>(
+        questsPath, questId, rumorsPath, decide(questId)
+      )
     });
-
-    // Mark every rumour as converted, in one batch (T032, PERF-06). Only the
-    // fields that change are written.
-    await commitRumorWrites(rumorsToConvert.map(rumor => ({
-      type: 'update' as const,
-      id: rumor.id,
-      data: {
-        convertedToQuestId: questId,
-        ...modificationAttribution,
-        notes: [
-          ...(Array.isArray(rumor.notes) ? rumor.notes : []),
-          {
-            id: crypto.randomUUID(),
-            content: `Converted to quest: ${questId}`,
-            ...creationAttribution
-          }
-        ]
-      }
-    })));
-
-    return questId;
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocument, commitRumorWrites, questsPath]);
+  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocumentWithUpdates, questsPath, rumorsPath]);
 
   const value: RumorContextValue = {
     rumors,

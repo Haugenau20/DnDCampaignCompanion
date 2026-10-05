@@ -44,3 +44,38 @@ export function updateAfterReadingThrough<T>(
     }
   );
 }
+
+/** What a `createDocumentWithUpdates` decision commits. */
+export interface CreatedWithUpdates<S> {
+  create: Record<string, any>;
+  updates: Array<{ id: string; data: Partial<S> }>;
+}
+
+/**
+ * A `createDocumentWithUpdates` for suites that mock `useFirestore` (T088).
+ *
+ * `decide` reads the records the suite already serves -- its stand-in for
+ * what the server holds -- and what it decides goes to the suite's `commit`
+ * mock, which may throw to refuse (a taken id, a failed write). Nothing is
+ * committed when `decide` refuses.
+ *
+ * @param recordOf - the record the suite serves for an id
+ * @param commit - receives the new document's collection and id, the source
+ *   collection, and the decision
+ */
+export function createWithUpdatesThrough<S>(
+  recordOf: (id: string) => S | undefined,
+  commit: (collection: string, id: string, sourceCollection: string, decided: CreatedWithUpdates<S>) => unknown
+) {
+  return jest.fn(
+    async (
+      collection: string,
+      id: string,
+      sourceCollection: string,
+      decide: (read: (otherId: string) => Promise<S | undefined>) => Promise<CreatedWithUpdates<S>>
+    ) => {
+      const decided = await decide(async (otherId) => recordOf(otherId));
+      await commit(collection, id, sourceCollection, decided);
+    }
+  );
+}

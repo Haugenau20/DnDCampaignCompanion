@@ -4,7 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { RumorProvider, useRumors } from '../RumorContext';
 import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
-import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
+import { updateAfterReadingThrough, createWithUpdatesThrough } from '@/test-utils/update-after-reading';
 
 /**
  * RumorContext Bug Discovery Testing
@@ -20,8 +20,13 @@ import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
 const mockUseFirestore = jest.fn();
-/** One commit for every multi-rumour write (T032, PERF-06). */
-const mockBatchOperations = jest.fn().mockResolvedValue(undefined);
+/**
+ * What a combine or conversion commits: the new record and the marks on its
+ * sources, in one transaction (T088, DATA-005).
+ */
+const mockCommit = jest.fn().mockResolvedValue(undefined);
+const RUMORS = 'groups/group-1/campaigns/campaign-1/rumors';
+const QUESTS = 'groups/group-1/campaigns/campaign-1/quests';
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
@@ -95,9 +100,13 @@ describe('RumorContext Bug Discovery Tests', () => {
       },
     });
 
-    mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations,
+    mockUseFirestore.mockReturnValue({
       setDocument: mockSetDocument,
       createDocument: mockCreateDocument,
+      createDocumentWithUpdates: createWithUpdatesThrough<Rumor>(
+        (id) => (mockUseRumorData()?.rumors ?? []).find((r: any) => r.id === id),
+        mockCommit
+      ),
     });
 
     mockUseRumorData.mockReturnValue({
@@ -453,12 +462,16 @@ describe('RumorContext Bug Discovery Tests', () => {
       });
 
       // BUG DISCOVERY: Combined rumor should deduplicate related entities correctly
-      expect(mockAddData).toHaveBeenCalledWith(
+      expect(mockCommit).toHaveBeenCalledWith(
+        RUMORS,
+        'combined-dragon-reports',
+        RUMORS,
         expect.objectContaining({
-          relatedNPCs: ['npc-1', 'npc-2', 'npc-3'], // Should be deduplicated
-          relatedLocations: ['mountain-1', 'mountain-2'] // Should be deduplicated
-        }),
-        'combined-dragon-reports'
+          create: expect.objectContaining({
+            relatedNPCs: ['npc-1', 'npc-2', 'npc-3'], // Should be deduplicated
+            relatedLocations: ['mountain-1', 'mountain-2'] // Should be deduplicated
+          })
+        })
       );
 
       console.warn('BUG #013: Checking if combine function properly deduplicates relationships');
@@ -505,12 +518,16 @@ describe('RumorContext Bug Discovery Tests', () => {
       });
 
       // Should not crash and should provide default empty arrays
-      expect(mockAddData).toHaveBeenCalledWith(
+      expect(mockCommit).toHaveBeenCalledWith(
+        RUMORS,
+        'safe-combined-rumor',
+        RUMORS,
         expect.objectContaining({
-          relatedNPCs: [], // Should default to empty array
-          relatedLocations: [] // Should default to empty array
-        }),
-        'safe-combined-rumor'
+          create: expect.objectContaining({
+            relatedNPCs: [], // Should default to empty array
+            relatedLocations: [] // Should default to empty array
+          })
+        })
       );
     });
   });
@@ -560,29 +577,24 @@ describe('RumorContext Bug Discovery Tests', () => {
         expect(questId).toBe('investigate-dragon-rumors');
       });
 
-      // Re-seamed for the attribution consolidation: convertToQuest now writes
-      // the quest through the attribution-aware createDocument path instead of
-      // the plain setDocument path, so DocumentService (not this context) owns
-      // stamping createdBy*/modifiedBy* -- invisible at this mocked boundary.
-      // That attribution behavior is covered separately in
-      // RumorContext.behavioral.test.tsx > 'Rumor Convert To Quest Behavior'.
-      expect(mockCreateDocument).toHaveBeenCalledWith(
-        'groups/group-1/campaigns/campaign-1/quests',
-        expect.objectContaining({
-          title: 'Investigate Dragon Rumors',
-          description: 'Look into the dragon sightings',
-          status: 'active'
-        }),
-        'investigate-dragon-rumors'
-      );
+      // Re-seamed twice. For the attribution consolidation, convertToQuest
+      // stopped hand-rolling createdBy*/modifiedBy* (DocumentService stamps
+      // them, invisible at this mocked boundary; covered in
+      // RumorContext.behavioral.test.tsx > 'Rumor Convert To Quest Behavior').
+      // For T088 (DATA-005), the quest and the rumour marks became one commit.
+      expect(mockCommit).toHaveBeenCalledTimes(1);
+      const [collection, questId, sourceCollection, { create, updates }] = mockCommit.mock.calls[0];
+      expect([collection, questId, sourceCollection]).toEqual([QUESTS, 'investigate-dragon-rumors', RUMORS]);
+      expect(create).toEqual(expect.objectContaining({
+        title: 'Investigate Dragon Rumors',
+        description: 'Look into the dragon sightings',
+        status: 'active'
+      }));
       expect(mockSetDocument).not.toHaveBeenCalled();
 
       // Should update rumor with conversion tracking
-      // Since T032 (PERF-06) the converted rumours are marked in one batch.
-      expect(mockBatchOperations).toHaveBeenCalledWith([
+      expect(updates).toEqual([
         expect.objectContaining({
-          type: 'update',
-          collection: 'groups/group-1/campaigns/campaign-1/rumors',
           id: 'rumor-to-convert',
           data: expect.objectContaining({
             convertedToQuestId: 'investigate-dragon-rumors',
@@ -640,14 +652,15 @@ describe('RumorContext Bug Discovery Tests', () => {
       });
 
       // BUG DISCOVERY: Quest ID generation should handle special characters properly.
-      // Re-seamed to createDocument (see note above) -- same sanitized-ID
-      // assertion, just against the collaborator the context now calls.
-      expect(mockCreateDocument).toHaveBeenCalledWith(
-        'groups/group-1/campaigns/campaign-1/quests',
+      // Re-seamed (see note above) -- same sanitized-ID assertion, just
+      // against the collaborator the context now calls.
+      expect(mockCommit).toHaveBeenCalledWith(
+        QUESTS,
+        'quest-with-special-characters', // Should be sanitized ID
+        RUMORS,
         expect.objectContaining({
-          id: 'quest-with-special-characters' // Should be sanitized ID
-        }),
-        'quest-with-special-characters'
+          create: expect.objectContaining({ id: 'quest-with-special-characters' })
+        })
       );
     });
   });

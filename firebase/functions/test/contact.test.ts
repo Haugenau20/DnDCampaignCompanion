@@ -27,8 +27,8 @@ const NAME = "0f8fad5b-d9cb-469f-a165-70867728950e.webp";
 const BYTES = Buffer.from("not really a webp, but the function never decodes it");
 
 /**
- * A caller of its own per test: the function rate-limits by uid in memory,
- * five an hour, and every test here shares one module instance.
+ * A caller of its own per test. The function's budgets live in Firestore,
+ * which is cleared before each test, so this is belt and braces.
  */
 let caller = 0;
 let uid: string;

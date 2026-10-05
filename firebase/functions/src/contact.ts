@@ -3,6 +3,7 @@ import * as functions from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import {rethrowHttpsError} from "./shared/httpsErrors";
 import {imageBucket} from "./shared/imageBucket";
+import {budgetsFor, callerAddress, takeSend} from "./contactThrottle";
 
 /**
  * The set of things a person can contact us about.
@@ -70,41 +71,6 @@ const transporter = nodemailer.createTransport({
     pass: emailPassword,
   },
 });
-
-/**
- * Rate limiting setup to prevent spam
- * Note: For callable functions, we'll use user ID for rate limiting instead of IP
- */
-const userThrottling: Record<string, { count: number, lastReset: number }> = {};
-const MAX_REQUESTS_PER_HOUR = 5;
-const ONE_HOUR_MS = 3600000;
-
-/**
- * Check if user has exceeded rate limit
- * @param userId - The authenticated user's ID, or "anonymous" for unauthenticated users
- * @returns true if rate limit exceeded, false otherwise
- */
-const isRateLimited = (userId: string): boolean => {
-  const now = Date.now();
-
-  if (!userThrottling[userId]) {
-    userThrottling[userId] = {count: 0, lastReset: now};
-  }
-
-  // Reset counter if an hour has passed
-  if (now - userThrottling[userId].lastReset > ONE_HOUR_MS) {
-    userThrottling[userId] = {count: 0, lastReset: now};
-  }
-
-  // Check if rate limit is exceeded
-  if (userThrottling[userId].count >= MAX_REQUESTS_PER_HOUR) {
-    return true;
-  }
-
-  // Increment the request counter
-  userThrottling[userId].count++;
-  return false;
-};
 
 /**
  * Validate email format using regex
@@ -344,12 +310,14 @@ export const sendContactEmail = functions.onCall(
 
       const screenshot = checkScreenshotPath(screenshotPath, request.auth?.uid);
 
-      // Determine user ID for rate limiting
-      // Use authenticated user ID if available, otherwise use email as identifier
+      // Named in the email, so a reply can be matched to an account.
       const userId = request.auth?.uid || `anonymous_${sanitizedEmail}`;
 
-      // Check rate limiting
-      if (isRateLimited(userId)) {
+      // Durable budgets (T099, SEC-006): by account when signed in, otherwise
+      // by network address and against a ceiling all signed-out senders
+      // share. Never by the reply-to address, which the caller makes up.
+      const budgets = budgetsFor(request.auth?.uid, callerAddress(request.rawRequest));
+      if (!(await takeSend(budgets))) {
         throw new functions.HttpsError(
           "resource-exhausted",
           "Too many requests. Please try again later."

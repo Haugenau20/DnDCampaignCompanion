@@ -54,6 +54,22 @@ const mockFirestore = {
     mockWrites.push({ op: 'create', path, id, data });
     return id;
   },
+  // One transaction: the new record and the marks on its sources (T088).
+  createDocumentWithUpdates: async (
+    collection: string,
+    id: string,
+    sourceCollection: string,
+    decide: (read: (id: string) => Promise<Doc | undefined>) => Promise<{ create: Doc; updates: Array<{ id: string; data: Doc }> }>
+  ) => {
+    const path = mockResolve(collection);
+    const sourcePath = mockResolve(sourceCollection);
+    await mockCreateGate;
+    const { create, updates } = await decide(async (otherId) =>
+      (mockStore[sourcePath] ?? []).find((stored) => stored.id === otherId)
+    );
+    mockWrites.push({ op: 'create', path, id, data: create });
+    updates.forEach((update) => mockWrites.push({ op: 'update', path: sourcePath, id: update.id, data: update.data }));
+  },
   deleteDocument: async (collection: string, id: string) => {
     mockWrites.push({ op: 'delete', path: mockResolve(collection), id });
   },
@@ -240,7 +256,7 @@ describe('an operation finishes in the campaign it started in (T082)', () => {
 
     expect(mockWrites.map(({ op, path, id }) => [op, path, id])).toEqual([
       ['create', `${PATH_A}/quests`, 'find-the-fire'],
-      ['batch-update', `${PATH_A}/rumors`, 'smoke'],
+      ['update', `${PATH_A}/rumors`, 'smoke'],
     ]);
   });
 

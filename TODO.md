@@ -26,7 +26,7 @@ adjusted for the images focus above.
 | high | T037 | A group cannot be deleted | L | open | Members' data cannot be removed with their group. Decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
+| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, an extra record per retry of a note conversion or promotion |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
@@ -40,7 +40,6 @@ adjusted for the images focus above.
 | low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
-| low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -154,13 +153,10 @@ documents agreed with each other and none of them agreed with the product.
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
-**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
+**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-05
 
 Each of these decides from a stale local copy, then writes:
 
-- **Conversion** (DATA-005, 03): rumour → quest and combine create the target
-  first (`RumorContext.tsx:306-311`) and mark the sources after; a failed mark
-  leaves an extra quest on every retry (pass 5 reproduced it, 17).
 - **Location delete** (DATA-006): `deleteLocation` takes the children from
   the local list, so a child added or moved in during a delete is orphaned,
   and one moved out is still deleted. Moves are transactional now
@@ -174,26 +170,18 @@ Each of these decides from a stale local copy, then writes:
   or a deliberate tiebreak (gaps, and a stable second key such as
   `dateAdded`) that makes duplicates harmless. The maintainer's call; plan
   first.
-- **Combine preview** (DUP-002, 09): `CombineRumorsDialog.tsx:40-46` predicts
-  an id the allocator then changes.
-- **Lists in those batches**: combine and convert append a note to each
-  source rumour, worked out from the local copy, so a note another player
-  added in the meantime is dropped (DATA-003's list case). Do them with the
-  conversion, which has to stop working from the local copy anyway.
-- **With the conversion**: `RumorContext`'s batch helper duplicates
-  `commitEntityWrites` (09, consolidation item 2); fold it in while touching
-  those batches.
-- **Source**: code review, 2026-10-04
-
-### T099 — The contact form's rate limit is easy to evade
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-04
-
-`firebase/functions/src/contact.ts:78-106` throttles in process memory, keyed
-for anonymous callers by the address they supply. A new address, or a new
-function instance, resets it.
-
-- **Findings**: SEC-006 (01). **Catch**: identifying an anonymous caller (App
-  Check, IP) is the design question.
+- **The other conversions** (DATA-005, 03; pass 5 reproduced the first, 17):
+  each creates the new record, then marks its source in a second write, so
+  a failed mark leaves the record behind and a retry makes another.
+  Converting a note's detected entity (`useQuickAddCreate.ts:158-179` then
+  `NoteContext.markEntityAsConverted`), a note into a rumour, and promoting
+  free text into a place (`promoteFeature`, `LocationDetailPage.tsx:298`;
+  `promotePlace`, `QuestDetailPage.tsx:320`). Rumour conversions already
+  commit both halves as one transaction
+  (`DocumentService.createDocumentWithUpdates`); that is the tool, but each
+  of these crosses a context: the note is a private document under `users/`,
+  and the create runs through another entity's context (NPC, location), so
+  the two halves have to meet in one call first.
 - **Source**: code review, 2026-10-04
 
 ---
