@@ -11,9 +11,11 @@ import { useGroups } from '../../groups/hooks/useGroups';
 import { useAdminOutlet } from './admin-outlet';
 import { memberId } from '../types';
 import LeaveGroupDialog from '../../profiles/components/LeaveGroupDialog';
+import DeleteGroupDialog from '../components/DeleteGroupDialog';
 
 /**
- * `/admin/group` -- what this group is, and the two ways out of it.
+ * `/admin/group` -- what this group is, and the ways out of it: leaving it,
+ * or deleting it for everyone.
  *
  * The closing note that told the reader to use the "Users" and "Registration
  * Tokens" tabs is gone, and nothing replaces it. The navigation is three links
@@ -28,6 +30,7 @@ const AdminGroupPage: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
@@ -278,7 +281,36 @@ const AdminGroupPage: React.FC = () => {
         </div>
       </section>
 
+      {/* T037. Last of all, below leaving: it ends the group for everyone,
+          where leaving ends it only for you. */}
+      <section
+        className="card rounded-lg"
+        aria-labelledby="delete-group-heading"
+      >
+        <div className="px-4 sm:px-6 py-5">
+          <Typography
+            variant="h3"
+            id="delete-group-heading"
+            className="font-heading text-lg mb-1"
+          >
+            Deleting the group
+          </Typography>
+          <Typography color="secondary" variant="body-sm" className="mb-4">
+            Deletes {group.name} for every member, with every campaign and note
+            in it. Members keep their accounts.
+          </Typography>
+          <Button
+            variant="ghost"
+            onClick={() => setDeleteOpen(true)}
+            className="delete-button min-h-[2.75rem]"
+          >
+            Delete {group.name}
+          </Button>
+        </div>
+      </section>
+
       <LeaveGroupDialog open={leaveOpen} onClose={() => setLeaveOpen(false)} />
+      <DeleteGroupDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} />
 
       <Dialog
         open={editOpen}

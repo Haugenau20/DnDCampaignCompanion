@@ -245,6 +245,26 @@ import { httpsCallable } from 'firebase/functions';
     }
   
     /**
+     * Delete a group and everything stored for it, for every member (admin
+     * only, T037).
+     *
+     * Runs in the `deleteGroup` Cloud Function: a client cannot enumerate
+     * the subcollections beneath a group, and the rules refuse a client
+     * deleting the group document. Members keep their accounts; the group is
+     * taken off each of them.
+     *
+     * @param groupId ID of the group
+     */
+    public async deleteGroup(groupId: string): Promise<void> {
+      if (!this.getCurrentUser()) {
+        throw new Error('Not authenticated');
+      }
+
+      const deleteGroupFn = httpsCallable(this.functions, 'deleteGroup');
+      await deleteGroupFn({ groupId });
+    }
+
+    /**
      * Make a member an admin, or an admin a member (admin only, T034).
      *
      * Runs in the `setMemberRole` Cloud Function. The rules refuse any client

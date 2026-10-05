@@ -122,7 +122,7 @@ from 15.23.0 the CLI ignores `NO_PROXY`, so behind a proxy the Storage rules sui
 The reason is recorded in that file.
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
-  `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`
+  `redeemInvitation`, `setMemberRole`, `deleteGroup`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`
   whose handler is exported as `admitAccount`), the last-admin guard in `removeUserFromGroup` /
   `deleteUser`, device sign-in (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`),
   and `extractEntities`'s party exclusion — with OpenAI stubbed by `jest.mock("openai")`, the way to
@@ -134,6 +134,8 @@ The reason is recorded in that file.
   the month. `now` is injected because the Storage emulator cannot backdate a file's `timeCreated`.
   `resumeCampaignDeletionsDaily` likewise: its body `resumeCampaignDeletions(now)` finishes campaign
   deletions that failed and were never retried (their record in `groups/{g}/campaignDeletions`).
+  `resumeGroupDeletionsDaily` the same for groups: `resumeGroupDeletions(now)`, records in the
+  top-level `groupDeletions`.
   `sweepContactThrottleDaily` too: `sweepContactThrottle(now)` deletes the contact form's expired
   budgets (`contactThrottle`), which the privacy page promises are gone within a day.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
@@ -161,6 +163,11 @@ in production requires the functions' runtime service account to hold **Service 
 Creator** on itself. The emulator needs nothing, so no test catches it — the live symptom is every
 claim failing as `internal`. Expired `deviceSignIns` docs are deleted lazily by `startDeviceSignIn`;
 a Firestore TTL policy on `expiresAt` is the intended sweep.
+
+**Inside the Functions emulator, `admin.firestore` is a wrapped stand-in without `FieldValue`,
+`FieldPath` or `Timestamp`.** Import them from `firebase-admin/firestore`. The jest suite uses the
+real namespace, so `admin.firestore.FieldValue.serverTimestamp()` passes every test and then fails
+every call in the dev app ("Cannot read properties of undefined"). Only a browser check finds it.
 
 **Rules are deployed from the repo** (T105): every merge to `main` deploys `firestore.rules.prod`
 and `storage.rules.prod`, so a change to either is live once merged, and a console edit lasts only

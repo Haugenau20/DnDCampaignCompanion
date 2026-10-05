@@ -17,6 +17,12 @@ jest.mock("@/features/user-management/profiles/components/LeaveGroupDialog", () 
     open ? <div data-testid="leave-group-dialog" /> : null,
 }));
 
+jest.mock("@/features/user-management/admin/components/DeleteGroupDialog", () => ({
+  __esModule: true,
+  default: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="delete-group-dialog" /> : null,
+}));
+
 const { useGroups } = require("@/features/user-management/groups/hooks/useGroups");
 
 const MEMBERS: GroupMember[] = [
@@ -241,15 +247,29 @@ describe("AdminGroupPage", () => {
       ).toBeEnabled();
     });
 
-    // Deleting a group has no server implementation at all -- no service
-    // method, no Cloud Function. Rendering the control would be a promise the
-    // product cannot keep.
-    test("offers no delete-group control", async () => {
+    // T037: the `deleteGroup` Cloud Function exists now, so the control does.
+    test("deleting the group is its own section, after leaving, and names the group", async () => {
       setup();
       await settle();
+      const deleting = screen.getByRole("region", { name: "Deleting the group" });
       expect(
-        screen.queryByRole("button", { name: /delete group|delete the group/i })
-      ).not.toBeInTheDocument();
+        within(deleting).getByRole("button", { name: "Delete The Fellowship" })
+      ).toBeEnabled();
+
+      const leaving = screen.getByRole("region", { name: "Leaving" });
+      expect(
+        leaving.compareDocumentPosition(deleting) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    test("deleting goes through a confirmation", async () => {
+      setup();
+      await settle();
+      expect(screen.queryByTestId("delete-group-dialog")).not.toBeInTheDocument();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Delete The Fellowship" })
+      );
+      expect(screen.getByTestId("delete-group-dialog")).toBeInTheDocument();
     });
   });
 

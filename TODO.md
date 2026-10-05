@@ -17,13 +17,12 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T083–T101 and T037's rise were triaged 2026-10-04 from the code
+The rows for T083–T101 were triaged 2026-10-04 from the code
 review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
 adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T037 | A group cannot be deleted | L | open | Members' data cannot be removed with their group. Decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, an extra record per retry of a note conversion or promotion |
@@ -90,13 +89,11 @@ evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
 - Every confirmed finding not yet fixed is covered by an entry: T083–T101.
-  The ones filed under T037 were closed on 2026-10-05.
 - **Not filed**: the reviews' unverified leads, and the optional refactors.
   They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its open findings were filed under T037 (closed
-  2026-10-05); the rest
-  of that scope stays unreviewed by decision.
+  (maintainer, 2026-10-04). Its open findings are closed; the rest of that
+  scope stays unreviewed by decision.
 - App source was byte-identical to the reviewed commit `64fe195` when these were
   filed, and each entry's primary location was opened on 2026-10-04.
 
@@ -442,40 +439,6 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 - **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
 
 ---
-
-### T037 — A group cannot be deleted
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-05
-
-The deletions it would build on are sound since 2026-10-05: the last-admin
-guard is transactional, a failed account deletion can be retried, and
-`deleteCampaign` is resumable (a record in `groups/{g}/campaignDeletions/{c}`,
-a daily `resumeCampaignDeletionsDaily` for deletions nobody retried) and
-closed to writes while it runs (the campaign's `deleting` mark, enforced by
-`campaignOpen` in the production rules). Uploads are not fenced: a picture
-uploaded into a campaign being deleted is left to the image sweeps.
-
-**Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
-plan to write, not something to start without one. The maintainer's reason is
-data retention: as long as a group cannot be deleted, the app keeps its
-members' data with no way to remove it. The plan should say what is deleted
-and what is kept (e.g. a member's own profile when they belong to another
-group), and check what account deletion (`deleteUser`) already leaves behind,
-since the two answer the same question.
-
-No service method, no Cloud Function. Not a small one either: deleting a group
-means cascading through its campaigns (each with its own subcollections), its
-`users`, its `usernames` reservations and its `registrationTokens`, plus every
-member's notes for every campaign in it.
-
-- **Precedent**: `deleteCampaign`, an Admin SDK `recursiveDelete` in a
-  callable, resumable through a deletion record outside the subtree it
-  deletes. Group deletion needs the same: the group document cannot record
-  its own unfinished deletion. Its doc comment at
-  `src/core/services/firebase/campaign/CampaignService.ts:225` explains why a
-  client cannot do this itself.
-- **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
-  which is implemented (`removeUserFromGroup`).
-- **Source**: Phase 14.3, while building `/admin/group`
 
 ### T059 — Create React App's peer dependencies no longer resolve
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-24
