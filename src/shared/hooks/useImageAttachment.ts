@@ -19,12 +19,36 @@ interface ImageAttachmentOptions {
 /**
  * Delete an image file that nothing points at any more. A failure only leaves
  * an orphan behind, never a broken page, so it is logged rather than thrown:
- * the user's action already succeeded. Also used when an entity is deleted.
+ * the user's action already succeeded.
  */
 export function discardImage(path: string): void {
   images.remove(path).catch(error =>
     console.warn(`Could not delete image ${path}; it is now an orphan.`, error)
   );
+}
+
+/**
+ * Start dropping an image that a document points at now: record it as
+ * released (T084), so the daily sweep deletes the file should the delete
+ * this returns never run or fail. Call it **before** the write that drops the
+ * image -- a document update or delete -- and call what it returns once that
+ * write has landed. Used here, and when an entity with a picture is deleted.
+ *
+ * If the write fails, don't call it: the record stays, and the sweep, finding
+ * the document still pointing at the file, keeps the file and in time drops
+ * the record.
+ *
+ * @param path `StoredImage.path` of the image being dropped
+ * @returns Deletes the file, then the record
+ */
+export function releaseImage(path: string): () => void {
+  images.recordReleasedImage(path);
+  return () => {
+    images.remove(path).then(
+      () => images.clearReleasedImage(path),
+      error => console.warn(`Could not delete image ${path}; the daily sweep will.`, error)
+    );
+  };
 }
 
 /**
@@ -47,8 +71,11 @@ function forgetPendingUpload(path: string): void {
  * - upload the new file, **then** save it on the document, **then** delete the
  *   old file. If saving fails, the new file is deleted and the old one kept.
  *   The upload is recorded as pending until the save has landed, so the daily
- *   sweep does not take it for an orphan meanwhile (T084).
- * - to remove: clear the document, **then** delete the file.
+ *   sweep does not take it for an orphan meanwhile, and the old file as
+ *   released before the save, so the sweep deletes it if this never does
+ *   (T084).
+ * - to remove: record the file as released, clear the document, **then**
+ *   delete the file.
  *
  * A failure can therefore leave an orphaned file (cheap, invisible), but never
  * a broken image. `ImageUploadControl` supplies the prepared image and shows
@@ -62,6 +89,7 @@ export function useImageAttachment({ prefix, current, save }: ImageAttachmentOpt
       }
 
       const uploaded = await images.upload(prefix, image, onProgress);
+      const discardOld = current ? releaseImage(current.path) : undefined;
       try {
         await save(uploaded);
       } catch (error) {
@@ -73,15 +101,16 @@ export function useImageAttachment({ prefix, current, save }: ImageAttachmentOpt
       // telling that a write is on its way (T084).
       forgetPendingUpload(uploaded.path);
 
-      if (current) discardImage(current.path);
+      discardOld?.();
     },
     [prefix, current, save]
   );
 
   const remove = useCallback(async () => {
     if (!current) return;
+    const discard = releaseImage(current.path);
     await save(null);
-    discardImage(current.path);
+    discard();
   }, [current, save]);
 
   return { upload, remove };

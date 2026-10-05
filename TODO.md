@@ -23,14 +23,11 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T084 | A write that outlives its upload's lease points at a deleted file | S | blocked | Images focus; the code is in, the enforcing rules wait for the client to be live, then a paste |
-| high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
-| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
@@ -44,8 +41,6 @@ adjusted for the images focus above.
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
-| low | T101 | Large campaigns: quest and rumour rosters unpaged | S | open | Measured at 1,000s of records; not felt at current sizes |
-| low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -155,61 +150,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T084 — A write that arrives after its upload's lease can still point at a deleted file
-**Type** bug · **Size** S · **Status** blocked · **Verified** 2026-10-04
-
-The code is in. An upload records itself in
-`groups/{groupId}/pendingUploads/{file}` (`ImageStorageService.upload`) and
-fails without it; the daily sweep spares a file whose entry is under 30 days
-old (`sweepOrphanedImages.ts`, `PENDING_LEASE_MS`); and revision 2026-10-04b
-of `firestore.rules.prod` refuses a write that points an NPC, location,
-campaign banner or group crest at a different file unless that file's entry
-is live (`imageLeased`). Revision 2026-10-04 (the entries alone) is live.
-
-- **Blocked on**: pasting revision 2026-10-04b into the console, which must
-  wait for the client. **Deploy order**: the frontend that writes entries
-  first; rules first would refuse every image change from a tab still on the
-  old frontend. Until then IMG-003's last case stays open: a document write
-  queued for longer than the lease lands and points at the file the sweep
-  deleted. Preferably paste after T083's field patches too: until then a
-  stale tab's unrelated edit that carries a since-replaced picture is
-  refused along with it (better than restoring a deleted file, which is what
-  it does today).
-- **Related**: the sweep still reads every NPC, location, campaign and group
-  document daily to learn what is referenced (PERF2-004's remaining half,
-  07). With entries required, a file with no entry and no reference is an
-  orphan by construction, but the old file of a replace has neither, so the
-  full read stays until replaces are recorded too.
-- **Findings**: IMG-003 (04).
-- **Source**: code review, 2026-10-04
-
-### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
-**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
-
-Authored text is lost or misfiled in several ways. Separate causes, grouped
-because the fix is one idea: a draft belongs to one record and outlives a
-failed write.
-
-- **Failed save loses the draft**: a rejected entity write sets the provider
-  error (`useFirebaseData.ts:285`) that the page gate reads, which unmounts
-  the editor, and Retry doesn't recover it (REACT-002, TEST-007).
-- **Wrong record**: a cross-campaign note's fallback survives a campaign
-  change (RECOVERY-002). Seen 2026-10-04 the other way round too: switching
-  campaign with your own note open leaves "Note Not Found" until a reload,
-  though a fresh load of the same URL shows it. A route change no longer
-  carries it: `app/RecordRoute.tsx` remounts the note page per note id. That
-  same remount should also close RECOVERY-001 (an offline-queued note save
-  running against the next note after Search navigation): the queue then
-  belongs to the old note's editor, which is the reviewers' own unmount
-  control. That is traced in the source, not re-run; re-run pass 4's
-  sequence (15) before deleting this.
-- **Draft dropped on leaving**: leaving a note before the autosave debounce
-  cancels the only pending save; a reload loses an unacknowledged one
-  (REACT-003).
-- **Findings**: 05, 06, 08, 15. **Catch**: the reviewers say these need separate
-  regression sequences; consider splitting at pickup. Plan first.
-- **Source**: code review, 2026-10-04
 
 ### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04
@@ -563,9 +503,8 @@ A plain `npm install` fails with `ERESOLVE`. It only works with
 - **Measured**: `react-scripts@5.0.1` declares TypeScript `^3.2.1 || ^4` against
   the project's `^5.7.3`; its `jest-watch-typeahead@1.1.0` wants Jest 27/28
   against `^29.7.0`. CRA itself is no longer maintained, so no upgrade of it fixes this.
-- **Where**: `package.json:21`; CI installs in `docker/Dockerfile.frontend.prod:8`
-  (`npm install --legacy-peer-deps`, not `npm ci`, so the lockfile is not
-  enforced; T107 would drop that Docker build).
+- **Where**: `package.json:21`; CI installs with `npm ci --legacy-peer-deps`
+  in `test.yml` and in both Hosting workflows' build.
 - **Decided (maintainer, 2026-10-02): move to Vite**, planned before any code.
   It touches the build, env-var names (`REACT_APP_*` → `VITE_*`), jest config
   (stay on jest, or move to Vitest — the plan decides) and the four-resolvers
@@ -628,64 +567,6 @@ time anyone edits it.
 - **Findings**: 13. OPS-001/002 are source-only; the reviewers could not run
   PowerShell. **Catch**: do it with T065's start/stop round trip.
 - **Source**: code review, 2026-10-04
-
-### T101 — Large campaigns: the rest of the roster work
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
-
-The NPC roster now mounts 100 rows at a time behind *Show more*
-(`shared/utils/roster-paging.ts`). Two things pass 5 (18) pointed at are left:
-
-- The quest and rumour rosters still mount every row. Their groups are by
-  status and can be collapsed, and a collapsed group still mounts its rows
-  (`hidden`), so paging them has to decide what a folded group counts as.
-- `NPCDirectory` resolves each NPC's location with `resolveLocationName`,
-  which searches the location array linearly per row (`location-display.ts`).
-  An id/name index would serve every row; pass 5 could not say how much of the
-  1,200-row redraw this is.
-- **Source**: code review, 2026-10-04
-
-### T105 — Deploy the Firestore and Storage rules from the repo, not by pasting into the console
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Production rules are pasted into the Firebase console by hand from
-`firestore.rules.prod` / `storage.rules.prod`, so the repo and production can
-drift with nothing to notice it.
-
-- **Where**: `firebase/firebase.json` deliberately has no rules keys (`:9`,
-  `:12` explain why: the keys used to point at the permissive emulator
-  rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
-  `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
-  are console-only and never deployed by CI.
-- **Catch**: the maintainer confirmed on 2026-10-04 that the live Firestore
-  and Storage rules are the `.prod` files (Firestore at T084's revision). The
-  first deploy overwrites whatever is live, so read the console back and diff
-  it first all the same. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
-  or from CI decides whether the deploy service account needs rules permissions.
-- **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
-  its `firestore.rules` key at `firestore.rules`; it has no such key.
-- **Source**: todo.txt, 2026-10-04
-
-### T107 — CI builds the site inside a Docker image only to copy the files out
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
-
-Docker is not needed for development (none exists), but it is not unused:
-both Hosting workflows build the shipped site with it
-(`firebase-hosting-merge.yml:81`, `firebase-hosting-pull-request.yml:38`).
-They then `docker cp` the files out, so the Dockerfile's nginx stage and
-`docker/config/nginx.conf` serve nothing. `test.yml` already builds without
-Docker, and the build could be produced the same way.
-
-- **Catch**: the shipped build is not the one CI checked. `Dockerfile.frontend.prod:8`
-  runs `npm install --legacy-peer-deps`, which ignores the lockfile, while
-  `test.yml` builds from `npm ci`. A direct build must keep `CI: false` (see
-  `test.yml`'s Build step) and the `.env` the workflow writes from secrets.
-- **Touches**: both Hosting workflows, `docker/`, `.dockerignore`, `CLAUDE.md:27-29`,
-  T059's `Where` line. Local leftovers `docker/emulators/{data,logs}` are
-  untracked and can simply be deleted.
-- **More Docker instead?** The note also asked this. Development already moved
-  off Docker on purpose (`CLAUDE.md`: "No Docker"); the remaining use adds a
-  layer and buys nothing that `actions/setup-node` doesn't.
-- **Source**: todo.txt, 2026-10-04
 
 ---
 
@@ -754,7 +635,8 @@ in the repo, so this is console work plus whatever copy is decided.
   rules are what protect the data. Hiding them protects nothing that correct
   rules don't. But public rules make any open hole easy to find.
 - **To decide**: keep them public, or make the repo private (moving them
-  elsewhere would break T105's deploy-from-repo). Either way, the exposure
+  elsewhere would break the deploy, which takes them from the repo since
+  T105). Either way, the exposure
   is a hole in the rules, not their visibility.
 - **Source**: todo.txt, 2026-10-04
 

@@ -4,7 +4,7 @@ import { Quest, QuestStatus } from '../types';
 import { useQuests } from '../context/QuestContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useLocations } from '../../locations/context/LocationContext';
-import { resolveLocationName } from '../../locations/utils/location-display';
+import { indexLocationNames, resolveLocationName } from '../../locations/utils/location-display';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { useNavigation } from 'shared/hooks/useNavigation';
@@ -25,8 +25,11 @@ import {
   RosterSkeleton,
   RosterEmpty,
   RosterStatus,
+  RosterShowMore,
   type RosterStatusTone,
 } from 'core/components/Roster';
+import { ROSTER_PAGE_SIZE } from 'shared/utils/roster-paging';
+import { useRosterGroupPaging } from 'shared/hooks/useRosterGroupPaging';
 
 interface QuestDirectoryProps {
   quests: Quest[];
@@ -51,6 +54,12 @@ const STATUS_GROUPS: { key: QuestStatus; title: string }[] = [
   { key: 'completed', title: 'Completed Quests' },
   { key: 'failed', title: 'Failed Quests' },
 ];
+
+/**
+ * T015: completed and failed quests are history, not work. They stay
+ * reachable and stay counted; they stop taking the top of the list.
+ */
+const HISTORY_GROUPS: QuestStatus[] = ['completed', 'failed'];
 
 /**
  * Quest state on the shared valence ramp, best to worst.
@@ -158,11 +167,13 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   // documents written before that field existed; see the contract on
   // `NPC.location`.
   const questLocationName = useMemo(() => {
+    // One lookup per quest, not a search of every place (T101).
+    const index = indexLocationNames(locations);
     const names = new Map<string, string>();
     quests.forEach(quest => {
       const resolved = resolveLocationName(
         { locationId: quest.locationId, location: quest.location },
-        locations
+        index
       );
       if (resolved) {
         names.set(quest.id, resolved);
@@ -240,6 +251,12 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
     })).filter(group => group.quests.length > 0);
   }, [filteredQuests]);
 
+  // The group a deep-linked quest sits in is opened for it (T101).
+  const highlightedGroup = highlightedQuestId
+    ? quests.find(quest => quest.id === highlightedQuestId)?.status ?? null
+    : null;
+  const paging = useRosterGroupPaging(HISTORY_GROUPS, highlightedGroup);
+
   /** An NPC id as a name and the line that tells two of them apart. */
   const npcFor = useCallback(
     (npcId: string) => {
@@ -304,101 +321,118 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
 
       {/* Quest roster by status */}
       {groupedQuests.length > 0 ? (
-        groupedQuests.map(group => (
-          <RosterGroup
-            key={group.key}
-            title={group.title}
-            count={group.quests.length}
-            // T015: completed and failed quests are history, not work. They
-            // stay reachable and stay counted; they stop taking the top of the
-            // list.
-            collapsible={group.key === 'completed' || group.key === 'failed'}
-            defaultCollapsed={group.key === 'completed' || group.key === 'failed'}
-          >
-            {group.quests.map((quest, index) => {
-              const isExpanded = expandedQuestId === quest.id;
-              const completedObjectives = quest.objectives.filter(obj => obj.completed).length;
-              const totalObjectives = quest.objectives.length;
+        groupedQuests.map(group => {
+          const collapsed = paging.isCollapsed(group.key);
+          // Each group pages on its own, folded or not (T101).
+          const limit = paging.limitFor(
+            group.key,
+            group.quests.findIndex(quest => quest.id === highlightedQuestId)
+          );
+          const rows = group.quests.slice(0, limit);
+          return (
+            <React.Fragment key={group.key}>
+              <RosterGroup
+                title={group.title}
+                count={group.quests.length}
+                collapsible={HISTORY_GROUPS.includes(group.key)}
+                collapsed={collapsed}
+                onCollapsedChange={value => paging.setCollapsed(group.key, value)}
+              >
+                {rows.map((quest, index) => {
+                  const isExpanded = expandedQuestId === quest.id;
+                  const completedObjectives = quest.objectives.filter(obj => obj.completed).length;
+                  const totalObjectives = quest.objectives.length;
 
-              return (
-                <RosterRow
-                  key={quest.id}
-                  id={`quest-${quest.id}`}
-                  entityId={quest.id}
-                  entityName={quest.title}
-                  gridClassName={ROW_GRID}
-                  isFirst={index === 0}
-                  highlighted={highlightedQuestId === quest.id}
-                  expanded={isExpanded}
-                  toggleLabel={quest.title}
-                  onToggle={() => setExpandedQuestId(isExpanded ? null : quest.id)}
-                  selected={selection.selected.has(quest.id)}
-                  leadingControl={
-                    selection.active ? (
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${quest.title}`}
-                        checked={selection.selected.has(quest.id)}
-                        onChange={(e) => selection.setSelected(quest.id, e.target.checked)}
-                      />
-                    ) : undefined
-                  }
-                  expandedContent={
-                    <QuestRowSummary
-                      quest={quest}
-                      npcFor={npcFor}
-                      onToggleObjective={(objectiveId, completed) =>
-                        updateQuestObjective(quest.id, objectiveId, completed)
+                  return (
+                    <RosterRow
+                      key={quest.id}
+                      id={`quest-${quest.id}`}
+                      entityId={quest.id}
+                      entityName={quest.title}
+                      gridClassName={ROW_GRID}
+                      isFirst={index === 0}
+                      highlighted={highlightedQuestId === quest.id}
+                      expanded={isExpanded}
+                      toggleLabel={quest.title}
+                      onToggle={() => setExpandedQuestId(isExpanded ? null : quest.id)}
+                      selected={selection.selected.has(quest.id)}
+                      leadingControl={
+                        selection.active ? (
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${quest.title}`}
+                            checked={selection.selected.has(quest.id)}
+                            onChange={(e) => selection.setSelected(quest.id, e.target.checked)}
+                          />
+                        ) : undefined
                       }
-                      onChangeStatus={(status) => updateQuest(quest.id, { status })}
-                      onOpenNPC={(npcId) => navigateToPage(`/npcs/${npcId}`)}
-                      onOpenQuest={() => navigateToPage(`/quests/${quest.id}`)}
-                    />
-                  }
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <Typography
-                      variant="body"
-                      className="font-semibold truncate font-heading"
-                    >
-                      {quest.title}
-                    </Typography>
-                  </div>
-
-                  <RosterStatus tone={STATUS_TONE[quest.status]}>
-                    {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
-                  </RosterStatus>
-
-                  {/* Objective progress -- the detail that makes quests more than a
-                      plain roster entry, so it stays visible on the collapsed row. */}
-                  <div className="hidden md:flex flex-col gap-1 min-w-0">
-                    <Typography variant="body-sm" color="secondary" className="text-sm">
-                      {totalObjectives > 0
-                        ? `${completedObjectives} of ${totalObjectives} objectives`
-                        : 'No objectives'}
-                    </Typography>
-                    {totalObjectives > 0 && (
-                      <div className="w-full rounded-full h-1.5 progress-container">
-                        <div
-                          className={clsx('rounded-full h-1.5', PROGRESS_FILL[quest.status])}
-                          style={{ width: `${(completedObjectives / totalObjectives) * 100}%` }}
+                      expandedContent={
+                        <QuestRowSummary
+                          quest={quest}
+                          npcFor={npcFor}
+                          onToggleObjective={(objectiveId, completed) =>
+                            updateQuestObjective(quest.id, objectiveId, completed)
+                          }
+                          onChangeStatus={(status) => updateQuest(quest.id, { status })}
+                          onOpenNPC={(npcId) => navigateToPage(`/npcs/${npcId}`)}
+                          onOpenQuest={() => navigateToPage(`/quests/${quest.id}`)}
                         />
+                      }
+                    >
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <Typography
+                          variant="body"
+                          className="font-semibold truncate font-heading"
+                        >
+                          {quest.title}
+                        </Typography>
                       </div>
-                    )}
-                  </div>
 
-                  <Typography
-                    variant="body-sm"
-                    color="secondary"
-                    className="hidden md:block text-sm truncate"
-                  >
-                    {questLocationName.get(quest.id) || '—'}
-                  </Typography>
-                </RosterRow>
-              );
-            })}
-          </RosterGroup>
-        ))
+                      <RosterStatus tone={STATUS_TONE[quest.status]}>
+                        {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
+                      </RosterStatus>
+
+                      {/* Objective progress -- the detail that makes quests more than a
+                          plain roster entry, so it stays visible on the collapsed row. */}
+                      <div className="hidden md:flex flex-col gap-1 min-w-0">
+                        <Typography variant="body-sm" color="secondary" className="text-sm">
+                          {totalObjectives > 0
+                            ? `${completedObjectives} of ${totalObjectives} objectives`
+                            : 'No objectives'}
+                        </Typography>
+                        {totalObjectives > 0 && (
+                          <div className="w-full rounded-full h-1.5 progress-container">
+                            <div
+                              className={clsx('rounded-full h-1.5', PROGRESS_FILL[quest.status])}
+                              style={{ width: `${(completedObjectives / totalObjectives) * 100}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <Typography
+                        variant="body-sm"
+                        color="secondary"
+                        className="hidden md:block text-sm truncate"
+                      >
+                        {questLocationName.get(quest.id) || '—'}
+                      </Typography>
+                    </RosterRow>
+                  );
+                })}
+              </RosterGroup>
+              {!collapsed && rows.length < group.quests.length && (
+                <RosterShowMore
+                  shown={rows.length}
+                  total={group.quests.length}
+                  step={ROSTER_PAGE_SIZE}
+                  noun={group.title.toLowerCase()}
+                  onShowMore={() => paging.showMore(group.key, limit)}
+                />
+              )}
+            </React.Fragment>
+          );
+        })
       ) : quests.length > 0 ? (
         <RosterEmpty
           title="No quests match these filters"

@@ -12,7 +12,7 @@ import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-managem
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
-import { discardImage } from 'shared/hooks/useImageAttachment';
+import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
@@ -239,9 +239,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await updateData(child.id, { parentId: grandparentId });
       }
 
+      const discard = location.image ? releaseImage(location.image.path) : undefined;
       await deleteData(locationId);
-      // After the document: a failure can then only orphan the file.
-      if (location.image) discardImage(location.image.path);
+      // After the document: a failure can then only orphan the file, which the
+      // released record lets the daily sweep find.
+      discard?.();
       return;
     }
 
@@ -250,6 +252,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // depth cap -- the recursion it replaces had neither, so a parent cycle
     // meant deleting a location never returned.
     const childrenIds = descendantIdsDeepestFirst(locations, locationId);
+
+    // Every picture in the subtree is recorded as released up front: a delete
+    // that fails partway leaves some places gone, and their files are then
+    // the daily sweep's to find.
+    const discards = [...childrenIds, locationId].flatMap(id => {
+      const image = getLocationById(id)?.image;
+      return image ? [releaseImage(image.path)] : [];
+    });
 
     // Sequential (rather than Promise.all) execution is required here: it is the
     // only way to guarantee descendants are actually removed from the database
@@ -263,10 +273,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await deleteData(locationId);
 
     // Every deleted place's picture, once all the documents are gone.
-    for (const id of [...childrenIds, locationId]) {
-      const image = getLocationById(id)?.image;
-      if (image) discardImage(image.path);
-    }
+    discards.forEach(discard => discard());
   }, [user, activeGroupId, activeCampaignId, getLocationById, locations, deleteData, updateData]);
 
   // Ids issued during this session but not yet reflected in `locations`. Two
@@ -306,6 +313,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // `string | null` contract consumers rely on. Cheap to keep, and it means the
     // contract holds regardless of how the hook is supplied.
     error: error || writeError || null,
+    // The read alone: a rejected write must not take the page down (T085).
+    loadError: error || null,
     getLocationById,
     getLocationsByType,
     getLocationsByStatus,

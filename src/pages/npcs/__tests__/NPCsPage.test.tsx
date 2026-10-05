@@ -54,6 +54,7 @@ interface NPCDataMock {
   npcs: any[];
   isLoading: boolean;
   error: string | null;
+  loadError?: string | null;
   refreshNPCs: jest.Mock;
   hasRequiredContext: boolean;
 }
@@ -195,7 +196,7 @@ describe("NPCsPage", () => {
     // panel names the noun and the real error message, and offers a retry
     // wired to refreshNPCs.
     it("shows the shared error panel, not the old inline copy, on a fetch error", () => {
-      mockNPCData = { ...mockNPCData, error: "Firebase error" };
+      mockNPCData = { ...mockNPCData, error: "Firebase error", loadError: "Firebase error" };
       renderPage();
       expect(
         screen.queryByText("Error Loading NPCs. Sign in to view content.")
@@ -206,10 +207,19 @@ describe("NPCsPage", () => {
     });
 
     it("retries through refreshNPCs from the error panel", () => {
-      mockNPCData = { ...mockNPCData, error: "Firebase error" };
+      mockNPCData = { ...mockNPCData, error: "Firebase error", loadError: "Firebase error" };
       renderPage();
       fireEvent.click(screen.getByRole("button", { name: /try again/i }));
       expect(mockNPCData.refreshNPCs).toHaveBeenCalledTimes(1);
+    });
+
+    // T085 (REACT-002): a rejected write is reported through `error`, but the
+    // records loaded fine, so the page stays up.
+    it("keeps the NPCs on the page when only a write failed", () => {
+      mockNPCData = { ...mockNPCData, error: "Write refused", loadError: null };
+      renderPage();
+      expect(screen.getByTestId("npc-directory")).toBeInTheDocument();
+      expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
     });
   });
 

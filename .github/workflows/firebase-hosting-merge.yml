@@ -16,8 +16,7 @@ jobs:
   # Functions first: a new page must never reach users before the function it
   # calls. Unchanged functions are skipped by the CLI, so most runs are quick.
   # Deploys with its own service account (FIREBASE_FUNCTIONS_DEPLOY_SA), not the
-  # Hosting one. Firestore and Storage rules stay manual: firebase.json has no
-  # rules keys, so `--only functions` cannot touch them.
+  # Hosting one. `--only functions` leaves the rules to `deploy_rules`.
   #
   # Fails, and so holds back Hosting, when: prod has a function that the source
   # no longer exports (delete it by hand: `firebase functions:delete`), or the
@@ -53,40 +52,103 @@ jobs:
         working-directory: firebase
         run: npx firebase deploy --only functions --project dnd-campaign-companion --non-interactive
 
+  # Then the Firestore and Storage rules (T105), from the files firebase.json
+  # names: firestore.rules.prod and storage.rules.prod. After the functions, so
+  # a rule may rely on a function that is already live; before Hosting, so the
+  # frontend may rely on a rule. A rule that must follow the frontend instead
+  # ships in a later merge (see the header of firestore.rules.prod).
+  #
+  # Same service account as the functions, which needs three more roles on the
+  # project; without them this job fails and holds back Hosting. What the CLI
+  # 15.22.4 checks or calls (lib/commands/deploy.js, lib/gcp/storage.js):
+  #   - Firebase Rules Admin (roles/firebaserules.admin): creating and
+  #     releasing both rulesets.
+  #   - Cloud Datastore Index Admin (roles/datastore.indexAdmin): the CLI's
+  #     pre-check asks for the `firestore` target's index permissions even
+  #     when only `firestore:rules` is deployed. No index is deployed.
+  #   - Cloud Storage for Firebase Viewer (roles/firebasestorage.viewer): the
+  #     Storage deploy looks up the default bucket.
+  # The CLI skips a ruleset identical to the live one.
+  deploy_rules:
+    needs: [test, deploy_functions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: firebase/package-lock.json
+
+      - name: Install the Firebase CLI
+        run: npm ci --prefix firebase
+
+      # firestore.rules and storage.rules are the permissive EMULATOR rulesets.
+      # A firebase.json that named either would deploy open data; refuse it.
+      - name: Refuse anything but the production rulesets
+        working-directory: firebase
+        run: |
+          node -e '
+            const config = require("./firebase.json");
+            const firestore = config.firestore && config.firestore.rules;
+            const storage = config.storage && config.storage.rules;
+            if (firestore !== "firestore.rules.prod" || storage !== "storage.rules.prod") {
+              console.error(`firebase.json must name firestore.rules.prod and storage.rules.prod; it names ${firestore} and ${storage}.`);
+              process.exit(1);
+            }
+          '
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_FUNCTIONS_DEPLOY_SA }}
+
+      - name: Deploy rules
+        working-directory: firebase
+        run: npx firebase deploy --only firestore:rules,storage --project dnd-campaign-companion --non-interactive
+
   # Merging deploys live, so a red suite must stop the deploy, not just report.
   build_and_deploy:
-    needs: [test, deploy_functions]
+    needs: [test, deploy_functions, deploy_rules]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      # Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      # Build app in Docker container and extract build artifacts
-      - name: Build app in container
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The install the `test` job checked: exactly the lockfile (T107). The
+      # site used to be built inside a Docker image with `npm install`, which
+      # ignores the lockfile, and then copied out of it -- so what shipped was
+      # not what CI had tested. --legacy-peer-deps: T059.
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      # `CI: false`: under CI=true react-scripts fails on any warning, and lint
+      # already holds app code to zero warnings (see test.yml's `bundle` job).
+      # react-scripts reads REACT_APP_* from the environment as from a .env.
+      - name: Build
+        run: npm run build
+        env:
+          CI: false
+          REACT_APP_USE_EMULATORS: "false"
+          REACT_APP_API_KEY: ${{ secrets.REACT_APP_API_KEY }}
+          REACT_APP_AUTH_DOMAIN: ${{ secrets.REACT_APP_AUTH_DOMAIN }}
+          REACT_APP_PROJECT_ID: ${{ secrets.REACT_APP_PROJECT_ID }}
+          REACT_APP_STORAGE_BUCKET: ${{ secrets.REACT_APP_STORAGE_BUCKET }}
+          REACT_APP_MESSAGING_SENDER_ID: ${{ secrets.REACT_APP_MESSAGING_SENDER_ID }}
+          REACT_APP_APP_ID: ${{ secrets.REACT_APP_APP_ID }}
+          REACT_APP_RECAPTCHA_SITE_KEY: ${{ secrets.REACT_APP_RECAPTCHA_SITE_KEY }}
+
+      # firebase/firebase.json serves `build`, relative to the entryPoint below.
+      - name: Place the build for Firebase
         run: |
-          # Create production env file from GitHub Secrets
-          echo "REACT_APP_USE_EMULATORS=false" > .env
-          echo "REACT_APP_API_KEY=${{ secrets.REACT_APP_API_KEY }}" >> .env
-          echo "REACT_APP_AUTH_DOMAIN=${{ secrets.REACT_APP_AUTH_DOMAIN }}" >> .env
-          echo "REACT_APP_PROJECT_ID=${{ secrets.REACT_APP_PROJECT_ID }}" >> .env
-          echo "REACT_APP_STORAGE_BUCKET=${{ secrets.REACT_APP_STORAGE_BUCKET }}" >> .env
-          echo "REACT_APP_MESSAGING_SENDER_ID=${{ secrets.REACT_APP_MESSAGING_SENDER_ID }}" >> .env
-          echo "REACT_APP_APP_ID=${{ secrets.REACT_APP_APP_ID }}" >> .env
-          echo "REACT_APP_RECAPTCHA_SITE_KEY=${{ secrets.REACT_APP_RECAPTCHA_SITE_KEY }}" >> .env
-          
-          # Build using Docker
-          docker build -t app-builder -f docker/Dockerfile.frontend.prod .
-          docker create --name temp-container app-builder
-          docker cp temp-container:/usr/share/nginx/html ./build
-          docker rm temp-container
-          
-          # Copy the build directory to where Firebase expects it relative to the entryPoint
           mkdir -p firebase/build
           cp -r build/* firebase/build/
-      
+
       # Deploy to Firebase Hosting
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

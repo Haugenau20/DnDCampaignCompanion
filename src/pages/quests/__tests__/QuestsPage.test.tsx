@@ -65,6 +65,7 @@ interface QuestContextMock {
   quests: unknown[];
   loading: boolean;
   error: string | null;
+  loadError?: string | null;
 }
 
 let mockQuestContext: QuestContextMock = {
@@ -195,6 +196,7 @@ describe("QuestsPage", () => {
       mockQuestContext = {
         ...mockQuestContext,
         error: "Firebase error",
+        loadError: "Firebase error",
         quests: [],
       };
       renderPage();
@@ -204,6 +206,15 @@ describe("QuestsPage", () => {
       expect(screen.getByText(/couldn't load quests/i)).toBeInTheDocument();
       expect(screen.getByText("Firebase error")).toBeInTheDocument();
       expect(screen.queryByTestId("quest-directory")).not.toBeInTheDocument();
+    });
+
+    // T085 (REACT-002): a rejected write is reported through `error`, but the
+    // records loaded fine, so the page stays up.
+    it("keeps the quests on the page when only a write failed", () => {
+      mockQuestContext = { ...mockQuestContext, error: "Write refused", loadError: null };
+      renderPage();
+      expect(screen.getByTestId("quest-directory")).toBeInTheDocument();
+      expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
     });
   });
 

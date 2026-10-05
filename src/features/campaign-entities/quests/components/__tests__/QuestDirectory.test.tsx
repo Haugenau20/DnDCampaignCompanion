@@ -908,4 +908,53 @@ describe('QuestDirectory', () => {
     });
   });
 
+
+  // -------------------------------------------------------------------------
+  // T101: a campaign with thousands of quests mounted every row. Each status
+  // group now mounts a page at a time, folded or not.
+  // -------------------------------------------------------------------------
+  describe('large campaigns', () => {
+    const many = (status: Quest['status'], count: number, prefix: string) =>
+      Array.from({ length: count }, (_, i) =>
+        makeQuest({ id: `${prefix}-${i}`, title: `${prefix} quest ${i}`, status })
+      );
+    /** Rows on the page, folded ones included, by their expand control. */
+    const rowsOf = (prefix: string) =>
+      screen.queryAllByRole('button', { name: new RegExp(`^(Expand|Collapse) ${prefix} quest `), hidden: true }).length;
+
+    beforeEach(() => {
+      mockQuestContext.quests = [...many('active', 250, 'open'), ...many('completed', 150, 'done')];
+    });
+
+    it('mounts one page of each group, while the headings still count them all', () => {
+      renderPage();
+      expect(rowsOf('open')).toBe(100);
+      expect(rowsOf('done')).toBe(100);
+      expect(screen.getByText('250')).toBeInTheDocument();
+      expect(screen.getByText('150')).toBeInTheDocument();
+    });
+
+    it('adds a page to the group whose "Show more" was pressed, and to no other', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: /show .*more/i }));
+      expect(rowsOf('open')).toBe(200);
+      expect(rowsOf('done')).toBe(100);
+    });
+
+    it('offers no "Show more" for a folded group until it is opened', () => {
+      renderPage();
+      // Only the active group's.
+      expect(screen.getAllByRole('button', { name: /show .*more/i })).toHaveLength(1);
+      openGroup(/Completed Quests/);
+      expect(screen.getAllByRole('button', { name: /show .*more/i })).toHaveLength(2);
+    });
+
+    it('opens a folded group for a deep link, and mounts the linked row however far down', () => {
+      mockGetCurrentQueryParams.mockReturnValue({ highlight: 'done-140' });
+      renderPage();
+      expect(screen.getByRole('button', { name: /Completed Quests/ })).toHaveAttribute('aria-expanded', 'true');
+      // Opened for the link, so in reach of a reader rather than merely mounted.
+      expect(screen.getByRole('button', { name: /^(Expand|Collapse) done quest 140$/ })).toBeVisible();
+    });
+  });
 });

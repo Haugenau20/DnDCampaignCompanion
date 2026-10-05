@@ -93,6 +93,8 @@ jest.mock('core/services/firebase', () => ({
   images: {
     upload: (...args: unknown[]) => mockUpload(...args),
     remove: (...args: unknown[]) => mockRemove(...args),
+    recordReleasedImage: jest.fn(),
+    clearReleasedImage: jest.fn(),
   },
   default: { document: { batchOperations: (operations: any) => mockFirestore.batchOperations(operations) } },
 }));

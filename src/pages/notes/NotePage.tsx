@@ -49,10 +49,28 @@ const NotePage: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   /** Why the last archive failed, shown above the note until the next attempt. */
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [crossCampaignNote, setCrossCampaignNote] = useState<Note | null>(null);
-  const [isLoadingCrossCampaignNote, setIsLoadingCrossCampaignNote] = useState(false);
-  const [crossCampaignNotFound, setCrossCampaignNotFound] = useState(false);
   const documentService = DocumentService.getInstance();
+
+  /**
+   * Who is asking for which note, under which campaign. The direct read below
+   * answers for exactly this, and its answer is used for nothing else: a
+   * campaign switch on the same note route used to keep the previous answer,
+   * so a stale "Note Not Found", or the copy fetched under another campaign,
+   * outlived the question it answered (T085, RECOVERY-002).
+   */
+  const fallbackScope = noteId && user?.uid && activeGroupId && activeCampaignId
+    ? `${activeGroupId}/${user.uid}/${activeCampaignId}/${noteId}`
+    : null;
+  const [fallback, setFallback] = useState<{
+    scope: string;
+    status: "loading" | "found" | "missing";
+    note: Note | null;
+  } | null>(null);
+  /** The scope the last direct read was started for. */
+  const requestedScopeRef = useRef<string | null>(null);
+  const currentFallback = fallback && fallback.scope === fallbackScope ? fallback : null;
+  const crossCampaignNote = currentFallback?.note ?? null;
+  const isLoadingCrossCampaignNote = currentFallback?.status === "loading";
 
   // Ref to access NoteEditor methods for auto-save functionality
   const noteEditorRef = useRef<NoteEditorRef>(null);
@@ -60,51 +78,40 @@ const NotePage: React.FC = () => {
   // Try to get the note from the current campaign context first
   const currentCampaignNote = noteId ? getNoteById(noteId) : undefined;
 
-  // If note is not found in current campaign, try to fetch it from other campaigns
+  /*
+    A note the active campaign's list does not hold may be one of the user's
+    notes from another campaign: read it directly, once per scope, and only
+    once the list has loaded -- a list still on its way would make every note
+    look missing, and that "missing" used to stick.
+  */
   useEffect(() => {
-    // Only fetch if we have a noteId and meet all the conditions
-    const shouldFetchCrossCampaignNote = noteId &&
-                                        !currentCampaignNote &&
-                                        !crossCampaignNote &&
-                                        !crossCampaignNotFound &&
-                                        !isLoadingCrossCampaignNote &&
-                                        user?.uid &&
-                                        activeGroupId &&
-                                        activeCampaignId; // Only fetch if we have an active campaign to compare against
+    if (!fallbackScope || !noteId || !user?.uid || !activeGroupId || !activeCampaignId) return;
+    if (currentCampaignNote || isLoading) return;
+    if (requestedScopeRef.current === fallbackScope) return;
+    requestedScopeRef.current = fallbackScope;
+    setFallback({ scope: fallbackScope, status: "loading", note: null });
 
-    if (shouldFetchCrossCampaignNote) {
-      const fetchCrossCampaignNote = async () => {
-        setIsLoadingCrossCampaignNote(true);
-        try {
-          // Try to fetch the note directly from the user's notes collection
-          const notesPath = `groups/${activeGroupId}/users/${user.uid}/notes`;
-          const note = await documentService.getDocument<Note>(notesPath, noteId);
-          
-          // Only set as cross-campaign note if it exists AND belongs to a different campaign
-          if (note && note.campaignId && note.campaignId !== activeCampaignId) {
-            setCrossCampaignNote(note);
-          } else if (note && note.campaignId === activeCampaignId) {
-            // Note belongs to current campaign but wasn't found in context
-            // This could happen due to timing issues - don't treat as cross-campaign
-            setCrossCampaignNote(null);
-            setCrossCampaignNotFound(true);
-          } else {
-            // note is null — not found in Firestore. Mark as not found so the
-            // effect does not re-trigger on every isLoadingCrossCampaignNote
-            // state change (fixes infinite re-fetch loop, bug #800).
-            setCrossCampaignNotFound(true);
-          }
-        } catch (error) {
-          console.error("Error fetching cross-campaign note:", error);
-          setCrossCampaignNotFound(true);
-        } finally {
-          setIsLoadingCrossCampaignNote(false);
+    const scope = fallbackScope;
+    const commit = (status: "found" | "missing", note: Note | null) => {
+      // An answer for a question no longer asked is dropped.
+      if (requestedScopeRef.current === scope) setFallback({ scope, status, note });
+    };
+    documentService
+      .getDocument<Note>(`groups/${activeGroupId}/users/${user.uid}/notes`, noteId)
+      .then((note) => {
+        // Only a note from ANOTHER campaign is shown this way; one that claims
+        // the active campaign but is not in its list is not shown at all.
+        if (note && note.campaignId && note.campaignId !== activeCampaignId) {
+          commit("found", note);
+        } else {
+          commit("missing", null);
         }
-      };
-
-      fetchCrossCampaignNote();
-    }
-  }, [noteId, currentCampaignNote, crossCampaignNote, crossCampaignNotFound, isLoadingCrossCampaignNote, user?.uid, activeGroupId, activeCampaignId, documentService]);
+      })
+      .catch((error) => {
+        console.error("Error fetching cross-campaign note:", error);
+        commit("missing", null);
+      });
+  }, [fallbackScope, noteId, user?.uid, activeGroupId, activeCampaignId, currentCampaignNote, isLoading, documentService]);
 
   // Functions to expose editor content to CampaignLinksPanel
   const getCurrentEditorContent = () => {
@@ -256,6 +263,11 @@ const NotePage: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
               <NoteEditor
+                // A note that turns read-only under a campaign switch gets a
+                // fresh editor: the editable one leaves, which saves what was
+                // typed in it (T085). The same editor would have kept the text
+                // and, now read-only, never written it.
+                key={isFromDifferentCampaign ? "read-only" : "editable"}
                 ref={noteEditorRef}
                 noteId={noteId}
                 // The active campaign's notes cannot supply this one, so the

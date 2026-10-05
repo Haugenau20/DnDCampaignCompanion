@@ -13,6 +13,13 @@ import { unnamedControlsIn } from '@/test-utils/accessible-names';
 const mockGetNoteById = jest.fn();
 const mockUpdateNote = jest.fn();
 const mockSaveNote = jest.fn();
+/** The provider's memory of edits whose save on leaving failed (T085). */
+const mockUnsavedEdits = new Map<string, unknown>();
+const mockGetUnsavedEdit = jest.fn((id: string) => mockUnsavedEdits.get(id));
+const mockSetUnsavedEdit = jest.fn((id: string, edit: unknown) => {
+  if (edit) mockUnsavedEdits.set(id, edit);
+  else mockUnsavedEdits.delete(id);
+});
 
 jest.mock('../../context/NoteContext', () => ({
   useNotes: jest.fn(),
@@ -30,6 +37,8 @@ function setupMocks({
     getNoteById,
     updateNote,
     saveNote,
+    getUnsavedEdit: mockGetUnsavedEdit,
+    setUnsavedEdit: mockSetUnsavedEdit,
   });
   mockGetNoteById.mockImplementation(() => note);
 }
@@ -73,6 +82,7 @@ describe('NoteEditor', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockUnsavedEdits.clear();
     mockUpdateNote.mockResolvedValue(undefined);
     mockSaveNote.mockResolvedValue(undefined);
     setupMocks({ note: makeNote() });
@@ -462,6 +472,190 @@ describe('NoteEditor', () => {
         expect.objectContaining({ content: 'start and more' })
       );
       expect(screen.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // T085 (REACT-003): leaving a note before the autosave fired dropped the
+  // text. Leaving now saves it; a failure keeps it; closing the tab asks.
+  // -------------------------------------------------------------------------
+  describe('leaving the note', () => {
+    test('saves what was typed when the editor goes before the autosave fires', async () => {
+      const { unmount } = renderEditor({ note: makeNote({ content: 'start' }) });
+      fireEvent.change(screen.getByLabelText('Note content'), {
+        target: { value: 'start and the last sentence' },
+      });
+
+      unmount();
+      await act(async () => { await Promise.resolve(); });
+
+      expect(mockUpdateNote).toHaveBeenCalledTimes(1);
+      expect(mockUpdateNote).toHaveBeenCalledWith(
+        'note-1',
+        expect.objectContaining({ content: 'start and the last sentence' })
+      );
+      // The debounce went with the editor: nothing writes a second time.
+      await act(async () => { jest.advanceTimersByTime(5000); });
+      expect(mockUpdateNote).toHaveBeenCalledTimes(1);
+    });
+
+    test('writes nothing when nothing was changed', async () => {
+      const { unmount } = renderEditor();
+      unmount();
+      await act(async () => { await Promise.resolve(); });
+      expect(mockUpdateNote).not.toHaveBeenCalled();
+      expect(mockSaveNote).not.toHaveBeenCalled();
+    });
+
+    test('does not create an empty new note just because it was opened', async () => {
+      const { unmount } = renderEditor({
+        note: makeNote({ title: '', content: '', isUnsaved: true }),
+      });
+      unmount();
+      await act(async () => { await Promise.resolve(); });
+      expect(mockSaveNote).not.toHaveBeenCalled();
+      expect(mockUpdateNote).not.toHaveBeenCalled();
+    });
+
+    test('never saves a read-only note', async () => {
+      const { unmount } = renderEditor({ props: { readOnly: true } });
+      unmount();
+      await act(async () => { await Promise.resolve(); });
+      expect(mockUpdateNote).not.toHaveBeenCalled();
+    });
+
+    test('a failed save on leaving keeps the edit, and reopening the note restores it with the reason', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockUpdateNote.mockRejectedValueOnce(new Error('Network unavailable'));
+      const { unmount } = renderEditor({ note: makeNote({ content: 'start' }) });
+      fireEvent.change(screen.getByLabelText('Note content'), {
+        target: { value: 'start and the last sentence' },
+      });
+
+      unmount();
+      await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+      expect(mockSetUnsavedEdit).toHaveBeenCalledWith('note-1', expect.objectContaining({
+        content: 'start and the last sentence',
+        error: 'Network unavailable',
+      }));
+
+      render(<NoteEditor noteId="note-1" />);
+      expect(screen.getByLabelText('Note content')).toHaveValue('start and the last sentence');
+      expect(screen.getByText(/your last changes were not saved: network unavailable/i)).toBeInTheDocument();
+
+      // Saving it forgets the kept edit.
+      fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+      await waitFor(() => expect(mockSetUnsavedEdit).toHaveBeenLastCalledWith('note-1', undefined));
+      expect(mockSaveNote).toHaveBeenCalledWith(
+        'note-1',
+        expect.objectContaining({ content: 'start and the last sentence' })
+      );
+    });
+
+    test('"All notes" saves first, then goes', async () => {
+      const onBack = jest.fn();
+      let release: () => void = () => undefined;
+      mockUpdateNote.mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+      renderEditor({ note: makeNote({ content: 'start' }), props: { onBack } });
+      fireEvent.change(screen.getByLabelText('Note content'), { target: { value: 'start, then more' } });
+
+      fireEvent.click(screen.getByRole('button', { name: /all notes/i }));
+      await act(async () => { await Promise.resolve(); });
+      expect(onBack).not.toHaveBeenCalled();
+
+      await act(async () => { release(); });
+      expect(onBack).toHaveBeenCalledTimes(1);
+      expect(mockUpdateNote).toHaveBeenCalledWith(
+        'note-1',
+        expect.objectContaining({ content: 'start, then more' })
+      );
+    });
+
+    test('"All notes" stays, with the reason and the text, when that save fails', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      const onBack = jest.fn();
+      mockUpdateNote.mockRejectedValueOnce(new Error('Write refused'));
+      renderEditor({ note: makeNote({ content: 'start' }), props: { onBack } });
+      fireEvent.change(screen.getByLabelText('Note content'), { target: { value: 'start, then more' } });
+
+      fireEvent.click(screen.getByRole('button', { name: /all notes/i }));
+
+      expect(await screen.findByText('Write refused')).toBeInTheDocument();
+      expect(onBack).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('Note content')).toHaveValue('start, then more');
+    });
+
+    test('"All notes" with nothing to save simply goes', async () => {
+      const onBack = jest.fn();
+      renderEditor({ props: { onBack } });
+      fireEvent.click(screen.getByRole('button', { name: /all notes/i }));
+      await act(async () => { await Promise.resolve(); });
+      expect(onBack).toHaveBeenCalledTimes(1);
+      expect(mockUpdateNote).not.toHaveBeenCalled();
+    });
+
+    test('closing the tab asks first while there is unsaved text, and not otherwise', () => {
+      renderEditor({ note: makeNote({ content: 'start' }) });
+      const close = () => {
+        const event = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+
+      expect(close()).toBe(false);
+      fireEvent.change(screen.getByLabelText('Note content'), { target: { value: 'start, unsaved' } });
+      expect(close()).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // T085 (RECOVERY-001): pass 4's sequence, in jsdom. Note A's second Ctrl+S is
+  // queued behind a first that has not answered (offline); the user opens
+  // note B. The route remounts the editor per note id (`RecordRoute`), so the
+  // queue belongs to A's editor: A's latest text must reach A, and B must get
+  // no write and none of A's save state.
+  // -------------------------------------------------------------------------
+  describe('a save queued on one note when another is opened', () => {
+    test("finishes against its own note, with that note's latest text", async () => {
+      const noteA = makeNote({ id: 'note-a', title: 'A', content: 'Original A.' });
+      const noteB = makeNote({ id: 'note-b', title: 'B', content: 'Original B.' });
+      const calls: Array<{ id: string; content?: string; release: () => void }> = [];
+      const held = (id: string, updates: Partial<Note>) =>
+        new Promise<void>((resolve) => { calls.push({ id, content: updates.content, release: resolve }); });
+      (useNotes as jest.Mock).mockImplementation(() => ({
+        getNoteById: (id: string) => [noteA, noteB].find((n) => n.id === id),
+        updateNote: held,
+        saveNote: held,
+        getUnsavedEdit: mockGetUnsavedEdit,
+        setUnsavedEdit: mockSetUnsavedEdit,
+      }));
+      // What `RecordRoute` does: one editor instance per note id.
+      const Route = ({ id }: { id: string }) => <NoteEditor key={id} noteId={id} />;
+      const { rerender } = render(<Route id="note-a" />);
+      const body = () => screen.getByLabelText('Note content');
+
+      fireEvent.change(body(), { target: { value: 'First submitted version of A.' } });
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      fireEvent.change(body(), { target: { value: 'Latest submitted version of A.' } });
+      fireEvent.keyDown(document, { key: 's', ctrlKey: true });
+      expect(calls).toHaveLength(1);
+
+      rerender(<Route id="note-b" />);
+      expect(body()).toHaveValue('Original B.');
+
+      // Reconnect: the first save answers, and the queued one runs.
+      await act(async () => { calls[0].release(); });
+      await act(async () => { jest.advanceTimersByTime(0); });
+
+      expect(calls.map((c) => c.id)).toEqual(['note-a', 'note-a']);
+      expect(calls[1].content).toBe('Latest submitted version of A.');
+      await act(async () => { calls[1].release(); });
+
+      // B was never written and shows none of A's save state.
+      expect(calls.some((c) => c.id === 'note-b')).toBe(false);
+      expect(screen.queryByText(/saving/i)).not.toBeInTheDocument();
+      expect(body()).toHaveValue('Original B.');
     });
   });
 
@@ -975,7 +1169,7 @@ describe('NoteEditor', () => {
             }),
           []
         );
-        ctx = { getNoteById, updateNote: persist, saveNote: persist };
+        ctx = { getNoteById, updateNote: persist, saveNote: persist, getUnsavedEdit: mockGetUnsavedEdit, setUnsavedEdit: mockSetUnsavedEdit };
         return <NoteEditor noteId={initial.id} />;
       };
 
@@ -1069,7 +1263,7 @@ describe('NoteEditor', () => {
               },
             });
           });
-        ctx = { getNoteById, updateNote: held('updateNote'), saveNote: held('saveNote') };
+        ctx = { getNoteById, updateNote: held('updateNote'), saveNote: held('saveNote'), getUnsavedEdit: mockGetUnsavedEdit, setUnsavedEdit: mockSetUnsavedEdit };
         return <NoteEditor noteId={initial.id} />;
       };
 

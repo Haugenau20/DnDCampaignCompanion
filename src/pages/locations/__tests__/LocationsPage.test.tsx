@@ -56,6 +56,7 @@ interface LocationContextMock {
   locations: any[];
   isLoading: boolean;
   error: string | null;
+  loadError?: string | null;
 }
 
 let mockLocationContext: LocationContextMock = {
@@ -188,7 +189,7 @@ describe("LocationsPage", () => {
     // Rewritten: the old inline error copy is gone; GatedContent's error
     // panel names the noun and the real error message instead.
     it("shows the shared error panel, not the old inline copy, on a fetch error", () => {
-      mockLocationContext = { ...mockLocationContext, error: "Firebase error" };
+      mockLocationContext = { ...mockLocationContext, error: "Firebase error", loadError: "Firebase error" };
       renderPage();
       expect(
         screen.queryByText("Error Loading Locations. Sign in to view content.")
@@ -198,6 +199,15 @@ describe("LocationsPage", () => {
       expect(
         screen.queryByTestId("location-directory")
       ).not.toBeInTheDocument();
+    });
+
+    // T085 (REACT-002): a rejected write is reported through `error`, but the
+    // records loaded fine, so the page stays up.
+    it("keeps the places on the page when only a write failed", () => {
+      mockLocationContext = { ...mockLocationContext, error: "Write refused", loadError: null };
+      renderPage();
+      expect(screen.getByTestId("location-directory")).toBeInTheDocument();
+      expect(screen.queryByText(/couldn't load/i)).not.toBeInTheDocument();
     });
   });
 

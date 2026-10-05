@@ -12,6 +12,8 @@ import { LocationProvider, useLocations } from 'features/campaign-entities/locat
 const mockDeleteData = jest.fn();
 const mockUpdateData = jest.fn();
 const mockRemoveImage = jest.fn();
+const mockRecordReleased = jest.fn();
+const mockClearReleased = jest.fn();
 let mockLocations: any[] = [];
 
 jest.mock('features/user-management', () => ({
@@ -41,7 +43,11 @@ jest.mock('shared/hooks/useFirebaseData', () => ({
 }));
 
 jest.mock('core/services/firebase', () => ({
-  images: { remove: (path: string) => mockRemoveImage(path) },
+  images: {
+    remove: (path: string) => mockRemoveImage(path),
+    recordReleasedImage: (path: string) => mockRecordReleased(path),
+    clearReleasedImage: (path: string) => mockClearReleased(path),
+  },
 }));
 
 const picture = (id: string) => ({
@@ -125,5 +131,49 @@ describe('deleting a location', () => {
     });
 
     expect(mockRemoveImage).not.toHaveBeenCalled();
+  });
+
+  // T084: a subtree delete that fails partway leaves some places gone. Their
+  // pictures are recorded as released before any document goes, so the daily
+  // sweep deletes them.
+  it('records every picture in the subtree as released before the first document goes', async () => {
+    const order: string[] = [];
+    mockRecordReleased.mockImplementation((path: string) => { order.push(`record ${path}`); });
+    mockDeleteData.mockImplementation(async (id: string) => { order.push(`document ${id}`); });
+    await renderContext();
+
+    await act(() => context.deleteLocation('gondolin', 'delete-subtree'));
+
+    const firstDocument = order.findIndex(entry => entry.startsWith('document'));
+    expect(order.slice(0, firstDocument).sort()).toEqual(
+      [`record ${picture('fountain').path}`, `record ${picture('gondolin').path}`].sort()
+    );
+    expect(mockClearReleased.mock.calls.map(([path]) => path).sort()).toEqual(
+      [picture('fountain').path, picture('gondolin').path].sort()
+    );
+  });
+
+  it('leaves the released records for the sweep when a delete fails partway', async () => {
+    mockDeleteData.mockImplementation(async (id: string) => {
+      if (id === 'gondolin') throw new Error('network');
+    });
+    await renderContext();
+
+    await act(async () => {
+      await context.deleteLocation('gondolin', 'delete-subtree').catch(() => undefined);
+    });
+
+    // The fountain's document is gone; its file is the sweep's to find.
+    expect(mockRecordReleased).toHaveBeenCalledWith(picture('fountain').path);
+    expect(mockClearReleased).not.toHaveBeenCalled();
+  });
+
+  it('moving the children up records only this place\'s picture', async () => {
+    await renderContext();
+
+    await act(() => context.deleteLocation('gondolin', 'promote-to-grandparent'));
+
+    expect(mockRecordReleased).toHaveBeenCalledTimes(1);
+    expect(mockRecordReleased).toHaveBeenCalledWith(picture('gondolin').path);
   });
 });

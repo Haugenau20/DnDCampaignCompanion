@@ -1,17 +1,28 @@
 // firebase/firestore.rules.prod
 //
 // ============================================================================
-// THIS FILE IS A REVIEW COPY. IT IS NOT DEPLOYED FROM HERE. EDITING IT CHANGES
-// NOTHING IN PRODUCTION. Paste it into the Firebase console to deploy.
+// THIS IS THE PRODUCTION RULESET. MERGING A CHANGE TO IT DEPLOYS IT (T105).
 // ============================================================================
 //
-// The production Firestore ruleset is authored and deployed through the
-// Firebase console. `firebase.json` points its `firestore.rules` key at
-// `firestore.rules` -- the permissive DEVELOPMENT ruleset used against the
-// emulators and the dev project -- and that file is deliberately NOT the
-// production policy. Do not "reconcile" the two: they describe different
-// environments, and `firestore.rules`'s blanket `allow read, write: if true`
-// is correct for an emulator and would be catastrophic in production.
+// `firebase.json` points its `firestore.rules` key here, and the merge
+// workflow (`firebase-hosting-merge.yml`, job `deploy_rules`) deploys it after
+// the Cloud Functions and before Hosting. Do not edit the rules in the
+// Firebase console: the next merge overwrites the console with this file.
+//
+// `firestore.rules` beside it is the permissive DEVELOPMENT ruleset -- the
+// emulators run without it, from `firebase.emulators.json` -- and is
+// deliberately NOT the production policy. Do not "reconcile" the two: its
+// blanket `allow read, write: if true` is correct for an emulator and would be
+// catastrophic in production.
+//
+// DEPLOY ORDER: rules go out with the functions they rely on and BEFORE the
+// frontend that relies on them. A change that must follow the frontend
+// instead (a rule that refuses what the live frontend still writes, as
+// 2026-10-04b did) has to ship in two merges: the frontend first, the rule
+// in a later one.
+//
+// Revisions up to 2026-10-04b were pasted into the console by hand; their
+// "paste" wording below is history.
 //
 // ---------------------------------------------------------------------------
 // REVISION 2026-07-29 -- READ BEFORE DEPLOYING
@@ -178,12 +189,31 @@
 // preferably once T083 has stopped edits sending the whole record, so that a
 // stale tab's unrelated edit is not refused along with the picture it carries.
 //
+// LIVE: the maintainer pasted this revision into the console on 2026-10-05,
+// after both client halves of T084 and T083's field patches had shipped.
+//
+// ---------------------------------------------------------------------------
+// REVISION 2026-10-05 -- T084, the sweep's second ledger
+// ---------------------------------------------------------------------------
+// The first revision deployed by the merge workflow (T105). One addition,
+// pinned by the "released images" tests in
+// `functions/test/rules/firestore-rules-prod.test.ts`:
+//
+// 8. NEW -- `groups/{groupId}/releasedImages/{imageId}`. A member records an
+//    image file before the write that stops a document pointing at it (a
+//    replace, a removal, a deleted NPC or location) and deletes the entry once
+//    the file is gone. The daily sweep then reads these entries instead of
+//    every document. Same rules as `pendingUploads`.
+//
+// Deploy order does not matter: the client's record is best-effort, so a
+// frontend that ships before the rule finds it refused and carries on, and
+// the monthly full sweep still finds what it would have recorded.
+//
 // ---------------------------------------------------------------------------
 // KEEPING IT HONEST
-// When you change the production rules in the console, update this file in the
-// same PR as whatever motivated the change. If you are relying on these rules
-// for a decision, re-read them in the console first -- treat this copy as a
-// claim to check, not as the source of truth.
+// Change the production rules here, in the same PR as whatever motivated the
+// change, never in the console. Every merge to `main` redeploys this file, so a
+// console edit lasts only until then.
 //
 // Note the rules are path-scoped, so a `collectionGroup` query has no matching
 // rule and WILL be denied.
@@ -417,6 +447,22 @@ service cloud.firestore {
 
         // Only its owner removes it. Nobody reads or changes one: the sweep
         // reads them with the Admin SDK.
+        allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      }
+
+      // An image file a document is about to stop pointing at (T084). The
+      // client records it before the write that drops the image and deletes
+      // the entry once it has deleted the file; the daily sweep deletes the
+      // file of any entry left behind, once the document no longer points at
+      // it. Same shape as `pendingUploads`, for the same reasons.
+      match /releasedImages/{imageId} {
+        allow create: if isGroupMember(groupId) &&
+                       request.resource.data.keys().hasOnly(['path', 'uid', 'createdAt']) &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.path is string &&
+                       request.resource.data.path.matches('groups/' + groupId + '/.+/' + imageId);
+
         allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
       }
 

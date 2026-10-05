@@ -14,6 +14,8 @@ const mockBatchOperations = jest.fn();
 const mockUpdateData = jest.fn();
 const mockDeleteData = jest.fn();
 const mockRemoveImage = jest.fn();
+const mockRecordReleased = jest.fn();
+const mockClearReleased = jest.fn();
 let mockNpcs: any[] = [];
 let mockHasRequiredContext = true;
 
@@ -50,7 +52,11 @@ jest.mock('shared/hooks/useFirebaseData', () => ({
 jest.mock('core/services/firebase', () => ({
   __esModule: true,
   default: { document: { batchOperations: (ops: unknown) => mockBatchOperations(ops) } },
-  images: { remove: (path: string) => mockRemoveImage(path) },
+  images: {
+    remove: (path: string) => mockRemoveImage(path),
+    recordReleasedImage: (path: string) => mockRecordReleased(path),
+    clearReleasedImage: (path: string) => mockClearReleased(path),
+  },
 }));
 
 const portrait = {
@@ -167,5 +173,21 @@ describe('NPCContext.deleteNPCs', () => {
 
     await expect(context.deleteNPCs(['n1'])).rejects.toThrow('permission-denied');
     expect(mockRemoveImage).not.toHaveBeenCalled();
+  });
+
+  // T084: the sweep's record of each portrait goes in before the batch.
+  it('records the portraits as released before the batch', async () => {
+    await renderContext();
+
+    await act(async () => {
+      await context.deleteNPCs(['n1', 'n2']);
+    });
+
+    expect(mockRecordReleased).toHaveBeenCalledTimes(1);
+    expect(mockRecordReleased).toHaveBeenCalledWith(portrait.path);
+    expect(mockRecordReleased.mock.invocationCallOrder[0]).toBeLessThan(
+      mockBatchOperations.mock.invocationCallOrder[0]
+    );
+    await waitFor(() => expect(mockClearReleased).toHaveBeenCalledWith(portrait.path));
   });
 });

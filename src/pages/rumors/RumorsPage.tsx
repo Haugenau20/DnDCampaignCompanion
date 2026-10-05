@@ -18,7 +18,7 @@ import PageShell from "shared/components/page-shell/PageShell";
  * page contradicting the control directly below it.
  */
 const RumorsPage: React.FC = () => {
-  const { rumors, isLoading, error } = useRumors();
+  const { rumors, isLoading, loadError } = useRumors();
 
   const gate = usePageGate("rumors", {
     /*
@@ -28,7 +28,7 @@ const RumorsPage: React.FC = () => {
       and the measurement behind it are on `useQuestData`.
     */
     loading: isLoading,
-    error,
+    error: loadError,
   });
 
   return (

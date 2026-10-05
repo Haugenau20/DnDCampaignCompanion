@@ -892,6 +892,32 @@ describe('RosterRow identity mark', () => {
 // ---------------------------------------------------------------------------
 
 describe('RosterGroup collapse', () => {
+  // T101: a list that pages its groups decides their fold itself -- to open
+  // the group a deep link points into.
+  it('follows a list that decides the fold, and tells it about clicks', () => {
+    const onCollapsedChange = jest.fn();
+    const { rerender } = render(
+      <RosterGroup title="Completed" count={3} collapsible collapsed onCollapsedChange={onCollapsedChange}>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    const trigger = screen.getByRole('button', { name: /Completed/ });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(trigger);
+    expect(onCollapsedChange).toHaveBeenCalledWith(false);
+    // Not its own decision: it stays folded until the list says otherwise.
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    rerender(
+      <RosterGroup title="Completed" count={3} collapsible collapsed={false} onCollapsedChange={onCollapsedChange}>
+        <div>a row</div>
+      </RosterGroup>
+    );
+    expect(screen.getByRole('button', { name: /Completed/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('a row')).toBeVisible();
+  });
+
   it('does not collapse unless asked to', () => {
     render(
       <RosterGroup title="Rivendell" count={2}>

@@ -1,6 +1,6 @@
 // src/features/collaboration/notes/context/NoteContext.tsx - Complete Fixed Version
 import React, { createContext, useContext, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { Note, NoteContextValue, EntityType } from "../types";
+import { Note, NoteContextValue, EntityType, UnsavedNoteEdit } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
 import { useRumors } from "features/campaign-entities";
@@ -38,6 +38,13 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * the listener's copy is the note.
    */
   const [drafts, setDrafts] = useState<Note[]>([]);
+  /**
+   * Edits whose save failed after their editor had gone (T085): leaving a
+   * note saves it, and the page that held it is no longer there to say the
+   * save failed. Memory only -- nothing a note says is kept in the browser --
+   * and a ref, because only an editor opening that note reads it.
+   */
+  const unsavedEditsRef = useRef<Map<string, UnsavedNoteEdit>>(new Map());
   const [error, setError] = useState<string | null>(null);
   /**
    * Bumped by `retry` to reopen a listener that failed. A failed listener is
@@ -122,6 +129,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   */
   useEffect(() => {
     setDrafts([]);
+    unsavedEditsRef.current.clear();
   }, [user?.uid, activeGroupId, activeCampaignId]);
 
   /** Saved notes and drafts together, most recently updated first. */
@@ -548,6 +556,16 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     await documentService.deleteDocument(notesCollection, noteId);
   }, [notesCollection, documentService]);
   
+  const getUnsavedEdit = useCallback(
+    (noteId: string) => unsavedEditsRef.current.get(noteId),
+    []
+  );
+
+  const setUnsavedEdit = useCallback((noteId: string, edit: UnsavedNoteEdit | undefined) => {
+    if (edit) unsavedEditsRef.current.set(noteId, edit);
+    else unsavedEditsRef.current.delete(noteId);
+  }, []);
+
   // Create context value
   const value: NoteContextValue = {
     notes,
@@ -566,6 +584,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     saveNote, // Add saveNote to context
     convertEntity,
     updateNote,
+    getUnsavedEdit,
+    setUnsavedEdit,
     archiveNote,
     deleteNote,
     markEntityAsConverted,

@@ -433,6 +433,13 @@ export interface RosterGroupProps {
   collapsible?: boolean;
   /** Start collapsed. Only meaningful with `collapsible`. */
   defaultCollapsed?: boolean;
+  /**
+   * Whether the group is collapsed, when its list decides that rather than
+   * the group: to open it for a deep link to a row inside, or to know whether
+   * its rows are on the page at all (T101). Pair with `onCollapsedChange`.
+   */
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -453,9 +460,16 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
   nested = false,
   collapsible = false,
   defaultCollapsed = false,
+  collapsed,
+  onCollapsedChange,
   children,
 }) => {
-  const [isCollapsed, setIsCollapsed] = React.useState(collapsible && defaultCollapsed);
+  const [ownCollapsed, setOwnCollapsed] = React.useState(collapsible && defaultCollapsed);
+  const isCollapsed = collapsible && (collapsed ?? ownCollapsed);
+  const toggle = () => {
+    if (collapsed === undefined) setOwnCollapsed(!isCollapsed);
+    onCollapsedChange?.(!isCollapsed);
+  };
   const bodyId = React.useId();
 
   const heading = (
@@ -476,7 +490,7 @@ export const RosterGroup: React.FC<RosterGroupProps> = ({
         // stays a heading inside it, so the page's outline is unchanged.
         <button
           type="button"
-          onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+          onClick={toggle}
           aria-expanded={!isCollapsed}
           aria-controls={bodyId}
           className="flex items-center gap-2 text-left"

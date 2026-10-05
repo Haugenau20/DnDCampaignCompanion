@@ -7,12 +7,22 @@ import { PreparedImage } from 'core/utils/prepare-image';
 const mockUpload = jest.fn();
 const mockRemove = jest.fn();
 const mockClearPending = jest.fn();
+const mockRecordReleased = jest.fn();
+const mockClearReleased = jest.fn();
 
 jest.mock('core/services/firebase', () => ({
   images: {
     upload: (...args: unknown[]) => mockUpload(...args),
     remove: (...args: unknown[]) => mockRemove(...args),
     clearPendingUpload: (...args: unknown[]) => mockClearPending(...args),
+    recordReleasedImage: (path: string) => {
+      calls.push(`record ${path}`);
+      mockRecordReleased(path);
+    },
+    clearReleasedImage: (path: string) => {
+      calls.push(`clear ${path}`);
+      mockClearReleased(path);
+    },
   },
 }));
 
@@ -59,6 +69,8 @@ beforeEach(() => {
     calls.push(`remove ${path}`);
   });
   mockClearPending.mockReset();
+  mockRecordReleased.mockReset();
+  mockClearReleased.mockReset();
   jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
@@ -90,7 +102,29 @@ describe('useImageAttachment', () => {
 
       await act(() => result.current.upload(prepared, jest.fn()));
 
-      expect(calls).toEqual(['upload', `save ${NEW.path}`, `remove ${OLD.path}`]);
+      expect(calls).toEqual([
+        'upload', `record ${OLD.path}`, `save ${NEW.path}`, `remove ${OLD.path}`, `clear ${OLD.path}`,
+      ]);
+    });
+
+    // T084: the old file is recorded as released before the document drops
+    // it, so the daily sweep deletes it if this delete never runs.
+    it('keeps the released record when the old file cannot be deleted, for the sweep', async () => {
+      mockRemove.mockRejectedValue(new Error('network'));
+      const { result } = setup(OLD);
+
+      await act(() => result.current.upload(prepared, jest.fn()));
+
+      expect(mockRecordReleased).toHaveBeenCalledWith(OLD.path);
+      expect(mockClearReleased).not.toHaveBeenCalled();
+    });
+
+    it('records nothing as released when there was no old image', async () => {
+      const { result } = setup(undefined);
+
+      await act(() => result.current.upload(prepared, jest.fn()));
+
+      expect(mockRecordReleased).not.toHaveBeenCalled();
     });
 
     it('keeps the old file, and deletes the new one, when saving fails', async () => {
@@ -159,7 +193,7 @@ describe('useImageAttachment', () => {
 
       await act(() => result.current.remove());
 
-      expect(calls).toEqual(['save null', `remove ${OLD.path}`]);
+      expect(calls).toEqual([`record ${OLD.path}`, 'save null', `remove ${OLD.path}`, `clear ${OLD.path}`]);
     });
 
     it('keeps the file when clearing the document fails', async () => {
@@ -168,6 +202,9 @@ describe('useImageAttachment', () => {
 
       expect(await settle(() => result.current.remove())).toEqual(expect.objectContaining({ message: 'offline' }));
       expect(mockRemove).not.toHaveBeenCalled();
+      // The record stays: the sweep finds the document still pointing at the
+      // file, keeps it, and drops the record when its lease runs out.
+      expect(mockClearReleased).not.toHaveBeenCalled();
     });
 
     it('does nothing when there is no image', async () => {

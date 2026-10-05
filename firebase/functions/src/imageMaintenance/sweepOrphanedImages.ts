@@ -3,23 +3,8 @@ import * as admin from "firebase-admin";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import type {File, GetFilesOptions} from "@google-cloud/storage";
 import {imageBucket} from "../shared/imageBucket";
-
-/**
- * How old an unreferenced file must be before the sweep deletes it. An upload
- * is written before the document that points at it, so a younger file may be
- * one whose document write is still on its way.
- */
-const MIN_AGE_MS = 24 * 60 * 60 * 1000;
-
-/**
- * How long a `pendingUploads` entry holds its file (T084, IMG-003). The client
- * writes the entry before it uploads and deletes it once the document that
- * points at the file is written. A write queued in a tab that went offline
- * lives only as long as that tab -- the app keeps no offline persistence -- so
- * a month is far past any write that can still land. After it the upload is
- * abandoned: the entry is deleted and the file judged like any other.
- */
-const PENDING_LEASE_MS = 30 * 24 * 60 * 60 * 1000;
+import {sweepReleasedImages} from "./sweepReleasedImages";
+import {deleteWithin, MIN_AGE_MS, PENDING_LEASE_MS} from "./shared";
 
 /**
  * The object paths the app writes images to (see the storage images design,
@@ -198,38 +183,12 @@ async function forEachPage(
 }
 
 /**
- * Deletes `files` with at most `concurrency` requests open at once.
- *
- * @param {File[]} files The files to delete
- * @param {number} concurrency How many deletes may be in flight
- * @return {Promise<Array<object>>} Per file, whether it failed and why
- */
-async function deleteWithin(
-  files: File[],
-  concurrency: number
-): Promise<Array<{failed: false} | {failed: true; reason: unknown}>> {
-  const outcomes: Array<{failed: false} | {failed: true; reason: unknown}> =
-    new Array(files.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < files.length) {
-      const i = next++;
-      try {
-        await files[i].delete({ignoreNotFound: true});
-        outcomes[i] = {failed: false};
-      } catch (reason) {
-        outcomes[i] = {failed: true, reason};
-      }
-    }
-  };
-  const workers = Math.max(1, Math.min(concurrency, files.length));
-  await Promise.all(Array.from({length: workers}, worker));
-  return outcomes;
-}
-
-/**
- * Deletes image files that no document references and that are over a day
- * old, and bug-report screenshots over a day old.
+ * The FULL sweep, run monthly (T084): deletes image files that no document
+ * references and that are over a day old, and bug-report screenshots over a
+ * day old. It reads every image-bearing document and lists the whole bucket;
+ * the daily run reads only the ledgers (`sweepReleasedImages`), and this one
+ * finds what they never recorded: files from before the ledgers, and the
+ * leftovers of a write from a frontend that did not record them.
  *
  * Image writes are ordered so a failure can leave a file without a document,
  * never a document without its file (`shared/hooks/useImageAttachment.ts` in
@@ -308,21 +267,51 @@ export async function sweepOrphanedImages(
   return result;
 }
 
+/** The time zone the sweep is scheduled in, and its month is counted in. */
+const SWEEP_TIME_ZONE = "Europe/Copenhagen";
+
 /**
- * Runs the sweep once a day, at night in Europe, when nobody is uploading.
+ * Whether `now` falls on the first day of a month where the sweep runs: the
+ * day the full sweep runs too.
+ *
+ * @param {Date} now The time of the run
+ * @return {boolean} True on the 1st
+ */
+export function isFullSweepDay(now: Date): boolean {
+  const day = new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    timeZone: SWEEP_TIME_ZONE,
+  }).format(now);
+  return day === "1";
+}
+
+/**
+ * Runs once a day, at night in Europe, when nobody is uploading: the ledger
+ * sweep every day, and on the 1st of the month the full sweep after it.
  */
 export const sweepOrphanedImagesDaily = onSchedule(
   {
     schedule: "every day 04:00",
-    timeZone: "Europe/Copenhagen",
+    timeZone: SWEEP_TIME_ZONE,
     region: "europe-west1",
   },
   async () => {
-    const {checked, deleted, failed, more, expiredUploads} = await sweepOrphanedImages();
+    const now = new Date();
+    const ledger = await sweepReleasedImages(now);
     console.log(
-      `Orphaned image sweep: checked ${checked}, deleted ${deleted.length}, ` +
-        `failed ${failed.length}, expired uploads ${expiredUploads}` +
-        (more ? "; stopped at its budget, the rest is left for tomorrow." : ".")
+      `Image ledger sweep: judged ${ledger.checked}, ` +
+        `deleted ${ledger.deleted.length}, failed ${ledger.failed.length}, ` +
+        `entries cleared ${ledger.cleared}` +
+        (ledger.more ? "; stopped at its budget, the rest is tomorrow's." : ".")
+    );
+    if (!isFullSweepDay(now)) return;
+
+    const full = await sweepOrphanedImages(now);
+    console.log(
+      `Full orphaned image sweep: checked ${full.checked}, ` +
+        `deleted ${full.deleted.length}, failed ${full.failed.length}, ` +
+        `expired uploads ${full.expiredUploads}` +
+        (full.more ? "; stopped at its budget, the rest is next month's." : ".")
     );
   }
 );

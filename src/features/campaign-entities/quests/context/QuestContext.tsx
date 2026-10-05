@@ -403,6 +403,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // `string | null` contract consumers rely on. Cheap to keep, and it means the
     // contract holds regardless of how the hook is supplied.
     error: error || writeError || null,
+    // The read alone: a rejected write must not take the page down (T085).
+    loadError: error || null,
     getQuestById,
     getQuestsByStatus,
     getQuestsByLocation,

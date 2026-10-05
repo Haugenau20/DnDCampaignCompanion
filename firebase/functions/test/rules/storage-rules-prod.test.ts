@@ -5,8 +5,8 @@
 // against it.
 //
 // The emulator's own ruleset (`storage.rules`) is `allow read, write: if true`,
-// so none of this can be seen by running the app, and passing here deploys
-// nothing: production rules are pasted into the console by hand.
+// so none of this can be seen by running the app. This suite gates the merge,
+// and the merge deploys the file it tests (T105).
 //
 // `RULES_FILE=<path> npx jest test/rules/storage` runs the same checks against
 // another ruleset. Run it against a wide-open one and every deny must fail --

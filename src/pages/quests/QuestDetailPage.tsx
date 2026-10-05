@@ -131,7 +131,7 @@ const QuestDetailPage: React.FC = () => {
   const {
     quests,
     isLoading,
-    error,
+    loadError,
     refreshQuests,
     updateQuest,
     updateQuestStatus,
@@ -162,7 +162,7 @@ const QuestDetailPage: React.FC = () => {
       one that is simply still on its way.
     */
     loading: isLoading && !quest,
-    error,
+    error: loadError,
     onRetry: () => {
       void refreshQuests();
     },
