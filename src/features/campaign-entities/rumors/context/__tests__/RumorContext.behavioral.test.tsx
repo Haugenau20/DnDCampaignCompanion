@@ -4,7 +4,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { RumorProvider, useRumors } from '../RumorContext';
 import { Rumor, RumorStatus, RumorNote, SourceType } from '../../types';
-import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
+import { updateAfterReadingThrough, createWithUpdatesThrough } from '@/test-utils/update-after-reading';
 
 /**
  * Rumor Context Behavioral Testing
@@ -45,6 +45,13 @@ jest.mock('../../hooks/useRumorData', () => ({
 
 jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => mockUseFirebaseData(),
+}));
+
+// Batch actions commit through `commitEntityWrites` (T088 folded the
+// context's own copy of it in).
+jest.mock('core/services/firebase', () => ({
+  __esModule: true,
+  default: { document: { batchOperations: (ops: unknown) => mockBatchOperations(ops) } },
 }));
 
 // Mock user utilities for proper testing
@@ -100,7 +107,7 @@ describe('RumorContext Behavioral Testing', () => {
       activeGroupUserProfile: null,
     });
 
-    mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations,
+    mockUseFirestore.mockReturnValue({
       setDocument: mockSetDocument,
     });
 
@@ -977,6 +984,8 @@ describe('RumorContext Behavioral Testing', () => {
 
   describe('Rumor Convert To Quest Behavior', () => {
     let mockCreateDocument: jest.Mock;
+    /** What the conversion's one transaction commits (T088, DATA-005). */
+    let mockCommit: jest.Mock;
 
     beforeEach(() => {
       const mockRumors: Rumor[] = [
@@ -1024,15 +1033,20 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       mockCreateDocument = jest.fn().mockResolvedValue('investigate-dragon-rumors');
-      mockUseFirestore.mockReturnValue({ batchOperations: mockBatchOperations,
+      mockCommit = jest.fn().mockResolvedValue(undefined);
+      mockUseFirestore.mockReturnValue({
         setDocument: mockSetDocument,
         createDocument: mockCreateDocument,
+        createDocumentWithUpdates: createWithUpdatesThrough<Rumor>(
+          (id) => mockRumors.find((rumor) => rumor.id === id),
+          mockCommit
+        ),
       });
 
       mockUpdateData.mockResolvedValue(undefined);
     });
 
-    test('should create the quest document through the attribution-aware createDocument path with the caller\'s domain data', async () => {
+    test('should create the quest document through the attribution-aware create path, in the same commit as the rumour marks, with the caller\'s domain data', async () => {
       renderRumorContext();
 
       await waitFor(() => {
@@ -1051,24 +1065,30 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       // BEHAVIOR: convertToQuest creates a brand new quest document, so it
-      // must go through the attribution-aware createDocument path (the
-      // single write path for new documents), not the plain setDocument path.
-      expect(mockCreateDocument).toHaveBeenCalledWith(
+      // must go through an attribution-aware create path, not the plain
+      // setDocument path. Since T088 (DATA-005) that create commits together
+      // with the rumour marks: one commit, never a quest without them.
+      expect(mockCommit).toHaveBeenCalledTimes(1);
+      expect(mockCommit).toHaveBeenCalledWith(
         'groups/group-1/campaigns/campaign-1/quests',
+        'investigate-dragon-rumors',
+        'groups/group-1/campaigns/campaign-1/rumors',
         expect.objectContaining({
-          title: 'Investigate Dragon Rumors',
-          description: 'Look into the dragon sightings',
-          status: 'active',
-          id: 'investigate-dragon-rumors'
-        }),
-        'investigate-dragon-rumors'
+          create: expect.objectContaining({
+            title: 'Investigate Dragon Rumors',
+            description: 'Look into the dragon sightings',
+            status: 'active',
+            id: 'investigate-dragon-rumors'
+          })
+        })
       );
       expect(mockSetDocument).not.toHaveBeenCalled();
+      expect(mockCreateDocument).not.toHaveBeenCalled();
 
-      // The context itself should no longer hand-roll creation attribution
-      // onto the quest document object -- DocumentService.createDocument now
-      // owns stamping createdBy*/modifiedBy* fields for documents it writes.
-      const questPayload = mockCreateDocument.mock.calls[0][1];
+      // The context itself should not hand-roll creation attribution onto the
+      // quest document object -- DocumentService stamps createdBy*/modifiedBy*
+      // fields for documents it writes.
+      const questPayload = mockCommit.mock.calls[0][3].create;
       expect(questPayload).not.toHaveProperty('createdByUsername');
       expect(questPayload).not.toHaveProperty('modifiedByUsername');
     });
@@ -1089,11 +1109,11 @@ describe('RumorContext Behavioral Testing', () => {
       // document, not a document of its own. DocumentService only attributes
       // the top-level document it writes, so this nested note must keep
       // carrying its own creation attribution built by the context.
-      // Since T032 (PERF-06) the converted rumours are marked in one batch.
-      expect(mockBatchOperations).toHaveBeenCalledWith([
+      // Since T088 (DATA-005) the converted rumours are marked in the
+      // quest's own commit.
+      const { updates } = mockCommit.mock.calls[0][3];
+      expect(updates).toEqual([
         expect.objectContaining({
-          type: 'update',
-          collection: 'groups/group-1/campaigns/campaign-1/rumors',
           id: 'rumor-to-convert',
           data: expect.objectContaining({
             convertedToQuestId: 'investigate-dragon-rumors',

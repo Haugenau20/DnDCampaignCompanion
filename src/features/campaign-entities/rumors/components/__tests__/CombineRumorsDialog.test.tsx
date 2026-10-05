@@ -164,7 +164,11 @@ describe('CombineRumorsDialog', () => {
       expect(statusSelect.value).toBe('unconfirmed');
     });
 
-    test('should show the generated ID preview', () => {
+    // DUP-002: the dialog used to print "ID will be: <slug>", from its own
+    // copy of the slug rule. The real id is allocated at the write and can
+    // differ (a taken slug gets `-2`, a punctuation-only title a random id),
+    // so the dialog makes no promise about it.
+    test('should not promise an id before the rumour is created', async () => {
       render(
         <CombineRumorsDialog
           open={true}
@@ -174,8 +178,12 @@ describe('CombineRumorsDialog', () => {
           onCombine={jest.fn()}
         />,
       );
-      // ID will be slug of "Combined Rumor (date)" → starts with "combined-rumor-"
-      expect(screen.getByText(/ID will be: combined-rumor-/i)).toBeInTheDocument();
+      expect(screen.queryByText(/ID will be/i)).not.toBeInTheDocument();
+
+      const titleInput = screen.getByDisplayValue(/Combined Rumor/);
+      await userEvent.clear(titleInput);
+      await userEvent.type(titleInput, 'Hello World!!');
+      expect(screen.queryByText(/hello-world/i)).not.toBeInTheDocument();
     });
   });
 
@@ -311,40 +319,6 @@ describe('CombineRumorsDialog', () => {
       );
       fireEvent.click(screen.getByText('Cancel'));
       expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('ID generation', () => {
-    test('should generate URL-safe slugs from title input', async () => {
-      render(
-        <CombineRumorsDialog
-          open={true}
-          onClose={jest.fn()}
-          rumorIds={['r1', 'r2']}
-          rumors={[makeRumor('r1'), makeRumor('r2')]}
-          onCombine={jest.fn()}
-        />,
-      );
-      const titleInput = screen.getByDisplayValue(/Combined Rumor/);
-      await userEvent.clear(titleInput);
-      await userEvent.type(titleInput, 'Hello World!!');
-      expect(screen.getByText('ID will be: hello-world')).toBeInTheDocument();
-    });
-
-    test('should strip leading/trailing hyphens from generated ID', async () => {
-      render(
-        <CombineRumorsDialog
-          open={true}
-          onClose={jest.fn()}
-          rumorIds={['r1', 'r2']}
-          rumors={[makeRumor('r1'), makeRumor('r2')]}
-          onCombine={jest.fn()}
-        />,
-      );
-      const titleInput = screen.getByDisplayValue(/Combined Rumor/);
-      await userEvent.clear(titleInput);
-      await userEvent.type(titleInput, '   spaces around   ');
-      expect(screen.getByText('ID will be: spaces-around')).toBeInTheDocument();
     });
   });
 });

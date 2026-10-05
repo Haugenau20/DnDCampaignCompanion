@@ -115,6 +115,27 @@ export function useFirestore() {
     }
   }, [setError]);
 
+  // Create one document and update others, in one transaction
+  const createDocumentWithUpdates = useCallback(async <T, S>(
+    collectionName: string,
+    id: string,
+    sourceCollection: string,
+    decide: (read: (id: string) => Promise<(S & { id: string }) | undefined>) => Promise<{
+      create: T;
+      updates: Array<{ id: string; data: Partial<S> }>;
+    }>
+  ): Promise<void> => {
+    try {
+      setError(null);
+      await firebaseServices.document.createDocumentWithUpdates<any, any>(
+        collectionName, id, sourceCollection, decide
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create document');
+      throw err;
+    }
+  }, [setError]);
+
   // Delete document
   const deleteDocument = useCallback(async (
     collectionName: string,
@@ -190,6 +211,7 @@ export function useFirestore() {
     createDocument,
     updateDocumentWithAttribution,
     updateDocumentAfterReading,
+    createDocumentWithUpdates,
     deleteDocument,
     queryDocuments,
     batchOperations

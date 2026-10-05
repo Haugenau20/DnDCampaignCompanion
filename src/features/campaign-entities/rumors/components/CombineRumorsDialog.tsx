@@ -36,15 +36,6 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRumorIds, setSelectedRumorIds] = useState<string[]>([]);
 
-  // Generate ID from title - matches the logic in RumorContext
-  const generateRumorId = (title: string): string => {
-    return title
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-      .replace(/^-+|-+$/g, '');    // Remove leading/trailing hyphens
-  };
-
   // Pre-populate the form based on the selected rumors
   useEffect(() => {
     if (open && rumorIds.length > 0) {
@@ -88,11 +79,6 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Preview the ID that will be generated
-      const id = generateRumorId(title);
-      
-      console.log(`Generated ID for combined rumor: ${id}`);
-      
       await onCombine(selectedRumorIds, {
         title,
         content,
@@ -171,10 +157,6 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
             required
             disabled={isSubmitting}
           />
-
-          <Typography variant="body-sm" color="secondary" className="text-sm">
-            ID will be: {title ? generateRumorId(title) : ''}
-          </Typography>
 
           <Input
             label="Content *"

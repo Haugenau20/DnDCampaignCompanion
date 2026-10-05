@@ -524,6 +524,62 @@ describe("an image path needs its upload's live entry (T084)", () => {
 // content written after that would survive the deletion under a campaign
 // nobody can open, so the rules refuse it -- and refuse it too once the
 // campaign document is gone, which covers writes queued offline.
+describe("turning rumours into a quest is one transaction (T088)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+
+  /**
+   * What `DocumentService.createDocumentWithUpdates` sends: the quest's id is
+   * read and found free, every rumour is read, then the quest is set and each
+   * rumour updated, in one commit.
+   */
+  const convert = (uid: string, rumourIds: string[]) => {
+    const db = as(uid);
+    return db.runTransaction(async (transaction) => {
+      const quest = db.doc(`${C}/quests/find-the-fire`);
+      if ((await transaction.get(quest)).exists) throw new Error("taken");
+      const rumours = await Promise.all(rumourIds.map((id) => transaction.get(db.doc(`${C}/rumors/${id}`))));
+      transaction.set(quest, {title: "Find the fire", createdBy: uid});
+      rumours.forEach((rumour) => transaction.update(rumour.ref, {
+        convertedToQuestId: "find-the-fire",
+        notes: [...rumour.data()!.notes, {id: `converted-${rumour.id}`, content: "Converted to quest: find-the-fire"}],
+        modifiedBy: uid,
+      }));
+    });
+  };
+
+  const seedRumours = (count: number) => env.withSecurityRulesDisabled(async (context) => {
+    const batch = context.firestore().batch();
+    for (let i = 0; i < count; i++) {
+      batch.set(context.firestore().doc(`${C}/rumors/r${i}`), {title: `Rumour ${i}`, notes: []});
+    }
+    await batch.commit();
+  });
+  const ids = (count: number) => Array.from({length: count}, (_, i) => `r${i}`);
+
+  it("a member converts three rumours", async () => {
+    await seedRumours(3);
+    await assertSucceeds(convert("frodo", ids(3)));
+  });
+
+  // Every write's rules read the member's profile and the campaign, but a
+  // request may make only so many reads; identical ones count once. The
+  // client allows 499 rumours per conversion.
+  it("and the largest selection the client allows, 499", async () => {
+    await seedRumours(499);
+    await assertSucceeds(convert("frodo", ids(499)));
+  });
+
+  it("a stranger converts none, and nothing is created", async () => {
+    await seedRumours(3);
+    await assertFails(convert("sauron", ids(3)));
+    let created = true;
+    await env.withSecurityRulesDisabled(async (context) => {
+      created = (await context.firestore().doc(`${C}/quests/find-the-fire`).get()).exists;
+    });
+    expect(created).toBe(false);
+  });
+});
+
 describe("a campaign being deleted takes no writes (T037)", () => {
   const NOTE = `groups/${G}/users/frodo/notes/n1`;
   const PROGRESS = `groups/${G}/users/frodo/story-progress/c1`;
