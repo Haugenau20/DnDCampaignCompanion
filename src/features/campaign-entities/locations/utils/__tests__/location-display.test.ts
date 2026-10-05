@@ -1,5 +1,5 @@
 // src/features/campaign-entities/locations/utils/__tests__/location-display.test.ts
-import { resolveLocationName, referencesLocation } from '../location-display';
+import { resolveLocationName, referencesLocation, indexLocationNames } from '../location-display';
 import { Location } from '../../types';
 
 function makeLocation(overrides: Partial<Location> = {}): Location {
@@ -85,6 +85,43 @@ describe('resolveLocationName', () => {
     expect(resolveLocationName({}, locations)).toBeUndefined();
     expect(resolveLocationName({ location: '' }, locations)).toBeUndefined();
   });
+});
+
+// T101: a roster resolves one reference per row; an index turns each from a
+// search of every place into a lookup. It must give the same answer.
+describe('resolveLocationName with an index', () => {
+  const collidingName = makeLocation({ id: 'bree', name: 'rivendell' });
+  const duplicateName = makeLocation({ id: 'rivendell-2', name: 'RIVENDELL' });
+  const sets: Location[][] = [
+    [],
+    locations,
+    [moria, rivendell, collidingName],
+    [rivendell, duplicateName, moria],
+    [duplicateName, rivendell],
+  ];
+  const references = [
+    {},
+    { location: 'mines-of-moria' },
+    { location: 'Rivendell' },
+    { location: 'rivendell' },
+    { location: 'RIVENDELL' },
+    { location: 'bree' },
+    { location: 'Lothlorien' },
+    { locationId: 'rivendell' },
+    { locationId: 'rivendell', location: 'Mines of Moria' },
+    { locationId: 'gone', location: 'rivendell' },
+    { locationId: 'gone' },
+  ];
+
+  test.each(sets.map((set, i) => [i, set] as const))(
+    'answers as the array does (set %i)',
+    (_i, set) => {
+      const index = indexLocationNames(set);
+      for (const reference of references) {
+        expect(resolveLocationName(reference, index)).toBe(resolveLocationName(reference, set));
+      }
+    }
+  );
 });
 
 describe('referencesLocation', () => {

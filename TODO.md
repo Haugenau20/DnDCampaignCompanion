@@ -41,7 +41,6 @@ adjusted for the images focus above.
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T099 | Contact form's rate limit is easy to evade | S | open | Mail abuse possible, nothing exposed |
-| low | T101 | Large campaigns: quest and rumour rosters unpaged | S | open | Measured at 1,000s of records; not felt at current sizes |
 | low | T107 | CI builds the site in Docker only to copy it out | S | open | Shipped build ignores the lockfile CI tested |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 
@@ -569,21 +568,6 @@ time anyone edits it.
   and exits 0, which `manage-dev-data.ps1` trusts.
 - **Findings**: 13. OPS-001/002 are source-only; the reviewers could not run
   PowerShell. **Catch**: do it with T065's start/stop round trip.
-- **Source**: code review, 2026-10-04
-
-### T101 — Large campaigns: the rest of the roster work
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
-
-The NPC roster now mounts 100 rows at a time behind *Show more*
-(`shared/utils/roster-paging.ts`). Two things pass 5 (18) pointed at are left:
-
-- The quest and rumour rosters still mount every row. Their groups are by
-  status and can be collapsed, and a collapsed group still mounts its rows
-  (`hidden`), so paging them has to decide what a folded group counts as.
-- `NPCDirectory` resolves each NPC's location with `resolveLocationName`,
-  which searches the location array linearly per row (`location-display.ts`).
-  An id/name index would serve every row; pass 5 could not say how much of the
-  1,200-row redraw this is.
 - **Source**: code review, 2026-10-04
 
 ### T107 — CI builds the site inside a Docker image only to copy the files out

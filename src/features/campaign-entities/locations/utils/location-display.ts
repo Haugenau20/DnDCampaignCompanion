@@ -14,6 +14,35 @@ export interface LocationReference {
 }
 
 /**
+ * The campaign's locations, looked up by id and by lower-cased name rather
+ * than searched. A roster resolves one reference per row, and searching the
+ * array for each one made a 1,200-row list do 1.4 million comparisons per
+ * redraw at that many places (T101). Build it once per `locations` array
+ * (`useMemo`) and pass it where the array would go.
+ */
+export interface LocationNameIndex {
+  byId: ReadonlyMap<string, Location>;
+  /** The FIRST location with each lower-cased name, as `Array.find` gives. */
+  byLowerName: ReadonlyMap<string, Location>;
+}
+
+/**
+ * Index `locations` for {@link resolveLocationName}.
+ *
+ * @param locations The campaign's locations
+ */
+export const indexLocationNames = (locations: readonly Location[]): LocationNameIndex => {
+  const byId = new Map<string, Location>();
+  const byLowerName = new Map<string, Location>();
+  for (const loc of locations) {
+    if (!byId.has(loc.id)) byId.set(loc.id, loc);
+    const lower = loc.name.toLowerCase();
+    if (!byLowerName.has(lower)) byLowerName.set(lower, loc);
+  }
+  return { byId, byLowerName };
+};
+
+/**
  * Resolve a stored location reference to the name a user should see.
  *
  * Entities disagree about what they store, and about which field is
@@ -66,13 +95,20 @@ export interface LocationReference {
  */
 export const resolveLocationName = (
   reference: LocationReference,
-  locations: Location[]
+  locations: Location[] | LocationNameIndex
 ): string | undefined => {
   const { locationId, location } = reference;
+  const index = Array.isArray(locations) ? null : (locations as LocationNameIndex);
+  const findById = (id: string) =>
+    index ? index.byId.get(id) : (locations as Location[]).find(loc => loc.id === id);
+  const findByName = (name: string) =>
+    index
+      ? index.byLowerName.get(name.toLowerCase())
+      : (locations as Location[]).find(loc => loc.name.toLowerCase() === name.toLowerCase());
 
   // Step 1 & 2: the canonical reference, and its dangling case.
   if (locationId) {
-    const byId = locations.find(loc => loc.id === locationId);
+    const byId = findById(locationId);
     if (byId) {
       return byId.name;
     }
@@ -85,14 +121,12 @@ export const resolveLocationName = (
   // Step 3: the free-text fallback, exactly as this function behaved before
   // `locationId` existed.
   if (location) {
-    const byId = locations.find(loc => loc.id === location);
+    const byId = findById(location);
     if (byId) {
       return byId.name;
     }
 
-    const byName = locations.find(
-      loc => loc.name.toLowerCase() === location.toLowerCase()
-    );
+    const byName = findByName(location);
 
     return byName ? byName.name : location;
   }

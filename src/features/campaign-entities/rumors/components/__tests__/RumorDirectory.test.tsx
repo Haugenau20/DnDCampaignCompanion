@@ -1715,4 +1715,40 @@ describe('RumorDirectory — 15.3', () => {
       ).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // T101: each status group mounts a page at a time, folded or not.
+  // -------------------------------------------------------------------------
+  describe('large campaigns', () => {
+    const many = (status: RumorStatus, count: number, prefix: string) =>
+      Array.from({ length: count }, (_, i) =>
+        makeRumor({ id: `${prefix}-${i}`, title: `${prefix} rumour ${i}`, status })
+      );
+    /** Rows on the page, folded ones included, by their expand control. */
+    const rowsOf = (prefix: string) =>
+      screen.queryAllByRole('button', { name: new RegExp(`^(Expand|Collapse) ${prefix} rumour `), hidden: true }).length;
+
+    it('mounts one page of each group, and "Show more" adds a page to that group', () => {
+      setupMocks();
+      render(
+        <RumorDirectory rumors={[...many('unconfirmed', 230, 'heard'), ...many('false', 120, 'lie')]} />
+      );
+      expect(rowsOf('heard')).toBe(100);
+      expect(rowsOf('lie')).toBe(100);
+
+      fireEvent.click(screen.getByRole('button', { name: /show .*more/i }));
+      expect(rowsOf('heard')).toBe(200);
+      expect(rowsOf('lie')).toBe(100);
+    });
+
+    it('opens the folded False group for a deep link, and mounts the linked row', () => {
+      setupMocks({ uid: 'user-1' }, { highlight: 'lie-110' });
+      render(<RumorDirectory rumors={many('false', 120, 'lie')} />);
+      const heading = screen
+        .getAllByRole('button', { name: /^False/ })
+        .find((button) => button.hasAttribute('aria-expanded'));
+      expect(heading).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('button', { name: /^(Expand|Collapse) lie rumour 110$/ })).toBeVisible();
+    });
+  });
 });

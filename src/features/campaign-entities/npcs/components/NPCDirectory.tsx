@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { NPC, NPCRelationship, NPCStatus } from '../types';
 import { useLocations } from '../../locations/context/LocationContext';
 import { useNPCs } from '../context/NPCContext';
-import { resolveLocationName } from '../../locations/utils/location-display';
+import { indexLocationNames, resolveLocationName } from '../../locations/utils/location-display';
 import Button from '../../../../core/components/Button';
 import Typography from '../../../../core/components/Typography';
 import { Plus } from 'lucide-react';
@@ -142,6 +142,8 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   /** How many rows the roster mounts; "Show more" raises it (T101). */
   const [rowLimit, setRowLimit] = useState(ROSTER_PAGE_SIZE);
   const { locations } = useLocations();
+  /** One lookup per row, not a search of every place (T101). */
+  const locationIndex = useMemo(() => indexLocationNames(locations), [locations]);
   const { updateNPCRelationship, deleteNPC, updateNPCsStatus, deleteNPCs } = useNPCs();
   /** The NPC whose Delete was pressed, awaiting confirmation. */
   const [confirmingDelete, setConfirmingDelete] = useState<NPC | null>(null);
@@ -249,7 +251,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   const groupedNPCs = useMemo(() => {
     return filteredNPCs.reduce((acc, npc) => {
       const location =
-        resolveLocationName({ locationId: npc.locationId, location: npc.location }, locations) ??
+        resolveLocationName({ locationId: npc.locationId, location: npc.location }, locationIndex) ??
         'Location unknown';
       if (!acc[location]) {
         acc[location] = [];
@@ -257,7 +259,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
       acc[location].push(npc);
       return acc;
     }, {} as Record<string, NPC[]>);
-  }, [filteredNPCs, locations]);
+  }, [filteredNPCs, locationIndex]);
 
   if (isLoading) {
     return <RosterSkeleton label="Loading NPCs" />;

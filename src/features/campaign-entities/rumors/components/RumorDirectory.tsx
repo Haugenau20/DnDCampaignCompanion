@@ -39,7 +39,10 @@ import {
   RosterSkeleton,
   RosterEmpty,
   RosterStatus,
+  RosterShowMore,
 } from 'core/components/Roster';
+import { ROSTER_PAGE_SIZE } from 'shared/utils/roster-paging';
+import { useRosterGroupPaging } from 'shared/hooks/useRosterGroupPaging';
 
 interface RumorDirectoryProps {
   rumors: Rumor[];
@@ -285,6 +288,15 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
     [pinnedGroup]
   );
 
+  // The group a deep-linked rumour sits in is opened for it (T101).
+  const highlightedRumor = highlightedRumorId
+    ? initialRumors.find(rumor => rumor.id === highlightedRumorId)
+    : undefined;
+  const paging = useRosterGroupPaging(
+    COLLAPSED_BY_DEFAULT,
+    highlightedRumor ? groupOf(highlightedRumor) : null
+  );
+
   // Status counts drive the one bar that replaced the "All Status" dropdown.
   // Confirmed / unconfirmed / false are the entire status enum, so the three
   // segments sum to the total and the bar needs no separate "other" bucket.
@@ -523,144 +535,164 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
       {/* Rumor roster by status */}
       {groupedRumors.length > 0 ? (
-        groupedRumors.map(group => (
-          <RosterGroup
-            key={group.key}
-            title={group.title}
-            count={group.rumors.length}
-            collapsible={COLLAPSED_BY_DEFAULT.includes(group.key)}
-            defaultCollapsed={COLLAPSED_BY_DEFAULT.includes(group.key)}
-          >
-            {group.rumors.map((rumor, index) => {
-              const isExpanded = expandedRumorId === rumor.id;
-              const displayed = rumorDisplayTitle(rumor);
-              const name = displayed ?? UNTITLED_RUMOR;
+        groupedRumors.map(group => {
+          const collapsed = paging.isCollapsed(group.key);
+          // Each group pages on its own, folded or not (T101).
+          const limit = paging.limitFor(
+            group.key,
+            group.rumors.findIndex(rumor => rumor.id === highlightedRumorId)
+          );
+          const rows = group.rumors.slice(0, limit);
+          return (
+            <React.Fragment key={group.key}>
+              <RosterGroup
+                title={group.title}
+                count={group.rumors.length}
+                collapsible={COLLAPSED_BY_DEFAULT.includes(group.key)}
+                collapsed={collapsed}
+                onCollapsedChange={value => paging.setCollapsed(group.key, value)}
+              >
+                {rows.map((rumor, index) => {
+                  const isExpanded = expandedRumorId === rumor.id;
+                  const displayed = rumorDisplayTitle(rumor);
+                  const name = displayed ?? UNTITLED_RUMOR;
 
-              return (
-                <RosterRow
-                  key={rumor.id}
-                  id={`rumor-${rumor.id}`}
-                  entityId={rumor.id}
-                  entityName={name}
-                  gridClassName={ROW_GRID}
-                  isFirst={index === 0}
-                  highlighted={highlightedRumorId === rumor.id}
-                  expanded={isExpanded}
-                  toggleLabel={name}
-                  onToggle={() => openRow(isExpanded ? null : rumor.id)}
-                  selected={selection.selected.has(rumor.id)}
-                  leadingControl={
-                    selection.active ? (
-                      <input
-                        type="checkbox"
-                        aria-label={`Select ${name}`}
-                        checked={selection.selected.has(rumor.id)}
-                        onChange={(e) => selection.setSelected(rumor.id, e.target.checked)}
-                      />
-                    ) : undefined
-                  }
-                  expandedContent={
-                    /*
-                      The whole record, in the row (item 2). This is the one
-                      entity where §1.3's four-fact bound does not apply,
-                      because there is no page holding the remainder.
-                    */
-                    <RumorRowEditor
-                      rumor={rumor}
-                      draft={drafts[rumor.id]}
-                      onDraftChange={(patch) => setDraft(rumor.id, patch, rumor)}
-                      onSave={(draft) => handleSave(rumor, draft)}
-                      onCollapse={() => {
-                        clearDraft(rumor.id);
-                        openRow(null);
-                      }}
-                      onDelete={() => handleDelete(rumor.id)}
-                      onStatusChange={(status) => updateRumorStatus(rumor.id, status)}
-                      onAttach={(id, kind) => handleAttach(rumor, id, kind)}
-                      onDetach={(id, kind) => handleDetach(rumor, id, kind)}
-                      sources={{ npc: npcs, location: locations }}
-                      autoFocus={justAddedId === rumor.id}
-                      onOpenQuest={handleQuestClick}
-                      movesTo={
-                        normalizeRumorStatus(rumor.status) === groupOf(rumor)
-                          ? null
-                          : normalizeRumorStatus(rumor.status)
+                  return (
+                    <RosterRow
+                      key={rumor.id}
+                      id={`rumor-${rumor.id}`}
+                      entityId={rumor.id}
+                      entityName={name}
+                      gridClassName={ROW_GRID}
+                      isFirst={index === 0}
+                      highlighted={highlightedRumorId === rumor.id}
+                      expanded={isExpanded}
+                      toggleLabel={name}
+                      onToggle={() => openRow(isExpanded ? null : rumor.id)}
+                      selected={selection.selected.has(rumor.id)}
+                      leadingControl={
+                        selection.active ? (
+                          <input
+                            type="checkbox"
+                            aria-label={`Select ${name}`}
+                            checked={selection.selected.has(rumor.id)}
+                            onChange={(e) => selection.setSelected(rumor.id, e.target.checked)}
+                          />
+                        ) : undefined
                       }
-                    />
-                  }
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {/* The "Quest" pill that sat here is gone: the last cell in the
-                          same row already reads "Converted to quest", so the pill was
-                          the same fact a second time, in a box, next to the name. */}
-                      <Typography
-                        variant="body"
-                        // An unnamed rumour reads as unfinished rather than as
-                        // a record actually called "Untitled rumour".
-                        color={displayed ? undefined : 'muted'}
-                        className="font-semibold truncate font-heading"
-                      >
-                        {name}
-                      </Typography>
+                      expandedContent={
+                        /*
+                          The whole record, in the row (item 2). This is the one
+                          entity where §1.3's four-fact bound does not apply,
+                          because there is no page holding the remainder.
+                        */
+                        <RumorRowEditor
+                          rumor={rumor}
+                          draft={drafts[rumor.id]}
+                          onDraftChange={(patch) => setDraft(rumor.id, patch, rumor)}
+                          onSave={(draft) => handleSave(rumor, draft)}
+                          onCollapse={() => {
+                            clearDraft(rumor.id);
+                            openRow(null);
+                          }}
+                          onDelete={() => handleDelete(rumor.id)}
+                          onStatusChange={(status) => updateRumorStatus(rumor.id, status)}
+                          onAttach={(id, kind) => handleAttach(rumor, id, kind)}
+                          onDetach={(id, kind) => handleDetach(rumor, id, kind)}
+                          sources={{ npc: npcs, location: locations }}
+                          autoFocus={justAddedId === rumor.id}
+                          onOpenQuest={handleQuestClick}
+                          movesTo={
+                            normalizeRumorStatus(rumor.status) === groupOf(rumor)
+                              ? null
+                              : normalizeRumorStatus(rumor.status)
+                          }
+                        />
+                      }
+                    >
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {/* The "Quest" pill that sat here is gone: the last cell in the
+                              same row already reads "Converted to quest", so the pill was
+                              the same fact a second time, in a box, next to the name. */}
+                          <Typography
+                            variant="body"
+                            // An unnamed rumour reads as unfinished rather than as
+                            // a record actually called "Untitled rumour".
+                            color={displayed ? undefined : 'muted'}
+                            className="font-semibold truncate font-heading"
+                          >
+                            {name}
+                          </Typography>
+                          {/*
+                            Loud on purpose. Keeping a draft across a route change
+                            is only an improvement if the row says it is holding
+                            one -- otherwise persistence is just a quieter way to
+                            lose work, because you would believe you had saved.
+                          */}
+                          {unsavedIds.has(rumor.id) && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-full text-xs feedback-warning-edge chip-toggle chip-toggle-selected">
+                              Unsaved
+                            </span>
+                          )}
+                        </div>
+                        <Typography variant="body-sm" color="secondary" className="text-sm truncate">
+                          {rumor.sourceName}
+                        </Typography>
+                      </div>
+
                       {/*
-                        Loud on purpose. Keeping a draft across a route change
-                        is only an improvement if the row says it is holding
-                        one -- otherwise persistence is just a quieter way to
-                        lose work, because you would believe you had saved.
+                        A false rumour is red and struck through: the strike keeps
+                        it apart from confirmed without relying on hue alone.
                       */}
-                      {unsavedIds.has(rumor.id) && (
-                        <span className="shrink-0 px-2 py-0.5 rounded-full text-xs feedback-warning-edge chip-toggle chip-toggle-selected">
-                          Unsaved
-                        </span>
-                      )}
-                    </div>
-                    <Typography variant="body-sm" color="secondary" className="text-sm truncate">
-                      {rumor.sourceName}
-                    </Typography>
-                  </div>
+                      <RosterStatus
+                        tone={RUMOR_STATUS_TONE[normalizeRumorStatus(rumor.status)]}
+                        negated={normalizeRumorStatus(rumor.status) === 'false'}
+                      >
+                        {formatRumorStatus(rumor.status)}
+                      </RosterStatus>
 
-                  {/*
-                    A false rumour is red and struck through: the strike keeps
-                    it apart from confirmed without relying on hue alone.
-                  */}
-                  <RosterStatus
-                    tone={RUMOR_STATUS_TONE[normalizeRumorStatus(rumor.status)]}
-                    negated={normalizeRumorStatus(rumor.status) === 'false'}
-                  >
-                    {formatRumorStatus(rumor.status)}
-                  </RosterStatus>
+                      {/* Source type, stated once and plainly -- it was a filled chip
+                          saying what a plain label says. An em dash means nobody has
+                          said where this came from. */}
+                      <Typography
+                        variant="body-sm"
+                        color="secondary"
+                        className="hidden md:block justify-self-start text-sm"
+                      >
+                        {formatSourceType(rumor.sourceType)}
+                      </Typography>
 
-                  {/* Source type, stated once and plainly -- it was a filled chip
-                      saying what a plain label says. An em dash means nobody has
-                      said where this came from. */}
-                  <Typography
-                    variant="body-sm"
-                    color="secondary"
-                    className="hidden md:block justify-self-start text-sm"
-                  >
-                    {formatSourceType(rumor.sourceType)}
-                  </Typography>
-
-                  <Typography
-                    variant="body-sm"
-                    color="secondary"
-                    className="hidden md:flex items-center gap-1.5 text-sm truncate"
-                  >
-                    {rumor.convertedToQuestId ? (
-                      <>
-                        <Scroll size={13} className="shrink-0" aria-hidden="true" />
-                        Converted to quest
-                      </>
-                    ) : (
-                      '—'
-                    )}
-                  </Typography>
-                </RosterRow>
-              );
-            })}
-          </RosterGroup>
-        ))
+                      <Typography
+                        variant="body-sm"
+                        color="secondary"
+                        className="hidden md:flex items-center gap-1.5 text-sm truncate"
+                      >
+                        {rumor.convertedToQuestId ? (
+                          <>
+                            <Scroll size={13} className="shrink-0" aria-hidden="true" />
+                            Converted to quest
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </Typography>
+                    </RosterRow>
+                  );
+                })}
+              </RosterGroup>
+              {!collapsed && rows.length < group.rumors.length && (
+                <RosterShowMore
+                  shown={rows.length}
+                  total={group.rumors.length}
+                  step={ROSTER_PAGE_SIZE}
+                  noun={`${group.title.toLowerCase()} rumours`}
+                  onShowMore={() => paging.showMore(group.key, limit)}
+                />
+              )}
+            </React.Fragment>
+          );
+        })
       ) : initialRumors.length > 0 ? (
         <RosterEmpty
           title="No rumours match these filters"
