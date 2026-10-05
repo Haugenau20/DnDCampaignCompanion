@@ -23,7 +23,7 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry. Group deletion decided 2026-10-02, plan first |
+| high | T037 | A deleting campaign stays writable; a group cannot be deleted | L | open | Late writes survive a campaign deletion (needs a decision). Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
@@ -453,19 +453,24 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 
 ---
 
-### T037 — Deletions cannot recover from a failure, and a group cannot be deleted
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-04
+### T037 — A deleting campaign stays writable, and a group cannot be deleted
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-05
 
-**The deletions that exist leave data behind when they fail** (code review,
-2026-10-04). Group deletion would be built on them, so the plan covers these
-first:
+**What is left of the deletions that exist** (code review, 2026-10-04). Since
+2026-10-05 `deleteCampaign` is resumable: it keeps a record in
+`groups/{g}/campaignDeletions/{c}` until every stage has succeeded, checks
+each member-cleanup write, and deletes pictures after documents. One finding
+remains, and it needs a decision:
 
-- `deleteCampaign` (`firebase/functions/src/campaignManagement/deleteCampaign.ts:107-150`)
-  deletes member notes through a BulkWriter whose individual failures
-  `close()` does not reject, deletes images before documents, and
-  `recursiveDelete` can remove the root after a failed child, after which a
-  retry is refused. The campaign stays writable during cleanup. DATA-004,
-  DATA-010 (03), IMG-005 (04), TEST-005 (08).
+- **A campaign being deleted still accepts writes** (DATA-010, 03). A note
+  saved, or an entity created, after the cleanup has passed it survives the
+  deletion, under a campaign nobody can open. Notes are outside the campaign
+  subtree and keyed by a `campaignId` field, and no rule checks that a
+  campaign exists or is being deleted. **To decide**: fence writes in the
+  rules (`!exists(.../campaignDeletions/$(campaignId))` on every campaign
+  content and note write: one extra billed read per write), or keep the
+  deletion record as a tombstone and re-sweep it later, as the image sweep
+  does (no per-write cost; late writes live until the sweep).
 
 **Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
 plan to write, not something to start without one. The maintainer's reason is
@@ -481,7 +486,9 @@ means cascading through its campaigns (each with its own subcollections), its
 member's notes for every campaign in it.
 
 - **Precedent**: `deleteCampaign`, an Admin SDK `recursiveDelete` in a
-  callable, but with the failure modes above. Its doc comment at
+  callable, resumable through a deletion record outside the subtree it
+  deletes. Group deletion needs the same: the group document cannot record
+  its own unfinished deletion. Its doc comment at
   `src/core/services/firebase/campaign/CampaignService.ts:225` explains why a
   client cannot do this itself.
 - **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
