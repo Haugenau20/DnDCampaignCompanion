@@ -6,9 +6,8 @@
 //
 // The blanket `allow read, write: if true` below is intentional for local
 // emulator work and is NOT what protects the production database. Production
-// rules are authored in the Firebase console; a transcribed review copy lives
-// beside this file as `firestore.rules.prod` (deny-by-default, group-scoped,
-// with per-document creator checks).
+// rules are `firestore.rules.prod` beside this file (deny-by-default,
+// group-scoped), which `firebase.json` names and the merge workflow deploys.
 //
 // Do not "harden" this file to match production, and do not read it as
 // evidence about production's posture -- a reader who did exactly that during

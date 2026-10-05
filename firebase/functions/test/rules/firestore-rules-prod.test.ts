@@ -6,8 +6,8 @@
 // the emulator harness is; nothing here exercises a Cloud Function.
 //
 // The emulator's own ruleset is `allow read, write: if true`, so none of this
-// can be seen by running the app. And passing here does not deploy anything:
-// production rules are pasted into the console by hand.
+// can be seen by running the app. This suite gates the merge, and the merge
+// deploys the file it tests (T105).
 //
 // `RULES_FILE=<path> npx jest test/rules` runs the same checks against another
 // revision. That is how each hole below was shown to be open before

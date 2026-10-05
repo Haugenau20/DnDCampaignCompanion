@@ -26,10 +26,10 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
   usually has them running. Need to switch branches under a running dev server? Ask first, or use a
   worktree.
 
-The emulators run from **`firebase/firebase.emulators.json`**, not `firebase.json`: the Storage
-emulator won't start under the real project id without a `storage.rules` key, and that key in
-`firebase.json` would let a bare `firebase deploy` push the permissive emulator rules live. Starting
-emulators by hand? Pass `--config firebase.emulators.json` too, or Storage (9199) is missing.
+The emulators run from **`firebase/firebase.emulators.json`**, not `firebase.json`: `firebase.json`
+names the **production** rulesets (`*.rules.prod`, which CI deploys), while the emulators need the
+permissive ones. Starting emulators by hand? Pass `--config firebase.emulators.json` too, or they
+enforce production rules against dev data and Storage (9199) is missing.
 
 `docker/` holds only what CI uses: it builds the frontend with `docker/Dockerfile.frontend.prod`
 (`npm install --legacy-peer-deps`, then `npm run build` — see T059). There is no Docker setup for
@@ -158,19 +158,24 @@ Creator** on itself. The emulator needs nothing, so no test catches it — the l
 claim failing as `internal`. Expired `deviceSignIns` docs are deleted lazily by `startDeviceSignIn`;
 a Firestore TTL policy on `expiresAt` is the intended sweep.
 
-The deployed Firestore rules live in the Firebase console, not a deploy step — don't assume they
-match `firestore.rules.prod` without reading them back.
+**Rules are deployed from the repo** (T105): every merge to `main` deploys `firestore.rules.prod`
+and `storage.rules.prod`, so a change to either is live once merged, and a console edit lasts only
+until the next merge. Never point `firebase.json` at `firestore.rules` or `storage.rules` — those
+are the permissive emulator rulesets; the deploy job refuses it.
 
 `npm run lint` in `firebase/functions` reports ~2,000 pre-existing problems (mostly CRLF
 `linebreak-style`), so it is **not a pass/fail gate** — stash, capture a baseline, and diff.
 
 ## Verifying a Change Before Proposing a Merge
 
-Merging to `main` deploys live: the Cloud Functions first, then Hosting (`firebase-hosting-merge.yml`;
-the functions deploy under the `FIREBASE_FUNCTIONS_DEPLOY_SA` secret, and a failed functions deploy
-holds Hosting back). That deploy is non-interactive, so it fails when production still has a function
-the source no longer exports — delete it by hand — or when `europe-west1` loses its Artifact Registry
-cleanup policy. Rules are never deployed by CI. CI (`.github/workflows/test.yml`) runs all three steps,
+Merging to `main` deploys live: the Cloud Functions first, then the Firestore and Storage rules,
+then Hosting (`firebase-hosting-merge.yml`; functions and rules deploy under the
+`FIREBASE_FUNCTIONS_DEPLOY_SA` secret, and either failing holds Hosting back). That deploy is
+non-interactive, so it fails when production still has a function the source no longer exports —
+delete it by hand — or when `europe-west1` loses its Artifact Registry cleanup policy. **Deploy
+order is fixed** — a rule may rely on a live function, and the frontend on a live rule. A rule that
+refuses what the *live* frontend still writes must merge after that frontend has shipped, in a
+later PR. CI (`.github/workflows/test.yml`) runs all three steps,
 plus `npm run lint`, `npm run lint:tests`, the `firebase/functions` suite and `npm run check:bundle`, on every PR and
 before the deploy, which waits on them. A ruleset on `main` requires `test / test`, `test / functions`
 and `test / bundle`, so a red PR cannot merge; a new job in `test.yml` gates nothing until the

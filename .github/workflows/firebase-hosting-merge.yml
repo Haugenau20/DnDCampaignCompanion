@@ -16,8 +16,7 @@ jobs:
   # Functions first: a new page must never reach users before the function it
   # calls. Unchanged functions are skipped by the CLI, so most runs are quick.
   # Deploys with its own service account (FIREBASE_FUNCTIONS_DEPLOY_SA), not the
-  # Hosting one. Firestore and Storage rules stay manual: firebase.json has no
-  # rules keys, so `--only functions` cannot touch them.
+  # Hosting one. `--only functions` leaves the rules to `deploy_rules`.
   #
   # Fails, and so holds back Hosting, when: prod has a function that the source
   # no longer exports (delete it by hand: `firebase functions:delete`), or the
@@ -53,9 +52,65 @@ jobs:
         working-directory: firebase
         run: npx firebase deploy --only functions --project dnd-campaign-companion --non-interactive
 
+  # Then the Firestore and Storage rules (T105), from the files firebase.json
+  # names: firestore.rules.prod and storage.rules.prod. After the functions, so
+  # a rule may rely on a function that is already live; before Hosting, so the
+  # frontend may rely on a rule. A rule that must follow the frontend instead
+  # ships in a later merge (see the header of firestore.rules.prod).
+  #
+  # Same service account as the functions, which needs three more roles on the
+  # project; without them this job fails and holds back Hosting. What the CLI
+  # 15.22.4 checks or calls (lib/commands/deploy.js, lib/gcp/storage.js):
+  #   - Firebase Rules Admin (roles/firebaserules.admin): creating and
+  #     releasing both rulesets.
+  #   - Cloud Datastore Index Admin (roles/datastore.indexAdmin): the CLI's
+  #     pre-check asks for the `firestore` target's index permissions even
+  #     when only `firestore:rules` is deployed. No index is deployed.
+  #   - Cloud Storage for Firebase Viewer (roles/firebasestorage.viewer): the
+  #     Storage deploy looks up the default bucket.
+  # The CLI skips a ruleset identical to the live one.
+  deploy_rules:
+    needs: [test, deploy_functions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: firebase/package-lock.json
+
+      - name: Install the Firebase CLI
+        run: npm ci --prefix firebase
+
+      # firestore.rules and storage.rules are the permissive EMULATOR rulesets.
+      # A firebase.json that named either would deploy open data; refuse it.
+      - name: Refuse anything but the production rulesets
+        working-directory: firebase
+        run: |
+          node -e '
+            const config = require("./firebase.json");
+            const firestore = config.firestore && config.firestore.rules;
+            const storage = config.storage && config.storage.rules;
+            if (firestore !== "firestore.rules.prod" || storage !== "storage.rules.prod") {
+              console.error(`firebase.json must name firestore.rules.prod and storage.rules.prod; it names ${firestore} and ${storage}.`);
+              process.exit(1);
+            }
+          '
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_FUNCTIONS_DEPLOY_SA }}
+
+      - name: Deploy rules
+        working-directory: firebase
+        run: npx firebase deploy --only firestore:rules,storage --project dnd-campaign-companion --non-interactive
+
   # Merging deploys live, so a red suite must stop the deploy, not just report.
   build_and_deploy:
-    needs: [test, deploy_functions]
+    needs: [test, deploy_functions, deploy_rules]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

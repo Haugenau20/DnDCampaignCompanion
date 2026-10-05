@@ -1,4 +1,3 @@
-
 {
   "functions": {
     "source": "functions",
@@ -6,12 +5,15 @@
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ]
   },
-  "//": "DELIBERATELY NO `firestore.rules` KEY. It used to point at firestore.rules -- the PERMISSIVE EMULATOR ruleset (`allow read, write: if true`) -- so a bare `firebase deploy`, or `--only firestore`, would have deployed a WIDE OPEN database to production. Production rules are authored and deployed through the Firebase console; the review copy is firestore.rules.prod. Removing the key makes that mistake impossible: deploy can no longer touch Firestore rules at all.",
-  "//2": "EXPECTED SIDE EFFECT, verified not assumed: the emulator now prints `Did not find a Cloud Firestore rules file` on every start and defaults to allowing all reads and writes. That is the SAME effective behaviour as before, because the file it used to load was itself `allow read, write: if true` -- the warning is noise, not a regression. firestore.rules is kept in the repo as documentation of dev intent, and because restoring the key is the way to make the emulator enforce rules if that is ever wanted.",
-  "//3": "To test rules against the emulator WITHOUT this key, load a ruleset per scratch project id: PUT http://127.0.0.1:8080/emulator/v1/projects/{projectId}:securityRules. That is how firestore.rules.prod was verified, and it leaves real sample data untouched.",
-  "//4": "Storage has NO key here either, for the same reason: storage.rules is the permissive emulator ruleset. The emulators run from firebase.emulators.json, which carries the storage key; production Storage rules are pasted into the console from storage.rules.prod.",
+  "//": "RULES ARE DEPLOYED FROM HERE (T105). `firestore.rules` and `storage.rules` below point at the PRODUCTION rulesets, firestore.rules.prod and storage.rules.prod, and the merge workflow deploys them with `--only firestore:rules,storage`, after the functions and before Hosting. They must never point at firestore.rules or storage.rules: those are the PERMISSIVE EMULATOR rulesets (`allow read, write: if true` and the like), and deploying either would open the production data to anyone. The deploy job refuses to run unless these two keys name the .prod files.",
+  "//2": "The emulators do not read this file: they run from firebase.emulators.json (scripts/start-dev.ps1, `npm --prefix firebase run test:functions`), which has no Firestore rules key, so the Firestore emulator allows all reads and writes, and whose Storage key loads the permissive storage.rules. Starting the emulators from THIS file instead would enforce the production rules against dev data and refuse the sample-data tooling's writes.",
+  "//3": "To test rules against the emulator, load a ruleset per scratch project id: PUT http://127.0.0.1:8080/emulator/v1/projects/{projectId}:securityRules. functions/test/rules/ does exactly that for both .prod files.",
   "firestore": {
+    "rules": "firestore.rules.prod",
     "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules.prod"
   },
   "hosting": {
     "public": "build",

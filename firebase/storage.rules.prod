@@ -1,19 +1,20 @@
 // firebase/storage.rules.prod
 //
 // ============================================================================
-// THIS FILE IS A REVIEW COPY. IT IS NOT DEPLOYED FROM HERE. EDITING IT CHANGES
-// NOTHING IN PRODUCTION. Paste it into the Firebase console to deploy.
+// THIS IS THE PRODUCTION RULESET. MERGING A CHANGE TO IT DEPLOYS IT (T105).
 // ============================================================================
 //
-// The production Storage ruleset is authored and deployed through the Firebase
-// console, exactly as Firestore's is (see firestore.rules.prod). `firebase.json`
-// carries no `storage` key, so `firebase deploy` cannot touch Storage rules.
+// `firebase.json` points its `storage.rules` key here, and the merge workflow
+// deploys it together with firestore.rules.prod, after the Cloud Functions and
+// before Hosting (see the deploy-order note there). Do not edit the rules in
+// the Firebase console: the next merge overwrites them with this file.
 // `storage.rules` is the PERMISSIVE EMULATOR ruleset, loaded only through
 // `firebase.emulators.json`. Do not "reconcile" the two.
 //
-// When pasting, the console asks to let Storage read Firestore. Accept: the
-// membership checks below are `firestore.get()` calls, and without that grant
-// every one of them fails, so every read and write is denied.
+// The membership checks below are `firestore.get()` calls, which need Storage
+// to be allowed to read Firestore. That grant was given in the console when
+// these rules were first pasted (it is a project setting, not part of the
+// ruleset); without it every check fails, so every read and write is denied.
 //
 // Pinned by functions/test/rules/storage-rules-prod.test.ts.
 //

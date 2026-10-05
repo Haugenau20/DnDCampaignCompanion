@@ -30,7 +30,6 @@ adjusted for the images focus above.
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, extra quests per retry |
 | medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
-| medium | T105 | Deploy the rules from the repo | M | open | Repo and production can drift unseen |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
@@ -637,27 +636,6 @@ The NPC roster now mounts 100 rows at a time behind *Show more*
   1,200-row redraw this is.
 - **Source**: code review, 2026-10-04
 
-### T105 — Deploy the Firestore and Storage rules from the repo, not by pasting into the console
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
-
-Production rules are pasted into the Firebase console by hand from
-`firestore.rules.prod` / `storage.rules.prod`, so the repo and production can
-drift with nothing to notice it.
-
-- **Where**: `firebase/firebase.json` deliberately has no rules keys (`:9`,
-  `:12` explain why: the keys used to point at the permissive emulator
-  rulesets). The Storage key lives only in `firebase.emulators.json:13`. Both
-  `.prod` headers say "paste into the console". `CLAUDE.md:154,166` say rules
-  are console-only and never deployed by CI.
-- **Catch**: the maintainer confirmed on 2026-10-04 that the live Firestore
-  and Storage rules are the `.prod` files (Firestore at T084's revision). The
-  first deploy overwrites whatever is live, so read the console back and diff
-  it first all the same. Deciding by hand (`firebase deploy --only firestore:rules,storage`)
-  or from CI decides whether the deploy service account needs rules permissions.
-- **Also stale**: `firestore.rules.prod:9-11` still says `firebase.json` points
-  its `firestore.rules` key at `firestore.rules`; it has no such key.
-- **Source**: todo.txt, 2026-10-04
-
 ### T107 — CI builds the site inside a Docker image only to copy the files out
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-04
 
@@ -747,7 +725,8 @@ in the repo, so this is console work plus whatever copy is decided.
   rules are what protect the data. Hiding them protects nothing that correct
   rules don't. But public rules make any open hole easy to find.
 - **To decide**: keep them public, or make the repo private (moving them
-  elsewhere would break T105's deploy-from-repo). Either way, the exposure
+  elsewhere would break the deploy, which takes them from the repo since
+  T105). Either way, the exposure
   is a hole in the rules, not their visibility.
 - **Source**: todo.txt, 2026-10-04
 
