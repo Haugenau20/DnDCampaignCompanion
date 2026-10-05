@@ -176,6 +176,55 @@ describe('NoteContext Behavioral Tests', () => {
     });
   });
 
+  // T085: an edit whose save failed after its editor had gone is held here,
+  // in memory, until the note is saved -- and never across users or campaigns.
+  describe('Unsaved edits kept after leaving a note', () => {
+    const edit = { title: '', content: 'the last sentence', hasExplicitTitle: false, error: 'offline' };
+    const renderProvider = () => {
+      let capturedContext: any;
+      const utils = render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      return { ...utils, context: () => capturedContext };
+    };
+
+    test('keeps an edit until it is forgotten', async () => {
+      const { context } = renderProvider();
+      await waitFor(() => expect(context()).toBeDefined());
+
+      context().setUnsavedEdit('note-1', edit);
+      expect(context().getUnsavedEdit('note-1')).toEqual(edit);
+
+      context().setUnsavedEdit('note-1', undefined);
+      expect(context().getUnsavedEdit('note-1')).toBeUndefined();
+    });
+
+    test('drops every kept edit when the user or campaign changes', async () => {
+      const { context, rerender } = renderProvider();
+      await waitFor(() => expect(context()).toBeDefined());
+      context().setUnsavedEdit('note-1', edit);
+
+      mockUseCampaigns.mockReturnValue({ activeCampaignId: 'other-campaign' });
+      rerender(
+        <NoteProvider>
+          <TestComponent onRender={() => undefined} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(context().getUnsavedEdit('note-1')).toBeUndefined());
+
+      context().setUnsavedEdit('note-2', edit);
+      mockUseAuth.mockReturnValue({ user: { uid: 'someone-else', email: 'x@example.com' } });
+      rerender(
+        <NoteProvider>
+          <TestComponent onRender={() => undefined} />
+        </NoteProvider>
+      );
+      await waitFor(() => expect(context().getUnsavedEdit('note-2')).toBeUndefined());
+    });
+  });
+
   describe('Authentication Requirements', () => {
     test('should throw error when creating note without authentication', async () => {
       mockUseAuth.mockReturnValue({ user: null });

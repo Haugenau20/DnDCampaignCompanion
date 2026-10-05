@@ -62,6 +62,19 @@ export interface Note extends BaseContent {
 }
 
 /**
+ * A note's text as it stood when a save on leaving failed (T085), and why it
+ * failed.
+ */
+export interface UnsavedNoteEdit {
+  /** The title as typed; meaningful only when `hasExplicitTitle`. */
+  title: string;
+  content: string;
+  hasExplicitTitle: boolean;
+  /** The failed save's message. */
+  error: string;
+}
+
+/**
  * Context value provided by NoteContext
  */
 export interface NoteContextValue {
@@ -124,6 +137,23 @@ export interface NoteContextValue {
    * @returns Promise resolving when update is complete
    */
   updateNote: (noteId: string, updateData: Partial<Note>) => Promise<void>;
+
+  /**
+   * The edit whose save failed after its editor had already gone (T085), or
+   * undefined. The editor restores it, with its error, when the note is
+   * opened again. Held in memory only, and dropped on a change of user,
+   * group or campaign.
+   * @param noteId ID of the note
+   */
+  getUnsavedEdit: (noteId: string) => UnsavedNoteEdit | undefined;
+
+  /**
+   * Keep an edit whose save failed after its editor had gone, or forget it
+   * (`undefined`) once the note has been saved.
+   * @param noteId ID of the note
+   * @param edit The edit, or undefined to forget it
+   */
+  setUnsavedEdit: (noteId: string, edit: UnsavedNoteEdit | undefined) => void;
   
   /**
    * Archive a note

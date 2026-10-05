@@ -74,7 +74,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   onArchive,
   onDelete
 }, ref) => {
-  const { getNoteById, updateNote, saveNote } = useNotes();
+  const { getNoteById, updateNote, saveNote, getUnsavedEdit, setUnsavedEdit } = useNotes();
   const [note, setNote] = useState<Note | undefined>();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -110,6 +110,13 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
   const lastWrittenRef = useRef<{ noteId: string; title: string; content: string } | null>(null);
   /** The id whose data is in the fields. See the load effect. */
   const loadedNoteIdRef = useRef<string | null>(null);
+  /**
+   * The fields as the server last had them, in the form they are written:
+   * as loaded, then as each save wrote them. Whatever differs from this would
+   * be lost by leaving (T085, REACT-003). Not `hasUnsavedChanges`, which a
+   * brand-new note starts with although there is nothing in it to save.
+   */
+  const baselineRef = useRef<{ title: string; content: string } | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { titleRef.current = title; }, [title]);
@@ -142,11 +149,30 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       // show "New Note" in the title field, with no derivation hint, on
       // every pre-existing note.
       const loadedTitle = noteData.title?.trim() ?? "";
-      setHasExplicitTitle(!!loadedTitle && loadedTitle !== LEGACY_DEFAULT_TITLE);
+      const loadedExplicit = !!loadedTitle && loadedTitle !== LEGACY_DEFAULT_TITLE;
+      setHasExplicitTitle(loadedExplicit);
+      baselineRef.current = {
+        title: titleToPersist(loadedExplicit, noteData.title || ""),
+        content: noteData.content || "",
+      };
       // Set last saved time from note's modification date (if saved)
       setLastSaved(noteData.isUnsaved ? null : (noteData.dateModified ? new Date(noteData.dateModified) : null));
+
+      // An edit whose save failed after this note was left (T085): put it
+      // back, say so, and let "Try again" or the next autosave write it.
+      const kept = readOnly ? undefined : getUnsavedEdit(noteId);
+      if (kept) {
+        setTitle(kept.title);
+        setContent(kept.content);
+        setHasExplicitTitle(kept.hasExplicitTitle);
+        hasExplicitTitleRef.current = kept.hasExplicitTitle;
+        titleRef.current = kept.title;
+        contentRef.current = kept.content;
+        setHasUnsavedChanges(true);
+        setSaveError(`Your last changes were not saved: ${kept.error}`);
+      }
     }
-  }, [noteId, providedNote, getNoteById]);
+  }, [noteId, providedNote, getNoteById, getUnsavedEdit, readOnly]);
 
   const clearDebounceTimer = useCallback(() => {
     if (debounceTimerRef.current !== null) {
@@ -210,6 +236,8 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       const persist = viaSave || isNewNote ? saveNote : updateNote;
       await persist(note.id, { title: nextTitle, content: nextContent });
       lastWrittenRef.current = { noteId: note.id, title: nextTitle, content: nextContent };
+      baselineRef.current = { title: nextTitle, content: nextContent };
+      setUnsavedEdit(note.id, undefined);
       setSaveError(null);
 
       // Reflect a now-created document locally so the footer's "Not saved to
@@ -224,7 +252,7 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     } finally {
       setIsSaving(false);
     }
-  }, [note, readOnly, getNoteById, updateNote, saveNote, onSave, markCleanIfUnchanged]);
+  }, [note, readOnly, getNoteById, updateNote, saveNote, onSave, markCleanIfUnchanged, setUnsavedEdit]);
 
   /*
     Saves never overlap (T072). Two writes in flight can land in either order
@@ -290,6 +318,59 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       performAutosave();
     }, AUTOSAVE_DEBOUNCE_MS);
   }, [clearDebounceTimer, performAutosave]);
+
+  /** Whether the fields hold anything the server does not have yet. */
+  const isDirty = useCallback((): boolean => {
+    const baseline = baselineRef.current;
+    if (!baseline || readOnly) return false;
+    return (
+      titleToPersist(hasExplicitTitleRef.current, titleRef.current) !== baseline.title ||
+      contentRef.current !== baseline.content
+    );
+  }, [readOnly]);
+
+  /*
+    Leaving the note saves it (T085, REACT-003). The idle debounce is
+    cancelled when the editor unmounts, and it used to be the only save
+    pending: whatever was typed in the last two seconds -- or longer, for a
+    writer who never paused -- went with it. The save is started here and
+    runs on after the editor is gone, through the provider above the routes.
+    If it fails, nobody is left to say so: the provider keeps the edit, and
+    the editor restores it, with the reason, when the note is opened again.
+  */
+  const leaveRef = useRef<() => void>(() => undefined);
+  leaveRef.current = () => {
+    if (!note || !isDirty()) return;
+    const kept = {
+      title: titleRef.current,
+      content: contentRef.current,
+      hasExplicitTitle: hasExplicitTitleRef.current,
+    };
+    runSave(false).catch((error: unknown) => {
+      console.error("Failed to save note on leaving:", error);
+      setUnsavedEdit(note.id, {
+        ...kept,
+        error: error instanceof Error ? error.message : "Failed to save note.",
+      });
+    });
+  };
+  useEffect(() => () => leaveRef.current(), []);
+
+  /*
+    Closing or reloading the tab cannot wait for a save, so it asks first
+    while there is anything unsaved, or a save still on its way.
+  */
+  useEffect(() => {
+    if (readOnly) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!isDirty() && !inFlightSaveRef.current) return;
+      event.preventDefault();
+      // Chrome before 119 needs `returnValue` set to show the prompt.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [readOnly, isDirty]);
 
   // Real interval save while the note is dirty. The debounce above only fires
   // after typing STOPS, so a writer who never pauses was never saved. Cleared
@@ -383,6 +464,28 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
     }
   };
 
+  /**
+   * "All notes": save first, and leave only once the note is safe. A failure
+   * stays here, with the text and the reason (T085).
+   */
+  const [isLeaving, setIsLeaving] = useState(false);
+  const handleBack = useCallback(async () => {
+    if (isDirty()) {
+      clearDebounceTimer();
+      setIsLeaving(true);
+      try {
+        await runSave(false);
+      } catch (error) {
+        console.error("Failed to save note before leaving:", error);
+        setSaveError(error instanceof Error ? error.message : "Failed to save note.");
+        return;
+      } finally {
+        setIsLeaving(false);
+      }
+    }
+    onBack?.();
+  }, [isDirty, clearDebounceTimer, runSave, onBack]);
+
   // Grow the body to fit its content instead of sitting at a fixed 30 rows.
   useAutoGrow(bodyRef, content);
 
@@ -446,8 +549,9 @@ const NoteEditor = forwardRef<NoteEditorRef, NoteEditorProps>(({
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b card-divider text-[13px]">
         <button
           type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 typography-secondary hover:underline"
+          onClick={() => { void handleBack(); }}
+          disabled={isLeaving}
+          className="flex items-center gap-1.5 typography-secondary hover:underline disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
           All notes
