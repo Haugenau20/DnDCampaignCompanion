@@ -12,6 +12,8 @@ import { NPCProvider, useNPCs } from 'features/campaign-entities/npcs/context/NP
 const mockDeleteData = jest.fn();
 const mockRefreshNPCs = jest.fn();
 const mockRemoveImage = jest.fn();
+const mockRecordReleased = jest.fn();
+const mockClearReleased = jest.fn();
 let mockNpcs: any[] = [];
 
 jest.mock('features/user-management', () => ({
@@ -42,7 +44,11 @@ jest.mock('shared/hooks/useFirebaseData', () => ({
 }));
 
 jest.mock('core/services/firebase', () => ({
-  images: { remove: (path: string) => mockRemoveImage(path) },
+  images: {
+    remove: (path: string) => mockRemoveImage(path),
+    recordReleasedImage: (path: string) => mockRecordReleased(path),
+    clearReleasedImage: (path: string) => mockClearReleased(path),
+  },
 }));
 
 const portrait = {
@@ -113,6 +119,33 @@ describe('deleting an NPC', () => {
 
     expect(error).toEqual(expect.objectContaining({ message: 'permission-denied' }));
     expect(mockRemoveImage).not.toHaveBeenCalled();
+  });
+
+  // T084: recorded before the document goes, so the daily sweep deletes the
+  // file if the delete below never runs.
+  it('records the portrait as released before the document delete, and clears it after the file', async () => {
+    const order: string[] = [];
+    mockRecordReleased.mockImplementation(() => { order.push('record'); });
+    mockDeleteData.mockImplementation(async () => { order.push('document'); });
+    mockRemoveImage.mockImplementation(async () => { order.push('image'); });
+    mockClearReleased.mockImplementation(() => { order.push('clear'); });
+    await renderContext();
+
+    await act(() => context.deleteNPC('n1'));
+
+    expect(mockRecordReleased).toHaveBeenCalledWith(portrait.path);
+    expect(mockClearReleased).toHaveBeenCalledWith(portrait.path);
+    expect(order).toEqual(['record', 'document', 'image', 'clear']);
+  });
+
+  it('keeps the released record when the portrait cannot be deleted, for the sweep', async () => {
+    mockRemoveImage.mockRejectedValue(new Error('network'));
+    await renderContext();
+
+    await act(() => context.deleteNPC('n1'));
+
+    expect(mockRecordReleased).toHaveBeenCalledWith(portrait.path);
+    expect(mockClearReleased).not.toHaveBeenCalled();
   });
 
   it('still succeeds when the portrait cannot be deleted -- it is only an orphan', async () => {

@@ -387,6 +387,42 @@ describe('ImageStorageService.clearPendingUpload', () => {
   });
 });
 
+describe('ImageStorageService -- the released entry (T084)', () => {
+  const service = ImageStorageService.getInstance();
+  const PATH = 'groups/g1/campaigns/c1/npcs/n1/7d3e2b1c.webp';
+
+  it('records a file about to be dropped in its group, named after the file, at the server time', async () => {
+    service.recordReleasedImage(PATH);
+    await flush();
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      { path: 'groups/g1/releasedImages/7d3e2b1c.webp' },
+      { path: PATH, uid: 'uploader-1', createdAt: SERVER_TIME }
+    );
+  });
+
+  it('deletes the entry once the file is gone', async () => {
+    service.clearReleasedImage(PATH);
+    await flush();
+    expect(mockDeleteDoc).toHaveBeenCalledWith({ path: 'groups/g1/releasedImages/7d3e2b1c.webp' });
+  });
+
+  it('never throws: a missing record only leaves the file to the monthly sweep', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockSetDoc.mockRejectedValue(new Error('permission-denied'));
+    mockDeleteDoc.mockRejectedValue(new Error('offline'));
+
+    expect(() => service.recordReleasedImage(PATH)).not.toThrow();
+    expect(() => service.clearReleasedImage(PATH)).not.toThrow();
+    await flush();
+    expect(warn).toHaveBeenCalledTimes(2);
+
+    expect(() => service.recordReleasedImage('not/a/group/path.webp')).not.toThrow();
+    mockAuth.currentUser = null;
+    expect(() => service.recordReleasedImage(PATH)).not.toThrow();
+    warn.mockRestore();
+  });
+});
+
 // ─── uploadScreenshot ────────────────────────────────────────────────────────
 
 describe('ImageStorageService.uploadScreenshot', () => {

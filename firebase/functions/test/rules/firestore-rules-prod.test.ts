@@ -355,6 +355,59 @@ describe("pending uploads (T084)", () => {
   });
 });
 
+// T084: the sweep's second ledger. A member records a file before the write
+// that stops a document pointing at it, so the daily sweep reads these entries
+// rather than every document. The same shape and rules as `pendingUploads`.
+describe("released images (T084)", () => {
+  const ID = "9a8b7c6d.webp";
+  const entry = (id = ID) => `groups/${G}/releasedImages/${id}`;
+  const FILE = `groups/${G}/campaigns/c1/npcs/n1/${ID}`;
+  const now = () => firebase.firestore.FieldValue.serverTimestamp();
+  const record = (over: Record<string, unknown> = {}) => ({path: FILE, uid: "frodo", createdAt: now(), ...over});
+
+  it("a member records a file they are about to drop, stamped by the server", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+  });
+
+  it("and removes it once the file is deleted", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+    await assertSucceeds(as("frodo").doc(entry()).delete());
+  });
+
+  it("covers a banner and a crest as well as an entity's picture", async () => {
+    await assertSucceeds(as("frodo").doc(entry("b.webp")).set(record({path: `groups/${G}/campaigns/c1/banner/b.webp`})));
+    await assertSucceeds(as("frodo").doc(entry("c.webp")).set(record({path: `groups/${G}/crest/c.webp`})));
+  });
+
+  it("cannot record one in another member's name", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({uid: "gandalf"})));
+  });
+
+  it("cannot choose its time", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({createdAt: new Date(Date.now() - 365 * 86400000)})));
+  });
+
+  it("must name a file in this group, under the entry's own id", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({path: `groups/mordor/campaigns/c9/npcs/n9/${ID}`})));
+    await assertFails(as("frodo").doc(entry()).set(record({path: `groups/${G}/campaigns/c1/npcs/n1/other.webp`})));
+  });
+
+  it("holds nothing but the three fields", async () => {
+    await assertFails(as("frodo").doc(entry()).set(record({note: "hello"})));
+  });
+
+  it("is not changed after the fact, nor removed or read by anyone else", async () => {
+    await assertSucceeds(as("frodo").doc(entry()).set(record()));
+    await assertFails(as("frodo").doc(entry()).update({path: `groups/${G}/crest/${ID}`}));
+    await assertFails(as("gandalf").doc(entry()).delete());
+    await assertFails(as("gandalf").doc(entry()).get());
+  });
+
+  it("a stranger cannot record one in the group", async () => {
+    await assertFails(as("sauron").doc(entry()).set(record({uid: "sauron"})));
+  });
+});
+
 // T084 (IMG-003), second half: the sweep deletes a file once its entry's lease
 // is over, so a document write that arrives after that would point at a
 // deleted file. The rules refuse it: pointing a document at a different file

@@ -193,6 +193,23 @@
 // after both client halves of T084 and T083's field patches had shipped.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-05 -- T084, the sweep's second ledger
+// ---------------------------------------------------------------------------
+// The first revision deployed by the merge workflow (T105). One addition,
+// pinned by the "released images" tests in
+// `functions/test/rules/firestore-rules-prod.test.ts`:
+//
+// 8. NEW -- `groups/{groupId}/releasedImages/{imageId}`. A member records an
+//    image file before the write that stops a document pointing at it (a
+//    replace, a removal, a deleted NPC or location) and deletes the entry once
+//    the file is gone. The daily sweep then reads these entries instead of
+//    every document. Same rules as `pendingUploads`.
+//
+// Deploy order does not matter: the client's record is best-effort, so a
+// frontend that ships before the rule finds it refused and carries on, and
+// the monthly full sweep still finds what it would have recorded.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // Change the production rules here, in the same PR as whatever motivated the
 // change, never in the console. Every merge to `main` redeploys this file, so a
@@ -430,6 +447,22 @@ service cloud.firestore {
 
         // Only its owner removes it. Nobody reads or changes one: the sweep
         // reads them with the Admin SDK.
+        allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      }
+
+      // An image file a document is about to stop pointing at (T084). The
+      // client records it before the write that drops the image and deletes
+      // the entry once it has deleted the file; the daily sweep deletes the
+      // file of any entry left behind, once the document no longer points at
+      // it. Same shape as `pendingUploads`, for the same reasons.
+      match /releasedImages/{imageId} {
+        allow create: if isGroupMember(groupId) &&
+                       request.resource.data.keys().hasOnly(['path', 'uid', 'createdAt']) &&
+                       request.resource.data.uid == request.auth.uid &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.path is string &&
+                       request.resource.data.path.matches('groups/' + groupId + '/.+/' + imageId);
+
         allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
       }
 

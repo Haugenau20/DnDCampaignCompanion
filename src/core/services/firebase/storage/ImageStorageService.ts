@@ -81,20 +81,44 @@ export function supportScreenshotPrefix(uid: string): string {
 const PENDING_ENTRY_TIMEOUT_MS = 10_000;
 
 /**
- * Where the pending entry for an image path lives: in the path's group, named
- * after the file (T084). `firestore.rules.prod` checks both.
+ * Where a ledger entry about an image path lives: in the path's group, in
+ * `ledger`, named after the file. `firestore.rules.prod` checks both.
  *
  * @param path An image path under `groups/{groupId}/`
+ * @param ledger `pendingUploads` or `releasedImages`
  * @returns The entry's collection path and document id
  */
-export function pendingUploadOf(path: string): { collection: string; id: string } {
+function ledgerEntryOf(path: string, ledger: string): { collection: string; id: string } {
   const segments = path.split("/");
   const [root, groupId] = segments;
   const id = segments[segments.length - 1];
   if (root !== "groups" || !groupId || segments.length < 3 || !id) {
     throw new Error(`Not an image path in a group: "${path}"`);
   }
-  return { collection: `groups/${groupId}/pendingUploads`, id };
+  return { collection: `groups/${groupId}/${ledger}`, id };
+}
+
+/**
+ * Where the pending entry for an image path lives (T084): an upload whose
+ * document is still to be written.
+ *
+ * @param path An image path under `groups/{groupId}/`
+ * @returns The entry's collection path and document id
+ */
+export function pendingUploadOf(path: string): { collection: string; id: string } {
+  return ledgerEntryOf(path, "pendingUploads");
+}
+
+/**
+ * Where the released entry for an image path lives (T084): a file a document
+ * is about to stop pointing at, which the daily sweep deletes if the client's
+ * own delete never happens.
+ *
+ * @param path An image path under `groups/{groupId}/`
+ * @returns The entry's collection path and document id
+ */
+export function releasedImageOf(path: string): { collection: string; id: string } {
+  return ledgerEntryOf(path, "releasedImages");
 }
 
 /**
@@ -126,9 +150,11 @@ export function isOwnBucketUrl(url: string): boolean {
  *
  * Callers save the returned `StoredImage` on their document, and decide the
  * order of writes (see the design's lifecycle table -- the document is always
- * written before an old file is deleted). The one Firestore write here is the
- * upload's pending entry, which says "a document is about to point at this
- * file" until the caller calls `clearPendingUpload` (T084).
+ * written before an old file is deleted). The Firestore writes here are the
+ * daily sweep's two ledgers (T084): an upload's pending entry, which says "a
+ * document is about to point at this file" until the caller calls
+ * `clearPendingUpload`, and a released entry, which says "a document is about
+ * to stop pointing at this file" until the caller calls `clearReleasedImage`.
  */
 class ImageStorageService extends BaseFirebaseService {
   private static instance: ImageStorageService;
@@ -225,6 +251,47 @@ class ImageStorageService extends BaseFirebaseService {
       console.warn(`Could not clear the pending entry for ${path}; the sweep's lease will.`, error);
     try {
       const { collection, id } = pendingUploadOf(path);
+      deleteDoc(doc(this.db, collection, id)).catch(warn);
+    } catch (error) {
+      warn(error);
+    }
+  }
+
+  /**
+   * Record that a document is about to stop pointing at `path` (T084), so the
+   * daily sweep deletes the file if the caller's own delete never runs -- a
+   * failed request, a closed tab. Without the record only the monthly full
+   * sweep would find it. Call it before the write that drops the image, and
+   * `clearReleasedImage` once the file is gone.
+   *
+   * Never throws, and does not wait: a record that fails costs nothing but a
+   * month's wait for the full sweep, and the user's action must not wait on
+   * clean-up. Its order against the document write does not matter either:
+   * the sweep checks the document before it deletes anything.
+   * @param path `StoredImage.path`
+   */
+  public recordReleasedImage(path: string): void {
+    const warn = (error: unknown) =>
+      console.warn(`Could not record ${path} as released; the monthly sweep will find it.`, error);
+    try {
+      const uid = this.requireUid();
+      const { collection, id } = releasedImageOf(path);
+      setDoc(doc(this.db, collection, id), { path, uid, createdAt: serverTimestamp() }).catch(warn);
+    } catch (error) {
+      warn(error);
+    }
+  }
+
+  /**
+   * The released file is deleted: its entry can go. Never throws -- a stale
+   * entry costs the sweep one read before it deletes the entry itself.
+   * @param path `StoredImage.path`
+   */
+  public clearReleasedImage(path: string): void {
+    const warn = (error: unknown) =>
+      console.warn(`Could not clear the released entry for ${path}; the sweep will.`, error);
+    try {
+      const { collection, id } = releasedImageOf(path);
       deleteDoc(doc(this.db, collection, id)).catch(warn);
     } catch (error) {
       warn(error);

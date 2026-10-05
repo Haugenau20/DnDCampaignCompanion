@@ -23,7 +23,6 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T084 | The image sweep reads every document daily | M | open | Images focus; the leases are enforced now, so only an unrecorded replace still needs the full read |
 | high | T085 | Editors carry the wrong record's draft, or lose it on a failed save | L | open | Authored prose lost or saved into another record |
 | high | T037 | Deletions cannot recover from a failure; a group cannot be deleted | L | open | Failed deletions strand data and refuse retry; the last-admin guard races. Group deletion decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
@@ -154,27 +153,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T084 — The orphaned-image sweep reads every image-bearing document, every day
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-05
-
-IMG-003 is closed: revision 2026-10-04b of `firestore.rules.prod`, which
-refuses a write pointing at a file without a live `pendingUploads` entry
-(`imageLeased`), was pasted into the console on 2026-10-05. What is left is
-the cost of the sweep it made safe (PERF2-004's remaining half, 07).
-
-- **Where**: `sweepOrphanedImages.ts` (`referencedPaths`) reads every NPC,
-  location, campaign and group document daily to learn what is referenced,
-  then lists the whole bucket. Both grow with the data, not with what changed.
-- **Why it still has to**: an upload has an entry and a referenced file has a
-  document, but the old file of a replace (or a removed picture, or a deleted
-  NPC's) has neither once the client's follow-up delete fails. Only the full
-  read finds it.
-- **Decided (maintainer, 2026-10-05)**: record the file a write drops, in the
-  same batch as that write, so the daily run reads only the records; keep the
-  full read as a **monthly** reconcile for files that predate the records or
-  that a stale tab's write dropped without one.
-- **Source**: code review, 2026-10-04; narrowed when T084's rules went live
 
 ### T085 — Editors carry the wrong record's draft, or lose the draft when a save fails
 **Type** bug · **Size** L · **Status** open · **Verified** 2026-10-04

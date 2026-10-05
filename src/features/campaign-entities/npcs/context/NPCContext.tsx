@@ -10,7 +10,7 @@ import { useAuth, useUser } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
-import { discardImage } from 'shared/hooks/useImageAttachment';
+import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
@@ -186,9 +186,11 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const image = getNPCById(npcId)?.image;
+    const discard = image ? releaseImage(image.path) : undefined;
     await deleteData(npcId);
-    // After the document: a failure can then only orphan the file.
-    if (image) discardImage(image.path);
+    // After the document: a failure can then only orphan the file, which the
+    // released record lets the daily sweep find.
+    discard?.();
   }, [hasRequiredContext, user, getNPCById, deleteData]);
 
   /**
@@ -226,13 +228,13 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('User must be authenticated to delete NPCs');
     }
 
-    const imagePaths = npcIds.flatMap(id => {
+    const discards = npcIds.flatMap(id => {
       const image = getNPCById(id)?.image;
-      return image ? [image.path] : [];
+      return image ? [releaseImage(image.path)] : [];
     });
     await commitEntityWrites<NPC>(npcsPath, 'NPCs', npcIds.map(id => ({ type: 'delete' as const, id })));
     // After the documents: a failure can then only orphan files.
-    imagePaths.forEach(discardImage);
+    discards.forEach(discard => discard());
   }, [hasRequiredContext, user, getNPCById, npcsPath]);
 
   const value: NPCContextValue = {
