@@ -34,6 +34,9 @@ adjusted for the images focus above.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
+| low | T114 | React Router 6 → 7 | M | open | Closes the last advisory in the browser bundle, which the app's own `next` check already blocks |
+| low | T115 | ESLint 8 is end-of-life | M | open | Tooling only; ESLint 9 means a flat config without `eslint-config-react-app` |
+| low | T116 | `firebase-admin` 12 → 14 in the functions | M | open | Last server-side advisories (`node-forge`, `uuid`); neither path is one the functions use |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
@@ -500,6 +503,69 @@ included; under Java 17 the emulators exit at once.
   (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
 - **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
+
+### T114 — React Router 6 → 7
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+`react-router-dom` 6.30.6 carries two advisories `npm audit` cannot fix inside
+v6; the first fixed release is 7.18.0.
+
+- **Reachability, measured 2026-10-06**: GHSA-wrjc-x8rr-h8h6 (open redirect via
+  a backslash in `<Link>` / `useNavigate`) needs an attacker-chosen path. The
+  only one the app navigates to is sign-in's `next`, and `safeNextPath`
+  (`features/user-management/auth/utils/next-path.ts:45-52`) already rejects
+  backslashes, raw and decoded. GHSA-337j-9hxr-rhxg is SSR hydration, which an
+  SPA never runs. So this is hygiene, not an open hole.
+- **Where**: `src/index.tsx:87` opts into `v7_startTransition` only; the dev
+  console warns about `v7_relativeSplatPath` and the other flags. Turn the
+  remaining future flags on one at a time first, then bump; `react-router-dom`
+  becomes a re-export of `react-router` in v7.
+- **Catch**: router behaviour is what jsdom sees least. Browser-check
+  navigation, the lazy pages' fallback (`app/RouteFallback.tsx`) and sign-in's
+  `next` round trip.
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
+
+### T115 — ESLint 8 is end-of-life
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+`npm ci` warns that `eslint@8.57.1` is no longer supported, and half of the
+other deprecation warnings (`@humanwhocodes/*`, the `@babel/plugin-proposal-*`
+set) arrive through it and `eslint-config-react-app`. The rest (`inflight`,
+`glob@7`, `rimraf@3`, `abab`, `domexception`) come from Jest 29's `babel-jest`
+and `jsdom@20`; that is a Jest major, not this item.
+
+- **Where**: the config is `package.json`'s `eslintConfig`, which extends
+  `react-app` and `react-app/jest` — Create React App's, kept after the move to
+  Vite (T059). It requires ESLint 8. ESLint 9 means a flat `eslint.config.js`
+  naming the plugins directly.
+- **Catch**: `npm run lint` must stay at zero warnings with `import/no-cycle`,
+  and `lint:tests` compares against a per-file baseline
+  (`scripts/test-lint-baseline.json`): a rule set that changes underneath it
+  moves every count, so re-record it and read the diff.
+- **Not covered**: the remaining dev-only advisories (`braces`, `sprintf-js`,
+  `postcss-selector-parser`, through Tailwind 3 and `babel-jest`) are
+  build- and test-time DoS with no fix in their ranges short of Tailwind 4.
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
+
+### T116 — `firebase-admin` 12 → 14 in the functions
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+After `npm audit fix`, the functions' production dependencies keep two
+advisories, both inside `firebase-admin@12.7.0`, and `npm audit` fixes them
+only by moving to 14.
+
+- **What**: `node-forge@1.4.0` (RSA PKCS#1 v1.5 signature verification accepts
+  extra nested elements) and `uuid` 9/10 (missing bounds check when a buffer is
+  passed to v3/v5/v6). The functions call neither directly; the Admin SDK uses
+  them for its own credentials and request ids.
+- **Where**: `firebase/functions/package.json`. 14 needs Node 22, which the
+  functions already declare (`engines.node`), but the installed
+  `firebase-functions` 6.3.2 accepts `firebase-admin` only up to 13, so 14 brings
+  `firebase-functions` 7 with it. All three are majors: read the changelogs, then rebuild and
+  run `npm --prefix firebase run test:functions` and a browser pass over the
+  callables (CLAUDE.md: the emulator's wrapped `admin.firestore` hides what jest
+  does not).
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
 
 ### T079 — Do old documents still lack `locationId`?
 **Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
