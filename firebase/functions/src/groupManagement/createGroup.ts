@@ -49,6 +49,12 @@ export const createGroup = functions.onCall(
       await admin.firestore().runTransaction(async (transaction) => {
         const now = new Date();
 
+        // The one read comes first: the SDK refuses a read after a write in
+        // the same transaction, and reading this after writing the group
+        // failed every call.
+        const userDocRef = admin.firestore().collection("users").doc(callerUid);
+        const userDoc = await transaction.get(userDocRef);
+
         // Create the group document.
         const groupDocRef = admin.firestore().collection("groups").doc(groupId);
         transaction.set(groupDocRef, {
@@ -59,9 +65,6 @@ export const createGroup = functions.onCall(
         });
 
         // Add the group to the caller's global profile.
-        const userDocRef = admin.firestore().collection("users").doc(callerUid);
-        const userDoc = await transaction.get(userDocRef);
-
         // Default username to use if we can't find one.
         let usernameToUse = "Admin";
 
