@@ -4,7 +4,7 @@
 // cannot be retried from the app -- the campaign is no longer listed -- so
 // the daily sweep finishes it. The scheduled wrapper never fires in the
 // emulator; its body is tested directly, with `now` injected.
-import * as admin from "firebase-admin";
+import {Firestore, Timestamp} from "firebase-admin/firestore";
 import {clearProject, useEmulatorProject} from "./emulator";
 import {resumeCampaignDeletions, RESUME_AFTER_MS} from "../src/campaignManagement/campaignDeletion";
 import {imageBucket} from "../src/shared/imageBucket";
@@ -14,7 +14,7 @@ const db = useEmulatorProject(PROJECT);
 const GROUP = "g1";
 const NOW = new Date("2026-10-05T03:30:00Z");
 
-const ago = (ms: number) => admin.firestore.Timestamp.fromMillis(NOW.getTime() - ms);
+const ago = (ms: number) => Timestamp.fromMillis(NOW.getTime() - ms);
 const isThere = async (path: string) => (await db.doc(path).get()).exists;
 const fileExists = async (path: string) => (await imageBucket().file(path).exists())[0];
 
@@ -69,7 +69,7 @@ describe("resumeCampaignDeletions", () => {
   it("keeps the record of a deletion that fails again, and finishes the others", async () => {
     await seedStranded("c1", 2 * RESUME_AFTER_MS);
     await seedStranded("c2", 2 * RESUME_AFTER_MS);
-    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+    jest.spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("injected: backend unavailable"));
 
     const result = await resumeCampaignDeletions(NOW);

@@ -1,5 +1,5 @@
 // functions/test/deviceSignIn.test.ts
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
 import {Timestamp} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {startDeviceSignIn} from "../src/deviceSignIn/startDeviceSignIn";
@@ -34,7 +34,7 @@ const claim = (data: object) =>
 
 /** A real account, as the approving device would be signed in as. */
 async function account(email: string = EMAIL): Promise<string> {
-  const user = await admin.auth().createUser({email});
+  const user = await getAuth().createUser({email});
   return user.uid;
 }
 
@@ -293,7 +293,7 @@ describe("claimDeviceSignIn", () => {
 
   it("issues nothing for an account deleted since it approved", async () => {
     const {requestId, secret, code, uid} = await approved();
-    await admin.auth().deleteUser(uid);
+    await getAuth().deleteUser(uid);
     await expect(claim({requestId, secret, code})).resolves.toEqual({status: "expired"});
   });
 });

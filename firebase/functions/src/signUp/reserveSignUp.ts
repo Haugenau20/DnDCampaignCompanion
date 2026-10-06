@@ -1,6 +1,6 @@
 // functions/src/signUp/reserveSignUp.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {registrationTokenProblem} from "../shared/registrationToken";
 import {
@@ -57,7 +57,7 @@ export const reserveSignUp = functions.onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = getFirestore();
 
     try {
       const [tokenDoc, groupDoc] = await Promise.all([

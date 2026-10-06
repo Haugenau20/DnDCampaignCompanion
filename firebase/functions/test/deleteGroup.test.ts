@@ -3,7 +3,7 @@
 // T037: deleting a group removes everything stored for it -- its campaigns,
 // its members' profiles and private notes, its pictures -- and nothing of
 // anyone else's. Members keep their accounts.
-import * as admin from "firebase-admin";
+import {BulkWriter, Firestore} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {deleteGroup} from "../src/groupManagement/deleteGroup";
 import {imageBucket} from "../src/shared/imageBucket";
@@ -161,7 +161,7 @@ describe("a deletion that fails partway", () => {
   // Every stage can fail, and calling again must finish the job. A failure
   // must never leave live documents whose pictures are gone.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bulkWriterProto = admin.firestore.BulkWriter.prototype as any;
+  const bulkWriterProto = BulkWriter.prototype as any;
 
   /** Fails the next BulkWriter update of `path`; `close()` still resolves. */
   const failNextUpdateOf = (path: string) => {
@@ -203,7 +203,7 @@ describe("a deletion that fails partway", () => {
   });
 
   it("keeps the pictures while the documents could not be deleted", async () => {
-    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+    jest.spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("injected: backend unavailable"));
 
     await expectHttpsError(remove("gandalf"), "internal");

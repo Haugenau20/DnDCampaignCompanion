@@ -1,6 +1,6 @@
 // functions/src/userManagement/removeUserFromGroup.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 import {LAST_ADMIN_MESSAGE, stepDownAsAdmin} from "../shared/groupAdmins";
@@ -43,8 +43,7 @@ export const removeUserFromGroup = functions.onCall(
       // Allow self-removal or admin removal
       if (!isSelfRemoval) {
         // Verify caller is an admin of the group
-        const adminProfileRef = admin
-          .firestore()
+        const adminProfileRef = getFirestore()
           .collection("groups")
           .doc(groupId)
           .collection("users")
@@ -60,8 +59,7 @@ export const removeUserFromGroup = functions.onCall(
         }
         
         // Check if target user is also an admin
-        const targetUserRef = admin
-          .firestore()
+        const targetUserRef = getFirestore()
           .collection("groups")
           .doc(groupId)
           .collection("users")
@@ -78,10 +76,10 @@ export const removeUserFromGroup = functions.onCall(
       }
       
       // Execute as a batch to ensure atomicity
-      const batch = admin.firestore().batch();
+      const batch = getFirestore().batch();
       
       // Update the user's global profile to remove this group
-      const globalUserRef = admin.firestore().collection("users").doc(userId);
+      const globalUserRef = getFirestore().collection("users").doc(userId);
       const globalUser = await globalUserRef.get();
       
       if (globalUser.exists) {

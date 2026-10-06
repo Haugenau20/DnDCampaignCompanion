@@ -1,6 +1,6 @@
 // functions/src/groupManagement/createGroup.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 
 interface CreateGroupData {
@@ -44,19 +44,19 @@ export const createGroup = functions.onCall(
     try {
       const callerUid = request.auth.uid;
       const callerEmail = request.auth.token.email;
-      const groupId = admin.firestore().collection("groups").doc().id;
+      const groupId = getFirestore().collection("groups").doc().id;
 
-      await admin.firestore().runTransaction(async (transaction) => {
+      await getFirestore().runTransaction(async (transaction) => {
         const now = new Date();
 
         // The one read comes first: the SDK refuses a read after a write in
         // the same transaction, and reading this after writing the group
         // failed every call.
-        const userDocRef = admin.firestore().collection("users").doc(callerUid);
+        const userDocRef = getFirestore().collection("users").doc(callerUid);
         const userDoc = await transaction.get(userDocRef);
 
         // Create the group document.
-        const groupDocRef = admin.firestore().collection("groups").doc(groupId);
+        const groupDocRef = getFirestore().collection("groups").doc(groupId);
         transaction.set(groupDocRef, {
           name: trimmedName,
           description: description || "",
@@ -94,8 +94,7 @@ export const createGroup = functions.onCall(
         }
 
         // Create the caller's group profile as an admin.
-        const groupUserDocRef = admin
-          .firestore()
+        const groupUserDocRef = getFirestore()
           .collection("groups")
           .doc(groupId)
           .collection("users")
@@ -112,8 +111,7 @@ export const createGroup = functions.onCall(
 
         // Reserve the username.
         const usernameLower = usernameToUse.toLowerCase();
-        const usernameDocRef = admin
-          .firestore()
+        const usernameDocRef = getFirestore()
           .collection("groups")
           .doc(groupId)
           .collection("usernames")

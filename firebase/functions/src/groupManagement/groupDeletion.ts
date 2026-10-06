@@ -1,9 +1,12 @@
 // functions/src/groupManagement/groupDeletion.ts
-import * as admin from "firebase-admin";
+import {
+  DocumentReference,
+  FieldPath,
+  FieldValue,
+  getFirestore,
+  Timestamp,
+} from "firebase-admin/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
-// Modular, not `admin.firestore.*`: the functions emulator wraps the
-// namespaced `admin.firestore` in a stand-in without these.
-import {FieldPath, FieldValue, Timestamp} from "firebase-admin/firestore";
 import {imageBucket} from "../shared/imageBucket";
 import {checkedBulkWriter} from "../shared/checkedBulkWriter";
 import {RESERVATIONS} from "../signUp/signUpGate";
@@ -17,12 +20,12 @@ import {RESERVATIONS} from "../signUp/signUpGate";
  * the rules' default deny covers it.
  *
  * @param {string} groupId The group
- * @return {admin.firestore.DocumentReference} The record
+ * @return {DocumentReference} The record
  */
 export function groupDeletionRef(
   groupId: string
-): admin.firestore.DocumentReference {
-  return admin.firestore().collection("groupDeletions").doc(groupId);
+): DocumentReference {
+  return getFirestore().collection("groupDeletions").doc(groupId);
 }
 
 /**
@@ -49,7 +52,7 @@ export function groupDeletionRef(
  * @return {Promise<void>} Resolves once the group and the record are gone
  */
 export async function finishGroupDeletion(groupId: string): Promise<void> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const groupRef = db.collection("groups").doc(groupId);
 
   // 1. Found by the array the rules read, not by the group's member
@@ -121,8 +124,7 @@ export async function resumeGroupDeletions(
   now: Date,
   budget = RESUME_BUDGET
 ): Promise<ResumeResult> {
-  const records = await admin
-    .firestore()
+  const records = await getFirestore()
     .collection("groupDeletions")
     .orderBy(FieldPath.documentId())
     .limit(budget + 1)

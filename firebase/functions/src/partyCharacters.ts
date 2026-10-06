@@ -12,7 +12,7 @@
 // A member is known by two names, and either can turn up in a note: the
 // group `username` they signed up with, and the character they post as. Both
 // are someone at the table, so neither is ever an NPC.
-import * as admin from "firebase-admin";
+import {Firestore} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 
 /**
@@ -24,13 +24,13 @@ import {HttpsError} from "firebase-functions/v2/https";
  * caller must be a member: this is the whole group's roster, and a
  * non-member has no business reading it.
  *
- * @param {admin.firestore.Firestore} db Firestore
+ * @param {Firestore} db Firestore
  * @param {string} groupId The group the note belongs to
  * @param {string} uid The caller
  * @return {Promise<string[]>} Distinct, trimmed, non-empty names
  */
 export async function readPartyNames(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   groupId: string,
   uid: string
 ): Promise<string[]> {

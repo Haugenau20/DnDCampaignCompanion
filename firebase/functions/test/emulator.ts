@@ -2,7 +2,8 @@
 //
 // Shared plumbing for suites that run against the emulators.
 
-import * as admin from "firebase-admin";
+import {getApps, initializeApp} from "firebase-admin/app";
+import {Firestore, getFirestore} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 
 export const EMULATOR_HOSTS = {
@@ -15,13 +16,13 @@ export const EMULATOR_HOSTS = {
  * Points the Admin SDK at the emulators under `projectId`, and initializes it
  * the way `src/index.ts` does in production.
  *
- * Call at the top of a suite, before anything reads `admin.firestore()`. Jest
+ * Call at the top of a suite, before anything reads `getFirestore()`. Jest
  * gives each suite its own module registry, so each gets a fresh default app.
  *
  * @param {string} projectId A `demo-` id unique to the suite
- * @return {admin.firestore.Firestore} The emulator-backed Firestore
+ * @return {Firestore} The emulator-backed Firestore
  */
-export function useEmulatorProject(projectId: string): admin.firestore.Firestore {
+export function useEmulatorProject(projectId: string): Firestore {
   if (!projectId.startsWith("demo-")) {
     throw new Error(`Test project ids must start with "demo-": ${projectId}`);
   }
@@ -29,10 +30,10 @@ export function useEmulatorProject(projectId: string): admin.firestore.Firestore
   process.env.FIREBASE_AUTH_EMULATOR_HOST = EMULATOR_HOSTS.Auth;
   process.env.FIREBASE_STORAGE_EMULATOR_HOST = EMULATOR_HOSTS.Storage;
   process.env.GCLOUD_PROJECT = projectId;
-  if (admin.apps.length === 0) {
-    admin.initializeApp({projectId});
+  if (getApps().length === 0) {
+    initializeApp({projectId});
   }
-  return admin.firestore();
+  return getFirestore();
 }
 
 /**

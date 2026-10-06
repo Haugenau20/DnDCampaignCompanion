@@ -1,6 +1,6 @@
 // functions/src/deviceSignIn/lookUpDeviceSignIn.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {
   DEVICE_SIGN_INS,
@@ -46,7 +46,7 @@ export const lookUpDeviceSignIn = functions.onCall(
 
     let stored: DeviceSignInRequest | undefined;
     try {
-      const snapshot = await admin.firestore()
+      const snapshot = await getFirestore()
         .collection(DEVICE_SIGN_INS)
         .doc(requestId)
         .get();

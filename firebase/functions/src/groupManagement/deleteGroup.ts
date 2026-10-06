@@ -1,10 +1,6 @@
 // functions/src/groupManagement/deleteGroup.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
-// The modular import, not `admin.firestore.FieldValue`: inside the functions
-// emulator the namespaced `admin.firestore` is a wrapped stand-in without
-// `FieldValue`, so the call failed there before writing anything.
-import {FieldValue} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {finishGroupDeletion, groupDeletionRef} from "./groupDeletion";
 
@@ -47,7 +43,7 @@ export const deleteGroup = functions.onCall(
 
     try {
       const callerUid = request.auth.uid;
-      const db = admin.firestore();
+      const db = getFirestore();
       const groupRef = db.collection("groups").doc(groupId);
 
       // A group admin or a global admin. Mirrors the isGroupAdmin() /

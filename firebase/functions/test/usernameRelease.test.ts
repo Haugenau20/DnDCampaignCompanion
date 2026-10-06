@@ -6,7 +6,8 @@
 // another member's name and then left released that member's reservation.
 // Cleanup must release the departing user's own reservations, and nobody
 // else's.
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
+import {WriteBatch} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {removeUserFromGroup} from "../src/userManagement/removeUserFromGroup";
 import {deleteUser} from "../src/userManagement/deleteUser";
@@ -22,7 +23,7 @@ const ownerOf = async (group: string, name: string) =>
 
 /** Seeds a member: Auth account, global profile, group profiles and usernames. */
 async function seedMember(uid: string, role: string, groups: string[] = [G1]) {
-  await admin.auth().createUser({uid});
+  await getAuth().createUser({uid});
   await db.doc(`users/${uid}`).set({id: uid, groups, activeGroupId: groups[0]});
   for (const group of groups) {
     await db.doc(`groups/${group}`).set({name: group});
@@ -79,8 +80,8 @@ describe.each([
   it("fails rather than release a reservation that changed hands meanwhile", async () => {
     // Between cleanup reading frodo's reservations and committing, frodo's
     // name is released and taken by gandalf.
-    const commit = admin.firestore.WriteBatch.prototype.commit;
-    const spy = jest.spyOn(admin.firestore.WriteBatch.prototype, "commit");
+    const commit = WriteBatch.prototype.commit;
+    const spy = jest.spyOn(WriteBatch.prototype, "commit");
     spy.mockImplementationOnce(async () => {
       await reservation(G1, "frodo").delete();
       await reservation(G1, "frodo").set({userId: "gandalf", originalUsername: "Frodo"});

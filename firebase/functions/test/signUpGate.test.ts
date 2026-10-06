@@ -1,5 +1,5 @@
 // functions/test/signUpGate.test.ts
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
 import {AuthBlockingEvent, HttpsError} from "firebase-functions/v2/identity";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {reserveSignUp} from "../src/signUp/reserveSignUp";
@@ -42,7 +42,7 @@ async function seedToken(token: object = {used: false}) {
 
 async function fillAccounts(count: number) {
   for (let i = 0; i < count; i++) {
-    await admin.auth().createUser({email: `existing${i}@test.dev`});
+    await getAuth().createUser({email: `existing${i}@test.dev`});
   }
 }
 

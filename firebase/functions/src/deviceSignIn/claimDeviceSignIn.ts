@@ -1,6 +1,7 @@
 // functions/src/deviceSignIn/claimDeviceSignIn.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {
   DEVICE_SIGN_INS,
@@ -66,7 +67,7 @@ export const claimDeviceSignIn = functions.onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = getFirestore();
     const ref = db.collection(DEVICE_SIGN_INS).doc(requestId);
 
     let outcome: Outcome;
@@ -100,12 +101,12 @@ export const claimDeviceSignIn = functions.onCall(
         }
 
         try {
-          await admin.auth().getUser(stored.uid);
+          await getAuth().getUser(stored.uid);
         } catch {
           tx.update(ref, {status: "spent"});
           return {status: "expired"};
         }
-        const token = await admin.auth().createCustomToken(stored.uid);
+        const token = await getAuth().createCustomToken(stored.uid);
         tx.update(ref, {status: "claimed"});
         return {status: "approved", token};
       });

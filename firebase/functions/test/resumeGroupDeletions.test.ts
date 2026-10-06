@@ -4,7 +4,7 @@
 // be retried from the app, so the daily sweep finishes it. The scheduled
 // wrapper never fires in the emulator; its body is tested directly, with
 // `now` injected.
-import * as admin from "firebase-admin";
+import {Firestore, Timestamp} from "firebase-admin/firestore";
 import {clearProject, useEmulatorProject} from "./emulator";
 import {resumeGroupDeletions, RESUME_AFTER_MS} from "../src/groupManagement/groupDeletion";
 import {imageBucket} from "../src/shared/imageBucket";
@@ -13,7 +13,7 @@ const PROJECT = "demo-resume-group-deletions";
 const db = useEmulatorProject(PROJECT);
 const NOW = new Date("2026-10-05T03:15:00Z");
 
-const ago = (ms: number) => admin.firestore.Timestamp.fromMillis(NOW.getTime() - ms);
+const ago = (ms: number) => Timestamp.fromMillis(NOW.getTime() - ms);
 const isThere = async (path: string) => (await db.doc(path).get()).exists;
 const fileExists = async (path: string) => (await imageBucket().file(path).exists())[0];
 
@@ -65,7 +65,7 @@ describe("resumeGroupDeletions", () => {
   it("keeps the record of a deletion that fails again, and finishes the others", async () => {
     await seedStranded("g1", 2 * RESUME_AFTER_MS);
     await seedStranded("g2", 2 * RESUME_AFTER_MS);
-    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+    jest.spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("injected: backend unavailable"));
 
     const result = await resumeGroupDeletions(NOW);

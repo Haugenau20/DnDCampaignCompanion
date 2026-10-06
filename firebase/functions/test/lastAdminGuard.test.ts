@@ -3,7 +3,8 @@
 // T035: leaving, and deleting your account, are the two other doors out of a
 // group's administration. Both refuse when they would leave nobody able to run
 // the group -- and both still work for everyone else.
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
+import {Firestore, Query} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {removeUserFromGroup} from "../src/userManagement/removeUserFromGroup";
 import {deleteUser} from "../src/userManagement/deleteUser";
@@ -20,7 +21,7 @@ const isMember = async (uid: string) =>
 async function seed(members: Record<string, string>) {
   await db.doc(`groups/${GROUP}`).set({name: "Fellowship"});
   for (const [uid, role] of Object.entries(members)) {
-    await admin.auth().createUser({uid});
+    await getAuth().createUser({uid});
     await db.doc(`users/${uid}`).set({id: uid, groups: [GROUP], activeGroupId: GROUP});
     await db.doc(`groups/${GROUP}/users/${uid}`).set({userId: uid, username: uid, role});
     await db.doc(`groups/${GROUP}/usernames/${uid}`).set({userId: uid, originalUsername: uid});
@@ -74,7 +75,7 @@ describe("deleting your account", () => {
     await expectHttpsError(deleteAccount("gandalf"), "failed-precondition");
     expect(await isMember("gandalf")).toBe(true);
     expect((await db.doc("users/gandalf").get()).exists).toBe(true);
-    await expect(admin.auth().getUser("gandalf")).resolves.toBeDefined();
+    await expect(getAuth().getUser("gandalf")).resolves.toBeDefined();
   });
 
   it("is allowed to a member", async () => {
@@ -125,7 +126,7 @@ describe("a member's reading progress (T073)", () => {
  */
 function holdRosterReads(parties: number): () => number {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const proto = admin.firestore.Query.prototype as any;
+  const proto = Query.prototype as any;
   const original = proto._get;
   let arrived = 0;
   let open: () => void = () => undefined;
@@ -216,7 +217,7 @@ describe("an admin who passes the guard", () => {
     // what follows fails, they stay behind as a member, and the retry
     // passes the guard instead of counting them as the admin who remains.
     await seed({gandalf: "admin", aragorn: "admin", sam: "member"});
-    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+    jest.spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("injected"));
 
     await expectHttpsError(leave("gandalf"), "internal");

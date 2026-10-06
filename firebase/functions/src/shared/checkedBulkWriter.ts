@@ -1,13 +1,18 @@
 // functions/src/shared/checkedBulkWriter.ts
-import * as admin from "firebase-admin";
+import {
+  DocumentData,
+  DocumentReference,
+  getFirestore,
+  UpdateData,
+} from "firebase-admin/firestore";
 
 /** A BulkWriter whose `close()` fails when any of its writes did. */
 export interface CheckedBulkWriter {
   update(
-    ref: admin.firestore.DocumentReference,
-    data: admin.firestore.UpdateData<admin.firestore.DocumentData>
+    ref: DocumentReference,
+    data: UpdateData<DocumentData>
   ): void;
-  delete(ref: admin.firestore.DocumentReference): void;
+  delete(ref: DocumentReference): void;
   /**
    * Flushes every write, then throws if any of them failed.
    *
@@ -29,7 +34,7 @@ export interface CheckedBulkWriter {
  * @return {CheckedBulkWriter} The writer
  */
 export function checkedBulkWriter(): CheckedBulkWriter {
-  const writer = admin.firestore().bulkWriter();
+  const writer = getFirestore().bulkWriter();
   const outcomes: Promise<{error: unknown} | null>[] = [];
   const observe = (write: Promise<unknown>) => {
     outcomes.push(write.then(() => null, (error) => ({error})));

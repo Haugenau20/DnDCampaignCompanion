@@ -1,5 +1,5 @@
 // functions/src/shared/deleteUserSubtree.ts
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 
 /**
  * Deletes a user's profile document inside a group, together with everything
@@ -26,12 +26,11 @@ export async function deleteGroupUserDocument(
   groupId: string,
   userId: string
 ): Promise<void> {
-  const groupUserRef = admin
-    .firestore()
+  const groupUserRef = getFirestore()
     .collection("groups")
     .doc(groupId)
     .collection("users")
     .doc(userId);
 
-  await admin.firestore().recursiveDelete(groupUserRef);
+  await getFirestore().recursiveDelete(groupUserRef);
 }
