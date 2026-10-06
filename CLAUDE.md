@@ -46,9 +46,10 @@ under a running dev server, a stale pre-bundle can report errors no gate sees: s
 `rm -rf node_modules/.vite` (or `npx vite --force`) and start again. Neither the dev server nor the
 build type-checks; `npx tsc --noEmit` does.
 
-**`os = "linux"` in a user `~/.npmrc` breaks Vite on Windows**: npm then installs Rollup's and
-esbuild's Linux binaries, and the dev server and build fail with `Cannot find module
-'@rollup/rollup-win32-x64-msvc'`. Remove the line and reinstall (`npm ci`).
+**`os = "linux"` in a user `~/.npmrc` breaks Vite on Windows**: npm then installs Rolldown's,
+Lightning CSS's and esbuild's Linux binaries, and the dev server and build fail with "Cannot find
+native binding". The message suggests deleting `package-lock.json` -- don't; remove the `.npmrc`
+line and run `npm ci` (or `npm ci --os=win32` for one install).
 
 ### Environment gotchas
 - The scripts' health checks must use `127.0.0.1` and `Invoke-WebRequest -UseBasicParsing`. Until
@@ -211,7 +212,7 @@ maintainer watches CI and asks when something needs doing.
    layout, a barrel's public API) now imports something only one page needs. Raising the ceiling
    is allowed; say in the PR what grew and why it belongs in the entry bundle.
 
-**`package.json` declares `"sideEffects": ["*.css"]`**: Rollup (`vite build`) may drop any other module
+**`package.json` declares `"sideEffects": ["*.css"]`**: Rolldown (`vite build`) may drop any other module
 in `src/` whose exports nobody uses, which is how the feature barrels stay out of the entry bundle
 (T030). A module imported only for what it does on load (`import "./x"`) is silently dropped from the
 build, while the dev server (which does not tree-shake) and jest still run it, so neither shows it. Add such a file to the list. Route pages load through `app/lazyPage.ts`; a page added to `App.tsx` should too.
@@ -223,7 +224,7 @@ build, while the dev server (which does not tree-shake) and jest still run it, s
 |---|---|---|
 | `tsc --noEmit` | ✅ | ✅ |
 | jest | ✅ (via `moduleNameMapper`) | ✅ |
-| Vite (`npm start`, `npm run build`, via `vite-tsconfig-paths`) | ✅ | ✅ |
+| Vite (`npm start`, `npm run build`, via `resolve.tsconfigPaths`) | ✅ | ✅ |
 | **`ts-node`** | **❌** | **❌** |
 
 `ts-node` has no `tsconfig-paths` here, so anything under `src/utils/__dev__/` (operator tooling run

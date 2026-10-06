@@ -146,7 +146,7 @@ remain the convention in shipped code:
 |---|---|---|
 | `tsc --noEmit` | ✅ | ✅ |
 | jest | ✅ (via `moduleNameMapper`) | ✅ |
-| Vite (`npm start`, `npm run build`, via `vite-tsconfig-paths`) | ✅ | ✅ |
+| Vite (`npm start`, `npm run build`, via `resolve.tsconfigPaths`) | ✅ | ✅ |
 | **`ts-node`** | **❌** | **❌** |
 
 `ts-node` has no `tsconfig-paths` registration in this repo, so it resolves only relative and

@@ -20,7 +20,11 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 
-/** Measured 260.81 kB on 2026-10-06, the first Vite build (CRA's main.js was 264.23 kB); ~4% headroom. */
+/**
+ * Measured 2026-10-06: 260.81 kB in one file on Vite 7, 262.96 kB in 24 files on
+ * Vite 8, whose Rolldown splits shared code out of the entry (CRA's main.js was
+ * 264.23 kB). ~3% headroom.
+ */
 const MAIN_CEILING_KB = 272;
 
 const buildDir = path.resolve(__dirname, "..", "build");
@@ -37,9 +41,9 @@ if (!fs.existsSync(htmlFile)) {
 }
 
 // The entry is everything index.html makes a visit download before anything
-// renders: its module script, and every chunk it modulepreloads. Rollup can
-// split code shared with the route chunks out of the entry file, and that
-// file alone would then undercount.
+// renders: its module script, and every chunk it modulepreloads. Rolldown
+// splits code shared with the route chunks out of the entry file, which alone
+// would undercount.
 const html = fs.readFileSync(htmlFile, "utf8");
 const scripts = [...html.matchAll(/<script\b[^>]*\bsrc="\/([^"]+\.js)"/g)].map((match) => match[1]);
 const preloads = [...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="\/([^"]+\.js)"/g)].map(
