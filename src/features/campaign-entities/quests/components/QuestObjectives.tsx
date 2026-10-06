@@ -15,7 +15,8 @@ export interface QuestObjectivesProps {
   /** The same write the row makes, from the same contract. */
   onToggle: (objectiveId: string, completed: boolean) => Promise<unknown>;
   onAdd: (description: string) => Promise<void>;
-  onEdit: (objectiveId: string, description: string) => Promise<void>;
+  /** `openedWith` is the wording the editor started from (T083). */
+  onEdit: (objectiveId: string, description: string, openedWith: string) => Promise<void>;
   onMove: (objectiveId: string, direction: 'up' | 'down') => Promise<unknown>;
   /** Conclude the quest. Only ever called because someone asked for it. */
   onComplete: () => Promise<unknown>;
@@ -106,7 +107,7 @@ export const QuestObjectives: React.FC<QuestObjectivesProps> = ({
                     rows={1}
                     initialValue={objective.description}
                     submitLabel="Save objective"
-                    onSubmit={(value) => onEdit(objective.id, value)}
+                    onSubmit={(value, openedWith) => onEdit(objective.id, value, openedWith)}
                     onSaved={() => setEditingId(null)}
                     onCancel={() => setEditingId(null)}
                   />

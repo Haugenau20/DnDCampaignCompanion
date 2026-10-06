@@ -881,6 +881,26 @@ describe("NPCDetailPage", () => {
       await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
     });
 
+    // T083: another player saved a new description after this editor opened.
+    it("writes nothing over another player's newer text, and shows it", async () => {
+      mockStoredRecords["npc-1"] = { ...fullNPC, description: "A wizard, returned in white." };
+      renderPage();
+      const field = openEditor();
+      fireEvent.change(field, { target: { value: "A wizard, much changed." } });
+      fireEvent.click(screen.getByText("Save description"));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("A wizard, returned in white.");
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
+
+      fireEvent.click(within(alert).getByRole("button", { name: "Keep mine" }));
+      await waitFor(() =>
+        expect(mockUpdateNPC).toHaveBeenCalledWith("npc-1", {
+          description: "A wizard, much changed.",
+        })
+      );
+    });
+
     it("returns focus to the control that opened it", async () => {
       renderPage();
       fireEvent.click(editButton());

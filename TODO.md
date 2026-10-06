@@ -17,14 +17,9 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T083–T101 were triaged 2026-10-04 from the code
-review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
-adjusted for the images focus above.
-
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T103 | Replay browser checks: Playwright in CI | L | open | Decided 2026-10-06: a few journeys first, and a defect found in the browser lands with a test |
-| low | T083 | A save warns when the text changed since the editor opened | S | open | Decided 2026-10-06: warn and let them choose, instead of last-write-wins |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -87,7 +82,7 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding not yet fixed is covered by an entry: T083–T101.
+- Every confirmed finding has been fixed; none is open here.
 - **Not filed**: the reviews' unverified leads, and the optional refactors.
   They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
@@ -351,25 +346,6 @@ for the crowded header the maintainer reported (busy, some text cut off).
   header gets back, and the "which truncation" question is settled then.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03
-
-### T083 — A save warns when the text changed since the editor opened
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06
-
-Edits write only their own fields, and every list (objectives, notes,
-relations, tags) is worked out from the record the server holds, in a
-transaction. One case is left: two people editing the same text field (a
-description, a note's text) from the same version -- the second save replaces
-the first, with no warning.
-
-**Decided (maintainer, 2026-10-06): warn and let them choose.** The save
-compares, inside the transaction it already runs, the field's stored value with
-the value the editor started from. When they differ it writes nothing and shows
-both versions: keep theirs, keep mine, or edit from theirs.
-
-- **Where**: `RecordChange` and `updateDataAfterReading`, the transaction every
-  edit already goes through; the inline editors pass the value they opened with.
-- **Findings**: DATA-003 (03), the remaining case.
-- **Source**: code review, 2026-10-04; decided 2026-10-06
 
 ### T110 — Preview sites say that sign-in is off
 **Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06

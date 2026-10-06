@@ -1,5 +1,6 @@
 // src/shared/utils/__tests__/entity-notes.test.ts
 import { replaceNoteText, removeNote, NOTE_CHANGED_MESSAGE } from "../entity-notes";
+import { EditConflictError } from "../edit-conflict";
 
 // Stored in the order written, which is not date order: the pages sort a copy.
 const stored = [
@@ -42,6 +43,31 @@ describe("replaceNoteText", () => {
   it("treats a missing author and a different author as different notes", () => {
     const credited = { ...stored[1], author: "Sam" };
     expect(() => replaceNoteText(stored, credited, "x")).toThrow(NOTE_CHANGED_MESSAGE);
+  });
+
+  // T083: the same note -- its date and author -- now says something else,
+  // because another player edited its text after this editor opened.
+  it("refuses a note whose text someone else changed, carrying their text", () => {
+    const shownBeforeTheirEdit = { ...stored[0], text: "Rode to Isen." };
+    let caught: unknown;
+    try {
+      replaceNoteText(stored, shownBeforeTheirEdit, "Rode to Orthanc.");
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(EditConflictError);
+    expect((caught as EditConflictError).theirs).toBe("Rode to Isengard.");
+  });
+
+  it("is not a conflict when the other player made the same fix", () => {
+    const shownBeforeTheirEdit = { ...stored[0], text: "Rode to Isen." };
+    expect(replaceNoteText(stored, shownBeforeTheirEdit, "Rode to Isengard.")).toEqual(stored);
+  });
+
+  it("still refuses outright when two notes share the date and author", () => {
+    const twoThatDay = [stored[2], { ...stored[2], text: "And left again." }];
+    const shown = { ...stored[2], text: "Returned home." };
+    expect(() => replaceNoteText(twoThatDay, shown, "x")).toThrow(NOTE_CHANGED_MESSAGE);
   });
 });
 

@@ -86,7 +86,9 @@ export function NoteHistory<T extends EntityNote>({
                   initialValue={note.text}
                   submitLabel="Save note"
                   rows={2}
-                  onSubmit={(text) => onEdit(note, text)}
+                  // The note as this editor last knew it: after a conflict
+                  // the user may build on the other player's text (T083).
+                  onSubmit={(text, openedWith) => onEdit({ ...note, text: openedWith }, text)}
                   onSaved={() => {
                     closeEditor(index);
                     onSaved?.();

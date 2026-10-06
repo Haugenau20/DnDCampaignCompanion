@@ -30,6 +30,7 @@ import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
+import { editedText } from 'shared/utils/edit-conflict';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { FieldPrompt } from 'shared/components/entity-page';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
@@ -720,7 +721,7 @@ const NPCDetailPage: React.FC = () => {
                             rows={1}
                             initialValue={npc.name}
                             submitLabel="Save name"
-                            onSubmit={(value) => save({ name: value })}
+                            onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
                             onSaved={() => afterSave('name')}
                             onCancel={() => {
                               closeField('name');
@@ -754,7 +755,7 @@ const NPCDetailPage: React.FC = () => {
                             initialValue={npc.title ?? ''}
                             optional
                             submitLabel="Save title"
-                            onSubmit={(value) => save({ title: value })}
+                            onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
                             onSaved={() => afterSave('title')}
                             onCancel={() => {
                               closeField('title');
@@ -935,7 +936,7 @@ const NPCDetailPage: React.FC = () => {
                           optional
                           submitLabel="Save role"
                           placeholder="Wizard"
-                          onSubmit={(value) => save({ occupation: value })}
+                          onSubmit={(value, openedWith) => save(editedText('occupation', value, openedWith))}
                           onSaved={() => afterSave('occupation')}
                           onCancel={() => {
                             closeField('occupation');
@@ -986,7 +987,7 @@ const NPCDetailPage: React.FC = () => {
                           optional
                           submitLabel="Save race"
                           placeholder="Maia"
-                          onSubmit={(value) => save({ race: value })}
+                          onSubmit={(value, openedWith) => save(editedText('race', value, openedWith))}
                           onSaved={() => afterSave('race')}
                           onCancel={() => {
                             closeField('race');
@@ -1039,7 +1040,7 @@ const NPCDetailPage: React.FC = () => {
                     helperText="A sentence or two about who they are."
                     initialValue={npc.description ?? ''}
                     submitLabel="Save description"
-                    onSubmit={(value) => save({ description: value })}
+                    onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
                     onSaved={() => afterSave('description')}
                     onCancel={() => {
                       closeField('description');
@@ -1115,7 +1116,7 @@ const NPCDetailPage: React.FC = () => {
                             initialValue={value ?? ''}
                             optional
                             submitLabel={`Save ${label.toLowerCase()}`}
-                            onSubmit={(next) => save({ [field]: next })}
+                            onSubmit={(next, openedWith) => save(editedText(field, next, openedWith))}
                             onSaved={() => afterSave(field)}
                             onCancel={() => {
                               closeField(field);

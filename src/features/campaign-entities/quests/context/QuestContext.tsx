@@ -13,6 +13,7 @@ import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { normaliseObjectives } from '../utils/quest-objectives';
+import { assertUnchanged } from 'shared/utils/edit-conflict';
 import { Location } from '../../locations/types';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
@@ -205,17 +206,32 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await writeObjectives(questId, (objectives) => [...objectives, added]);
   }, [questForObjectiveWrite, writeObjectives]);
 
-  /** Reword an objective, keeping whether it is ticked and where it sits. */
-  const editQuestObjective = useCallback(async (questId: string, objectiveId: string, description: string) => {
+  /**
+   * Reword an objective, keeping whether it is ticked and where it sits.
+   *
+   * Given `openedWith`, the wording is compared with the one the server holds,
+   * in the same transaction (T083): reworded by someone else since, and
+   * nothing is written.
+   */
+  const editQuestObjective = useCallback(async (
+    questId: string,
+    objectiveId: string,
+    description: string,
+    openedWith?: string
+  ) => {
     questForObjectiveWrite(questId);
     const trimmed = description.trim();
     if (!trimmed) {
       throw new Error('An objective needs something to say.');
     }
 
-    await writeObjectives(questId, (objectives) => objectives.map(obj =>
-      obj.id === objectiveId ? { ...obj, description: trimmed } : obj
-    ));
+    await writeObjectives(questId, (objectives) => objectives.map(obj => {
+      if (obj.id !== objectiveId) return obj;
+      if (openedWith !== undefined) {
+        assertUnchanged(obj.description, openedWith, trimmed);
+      }
+      return { ...obj, description: trimmed };
+    }));
   }, [questForObjectiveWrite, writeObjectives]);
 
   /**

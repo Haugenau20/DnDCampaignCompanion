@@ -37,6 +37,7 @@ import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
+import { editedText } from 'shared/utils/edit-conflict';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
 import { useInlineEditing } from 'shared/hooks/useInlineEditing';
@@ -659,7 +660,7 @@ const LocationDetailPage: React.FC = () => {
                 rows={1}
                 initialValue={location.name}
                 submitLabel="Save name"
-                onSubmit={(value) => save({ name: value })}
+                onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
               />
@@ -689,7 +690,7 @@ const LocationDetailPage: React.FC = () => {
                 helperText="A sentence or two about the place itself."
                 initialValue={location.description ?? ''}
                 submitLabel="Save description"
-                onSubmit={(value) => save({ description: value })}
+                onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
               />

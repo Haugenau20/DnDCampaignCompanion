@@ -91,7 +91,12 @@ export interface QuestContextValue extends QuestContextState {
   updateQuestStatus: (questId: string, status: QuestStatus) => Promise<void>;
   updateQuestObjective: (questId: string, objectiveId: string, completed: boolean) => Promise<void>;
   addQuestObjective: (questId: string, description: string) => Promise<void>;
-  editQuestObjective: (questId: string, objectiveId: string, description: string) => Promise<void>;
+  /**
+   * Reword an objective. With `openedWith` -- the wording the editor started
+   * from -- it refuses with an `EditConflictError` when someone else reworded
+   * it since (T083).
+   */
+  editQuestObjective: (questId: string, objectiveId: string, description: string, openedWith?: string) => Promise<void>;
   moveQuestObjective: (questId: string, objectiveId: string, direction: 'up' | 'down') => Promise<void>;
   /** `alongside`: a change to another record that commits with this one (T088). */
   addQuest: (quest: DomainData<Quest>, alongside?: CreateAlongside) => Promise<string>;
