@@ -31,7 +31,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
 | low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
-| low | T110 | Preview sites say that sign-in is off | S | open | Decided 2026-10-06: previews stay signed-out on purpose, since they run unmerged code against production data |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
 
@@ -346,25 +345,6 @@ for the crowded header the maintainer reported (busy, some text cut off).
   header gets back, and the "which truncation" question is settled then.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03
-
-### T110 — Preview sites say that sign-in is off
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06
-
-**Decided (maintainer, 2026-10-06): a PR's preview site stays signed-out, on
-purpose.** Previews run unmerged code against **production** data, and their
-hostnames change per PR, so signing in there would let unreviewed code write
-real records. Signed-in screens are reviewed on the dev server. What is left is
-saying so, so a reviewer does not take the refusal for a bug.
-
-- **Where**: the preview build (`.github/workflows/firebase-hosting-pull-request.yml`,
-  the Build step) passes `REACT_APP_*` values that `vite.config.ts` replaces in
-  the source. A `REACT_APP_PREVIEW: "true"` there, read by `SignInPage.tsx` and
-  `JoinPage.tsx`, can show "Preview build: sign-in is off" in place of the form.
-  The live deploy (`firebase-hosting-merge.yml`) does not set it.
-- **Why sign-in fails there** was never read and no longer needs to be: App
-  Check's reCAPTCHA key or Auth's authorised domains, which list only the live
-  hostnames.
-- **Source**: todo.txt, 2026-10-06; decided 2026-10-06
 
 ### T111 — Is it worth expanding the notes feature?
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-06

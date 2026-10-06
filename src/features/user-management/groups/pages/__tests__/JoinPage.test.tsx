@@ -243,4 +243,22 @@ describe("JoinPage", () => {
       expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
     });
   });
+
+  // T110: joining means signing in, which a preview site does not allow.
+  describe("on a preview build", () => {
+    afterEach(() => {
+      delete process.env.REACT_APP_PREVIEW;
+    });
+
+    test("says sign-in is off and does not check the invitation", async () => {
+      process.env.REACT_APP_PREVIEW = "true";
+      setup();
+      await settle();
+
+      expect(screen.getByText(/preview build: sign-in is off/i)).toBeInTheDocument();
+      expect(useInvitations.mock.results[0].value.validateToken).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("new-user-step")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("existing-user-step")).not.toBeInTheDocument();
+    });
+  });
 });

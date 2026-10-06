@@ -11,6 +11,8 @@ import { CAMPAIGN_HOME } from '../../auth/utils/next-path';
 import JoinAsExistingUser from '../components/JoinAsExistingUser';
 import JoinAsNewUser from '../components/JoinAsNewUser';
 import JoinTokenPrompt from '../components/JoinTokenPrompt';
+import PreviewSignInNotice from '../../auth/components/PreviewSignInNotice';
+import { isPreviewBuild } from 'core/constants/app';
 
 /** Where the page is, which decides what it renders. */
 type TokenState = 'absent' | 'checking' | 'valid' | 'rejected';
@@ -70,7 +72,7 @@ const JoinPage: React.FC = () => {
   );
 
   useEffect(() => {
-    if (linkToken) check(linkToken);
+    if (linkToken && !isPreviewBuild()) check(linkToken);
   }, [linkToken, check]);
 
   const handleJoined = async () => {
@@ -101,6 +103,19 @@ const JoinPage: React.FC = () => {
       </div>
     </div>
   );
+
+  // Joining means signing in or creating an account, and a preview site stays
+  // signed out on purpose (T110). The invitation is not even checked there.
+  if (isPreviewBuild()) {
+    return (
+      <>
+        {band}
+        <div className="max-w-xl mx-auto px-4 py-8">
+          <PreviewSignInNotice />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

@@ -196,6 +196,10 @@ before the deploy, which waits on them. A ruleset on `main` requires `test / tes
 and `test / bundle`, so a red PR cannot merge; a new job in `test.yml` gates nothing until the
 maintainer adds it there. Changed a function? Run `npm --prefix firebase run test:functions` too.
 
+**A PR's preview site is signed out on purpose**: it runs unmerged code against production data, so the
+preview build sets `REACT_APP_PREVIEW` and `/signin` and `/join` say sign-in is off. Check signed-in
+screens on the dev server; never set that variable in the live deploy.
+
 **Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
 subscribe to PR activity, poll check runs, `/loop`, schedule check-ins (`send_later`, routines,
 cron), or wait on CI in any other way. Run the gates below locally, push, report, and stop; the
