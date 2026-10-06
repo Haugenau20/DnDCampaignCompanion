@@ -32,14 +32,12 @@ adjusted for the images focus above.
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T059 | CRA peer deps no longer resolve | L | open | Builds only with --legacy-peer-deps; decided 2026-10-02 to move to Vite, plan first |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
-| low | T065 | Global Firebase CLI still 13.x | S | open | Repo pins 15.22.4; the maintainer's machine and `start-dev.ps1` still run 13 |
+| low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T110 | A PR's preview site cannot be signed in to | S | needs investigation | Only PR review is affected, and previews touch production data, so whether to allow it comes first |
-| low | T108 | Build with `CI=true` in CI | S | open | The build already compiles without warnings; this keeps it that way |
 | low | T112 | Code of conduct, contributing guide, issue and PR templates | S | open | Public repo; the PR template's checklist is behind CI |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | The maintainer flagged it as not important |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | needs scoping | Bookkeeping; needs a definition of stale first |
@@ -481,39 +479,19 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 
 ---
 
-### T059 — Create React App's peer dependencies no longer resolve
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-09-24
+### T065 — The maintainer's global Firebase CLI is past the repo's pin
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
 
-A plain `npm install` fails with `ERESOLVE`. It only works with
-`--legacy-peer-deps`, which is what CI uses.
+The repo pins `firebase-tools` **15.22.4** in `firebase/package.json`, and CI's
+`functions` suite runs on it. `start-dev.ps1` runs the **global** CLI, which on
+the maintainer's machine is **15.32.1** (2026-10-06): the local emulators no
+longer run the version CI tests. firebase-tools 15 needs **Java 21**, 15.22.4
+included; under Java 17 the emulators exit at once.
 
-- **Measured**: `react-scripts@5.0.1` declares TypeScript `^3.2.1 || ^4` against
-  the project's `^5.7.3`; its `jest-watch-typeahead@1.1.0` wants Jest 27/28
-  against `^29.7.0`. CRA itself is no longer maintained, so no upgrade of it fixes this.
-- **Where**: `package.json:21`; CI installs with `npm ci --legacy-peer-deps`
-  in `test.yml` and in both Hosting workflows' build.
-- **Decided (maintainer, 2026-10-02): move to Vite**, planned before any code.
-  It touches the build, env-var names (`REACT_APP_*` → `VITE_*`), jest config
-  (stay on jest, or move to Vitest — the plan decides) and the four-resolvers
-  table in `CLAUDE.md`, which Vite can collapse by honouring `@/` paths. `scripts/check-bundle-size.js` expects CRA's
-  `build/static/js/main.*.js`; a new bundler must keep it measuring the entry.
-- **Source**: todo.txt, 2026-09-24
-
-### T065 — The maintainer's global Firebase CLI is still 13.x
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-09-28
-
-The repo now pins `firebase-tools` **15.22.4** in `firebase/package.json`, and
-`firebase/functions`' suite passes on it: 11/11 suites, 194/194 tests, the same
-as on 13.32.0 (2026-09-28). An emulator export written by 13.32.0 imports under
-15.22.4 with its Firestore documents and Auth users intact. What is left
-happens on the maintainer's machine, which `start-dev.ps1` runs against
-the **global** CLI:
-
-- `npm i -g firebase-tools@15.22.4`, then one `start-dev.ps1` start/stop round
-  trip. The PowerShell script itself was not run; only the import/export it
-  performs was. The round trip also checks what was only run with stubs on
-  2026-10-05: start compiling `firebase/functions` first, and stop exporting
-  before it ends this project's port listeners (and nothing else).
+- `npm i -g firebase-tools@15.22.4` to match CI, or decide the global CLI may
+  float. Then one `start-dev.ps1` stop/start round trip: `stop` must export
+  (its output is shown now) before it ends this project's port listeners, and
+  nothing else.
 - **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
   through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
   proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
@@ -541,23 +519,6 @@ time anyone edits it.
   them or keep the fallback on purpose.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted
-
-### T108 — Build with `CI=true` in CI
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
-
-All three workflows build with `CI: false`, so a react-scripts compile warning
-never fails the build. The inbox note assumed lint issues would need fixing
-first. **They do not**: `CI=true npm run build` on `fix/t100-dev-scripts`
-(`23376db`) printed "Compiled successfully." and exited 0 (2026-10-06, local,
-Node 23; CI runs Node 22).
-
-- **Where**: `test.yml:109-115`, `firebase-hosting-merge.yml:130-136`,
-  `firebase-hosting-pull-request.yml:32-38`, each with a comment explaining
-  the flag. `CLAUDE.md:38` describes it too.
-- **Catch**: flip all three together. If only the deploy flips, a warning that
-  `test.yml` lets through blocks the deploy after merge, which is the case the
-  comment in `test.yml` was written to prevent.
-- **Source**: todo.txt, 2026-10-06
 
 ---
 

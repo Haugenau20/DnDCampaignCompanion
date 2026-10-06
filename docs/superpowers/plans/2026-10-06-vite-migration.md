@@ -33,7 +33,7 @@ ESLint 8 + `eslint-config-react-app` 7 (now explicit), Windows PowerShell 5.1 fo
 - `npm install` and `npm ci` must succeed **without** `--legacy-peer-deps` (T059's point).
 - Dev server: `http://localhost:3000`, listening on IPv4 `127.0.0.1` (the scripts' health checks use `127.0.0.1:3000`; see CLAUDE.md "Environment gotchas").
 - Build output stays in `build/` (`firebase/firebase.json` `"public": "build"`, and both Hosting workflows `cp -r build/*`).
-- `npm run build` must still fail on a type error: `react-scripts build` type-checked `src/`, and CI has no other `tsc` step.
+- Type errors stay gated: `react-scripts build` type-checked `src/`; Vite does not. `test.yml` has its own `Type-check` step (`npx tsc --noEmit`) and every deploy job `needs: test`, so `npm run build` stays plain `vite build`.
 - No hardcoded colours, double quotes in TS, JSDoc on functions (CLAUDE.md Code Style).
 - **Never modify a test to make it pass.** `lazyPage.test.tsx`'s fixture changes in Task 3 because the bundler's
   contract changes (webpack's `ChunkLoadError` stops existing). The requirement it pins stays the same.
@@ -325,7 +325,7 @@ git commit -m "fix(dev): start-dev.ps1 reads a failed export as failure, and say
 - Modify: `package.json` (scripts, dependencies, `eslintConfig` unchanged), `package-lock.json`
 
 **Interfaces:**
-- Produces: `npm start` (Vite dev server on `127.0.0.1:3000`), `npm run build` (`tsc --noEmit && vite build` → `build/`),
+- Produces: `npm start` (Vite dev server on `127.0.0.1:3000`), `npm run build` (`vite build` → `build/`),
   `npm run preview` (serves `build/` on `127.0.0.1:4173`). `build/index.html` loads the entry via
   `<script type="module" src="/assets/index-<hash>.js">` and preloads shared chunks via `<link rel="modulepreload" href="/assets/…">`.
   Task 4 relies on that shape.
@@ -437,14 +437,13 @@ Then in `index.html`: replace `href="%PUBLIC_URL%/manifest.json"` with `href="/m
 
 ```json
     "start": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
     "preview": "vite preview",
 ```
 
 Delete the `"eject"` script. Keep `browserslist`: autoprefixer (via `postcss.config.js`) still reads it.
 
-The `tsc --noEmit` is not optional. `react-scripts build` type-checked `src/`, and CI has no other type-check
-step, so without it a type error would deploy.
+No `tsc` in it: `test.yml`'s `Type-check` step gates type errors, and the deploy waits on that job.
 
 - [ ] **Step 7: Type gate and lint**
 
@@ -471,9 +470,6 @@ grep -c "sessionTester" build/assets/*.js | grep -v ":0$" || echo "dev-only test
 
 Expected: `no process.env left`, at least one file holding the project id, and `dev-only tester not in the build`
 (`index.tsx` imports it only when `NODE_ENV === "development"`).
-
-Type-gate control: add `const x: number = "a";` to `src/app/App.tsx`, then run `npm run build`.
-Expected: it fails at `tsc`. Revert the line.
 
 - [ ] **Step 10: Commit**
 
@@ -835,12 +831,12 @@ Check: `grep -rn "legacy-peer\|react-scripts\|CI: false" .github/` → nothing.
   ### If the dev server reports errors that `tsc` and `npm run build` do not
   Vite pre-bundles dependencies into `node_modules/.vite`. After a dependency change or a branch switch
   under a running dev server, a stale pre-bundle can report errors no gate sees: stop it, then
-  `rm -rf node_modules/.vite` (or `npx vite --force`) and start again. The dev server does not type-check;
-  `npx tsc --noEmit` does, and `npm run build` runs it first.
+  `rm -rf node_modules/.vite` (or `npx vite --force`) and start again. Neither the dev server nor the build
+  type-checks; `npx tsc --noEmit` does.
   ```
 
-- Gate 3: replace its text with: "**`npm run build` — required.** It runs `tsc --noEmit`, then `vite build`, and it is
-  the only gate that bundles. A module that only works under jest's resolver, or a `process.env` name that Vite does not
+- Gate 3: replace its text with: "**`npm run build` — required.** It is the only gate that bundles, and Vite does not
+  type-check (gate 1 does). A module that only works under jest's resolver, or a `process.env` name that Vite does not
   replace, fails here."
 - Gate 4: "`main.js` must stay under the ceiling" → "the entry (what `build/index.html` loads) must stay under the ceiling".
 - `sideEffects` paragraph: "webpack may drop" → "Rollup (`vite build`) may drop". "silently dropped by webpack, in the dev
@@ -856,7 +852,7 @@ Check: `grep -rn "legacy-peer\|react-scripts\|CI: false" .github/` → nothing.
 - [ ] **Step 3: AGENTS.md**
 
 Same facts, in its own sections. Lines 114-115 (webpack caches) get the Vite paragraph from Step 2. Line 142
-"since `react-scripts build` type-checks all of `src/`" → "since `npm run build` runs it first". Line 144 and the table
+"since `react-scripts build` type-checks all of `src/`" → "(CI's `Type-check` step; Vite does not type-check)". Line 144 and the table
 row at 158 as in Step 2.
 
 - [ ] **Step 4: Source comments**
@@ -927,6 +923,6 @@ the error boundary, not a reload loop. Delete `build-dev/` afterwards (it is not
 
 Push `chore/t059-vite` and open the PR. In the body: the measured entry size against CRA's 264.23 kB, whether the
 `moduleSideEffects` option was needed, the Vite-7-not-8 reason, and that Vite's dev server no longer shows type errors
-in the browser (CRA's did); `tsc` in `npm run build` is the gate. Do not watch CI (CLAUDE.md). Once the preview deploy
+in the browser (CRA's did); `npx tsc --noEmit` (and CI's `Type-check` step) is the gate. Do not watch CI (CLAUDE.md). Once the preview deploy
 is up, the maintainer can open it and see the production Firebase project in the console log's config (Review Focus 2).
 Sign-in there is T110's problem, not this PR's.

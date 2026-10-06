@@ -5,14 +5,14 @@ import clsx from 'clsx';
 /**
  * The parser is behind a dynamic import, so `react-markdown` and its
  * unified/remark/micromark tree (67 packages, +43.1 kB gzipped) land in their
- * own chunk instead of in `main.js`.
+ * own chunk instead of in the entry bundle.
  *
  * The split has to sit here rather than at the route, and that is a
  * consequence of the architecture rather than a preference: `ChapterReader`
  * and `BookViewer` are exported from `features/storytelling`'s barrel, and
  * `HomePage`, `SearchContext` and `CampaignStats` all import from that barrel,
  * so anything the barrel can reach is in the initial graph no matter how the
- * routes are loaded. A dynamic import is split by webpack regardless of who
+ * routes are loaded. A dynamic import is split by the bundler regardless of who
  * imports the module holding it, which is what makes it the one placement that
  * actually works here.
  */

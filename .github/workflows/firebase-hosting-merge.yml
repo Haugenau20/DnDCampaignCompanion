@@ -123,17 +123,14 @@ jobs:
       # The install the `test` job checked: exactly the lockfile (T107). The
       # site used to be built inside a Docker image with `npm install`, which
       # ignores the lockfile, and then copied out of it -- so what shipped was
-      # not what CI had tested. --legacy-peer-deps: T059.
+      # not what CI had tested.
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
-      # `CI: false`: under CI=true react-scripts fails on any warning, and lint
-      # already holds app code to zero warnings (see test.yml's `bundle` job).
-      # react-scripts reads REACT_APP_* from the environment as from a .env.
+      # vite.config.ts reads REACT_APP_* from the environment, ahead of any .env file.
       - name: Build
         run: npm run build
         env:
-          CI: false
           REACT_APP_USE_EMULATORS: "false"
           REACT_APP_API_KEY: ${{ secrets.REACT_APP_API_KEY }}
           REACT_APP_AUTH_DOMAIN: ${{ secrets.REACT_APP_AUTH_DOMAIN }}

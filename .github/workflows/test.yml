@@ -33,10 +33,8 @@ jobs:
           node-version: 22
           cache: npm
 
-      # --legacy-peer-deps: CRA's peer ranges no longer resolve (T059); the
-      # Hosting workflows' build installs the same way.
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Type-check
         run: npx tsc --noEmit
@@ -104,15 +102,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
-      # `CI: false` as the shipping build has it (the Hosting workflows): under
-      # CI=true react-scripts fails on any warning. A PR must not fail a build
-      # that the deploy would pass; lint already holds app code to zero warnings.
       - name: Build
         run: npm run build
-        env:
-          CI: false
 
       - name: Entry bundle size
         run: npm run check:bundle
