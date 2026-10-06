@@ -32,7 +32,6 @@ adjusted for the images focus above.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
-| low | T115 | ESLint 9 is end-of-life too: move to 10 | S | open | Tooling only; three plugins in use declare ESLint 9 at most |
 | low | T116 | `firebase-admin` 12 → 14 in the functions | M | open | Last server-side advisories (`node-forge`, `uuid`); neither path is one the functions use |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
@@ -449,34 +448,6 @@ included; under Java 17 the emulators exit at once.
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
 - **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
 
-### T115 — ESLint 9 is end-of-life too: move to 10
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The lint config is a flat `eslint.config.mjs` on ESLint 9, which replaced Create
-React App's `eslint-config-react-app` (ESLint 8 only). But 9 is ESLint's
-`maintenance` line and `npm ci` already calls it unsupported; `latest` is 10.
-
-- **Where**: `eslint.config.mjs` and `package.json`'s devDependencies.
-- **Catch**: three of the plugins it uses declare ESLint `^9` at most and have
-  not released since 2024–25: `eslint-plugin-react` 7.37.5, `eslint-plugin-jsx-a11y`
-  6.10.2 and `eslint-plugin-import` 2.32.0. Try them on 10 before swapping any:
-  `eslint-plugin-import-x` supports 10 and keeps `import/no-cycle`'s behaviour.
-  Five rules carried from CRA (`dot-location`, `new-parens`,
-  `no-mixed-operators`, `no-whitespace-before-property`, `rest-spread-spacing`)
-  are deprecated formatting rules; check whether 10 still has them.
-- **Gate**: `npm run lint` must stay at zero warnings with `import/no-cycle`,
-  and `lint:tests` compares against a per-file baseline
-  (`scripts/test-lint-baseline.json`): a rule set that changes underneath it
-  moves every count, so re-record it and read the diff. Plant a violation of
-  each plugin once and watch it fail, as a clean run proves nothing.
-- **Not covered**: the remaining dev-only advisories (`braces`, `sprintf-js`,
-  `postcss-selector-parser`, through Tailwind 3 and `babel-jest`) are
-  build- and test-time DoS with no fix in their ranges short of Tailwind 4.
-  The other `npm ci` deprecation warnings (`inflight`, `glob@7`, `rimraf@3`,
-  `abab`, `domexception`) come from Jest 29's `babel-jest` and `jsdom@20`;
-  that is a Jest major, not this item.
-- **Source**: todo.txt (`npm ci` warnings), 2026-10-06; narrowed to the 10 bump
-  when the flat config landed
 
 ### T116 — `firebase-admin` 12 → 14 in the functions
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06

@@ -10,6 +10,13 @@
 // everything at "warn"; `npm run lint` allows zero warnings, so in app code a
 // warning fails the gate just as an error does.
 //
+// ESLint 10. Three of the plugins (`eslint-plugin-react`, `eslint-plugin-jsx-a11y`,
+// `eslint-plugin-import`) declare ESLint 9 at most and have not released since
+// 2024-25, but run on 10: a planted violation of each still fails the lint.
+// `overrides` in package.json lets them accept the project's ESLint, or
+// `npm ci` refuses the install. If one of them stops working on a later
+// ESLint, `eslint-plugin-import-x` is the maintained successor to the third.
+//
 // Two scripts read this file: `npm run lint` (app code, zero warnings, plus
 // `import/no-cycle` on the command line) and `npm run lint:tests` (the test
 // files, against a per-file baseline in scripts/test-lint-baseline.json).
@@ -23,6 +30,14 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 import testingLibraryPlugin from "eslint-plugin-testing-library";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import { createRequire } from "node:module";
+
+/**
+ * The installed React's version, for `eslint-plugin-react`. Its own
+ * `version: "detect"` calls `context.getFilename()`, which ESLint 10 removed,
+ * so every React rule failed to load; reading the version here sidesteps it.
+ */
+const REACT_VERSION = createRequire(import.meta.url)("react/package.json").version;
 
 /** Code-splitting the CRA way; `import()` is the only form the bundler splits on. */
 const USE_DYNAMIC_IMPORT = "Please use import() instead.";
@@ -54,7 +69,7 @@ export default [
       "react-hooks": reactHooksPlugin,
     },
     settings: {
-      react: { version: "detect" },
+      react: { version: REACT_VERSION },
       // `import/no-cycle` has to resolve bare `baseUrl` imports
       // (`core/types/common`) to follow an edge, hence `src` as a module root.
       "import/parsers": { "@typescript-eslint/parser": [".ts", ".tsx"] },
