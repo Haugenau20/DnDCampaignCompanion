@@ -981,6 +981,47 @@ describe('StoryContext Behavioral Testing', () => {
 
       expect(movesIn(committedBatch())).toEqual({ 'chapter-3': 2, 'chapter-7': 3 });
     });
+
+    // T017: deleting several chapters at once.
+    test('deleting several chapters is one commit that closes every gap', async () => {
+      withChapters(Array.from({ length: 5 }, (_, index) => chapterAt(index + 1)));
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.deleteChapters(['chapter-2', 'chapter-4']);
+      });
+
+      expect(mockFirebaseServices.document.batchOperations).toHaveBeenCalledTimes(1);
+      const batch = committedBatch();
+      expect(batch.filter((write) => write.type === 'delete').map((write) => write.id))
+        .toEqual(['chapter-2', 'chapter-4']);
+      expect(movesIn(batch)).toEqual({ 'chapter-3': 2, 'chapter-5': 3 });
+    });
+
+    test('deleting several chapters skips one already gone from the list', async () => {
+      withChapters([chapterAt(1), chapterAt(2), chapterAt(3)]);
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.deleteChapters(['chapter-1', 'chapter-99']);
+      });
+
+      const batch = committedBatch();
+      expect(batch.filter((write) => write.type === 'delete').map((write) => write.id)).toEqual(['chapter-1']);
+      expect(movesIn(batch)).toEqual({ 'chapter-2': 1, 'chapter-3': 2 });
+    });
+
+    test('deleting several chapters refuses a signed-out caller, writing nothing', async () => {
+      withChapters([chapterAt(1), chapterAt(2)]);
+      mockUseAuth.mockReturnValue({ user: null });
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await expect(storyContext.deleteChapters(['chapter-1'])).rejects.toThrow('You must be signed in to delete chapters');
+      expect(mockFirebaseServices.document.batchOperations).not.toHaveBeenCalled();
+    });
   });
 
   // T088 (DATA-007): two people inserting at once both write the same order

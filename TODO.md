@@ -26,19 +26,19 @@ adjusted for the images focus above.
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
-| medium | T109 | "Keep me signed in for 30 days" ends after a day away | S | open | Remembered users are signed out after 24h idle, against what the checkbox and privacy page say |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
-| low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
+| low | T114 | React Router 6 → 7 | M | open | Closes the last advisory in the browser bundle, which the app's own `next` check already blocks |
+| low | T115 | ESLint 8 is end-of-life | M | open | Tooling only; ESLint 9 means a flat config without `eslint-config-react-app` |
+| low | T116 | `firebase-admin` 12 → 14 in the functions | M | open | Last server-side advisories (`node-forge`, `uuid`); neither path is one the functions use |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T110 | A PR's preview site cannot be signed in to | S | needs investigation | Only PR review is affected, and previews touch production data, so whether to allow it comes first |
-| low | T112 | Code of conduct, contributing guide, issue and PR templates | S | open | Public repo; the PR template's checklist is behind CI |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | The maintainer flagged it as not important |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | needs scoping | Bookkeeping; needs a definition of stale first |
 
@@ -150,29 +150,6 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T109 — "Keep me signed in for 30 days" ends after a day away
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The sign-in checkbox and the privacy page promise a 30-day session, but a
-remembered session still ends after 24 hours without activity, so anyone who
-skips a day is signed out on their next visit.
-
-- **Where**: `AuthService.checkSessionExpired`
-  (`core/services/firebase/auth/AuthService.ts:192-214`) applies
-  `INACTIVITY_TIMEOUT` (24h, `core/constants/time.ts:16`) whatever
-  `rememberMe` says. `useSessionManager.ts:29-31` runs it on startup and signs out.
-  The promises: `SignInForm.tsx:285`, `SessionTimeoutWarning.tsx:142`, and
-  `PrivacyPolicyPage.tsx:163-165` ("ends after 24 hours of inactivity, or
-  lasts 30 days if you asked to be remembered").
-- **Catch**: `AuthService.test.ts:283-292` asserts the current behaviour with
-  `rememberMe: true`, so this is a requirement to settle, not just a code fix:
-  does a remembered session time out when idle at all, and does the privacy
-  page's second mention (`:280-281`, "time out on their own") still hold? Also,
-  the expiry is enforced only in the browser (`localStorage.sessionInfo`); the
-  Firebase session itself does not expire.
-- **Unverified**: found by reading the code, not reproduced in a browser.
-- **Source**: todo.txt, 2026-10-06
-
 ### T110 — A PR's preview site cannot be signed in to
 **Type** bug · **Size** S · **Status** needs investigation · **Verified** 2026-10-06
 
@@ -199,34 +176,6 @@ to, and suspects App Check.
 ---
 
 ## Features and enhancements
-
-### T017 — Batch delete for locations, and batch actions for chapters
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-03
-
-Rumours, NPCs and quests can be selected and then deleted or given a status in
-one go; locations can be given a status but not deleted; the chapter list has
-neither.
-
-- **Locations -- decide first**: deleting one place asks what becomes of what
-  is inside it (`LocationChildStrategy`: delete the subtree, or move the
-  children up to the grandparent). A selection can mix parents, children and
-  unrelated places, so it needs one answer for all of them, and the
-  confirmation has to say how many places that removes in total. One batch is
-  atomic, so the descendants-first ordering `deleteLocation` keeps for its
-  sequential writes stops mattering. Delete pictures after the documents.
-  It must still mark each place `deleting` and ask the server what is inside
-  it, as `deleteLocation` does, or a place added inside meanwhile is orphaned.
-- **The pattern to copy**: `shared/hooks/useSelection` (mode and ticked ids),
-  `campaign-entities/shared/EntityBatchActions.tsx` (the bar: statuses, an
-  optional Delete and its confirmation), and a batched pair on the context that
-  writes through `campaign-entities/shared/commitEntityWrites.ts`, as
-  `QuestContext`'s `updateQuestsStatus` and `deleteQuests` do. Stamp
-  modification attribution yourself: a batch writes its data as given.
-  `QuestDirectory.batch.test.tsx` is the test pattern.
-- **Chapters are different**: the list is `ChapterList.tsx`, not a roster, and
-  chapters have no status. Deleting several also has to keep the remaining
-  chapters' `order` contiguous, which `StoryContext.deleteChapter` does for one.
-- **Source**: todo.txt, 2026-09-16
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23
@@ -501,6 +450,69 @@ included; under Java 17 the emulators exit at once.
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
 - **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
 
+### T114 — React Router 6 → 7
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+`react-router-dom` 6.30.6 carries two advisories `npm audit` cannot fix inside
+v6; the first fixed release is 7.18.0.
+
+- **Reachability, measured 2026-10-06**: GHSA-wrjc-x8rr-h8h6 (open redirect via
+  a backslash in `<Link>` / `useNavigate`) needs an attacker-chosen path. The
+  only one the app navigates to is sign-in's `next`, and `safeNextPath`
+  (`features/user-management/auth/utils/next-path.ts:45-52`) already rejects
+  backslashes, raw and decoded. GHSA-337j-9hxr-rhxg is SSR hydration, which an
+  SPA never runs. So this is hygiene, not an open hole.
+- **Where**: `src/index.tsx:87` opts into `v7_startTransition` only; the dev
+  console warns about `v7_relativeSplatPath` and the other flags. Turn the
+  remaining future flags on one at a time first, then bump; `react-router-dom`
+  becomes a re-export of `react-router` in v7.
+- **Catch**: router behaviour is what jsdom sees least. Browser-check
+  navigation, the lazy pages' fallback (`app/RouteFallback.tsx`) and sign-in's
+  `next` round trip.
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
+
+### T115 — ESLint 8 is end-of-life
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+`npm ci` warns that `eslint@8.57.1` is no longer supported, and half of the
+other deprecation warnings (`@humanwhocodes/*`, the `@babel/plugin-proposal-*`
+set) arrive through it and `eslint-config-react-app`. The rest (`inflight`,
+`glob@7`, `rimraf@3`, `abab`, `domexception`) come from Jest 29's `babel-jest`
+and `jsdom@20`; that is a Jest major, not this item.
+
+- **Where**: the config is `package.json`'s `eslintConfig`, which extends
+  `react-app` and `react-app/jest` — Create React App's, kept after the move to
+  Vite (T059). It requires ESLint 8. ESLint 9 means a flat `eslint.config.js`
+  naming the plugins directly.
+- **Catch**: `npm run lint` must stay at zero warnings with `import/no-cycle`,
+  and `lint:tests` compares against a per-file baseline
+  (`scripts/test-lint-baseline.json`): a rule set that changes underneath it
+  moves every count, so re-record it and read the diff.
+- **Not covered**: the remaining dev-only advisories (`braces`, `sprintf-js`,
+  `postcss-selector-parser`, through Tailwind 3 and `babel-jest`) are
+  build- and test-time DoS with no fix in their ranges short of Tailwind 4.
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
+
+### T116 — `firebase-admin` 12 → 14 in the functions
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+After `npm audit fix`, the functions' production dependencies keep two
+advisories, both inside `firebase-admin@12.7.0`, and `npm audit` fixes them
+only by moving to 14.
+
+- **What**: `node-forge@1.4.0` (RSA PKCS#1 v1.5 signature verification accepts
+  extra nested elements) and `uuid` 9/10 (missing bounds check when a buffer is
+  passed to v3/v5/v6). The functions call neither directly; the Admin SDK uses
+  them for its own credentials and request ids.
+- **Where**: `firebase/functions/package.json`. 14 needs Node 22, which the
+  functions already declare (`engines.node`), but the installed
+  `firebase-functions` 6.3.2 accepts `firebase-admin` only up to 13, so 14 brings
+  `firebase-functions` 7 with it. All three are majors: read the changelogs, then rebuild and
+  run `npm --prefix firebase run test:functions` and a browser pass over the
+  callables (CLAUDE.md: the emulator's wrapped `admin.firestore` hides what jest
+  does not).
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
+
 ### T079 — Do old documents still lack `locationId`?
 **Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
 
@@ -523,26 +535,6 @@ time anyone edits it.
 ---
 
 ## Documentation
-
-### T112 — Code of conduct, contribution guidelines, issue and PR templates
-**Type** docs · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The repo is public with issues enabled, and GitHub's community profile scores it
-57%: README, licence and PR template present; code of conduct, contributing
-guide and issue templates missing (`gh api …/community/profile`).
-
-- **Where**: new `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` and
-  `.github/ISSUE_TEMPLATE/`; the existing `.github/pull_request_template.md`.
-- **The PR template is stale**: its checklist names `tsc`, `npm test` and
-  `npm run build`, but not `lint`, `lint:tests`, `check:bundle` or the
-  `firebase/functions` suite, and it says "no new failures against the
-  recorded baseline" where `CLAUDE.md` now requires a fully green suite. The
-  privacy-policy item is still current.
-- **Catch**: `README.md:39` says outside contributions are not accepted during
-  the beta; the contributing guide must say the same, or that changes first.
-  An issue template on a public repo should also send security reports
-  somewhere private, and there is no `SECURITY.md` to point at.
-- **Source**: todo.txt, 2026-10-06 (four inbox lines, merged)
 
 ### T113 — Clean up `docs/` and delete what is stale
 **Type** docs · **Size** M · **Status** needs scoping · **Verified** 2026-10-06

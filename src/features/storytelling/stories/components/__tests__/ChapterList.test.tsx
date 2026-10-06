@@ -248,4 +248,65 @@ describe('ChapterList', () => {
       expect(screen.queryAllByRole('heading')).toHaveLength(0);
     });
   });
+
+  // T017: in selection mode each row is a checkbox, so several chapters can be
+  // deleted at once from the page's batch bar.
+  describe('selection mode', () => {
+    const items: ChapterWithProgress[] = [
+      makeItem({ id: 'ch-1', title: 'One', order: 1 }),
+      makeItem({ id: 'ch-2', title: 'Two', order: 2 }),
+    ];
+
+    it('shows no checkboxes outside selection mode', () => {
+      render(<ChapterList items={items} onChapterSelect={jest.fn()} />);
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    });
+
+    it('gives every row a checkbox named for its chapter, ticked as the selection says', () => {
+      render(
+        <ChapterList
+          items={items}
+          onChapterSelect={jest.fn()}
+          selection={{ selected: new Set(['ch-2']), onToggle: jest.fn() }}
+        />
+      );
+      expect(screen.getByRole('checkbox', { name: 'Select One' })).not.toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'Select Two' })).toBeChecked();
+    });
+
+    it('ticks a row instead of opening it, and hides the row actions', () => {
+      const onChapterSelect = jest.fn();
+      const onToggle = jest.fn();
+      render(
+        <ChapterList
+          items={items}
+          onChapterSelect={onChapterSelect}
+          onEditChapter={jest.fn()}
+          isAdmin
+          selection={{ selected: new Set(), onToggle }}
+        />
+      );
+
+      fireEvent.click(screen.getByText('One'));
+      expect(onToggle).toHaveBeenCalledWith('ch-1', true);
+      expect(onChapterSelect).not.toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: 'Read' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    });
+
+    it('unticks a ticked row through its checkbox', () => {
+      const onToggle = jest.fn();
+      render(
+        <ChapterList
+          items={items}
+          onChapterSelect={jest.fn()}
+          selection={{ selected: new Set(['ch-1']), onToggle }}
+        />
+      );
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Select One' }));
+      expect(onToggle).toHaveBeenCalledTimes(1);
+      expect(onToggle).toHaveBeenCalledWith('ch-1', false);
+    });
+  });
 });

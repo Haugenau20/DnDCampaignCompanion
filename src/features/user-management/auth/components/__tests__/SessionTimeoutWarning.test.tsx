@@ -161,6 +161,17 @@ describe('SessionTimeoutWarning', () => {
 
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
+
+    // T109: a remembered session has no idle limit, so there is nothing to warn about.
+    test('should NOT warn a remembered session about inactivity', () => {
+      const now = Date.now();
+      const lastActivityAt = now - INACTIVITY_TIMEOUT + (SESSION_WARNING_THRESHOLD - 60000);
+      setSessionInfo({ lastActivityAt, expiresAt: now + 24 * 60 * 60 * 1000, rememberMe: true });
+
+      render(<SessionTimeoutWarning />);
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------

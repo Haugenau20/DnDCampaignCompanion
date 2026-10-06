@@ -142,6 +142,12 @@ export interface LocationContextValue extends LocationContextState {
    */
   moveLocation: (locationId: string, nextParentId: string | undefined) => Promise<void>;
   deleteLocation: (locationId: string, childStrategy?: LocationChildStrategy) => Promise<void>;
+  /**
+   * Delete several places, with one answer for what is inside all of them
+   * (T017). Place by place, not atomic: a place already gone is skipped, so a
+   * retry finishes what a failure left.
+   */
+  deleteLocations: (locationIds: string[], childStrategy: LocationChildStrategy) => Promise<void>;
   /** `alongside`: a change to another record that commits with this one (T088). */
   createLocation: (locationData: DomainData<Location>, alongside?: CreateAlongside) => Promise<string>;
   /** Retry after a failed load: reopens the listener if it failed (T032). Writes never need it. */

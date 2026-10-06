@@ -21,12 +21,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-10-05";
+export const PRIVACY_LAST_UPDATED = "2026-10-06";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "To stop the contact form being used to flood us, we now note the times it was used for an hour: against your account if you are signed in, otherwise against a hash of your network address.",
-  "Nobody sees that record, the address itself is never kept, and the record is deleted within a day of the hour ending.",
+  "If you ask to be remembered, you now stay signed in for the full 30 days, however long you are away between visits.",
+  "If you don't, nothing changes: your session still ends after 24 hours without activity.",
 ]
 
 /**

@@ -280,11 +280,35 @@ describe('AuthService', () => {
       expect(AuthService.getInstance().checkSessionExpired()).toBe(true);
     });
 
-    test('should return true when the session has been inactive beyond INACTIVITY_TIMEOUT', () => {
+    test('should return true when a session that is not remembered has been inactive beyond INACTIVITY_TIMEOUT', () => {
       const sessionInfo = {
         createdAt: 0,
-        expiresAt: Date.now() + REMEMBER_ME_DURATION,
+        expiresAt: Date.now() + SESSION_DURATION,
         lastActivityAt: Date.now() - INACTIVITY_TIMEOUT - 1000, // inactive too long
+        rememberMe: false,
+      };
+      localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo));
+      expect(AuthService.getInstance().checkSessionExpired()).toBe(true);
+    });
+
+    // T109: "Keep me signed in for 30 days" promises 30 days, so a remembered
+    // session survives any number of days away until then.
+    test('should return false when a remembered session has been idle for days but is inside its 30 days', () => {
+      const sessionInfo = {
+        createdAt: Date.now() - 10 * INACTIVITY_TIMEOUT,
+        expiresAt: Date.now() + REMEMBER_ME_DURATION - 10 * INACTIVITY_TIMEOUT,
+        lastActivityAt: Date.now() - 10 * INACTIVITY_TIMEOUT,
+        rememberMe: true,
+      };
+      localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo));
+      expect(AuthService.getInstance().checkSessionExpired()).toBe(false);
+    });
+
+    test('should return true when a remembered session has passed its 30 days, however recently it was used', () => {
+      const sessionInfo = {
+        createdAt: Date.now() - REMEMBER_ME_DURATION - 1000,
+        expiresAt: Date.now() - 1000,
+        lastActivityAt: Date.now(),
         rememberMe: true,
       };
       localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo));

@@ -4,10 +4,8 @@ import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import Dialog from 'core/components/Dialog';
 import { AlertCircle, RefreshCw, Save } from 'lucide-react';
-import { 
-  INACTIVITY_TIMEOUT, 
-  SESSION_WARNING_THRESHOLD 
-} from 'core/constants/time';
+import { SESSION_WARNING_THRESHOLD } from 'core/constants/time';
+import { idleDeadline } from 'core/services/firebase/auth/sessionTimeout';
 import clsx from 'clsx';
 
 // Types of session timeout warnings
@@ -44,16 +42,16 @@ const SessionTimeoutWarning: React.FC = () => {
         // Check for absolute session expiration first
         const timeUntilAbsoluteExpiry = sessionInfo.expiresAt - now;
         
-        // Check for inactivity timeout
-        const lastActivity = sessionInfo.lastActivityAt || sessionInfo.createdAt;
-        const timeUntilInactivityExpiry = (lastActivity + INACTIVITY_TIMEOUT) - now;
-        
+        // Check for inactivity timeout (a remembered session has none)
+        const idleUntil = idleDeadline(sessionInfo);
+        const timeUntilInactivityExpiry = idleUntil === null ? Infinity : idleUntil - now;
+
         // Determine which warning to show (prioritize absolute expiration)
         if (timeUntilAbsoluteExpiry > 0 && timeUntilAbsoluteExpiry < SESSION_WARNING_THRESHOLD) {
           setShowWarning(true);
           setWarningType(WarningType.ABSOLUTE);
           setTimeRemaining(Math.ceil(timeUntilAbsoluteExpiry / 60000)); // Convert to minutes
-        } 
+        }
         else if (timeUntilInactivityExpiry > 0 && timeUntilInactivityExpiry < SESSION_WARNING_THRESHOLD) {
           setShowWarning(true);
           setWarningType(WarningType.INACTIVITY);
