@@ -4,13 +4,12 @@
 // Fails when the entry bundle outgrows its ceiling (T030). Run after
 // `npm run build`: `npm run check:bundle`.
 //
-// Only `main.*.js` has a ceiling. It is what every visit downloads and parses
-// before anything renders; a route chunk costs only the visits to that route,
-// and is fetched at idle besides (`webpackPrefetch` in `app/App.tsx`).
+// Only the entry -- what `build/index.html` loads -- has a ceiling. It is what
+// every visit downloads and parses before anything renders; a route chunk
+// costs only the visits to that route, and is fetched at idle besides
+// (`prefetchPages` in `app/lazyPage.ts`).
 //
-// Sizes are gzipped at level 9 and reported in base-10 kB, which is what
-// `react-scripts build` prints -- so the number here and the number in the
-// build log are the same number.
+// Sizes are gzipped at level 9 and reported in base-10 kB.
 //
 // RAISING THE CEILING is allowed, and is a decision: say in the PR what grew
 // and why it has to be in the entry bundle rather than in a route's chunk.
@@ -21,43 +20,53 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 
-/** Measured 264.23 kB on 2026-09-28, after the route split; ~4% headroom. */
-const MAIN_CEILING_KB = 275;
+/** Measured 260.81 kB on 2026-10-06, the first Vite build (CRA's main.js was 264.23 kB); ~4% headroom. */
+const MAIN_CEILING_KB = 272;
 
-// `BUILD_PATH` as `react-scripts build` reads it: relative to the repo, or absolute.
-const jsDir = path.join(path.resolve(__dirname, "..", process.env.BUILD_PATH || "build"), "static", "js");
+const buildDir = path.resolve(__dirname, "..", "build");
 
-/** Gzipped size in kB, the way `react-scripts build` measures it. */
+/** Gzipped size in kB (level 9, base 10). */
 function gzipKb(file) {
   return zlib.gzipSync(fs.readFileSync(file), { level: 9 }).length / 1000;
 }
 
-if (!fs.existsSync(jsDir)) {
-  console.error(`No build at ${jsDir}. Run \`npm run build\` first.`);
+const htmlFile = path.join(buildDir, "index.html");
+if (!fs.existsSync(htmlFile)) {
+  console.error(`No build at ${buildDir}. Run \`npm run build\` first.`);
   process.exit(2);
 }
 
-const files = fs.readdirSync(jsDir).filter((name) => name.endsWith(".js"));
-const main = files.filter((name) => /^main\.[0-9a-f]+\.js$/.test(name));
-if (main.length !== 1) {
-  console.error(`Expected one main.*.js in ${jsDir}, found ${main.length}: ${main.join(", ")}`);
+// The entry is everything index.html makes a visit download before anything
+// renders: its module script, and every chunk it modulepreloads. Rollup can
+// split code shared with the route chunks out of the entry file, and that
+// file alone would then undercount.
+const html = fs.readFileSync(htmlFile, "utf8");
+const scripts = [...html.matchAll(/<script\b[^>]*\bsrc="\/([^"]+\.js)"/g)].map((match) => match[1]);
+const preloads = [...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="\/([^"]+\.js)"/g)].map(
+  (match) => match[1]
+);
+if (scripts.length === 0) {
+  console.error(`No module script in ${htmlFile}; is this a Vite build?`);
   process.exit(2);
 }
+const entryFiles = [...scripts, ...preloads];
 
-const mainKb = gzipKb(path.join(jsDir, main[0]));
-const chunks = files
-  .filter((name) => name.endsWith(".chunk.js"))
-  .map((name) => ({ name, kb: gzipKb(path.join(jsDir, name)) }))
+const mainKb = entryFiles.reduce((sum, file) => sum + gzipKb(path.join(buildDir, file)), 0);
+const assetsDir = path.join(buildDir, "assets");
+const chunks = fs
+  .readdirSync(assetsDir)
+  .filter((name) => name.endsWith(".js") && !entryFiles.includes(`assets/${name}`))
+  .map((name) => ({ name, kb: gzipKb(path.join(assetsDir, name)) }))
   .sort((a, b) => b.kb - a.kb);
 
-console.log(`main      ${mainKb.toFixed(2)} kB gzip (ceiling ${MAIN_CEILING_KB} kB)`);
+console.log(`entry     ${mainKb.toFixed(2)} kB gzip in ${entryFiles.length} file(s) (ceiling ${MAIN_CEILING_KB} kB)`);
 console.log(`chunks    ${chunks.length}, largest ${chunks.slice(0, 3).map((c) => `${c.name} ${c.kb.toFixed(2)} kB`).join(", ")}`);
 
 if (mainKb > MAIN_CEILING_KB) {
   console.error(
-    `\nThe entry bundle is ${(mainKb - MAIN_CEILING_KB).toFixed(2)} kB over its ceiling.\n` +
+    `\nThe entry is ${(mainKb - MAIN_CEILING_KB).toFixed(2)} kB over its ceiling.\n` +
       "Something that only a page needs is probably being imported from an eager module.\n" +
-      "Compare `npx source-map-explorer build/static/js/main.*.js` against main, or raise\n" +
+      "Compare `npx source-map-explorer build/assets/index-*.js` against main, or raise\n" +
       "MAIN_CEILING_KB in scripts/check-bundle-size.js and say why in the PR."
   );
   process.exit(1);
