@@ -24,7 +24,6 @@ describe("privacy constants", () => {
 
     let reloaded: string | undefined;
     jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       reloaded = require("../privacy").PRIVACY_LAST_UPDATED;
     });
 
