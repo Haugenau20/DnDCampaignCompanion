@@ -26,7 +26,6 @@ adjusted for the images focus above.
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
-| medium | T109 | "Keep me signed in for 30 days" ends after a day away | S | open | Remembered users are signed out after 24h idle, against what the checkbox and privacy page say |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -152,29 +151,6 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
-
-### T109 — "Keep me signed in for 30 days" ends after a day away
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The sign-in checkbox and the privacy page promise a 30-day session, but a
-remembered session still ends after 24 hours without activity, so anyone who
-skips a day is signed out on their next visit.
-
-- **Where**: `AuthService.checkSessionExpired`
-  (`core/services/firebase/auth/AuthService.ts:192-214`) applies
-  `INACTIVITY_TIMEOUT` (24h, `core/constants/time.ts:16`) whatever
-  `rememberMe` says. `useSessionManager.ts:29-31` runs it on startup and signs out.
-  The promises: `SignInForm.tsx:285`, `SessionTimeoutWarning.tsx:142`, and
-  `PrivacyPolicyPage.tsx:163-165` ("ends after 24 hours of inactivity, or
-  lasts 30 days if you asked to be remembered").
-- **Catch**: `AuthService.test.ts:283-292` asserts the current behaviour with
-  `rememberMe: true`, so this is a requirement to settle, not just a code fix:
-  does a remembered session time out when idle at all, and does the privacy
-  page's second mention (`:280-281`, "time out on their own") still hold? Also,
-  the expiry is enforced only in the browser (`localStorage.sessionInfo`); the
-  Firebase session itself does not expire.
-- **Unverified**: found by reading the code, not reproduced in a browser.
-- **Source**: todo.txt, 2026-10-06
 
 ### T110 — A PR's preview site cannot be signed in to
 **Type** bug · **Size** S · **Status** needs investigation · **Verified** 2026-10-06

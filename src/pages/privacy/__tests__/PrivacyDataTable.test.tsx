@@ -50,6 +50,14 @@ describe("PrivacyDataTable", () => {
     expect(row.textContent).not.toContain("SESSION_DURATIONS");
   });
 
+  // T109: "30 days, or 24 hours idle" read as whichever comes first, which a
+  // remembered session no longer does; the row must say which applies when.
+  it("ties the 30 days to being remembered, not to an idle race", () => {
+    render(<PrivacyDataTable />);
+    const row = screen.getByTestId("privacy-row-session");
+    expect(row.textContent).toMatch(new RegExp(`${REMEMBER_ME_TEXT} if remembered`));
+  });
+
   it("labels every cell for the stacked layout, where headers are off-screen", () => {
     render(<PrivacyDataTable />);
     const row = screen.getByTestId("privacy-row-identifiers");

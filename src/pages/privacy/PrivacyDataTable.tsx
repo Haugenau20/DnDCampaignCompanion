@@ -20,7 +20,7 @@ const COLUMNS = ["What we keep", "Why", "Where it goes", "How long"] as const;
 const expandSentinels = (value: string): string =>
   value.replace(
     "SESSION_DURATIONS",
-    `${REMEMBER_ME_TEXT}, or ${INACTIVITY_TIMEOUT_TEXT} idle`
+    `${REMEMBER_ME_TEXT} if remembered, otherwise ${INACTIVITY_TIMEOUT_TEXT} idle`
   );
 
 /**

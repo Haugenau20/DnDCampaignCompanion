@@ -272,6 +272,15 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     expect(container.textContent).toContain(REMEMBER_ME_TEXT);
   });
 
+  // T109: the idle timeout applies only to sessions that are not remembered,
+  // so the security section must not promise it of every session.
+  it("says in the security section that a remembered session lasts its full term", () => {
+    render(<PrivacyPolicyPage />);
+    expect(screen.getByText(/Sessions time out on their own/)).toHaveTextContent(
+      new RegExp(`after ${REMEMBER_ME_TEXT} if you asked to be remembered`)
+    );
+  });
+
   it("claims no analytics and no advertising", () => {
     const { container } = render(<PrivacyPolicyPage />);
     expect(container.textContent).toMatch(/no analytics/i);

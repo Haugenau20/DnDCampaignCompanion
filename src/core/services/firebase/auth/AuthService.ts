@@ -21,7 +21,8 @@ import {
   import BaseFirebaseService from '../core/BaseFirebaseService';
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
-  import { SESSION_DURATION, REMEMBER_ME_DURATION, INACTIVITY_TIMEOUT } from '../config/firebaseConfig';
+  import { SESSION_DURATION, REMEMBER_ME_DURATION } from '../config/firebaseConfig';
+  import { idleDeadline, StoredSessionInfo } from './sessionTimeout';
 
   /** Where `sendSignInLink` remembers the address it sent a link to. */
   export const PENDING_EMAIL_SIGN_IN_KEY = 'pendingEmailSignIn';
@@ -194,20 +195,17 @@ import {
       if (!sessionInfoStr) return false; // No session info, let Firebase handle it
       
       try {
-        const sessionInfo = JSON.parse(sessionInfoStr);
+        const sessionInfo: StoredSessionInfo = JSON.parse(sessionInfoStr);
         const now = new Date().getTime();
-        
+
         // Check absolute expiry (30 days for rememberMe, 24 hours for session)
         if (now > sessionInfo.expiresAt) {
           return true;
         }
-        
-        // Check inactivity timeout (24 hours of inactivity)
-        if (now - sessionInfo.lastActivityAt > INACTIVITY_TIMEOUT) {
-          return true;
-        }
-        
-        return false;
+
+        // Check inactivity timeout (none for a remembered session)
+        const idleUntil = idleDeadline(sessionInfo);
+        return idleUntil !== null && now > idleUntil;
       } catch (e) {
         console.error('Error checking session expiry:', e);
         return false;
