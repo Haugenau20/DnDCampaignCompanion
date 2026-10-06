@@ -1,6 +1,6 @@
 // functions/src/deviceSignIn/approveDeviceSignIn.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {normalizeEmail} from "../signUp/signUpGate";
 import {
@@ -56,7 +56,7 @@ export const approveDeviceSignIn = functions.onCall(
     const callerEmail = request.auth.token.email;
     const uid = request.auth.uid;
 
-    const db = admin.firestore();
+    const db = getFirestore();
     const ref = db.collection(DEVICE_SIGN_INS).doc(requestId);
 
     let outcome: Outcome;

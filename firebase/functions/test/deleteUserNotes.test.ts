@@ -6,7 +6,8 @@
 // by the app, but still stored and still readable by anything holding the path.
 // Both ways out of a group (leaving it, deleting the account) must take the
 // notes with them, and must touch nobody else's.
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
+import {Firestore, WriteBatch} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {removeUserFromGroup} from "../src/userManagement/removeUserFromGroup";
 import {deleteUser} from "../src/userManagement/deleteUser";
@@ -25,7 +26,7 @@ const historyCount = async (group: string, uid: string) =>
 
 /** Seeds a member: Auth account, global profile, group profiles and usernames. */
 async function seedMember(uid: string, role: string, groups: string[] = [G1]) {
-  await admin.auth().createUser({uid});
+  await getAuth().createUser({uid});
   await db.doc(`users/${uid}`).set({id: uid, groups, activeGroupId: groups[0]});
   for (const group of groups) {
     await db.doc(`groups/${group}`).set({name: group});
@@ -108,7 +109,7 @@ describe("deleting an account", () => {
 
   it("is retryable: if the notes cannot be deleted, nothing else is", async () => {
     jest
-      .spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+      .spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("backend unavailable"));
 
     await expectHttpsError(deleteAccount("frodo"), "internal");
@@ -117,7 +118,7 @@ describe("deleting an account", () => {
     expect((await db.doc("users/frodo").get()).exists).toBe(true);
     expect((await db.doc(`groups/${G1}/users/frodo`).get()).exists).toBe(true);
     expect((await db.doc(`groups/${G1}/usernames/frodo`).get()).exists).toBe(true);
-    await expect(admin.auth().getUser("frodo")).resolves.toBeDefined();
+    await expect(getAuth().getUser("frodo")).resolves.toBeDefined();
     expect(await noteCount(G1, "frodo")).toBe(3);
 
     jest.restoreAllMocks();
@@ -165,7 +166,7 @@ describe("leaving a group", () => {
 
   it("is retryable: if the notes cannot be deleted, the membership stays", async () => {
     jest
-      .spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+      .spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("backend unavailable"));
 
     await expectHttpsError(leave(G1, "frodo"), "internal");
@@ -188,7 +189,7 @@ describe("a removal that fails after the notes are gone", () => {
   // find everything left to do -- the name reservation (DATA-009) and the
   // Auth account (AUTH-002) -- instead of refusing or skipping it.
   const failNextCommit = () => jest
-    .spyOn(admin.firestore.WriteBatch.prototype, "commit")
+    .spyOn(WriteBatch.prototype, "commit")
     .mockRejectedValueOnce(new Error("backend unavailable"));
 
   it("leaving: a retry still releases the member's name", async () => {
@@ -211,19 +212,19 @@ describe("a removal that fails after the notes are gone", () => {
 
     expect((await db.doc(`groups/${G1}/usernames/frodo`).get()).exists).toBe(false);
     expect((await db.doc("users/frodo").get()).exists).toBe(false);
-    await expect(admin.auth().getUser("frodo")).rejects.toMatchObject({code: "auth/user-not-found"});
+    await expect(getAuth().getUser("frodo")).rejects.toMatchObject({code: "auth/user-not-found"});
   });
 
   it("deleting an account: a retry finishes an Auth deletion that failed", async () => {
-    jest.spyOn(admin.auth(), "deleteUser")
+    jest.spyOn(getAuth(), "deleteUser")
       .mockRejectedValueOnce(new Error("auth backend unavailable"));
     await expectHttpsError(deleteAccount("frodo"), "internal");
     expect((await db.doc("users/frodo").get()).exists).toBe(false);
-    await expect(admin.auth().getUser("frodo")).resolves.toBeDefined();
+    await expect(getAuth().getUser("frodo")).resolves.toBeDefined();
 
     await deleteAccount("frodo");
 
-    await expect(admin.auth().getUser("frodo")).rejects.toMatchObject({code: "auth/user-not-found"});
+    await expect(getAuth().getUser("frodo")).rejects.toMatchObject({code: "auth/user-not-found"});
   });
 
   it("deleting an account: still not-found once nothing is left", async () => {
@@ -232,11 +233,11 @@ describe("a removal that fails after the notes are gone", () => {
   });
 
   it("deleting another account: a missing profile still needs a global admin", async () => {
-    jest.spyOn(admin.auth(), "deleteUser")
+    jest.spyOn(getAuth(), "deleteUser")
       .mockRejectedValueOnce(new Error("auth backend unavailable"));
     await expectHttpsError(deleteAccount("frodo"), "internal");
 
     await expectHttpsError(call(deleteUser, {userId: "frodo"}, "sam"), "permission-denied");
-    await expect(admin.auth().getUser("frodo")).resolves.toBeDefined();
+    await expect(getAuth().getUser("frodo")).resolves.toBeDefined();
   });
 });

@@ -129,7 +129,6 @@ describe('Markdown — links', () => {
   });
 
   it('does not emit a javascript: href', async () => {
-    // eslint-disable-next-line no-script-url
     const { container } = await renderMarkdown('[click me](javascript:window.pwned=true)');
 
     expect(container.textContent).toContain('click me');

@@ -11,7 +11,8 @@
 // reservation keyed to the email the visitor said they would use. The blocking
 // function then admits exactly the emails that hold one.
 
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
+import {DocumentReference, Firestore} from "firebase-admin/firestore";
 import {registrationTokenProblem} from "../shared/registrationToken";
 
 /**
@@ -76,7 +77,7 @@ export function reservationId(groupId: string, token: string): string {
  * @return {Promise<boolean>} true when no further account may be created
  */
 export async function accountLimitReached(): Promise<boolean> {
-  const {users} = await admin.auth().listUsers(MAX_ACCOUNTS);
+  const {users} = await getAuth().listUsers(MAX_ACCOUNTS);
   return users.length >= MAX_ACCOUNTS;
 }
 
@@ -87,16 +88,16 @@ export async function accountLimitReached(): Promise<boolean> {
  * reservation outlives nothing it was made from. Expired or dead ones found on
  * the way are deleted.
  *
- * @param {admin.firestore.Firestore} db Firestore
+ * @param {Firestore} db Firestore
  * @param {string} email The address about to get an account
  * @param {Date} now The moment to judge against
- * @return {Promise<admin.firestore.DocumentReference | null>} The reservation
+ * @return {Promise<DocumentReference | null>} The reservation
  */
 export async function findLiveReservation(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   email: string,
   now: Date = new Date()
-): Promise<admin.firestore.DocumentReference | null> {
+): Promise<DocumentReference | null> {
   const snapshot = await db
     .collection(RESERVATIONS)
     .where("email", "==", normalizeEmail(email))

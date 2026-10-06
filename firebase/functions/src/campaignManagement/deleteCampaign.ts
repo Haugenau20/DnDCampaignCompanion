@@ -1,10 +1,6 @@
 // functions/src/campaignManagement/deleteCampaign.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
-// The modular import, not `admin.firestore.FieldValue`: inside the functions
-// emulator the namespaced `admin.firestore` is a wrapped stand-in without
-// `FieldValue`, so the call failed there before writing anything.
-import {FieldValue} from "firebase-admin/firestore";
+import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {
   campaignDeletionRef,
@@ -58,14 +54,13 @@ export const deleteCampaign = functions.onCall(
       // isGroupAdmin() / isGlobalAdmin() helpers in
       // firebase/firestore.rules.prod.
       const [groupUserDoc, globalUserDoc] = await Promise.all([
-        admin
-          .firestore()
+        getFirestore()
           .collection("groups")
           .doc(groupId)
           .collection("users")
           .doc(callerUid)
           .get(),
-        admin.firestore().collection("users").doc(callerUid).get(),
+        getFirestore().collection("users").doc(callerUid).get(),
       ]);
 
       const isGroupAdmin =
@@ -80,8 +75,7 @@ export const deleteCampaign = functions.onCall(
         );
       }
 
-      const campaignRef = admin
-        .firestore()
+      const campaignRef = getFirestore()
         .collection("groups")
         .doc(groupId)
         .collection("campaigns")
@@ -102,7 +96,7 @@ export const deleteCampaign = functions.onCall(
       // to writes (DATA-010): the production rules refuse any note, reading
       // progress or content written into a campaign that is marked, or that
       // no longer exists, so nothing can land behind the cleanup's back.
-      await admin.firestore().runTransaction(async (transaction) => {
+      await getFirestore().runTransaction(async (transaction) => {
         const [campaignDoc, deletionDoc] = await Promise.all([
           transaction.get(campaignRef),
           transaction.get(deletionRef),

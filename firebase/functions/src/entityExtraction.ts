@@ -1,7 +1,7 @@
 // functions/src/entityExtraction.ts
 import * as functions from "firebase-functions/v2/https";
 import { HttpsError } from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {DocumentSnapshot, getFirestore} from "firebase-admin/firestore";
 import OpenAI from "openai";
 import {rethrowHttpsError} from "./shared/httpsErrors";
 import {dropPartyCharacters, partyPrompt, readPartyNames} from "./partyCharacters";
@@ -228,7 +228,7 @@ function exhaustedPeriod(
 
 /** The stored usage, or a fresh record for a user who has none. */
 function readUsage(
-  userDoc: admin.firestore.DocumentSnapshot
+  userDoc: DocumentSnapshot
 ): EntityExtractionUsage {
   const stored = userDoc.exists ?
     userDoc.data()?.entityExtractionUsage :
@@ -245,7 +245,7 @@ function readUsage(
  * performs the reset, inside its transaction.
  */
 async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
-  const userDoc = await admin.firestore().collection("users").doc(userId).get();
+  const userDoc = await getFirestore().collection("users").doc(userId).get();
   const usageData = readUsage(userDoc);
 
   if (usageData.isUnlimited) {
@@ -273,7 +273,7 @@ async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
  * and a retry must never call the model twice.
  */
 async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const userRef = db.collection("users").doc(userId);
 
   return db.runTransaction(async (transaction) => {
@@ -376,7 +376,7 @@ export const extractEntities = functions.onCall(
       // Before usage is counted: a caller outside the group is refused here,
       // and should not be charged an extraction for it.
       const partyNames = groupId ?
-        await readPartyNames(admin.firestore(), groupId, userId) :
+        await readPartyNames(getFirestore(), groupId, userId) :
         [];
 
       // Check usage limits and increment counters (only if we're going to call OpenAI)

@@ -1,7 +1,6 @@
 // functions/src/contactThrottle.ts
-import * as admin from "firebase-admin";
+import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {createHash} from "crypto";
-import {Timestamp} from "firebase-admin/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 
 /**
@@ -97,7 +96,7 @@ export async function takeSend(
   budgets: Budget[],
   now: Date = new Date()
 ): Promise<boolean> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const refs = budgets.map((budget) =>
     db.collection(CONTACT_THROTTLE).doc(budget.id)
   );
@@ -142,7 +141,7 @@ const SWEEP_MAX_PAGES = 200;
 export async function sweepContactThrottle(
   now: Date
 ): Promise<{deleted: number; more: boolean}> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const expired = db.collection(CONTACT_THROTTLE)
     .where("expiresAt", "<=", Timestamp.fromDate(now))
     .orderBy("expiresAt")

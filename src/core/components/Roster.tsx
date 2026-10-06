@@ -696,7 +696,25 @@ export interface RosterRowProps {
    */
   selected?: boolean;
   id?: string;
+  /**
+   * How deep in a tree the row sits; a location's rows nest. The row indents
+   * {@link ROSTER_INDENT_PX} a level behind a hairline rail, and the indent
+   * stops at {@link ROSTER_MAX_VISUAL_DEPTH} so a place nine levels down
+   * still has a name column to read (§6.1).
+   *
+   * The indent comes out of the name column alone: a directory with nested
+   * rows sizes every other column in fixed widths, so its statuses and counts
+   * stay lined up at every depth.
+   */
+  depth?: number;
+  /** The rows inside this one, rendered after its expansion. */
+  nested?: React.ReactNode;
 }
+
+/** How far each level of a tree indents, in px. */
+export const ROSTER_INDENT_PX = 30;
+/** The deepest level that still indents further. */
+export const ROSTER_MAX_VISUAL_DEPTH = 4;
 
 /**
  * One dense row, expanding in place.
@@ -719,6 +737,8 @@ export const RosterRow: React.FC<RosterRowProps> = ({
   highlighted = false,
   selected = false,
   id,
+  depth = 0,
+  nested,
 }) => {
   // Loud on purpose. A row reaching this component without an id is a data bug,
   // and the quiet alternatives are both worse than a crash: no mark leaves one
@@ -731,6 +751,8 @@ export const RosterRow: React.FC<RosterRowProps> = ({
     );
   }
 
+  const indent = Math.min(depth, ROSTER_MAX_VISUAL_DEPTH) * ROSTER_INDENT_PX;
+
   return (
   <div
     id={id}
@@ -738,50 +760,116 @@ export const RosterRow: React.FC<RosterRowProps> = ({
       'transition-colors',
       !isFirst && 'border-t border-card',
       highlighted && `highlighted-item`,
-      selected && 'roster-row-selected',
       expanded && 'bg-secondary'
     )}
   >
-    <div className="flex items-stretch">
-      {leadingControl && (
-        <div className="flex items-center pl-5 shrink-0">{leadingControl}</div>
-      )}
-
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
-        className="flex-1 min-w-0 text-left flex items-center gap-4 roster-row selectable-item"
-      >
-        {/*
-          The mark sits outside the grid rather than as another column, so the
-          four directories keep their own column templates unchanged — a leading
-          `auto` in each of them would be the same slot expressed four times, and
-          would drift the moment one of them was edited.
-        */}
-        <EntitySigil entityId={entityId} name={entityName} size={28} />
-
-        <div className={clsx('flex-1 min-w-0 items-center gap-4 grid', gridClassName)}>
-          {children}
-          <ChevronDown
-            size={16}
+    {/*
+      The selection tint covers the row and its expansion, not the rows nested
+      under it: those are selected, or not, on their own.
+    */}
+    <div data-testid="roster-row-line" className={clsx(selected && 'roster-row-selected')}>
+      <div className="flex items-stretch">
+        {indent > 0 && (
+          // The rail. A hairline at the indent, not a box.
+          <div
+            data-testid="roster-indent"
             aria-hidden="true"
-            className={clsx(
-              'justify-self-end transition-transform typography-secondary',
-              expanded && 'rotate-180'
-            )}
+            className="shrink-0 border-r card-border"
+            style={{ width: indent }}
           />
+        )}
+
+        {leadingControl && (
+          <div className="flex items-center pl-5 shrink-0">{leadingControl}</div>
+        )}
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${toggleLabel}`}
+          className="flex-1 min-w-0 text-left flex items-center gap-4 roster-row selectable-item"
+        >
+          {/*
+            The mark sits outside the grid rather than as another column, so the
+            four directories keep their own column templates unchanged — a leading
+            `auto` in each of them would be the same slot expressed four times, and
+            would drift the moment one of them was edited.
+          */}
+          <EntitySigil entityId={entityId} name={entityName} size={28} />
+
+          <div className={clsx('flex-1 min-w-0 items-center gap-4 grid', gridClassName)}>
+            {children}
+            <ChevronDown
+              size={16}
+              aria-hidden="true"
+              className={clsx(
+                'justify-self-end transition-transform typography-secondary',
+                expanded && 'rotate-180'
+              )}
+            />
+          </div>
+        </button>
+      </div>
+
+      {expanded && expandedContent && (
+        <div
+          className="px-5 pb-5 pt-1 border-t border-card"
+          style={indent > 0 ? { paddingLeft: indent + 20 } : undefined}
+        >
+          {expandedContent}
         </div>
-      </button>
+      )}
     </div>
 
-    {expanded && expandedContent && (
-      <div className="px-5 pb-5 pt-1 border-t border-card">{expandedContent}</div>
-    )}
+    {nested}
   </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Name
+// ---------------------------------------------------------------------------
+
+export interface RosterNameProps {
+  /** The entity's name or title. */
+  name: React.ReactNode;
+  /**
+   * The line under it: an NPC's title, a place's type, a quest's location, a
+   * rumour's source. Kept even when empty.
+   */
+  detail?: React.ReactNode;
+  /** Draws the name muted, as for a rumour nobody has named yet. */
+  muted?: boolean;
+  /** Beside the name, such as a rumour's "Unsaved". */
+  badge?: React.ReactNode;
+}
+
+/**
+ * The first cell of every directory row: the name, and a second line under it.
+ *
+ * One cell for all four directories so their rows are one shape. The second
+ * line is always there, a blank one when there is nothing to say: a row's
+ * height is part of what makes a list read as one list, and an NPC without a
+ * title used to sit a line shorter than the one above it.
+ */
+export const RosterName: React.FC<RosterNameProps> = ({ name, detail, muted, badge }) => (
+  <div className="flex flex-col gap-0.5 min-w-0">
+    <div className="flex items-center gap-2 min-w-0">
+      <Typography
+        variant="body"
+        color={muted ? 'muted' : undefined}
+        className="font-semibold truncate font-heading"
+      >
+        {name}
+      </Typography>
+      {badge}
+    </div>
+    <Typography variant="body-sm" color="secondary" className="text-sm truncate">
+      {detail || ' '}
+    </Typography>
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Loading

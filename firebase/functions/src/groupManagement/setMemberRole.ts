@@ -1,6 +1,6 @@
 // functions/src/groupManagement/setMemberRole.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {
   LAST_ADMIN_MESSAGE,
@@ -52,8 +52,7 @@ export const setMemberRole = functions.onCall(
 
     const callerUid = request.auth.uid;
     try {
-      const usersRef = admin
-        .firestore()
+      const usersRef = getFirestore()
         .collection("groups")
         .doc(groupId)
         .collection("users");
@@ -62,7 +61,7 @@ export const setMemberRole = functions.onCall(
       // two admins demoting each other at once would otherwise each pass a
       // guard that counted the other (AUTH-001), and a caller demoted a
       // moment ago could still act as an admin.
-      await admin.firestore().runTransaction(async (transaction) => {
+      await getFirestore().runTransaction(async (transaction) => {
         const snapshot = await readAdmins(transaction, groupId, userId);
         const caller = await transaction.get(usersRef.doc(callerUid));
         if (!caller.exists || caller.data()?.role !== "admin") {

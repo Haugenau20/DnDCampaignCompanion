@@ -12,12 +12,7 @@ import { StoryProvider } from '@/features/storytelling';
 
 const AllTheProviders: FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <BrowserRouter>
       <ThemeProvider>
         <FirebaseProvider>
           <NavigationProvider>

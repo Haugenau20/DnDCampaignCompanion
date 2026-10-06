@@ -1,7 +1,6 @@
 // functions/src/deviceSignIn/startDeviceSignIn.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
-import {Timestamp} from "firebase-admin/firestore";
+import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {normalizeEmail} from "../signUp/signUpGate";
 import {
@@ -49,7 +48,7 @@ export const startDeviceSignIn = functions.onCall(
       );
     }
 
-    const db = admin.firestore();
+    const db = getFirestore();
     const address = normalizeEmail(email);
     const now = new Date();
 

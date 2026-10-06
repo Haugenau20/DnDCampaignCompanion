@@ -23,6 +23,5 @@ import { act } from '@testing-library/react';
  *   suspended boundary that rendered nothing at all.
  */
 export async function flushLazy(): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   await act(async () => {});
 }

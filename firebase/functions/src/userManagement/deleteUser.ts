@@ -1,6 +1,7 @@
 // functions/src/userManagement/deleteUser.ts
 import * as functions from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import {getAuth} from "firebase-admin/auth";
+import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {deleteGroupUserDocument} from "../shared/deleteUserSubtree";
 import {LAST_ADMIN_MESSAGE, stepDownAsAdmin} from "../shared/groupAdmins";
@@ -19,7 +20,7 @@ interface DeleteUserData {
  */
 async function finishAuthDeletion(userId: string): Promise<void> {
   try {
-    await admin.auth().deleteUser(userId);
+    await getAuth().deleteUser(userId);
   } catch (error) {
     if ((error as {code?: string}).code === "auth/user-not-found") {
       throw new functions.HttpsError("not-found", "User profile not found.");
@@ -51,8 +52,7 @@ export const deleteUser = functions.onCall(
       
       // For admin deletion, verify admin status
       if (!isSelfDeletion) {
-        const callerDoc = await admin
-          .firestore()
+        const callerDoc = await getFirestore()
           .collection("users")
           .doc(callerUid)
           .get();
@@ -66,8 +66,7 @@ export const deleteUser = functions.onCall(
       }
       
       // Get user's global profile to find group memberships
-      const userDoc = await admin
-        .firestore()
+      const userDoc = await getFirestore()
         .collection("users")
         .doc(userIdToDelete)
         .get();
@@ -103,7 +102,7 @@ export const deleteUser = functions.onCall(
       }
 
       // Create a batch for Firestore operations
-      const batch = admin.firestore().batch();
+      const batch = getFirestore().batch();
       
       // 1. Release the user's name reservations in every group -- found by
       // owner, never by the profile's client-written `username` (SEC-005,
@@ -131,7 +130,7 @@ export const deleteUser = functions.onCall(
       await batch.commit();
       
       // 4. Delete from Firebase Authentication
-      await admin.auth().deleteUser(userIdToDelete);
+      await getAuth().deleteUser(userIdToDelete);
       
       // Return success
       return {success: true, message: "User deleted successfully"};

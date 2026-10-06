@@ -7,12 +7,7 @@ import { BrowserRouter } from 'react-router-dom';
 // Simple test wrapper without Firebase contexts that cause initialization issues
 const SimpleTestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <BrowserRouter>
       {children}
     </BrowserRouter>
   );

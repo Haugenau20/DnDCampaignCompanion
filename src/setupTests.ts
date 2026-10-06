@@ -26,6 +26,15 @@ if (typeof globalThis.crypto.randomUUID !== 'function') {
   };
 }
 
+// Polyfill TextEncoder/TextDecoder, which Node has and jest's JSDOM
+// environment does not expose. React Router 7 builds one when its module
+// loads, so without this every suite that imports the router fails to run
+// before any test does ("TextEncoder is not defined"). Browsers have both.
+if (typeof globalThis.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  Object.assign(globalThis, { TextEncoder, TextDecoder });
+}
+
 // Mock Firebase for unit tests (will be bypassed when using emulator integration tests)
 jest.mock('firebase/app', () => ({
   initializeApp: jest.fn(),
@@ -76,10 +85,9 @@ jest.mock('firebase/auth', () => ({
 const originalWarn = console.warn;
 beforeAll(() => {
   console.warn = (...args) => {
-    // Suppress Firebase and React Router warnings in tests
+    // Suppress Firebase warnings in tests
     if (args[0]?.includes('Firebase') || 
-        args[0]?.includes('emulator') ||
-        args[0]?.includes('React Router Future Flag')) {
+        args[0]?.includes('emulator')) {
       return;
     }
     originalWarn(...args);

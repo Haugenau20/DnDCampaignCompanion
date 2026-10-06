@@ -1,5 +1,12 @@
 // functions/src/imageMaintenance/sweepReleasedImages.ts
-import * as admin from "firebase-admin";
+import {
+  DocumentReference,
+  DocumentSnapshot,
+  FieldPath,
+  getFirestore,
+  QueryDocumentSnapshot,
+  Timestamp,
+} from "firebase-admin/firestore";
 import type {File} from "@google-cloud/storage";
 import {imageBucket} from "../shared/imageBucket";
 import {deleteWithin, MIN_AGE_MS, PENDING_LEASE_MS} from "./shared";
@@ -66,7 +73,7 @@ export function ownerOf(path: string): Owner | null {
 
 /** A ledger entry the sweep is about to judge. */
 interface Candidate {
-  entry: admin.firestore.DocumentReference;
+  entry: DocumentReference;
   path: string;
   /** How long the entry has existed, or Infinity when it cannot be dated. */
   age: number;
@@ -85,12 +92,12 @@ interface Candidate {
 async function forEachEntryPage(
   ledger: string,
   pageSize: number,
-  visit: (entries: admin.firestore.QueryDocumentSnapshot[]) => boolean
+  visit: (entries: QueryDocumentSnapshot[]) => boolean
 ): Promise<boolean> {
-  const base = admin.firestore().collectionGroup(ledger)
-    .orderBy(admin.firestore.FieldPath.documentId())
+  const base = getFirestore().collectionGroup(ledger)
+    .orderBy(FieldPath.documentId())
     .limit(pageSize);
-  let last: admin.firestore.QueryDocumentSnapshot | undefined;
+  let last: QueryDocumentSnapshot | undefined;
   for (;;) {
     const page = await (last ? base.startAfter(last) : base).get();
     if (page.empty) return true;
@@ -108,11 +115,11 @@ async function forEachEntryPage(
  * @return {number} Milliseconds, or Infinity when it cannot be dated
  */
 function ageOf(
-  entry: admin.firestore.QueryDocumentSnapshot,
+  entry: QueryDocumentSnapshot,
   now: Date
 ): number {
   const createdAt =
-    entry.get("createdAt") as admin.firestore.Timestamp | undefined;
+    entry.get("createdAt") as Timestamp | undefined;
   return createdAt?.toMillis ? now.getTime() - createdAt.toMillis() : Infinity;
 }
 
@@ -145,7 +152,7 @@ export async function sweepReleasedImages(
   limits: Partial<LedgerSweepLimits> = {}
 ): Promise<LedgerSweepResult> {
   const {pageSize, maxEntries, concurrency} = {...DEFAULT_LIMITS, ...limits};
-  const db = admin.firestore();
+  const db = getFirestore();
 
   // Live upload entries hold their files; expired ones are candidates.
   const held = new Set<string>();
@@ -158,7 +165,7 @@ export async function sweepReleasedImages(
    * @return {boolean} False once the budget is spent
    */
   const consider = (
-    entry: admin.firestore.QueryDocumentSnapshot,
+    entry: QueryDocumentSnapshot,
     age: number
   ): boolean => {
     if (candidates.length >= maxEntries) return false;
@@ -197,10 +204,10 @@ export async function sweepReleasedImages(
   // One document read per candidate, in batches.
   const owners = candidates.map((candidate) => ownerOf(candidate.path));
   const ownerRefs = owners.map((owner) => (owner ? db.doc(owner.doc) : null));
-  const snapshots = new Map<string, admin.firestore.DocumentSnapshot>();
+  const snapshots = new Map<string, DocumentSnapshot>();
   const unique = [...new Map(
     ownerRefs
-      .filter((ref): ref is admin.firestore.DocumentReference => ref !== null)
+      .filter((ref): ref is DocumentReference => ref !== null)
       .map((ref) => [ref.path, ref])
   ).values()];
   for (let i = 0; i < unique.length; i += 100) {
@@ -209,7 +216,7 @@ export async function sweepReleasedImages(
   }
 
   const toDelete: Candidate[] = [];
-  const toClear: admin.firestore.DocumentReference[] = [];
+  const toClear: DocumentReference[] = [];
   candidates.forEach((candidate, i) => {
     const owner = owners[i];
     if (!owner) {

@@ -268,7 +268,8 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       location: Location,
       depth: number,
       visited: Set<string>,
-      path?: string
+      path?: string,
+      isFirst = false
     ): React.ReactNode => {
       if (visited.has(location.id) || depth > HIGHLIGHT_DEPTH_CAP) return null;
       const nextVisited = new Set(visited);
@@ -298,6 +299,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           questCount={location.relatedQuests?.length ?? 0}
           summary={expanded ? summaryFor(location) : undefined}
           selected={selectedIds.has(location.id)}
+          isFirst={isFirst}
           leadingControl={
             selecting ? (
               <input
@@ -338,7 +340,8 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       )
     : index.roots
         .filter((location) => matchesWithDescendants(location))
-        .map((location) => renderRow(location, 0, new Set()));
+        // The first draws no rule above it, as in every other directory.
+        .map((location, i) => renderRow(location, 0, new Set(), undefined, i === 0));
 
   // Locations whose parentId names an id that isn't in the loaded set —
   // dangling references from a deleted or renamed parent (see #303). Kept

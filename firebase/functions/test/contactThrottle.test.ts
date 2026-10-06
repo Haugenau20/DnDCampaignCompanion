@@ -5,7 +5,7 @@
 // typed, so a new address -- or a new function instance -- reset them. Now
 // they are Firestore documents: by account, or signed out by network address
 // and against a ceiling every signed-out caller shares. Mail is stubbed.
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {
   ANONYMOUS_LIMIT,
@@ -71,7 +71,7 @@ const sendTimes = async (count: number, from: Parameters<typeof send>[1]) => {
 };
 
 const budgetDoc = async (id: string) =>
-  (await admin.firestore().collection(CONTACT_THROTTLE).doc(id).get()).data();
+  (await getFirestore().collection(CONTACT_THROTTLE).doc(id).get()).data();
 
 beforeEach(async () => {
   jest.spyOn(console, "error").mockImplementation(() => undefined);
@@ -116,7 +116,7 @@ describe("a signed-out caller", () => {
   it("stores its address only as a hash", async () => {
     await send(form(), {address: "203.0.113.7"});
 
-    const ids = (await admin.firestore().collection(CONTACT_THROTTLE).listDocuments()).map((ref) => ref.id);
+    const ids = (await getFirestore().collection(CONTACT_THROTTLE).listDocuments()).map((ref) => ref.id);
     expect(ids.join(" ")).not.toContain("203.0.113.7");
     expect(ids).toContain("anonymous");
   });
@@ -154,7 +154,7 @@ describe("the budgets themselves", () => {
     await sendTimes(PER_ACCOUNT_LIMIT, {uid: "sam"});
     expect((await budgetDoc("account_sam"))?.sent).toHaveLength(PER_ACCOUNT_LIMIT);
 
-    await admin.firestore().collection(CONTACT_THROTTLE).doc("account_sam").delete();
+    await getFirestore().collection(CONTACT_THROTTLE).doc("account_sam").delete();
     await send(form(), {uid: "sam"});
     expect(mockSendMail).toHaveBeenCalledTimes(PER_ACCOUNT_LIMIT + 1);
   });
@@ -210,7 +210,7 @@ describe("the daily sweep", () => {
     const result = await sweepContactThrottle(later(THROTTLE_WINDOW_MS + 1));
 
     expect(result).toEqual({deleted: 2, more: false});
-    expect(await admin.firestore().collection(CONTACT_THROTTLE).listDocuments()).toHaveLength(0);
+    expect(await getFirestore().collection(CONTACT_THROTTLE).listDocuments()).toHaveLength(0);
   });
 
   it("keeps a budget still in its window", async () => {

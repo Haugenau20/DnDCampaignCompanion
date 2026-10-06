@@ -10,6 +10,7 @@ import {
   useNPCs,
   useLocations,
   useRumors,
+  resolveLocation,
   resolveLocationName,
   QuestObjectives,
   DeleteQuestDialog,
@@ -310,6 +311,13 @@ const QuestDetailPage: React.FC = () => {
     save((current) => ({
       [field]: (current[field] ?? []).filter((entry) => entry !== value),
     }) as Partial<Quest>);
+
+  /**
+   * The location a place already is, if any (#1421): by the id stored when it
+   * was added, else -- for places added before that -- by its name.
+   */
+  const placeLocation = (place: QuestLocation) =>
+    resolveLocation({ locationId: place.locationId, location: place.name }, locations);
 
   /**
    * A place inside the quest becomes a real location -- the same promotion a
@@ -807,46 +815,71 @@ const QuestDetailPage: React.FC = () => {
           >
             {(quest.keyLocations ?? []).length ? (
               <ul className="flex flex-col divide-y card-divider list-none p-0 m-0">
-                {(quest.keyLocations ?? []).map((place) => (
-                  <li
-                    key={place.name}
-                    className="flex items-center gap-3 py-2 first:pt-0 last:pb-0 min-h-[44px] sm:min-h-[38px]"
-                  >
-                    <span className="flex-1 min-w-0">
-                      <Typography className="font-heading block truncate">{place.name}</Typography>
+                {(quest.keyLocations ?? []).map((place) => {
+                  /*
+                    A place that is already a location (#1421) links to it,
+                    under the location's current name, and cannot be promoted:
+                    that would make a second one. Quests written before places
+                    were prep notes list whole locations here, by name.
+                  */
+                  const existing = placeLocation(place);
+                  const shownName = existing ? existing.name : place.name;
+                  const text = (
+                    <>
+                      <Typography className="font-heading block truncate">{shownName}</Typography>
                       {place.description && (
                         <Typography variant="body-sm" color="secondary" className="block">
                           {place.description}
                         </Typography>
                       )}
-                    </span>
-                    {canAct && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => void promotePlace(place)}
-                        >
-                          Make it a location
-                        </Button>
+                    </>
+                  );
+                  return (
+                    <li
+                      key={place.name}
+                      className="flex items-center gap-3 py-2 first:pt-0 last:pb-0 min-h-[44px] sm:min-h-[38px]"
+                    >
+                      {existing ? (
                         <button
                           type="button"
-                          aria-label={`Remove ${place.name}`}
-                          onClick={() =>
-                            void save((current) => ({
-                              keyLocations: (current.keyLocations ?? []).filter(
-                                (entry) => entry.name !== place.name
-                              ),
-                            }))
-                          }
-                          className="button-ghost rounded-full p-1 shrink-0"
+                          onClick={() => navigateToPage(`/locations/${existing.id}`)}
+                          className="flex-1 min-w-0 text-left"
                         >
-                          <X size={14} aria-hidden="true" />
+                          {text}
                         </button>
-                      </>
-                    )}
-                  </li>
-                ))}
+                      ) : (
+                        <span className="flex-1 min-w-0">{text}</span>
+                      )}
+                      {canAct && (
+                        <>
+                          {!existing && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void promotePlace(place)}
+                            >
+                              Make it a location
+                            </Button>
+                          )}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${shownName}`}
+                            onClick={() =>
+                              void save((current) => ({
+                                keyLocations: (current.keyLocations ?? []).filter(
+                                  (entry) => entry.name !== place.name
+                                ),
+                              }))
+                            }
+                            className="button-ghost rounded-full p-1 shrink-0"
+                          >
+                            <X size={14} aria-hidden="true" />
+                          </button>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : null}
 
@@ -859,14 +892,19 @@ const QuestDetailPage: React.FC = () => {
                   submitLabel="Add place"
                   placeholder="Secret door"
                   clearOnSave
-                  onSubmit={(value) =>
-                    save((current) => ({
+                  onSubmit={(value) => {
+                    // Naming a location the campaign already has stores its
+                    // id, so the link survives that location being renamed.
+                    const existing = resolveLocation({ location: value }, locations);
+                    return save((current) => ({
                       keyLocations: [
                         ...(current.keyLocations ?? []),
-                        { name: value, description: '' },
+                        existing
+                          ? { name: value, description: '', locationId: existing.id }
+                          : { name: value, description: '' },
                       ],
-                    }))
-                  }
+                    }));
+                  }}
                   onSaved={() => undefined}
                   onCancel={closeEditor}
                 />
@@ -880,7 +918,8 @@ const QuestDetailPage: React.FC = () => {
 
             <Typography variant="body-sm" color="muted" className="text-xs">
               These stay free text — notes about places inside the quest’s location, not records of
-              their own. Promoting one is how it becomes a location when the party gets there.
+              their own. Promoting one is how it becomes a location when the party gets there; one
+              that already is a location links to it.
             </Typography>
           </EntityPageSection>
 

@@ -95,45 +95,61 @@ export const indexLocationNames = (locations: readonly Location[]): LocationName
  */
 export const resolveLocationName = (
   reference: LocationReference,
-  locations: Location[] | LocationNameIndex
+  locations: readonly Location[] | LocationNameIndex
 ): string | undefined => {
+  const resolved = resolveLocation(reference, locations);
+  if (resolved) {
+    return resolved.name;
+  }
+
+  // Steps 2 and 3's tails: whatever was stored, verbatim -- the free text if
+  // there is any, else the dangling id. Step 4 when neither is set.
+  return reference.location || reference.locationId || undefined;
+};
+
+/**
+ * The Location record a reference points at, or `undefined` when it points
+ * at none.
+ *
+ * The record-returning twin of {@link resolveLocationName}, for callers that
+ * link to the place rather than print it, and the order that function
+ * documents lives here: a `locationId` that resolves wins outright; otherwise
+ * the free-text `location` is tried by id, then by case-insensitive name.
+ * What this does not do is that function's verbatim fallback -- a reference
+ * that names nothing has no record to return.
+ *
+ * @param reference The stored pair; either field may be missing
+ * @param locations The campaign's locations, or an index of them
+ */
+export const resolveLocation = (
+  reference: LocationReference,
+  locations: readonly Location[] | LocationNameIndex
+): Location | undefined => {
   const { locationId, location } = reference;
-  const index = Array.isArray(locations) ? null : (locations as LocationNameIndex);
+  const index = isIndex(locations) ? locations : null;
+  const list = index ? [] : (locations as readonly Location[]);
   const findById = (id: string) =>
-    index ? index.byId.get(id) : (locations as Location[]).find(loc => loc.id === id);
+    index ? index.byId.get(id) : list.find(loc => loc.id === id);
   const findByName = (name: string) =>
     index
       ? index.byLowerName.get(name.toLowerCase())
-      : (locations as Location[]).find(loc => loc.name.toLowerCase() === name.toLowerCase());
+      : list.find(loc => loc.name.toLowerCase() === name.toLowerCase());
 
-  // Step 1 & 2: the canonical reference, and its dangling case.
-  if (locationId) {
-    const byId = findById(locationId);
-    if (byId) {
-      return byId.name;
-    }
-
-    if (!location) {
-      return locationId;
-    }
+  // Steps 1 and 2: the canonical reference wins when it resolves; a dangling
+  // one falls through to the free text.
+  const byLocationId = locationId ? findById(locationId) : undefined;
+  if (byLocationId) {
+    return byLocationId;
   }
 
-  // Step 3: the free-text fallback, exactly as this function behaved before
-  // `locationId` existed.
-  if (location) {
-    const byId = findById(location);
-    if (byId) {
-      return byId.name;
-    }
-
-    const byName = findByName(location);
-
-    return byName ? byName.name : location;
-  }
-
-  // Step 4: nothing to resolve.
-  return undefined;
+  // Step 3: the free-text fallback, by id then by name.
+  return location ? findById(location) ?? findByName(location) : undefined;
 };
+
+/** Whether `locations` is an index rather than the array it was built from. */
+const isIndex = (
+  locations: readonly Location[] | LocationNameIndex
+): locations is LocationNameIndex => !Array.isArray(locations);
 
 /**
  * Whether a location reference points at `location`, canonically or via the

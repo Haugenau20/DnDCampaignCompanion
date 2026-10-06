@@ -1,5 +1,5 @@
 // functions/src/shared/usernameReservations.ts
-import * as admin from "firebase-admin";
+import {getFirestore, WriteBatch} from "firebase-admin/firestore";
 
 /**
  * Adds to `batch` the deletion of every username reservation in a group that
@@ -15,18 +15,17 @@ import * as admin from "firebase-admin";
  * read, so one released and re-reserved by somebody else in between fails the
  * commit instead of being deleted.
  *
- * @param {admin.firestore.WriteBatch} batch - Batch the deletions join.
+ * @param {WriteBatch} batch - Batch the deletions join.
  * @param {string} groupId - Group whose reservations to release.
  * @param {string} userId - Uid of the departing member.
  * @return {Promise<void>} Resolves once the deletions are in the batch.
  */
 export async function releaseUsernames(
-  batch: admin.firestore.WriteBatch,
+  batch: WriteBatch,
   groupId: string,
   userId: string
 ): Promise<void> {
-  const owned = await admin
-    .firestore()
+  const owned = await getFirestore()
     .collection("groups")
     .doc(groupId)
     .collection("usernames")

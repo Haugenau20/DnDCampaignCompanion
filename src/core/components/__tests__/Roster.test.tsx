@@ -1,6 +1,6 @@
 // src/core/components/__tests__/Roster.test.tsx
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, getDefaultNormalizer } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   RosterStatusBar,
@@ -9,6 +9,7 @@ import {
   RosterFilterSelect,
   RosterGroup,
   RosterRow,
+  RosterName,
   RosterStatus,
   RosterField,
   type RosterSegment,
@@ -976,5 +977,86 @@ describe('RosterGroup collapse', () => {
     const trigger = screen.getByRole('button', { name: /Completed/ });
     const controlled = document.getElementById(trigger.getAttribute('aria-controls')!);
     expect(controlled).toContainElement(screen.getByText('a row'));
+  });
+});
+
+// The four directories' rows are one shape: the same name cell, two lines
+// tall whether or not there is anything for the second line to say.
+describe('RosterName', () => {
+  /** Matches a blank line exactly, which the default normaliser would trim. */
+  const asWritten = { normalizer: getDefaultNormalizer({ trim: false, collapseWhitespace: false }) };
+
+  test('puts the name and the detail on lines of their own', () => {
+    render(<RosterName name="Acar Qinmenor" detail="Eliksir brygger" />);
+    // Exact matches, so neither shares an element with the other.
+    expect(screen.getByText('Acar Qinmenor')).toBeInTheDocument();
+    expect(screen.getByText('Eliksir brygger')).toBeInTheDocument();
+  });
+
+  test('keeps the second line when there is no detail, so every row is as tall', () => {
+    render(<RosterName name="Bare Rock" />);
+    expect(screen.getByText(' ', asWritten)).toBeInTheDocument();
+  });
+
+  test('draws no blank line when there is a detail', () => {
+    render(<RosterName name="Acar Qinmenor" detail="Eliksir brygger" />);
+    expect(screen.queryByText(' ', asWritten)).not.toBeInTheDocument();
+  });
+
+  test('carries a badge beside the name', () => {
+    render(<RosterName name="Dragon spotted" badge={<span>Unsaved</span>} />);
+    expect(screen.getByText('Unsaved')).toBeInTheDocument();
+  });
+});
+
+// A location's rows nest: indent and a rail say so, and the rows inside it
+// belong to the row without being part of its line.
+describe('RosterRow depth', () => {
+  const renderRow = (props: Partial<React.ComponentProps<typeof RosterRow>> = {}) =>
+    render(
+      <RosterRow
+        entityId="p"
+        entityName="Phandalin"
+        gridClassName="grid-cols-2"
+        toggleLabel="Phandalin"
+        {...props}
+      >
+        <span>Phandalin</span>
+      </RosterRow>
+    );
+
+  test('a top-level row has no indent', () => {
+    renderRow();
+    expect(screen.queryByTestId('roster-indent')).not.toBeInTheDocument();
+  });
+
+  test('indents a nested row 30px a level', () => {
+    renderRow({ depth: 2 });
+    expect(screen.getByTestId('roster-indent')).toHaveStyle({ width: '60px' });
+  });
+
+  test('stops indenting at four levels', () => {
+    renderRow({ depth: 9 });
+    expect(screen.getByTestId('roster-indent')).toHaveStyle({ width: '120px' });
+  });
+
+  test('renders the rows inside after its own expansion', () => {
+    renderRow({
+      expanded: true,
+      expandedContent: <div>summary</div>,
+      nested: <div>Stonehill Inn</div>,
+    });
+    expect(screen.getAllByText(/^(summary|Stonehill Inn)$/).map((el) => el.textContent)).toEqual([
+      'summary',
+      'Stonehill Inn',
+    ]);
+  });
+
+  test('a selected row tints its own line, not the rows inside it', () => {
+    renderRow({ selected: true, nested: <div>Stonehill Inn</div> });
+    const line = screen.getByTestId('roster-row-line');
+    expect(line).toHaveClass('roster-row-selected');
+    expect(within(line).getByText('Phandalin')).toBeInTheDocument();
+    expect(within(line).queryByText('Stonehill Inn')).not.toBeInTheDocument();
   });
 });

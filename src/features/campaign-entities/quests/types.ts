@@ -10,9 +10,19 @@ export interface QuestObjective {
   completed: boolean;
 }
 
+/**
+ * A place inside a quest: free text, a prep note about somewhere the party has
+ * mostly not been. Promoting one creates a Location and takes it off the quest.
+ */
 export interface QuestLocation {
   name: string;
   description: string;
+  /**
+   * The Location this place already is, stored when a place is added under
+   * the name of one (#1421) so the link survives a rename. Places added
+   * before that resolve by `name` alone, the way `location` does for a quest.
+   */
+  locationId?: string;
 }
 
 /**

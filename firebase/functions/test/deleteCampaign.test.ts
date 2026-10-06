@@ -1,7 +1,11 @@
 // functions/test/deleteCampaign.test.ts
 //
 // T021: deleting a campaign also deletes its images -- and nobody else's.
-import * as admin from "firebase-admin";
+import {
+  BulkWriter,
+  DocumentReference,
+  Firestore,
+} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {deleteCampaign} from "../src/campaignManagement/deleteCampaign";
 import {imageBucket} from "../src/shared/imageBucket";
@@ -120,11 +124,11 @@ describe("a deletion that fails partway (T037)", () => {
   const record = db.doc(`groups/${GROUP}/campaignDeletions/c1`);
   const note = db.doc(`groups/${GROUP}/users/frodo/notes/note-c1`);
   const otherNote = db.doc(`groups/${GROUP}/users/frodo/notes/note-c2`);
-  const isThere = async (ref: admin.firestore.DocumentReference) =>
+  const isThere = async (ref: DocumentReference) =>
     (await ref.get()).exists;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bulkWriterProto = admin.firestore.BulkWriter.prototype as any;
+  const bulkWriterProto = BulkWriter.prototype as any;
 
   /** Fails the next BulkWriter delete of `path`, the way a write that has
    * exhausted its retries does: its own promise rejects, `close()` does not. */
@@ -194,7 +198,7 @@ describe("a deletion that fails partway (T037)", () => {
   });
 
   it("keeps the pictures while the documents that show them could not be deleted", async () => {
-    jest.spyOn(admin.firestore.Firestore.prototype, "recursiveDelete")
+    jest.spyOn(Firestore.prototype, "recursiveDelete")
       .mockRejectedValueOnce(new Error("injected: backend unavailable"));
 
     await expectHttpsError(remove("gandalf"), "internal");

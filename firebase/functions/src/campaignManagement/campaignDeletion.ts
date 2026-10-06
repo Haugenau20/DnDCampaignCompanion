@@ -1,5 +1,10 @@
 // functions/src/campaignManagement/campaignDeletion.ts
-import * as admin from "firebase-admin";
+import {
+  DocumentReference,
+  FieldPath,
+  getFirestore,
+  Timestamp,
+} from "firebase-admin/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {imageBucket} from "../shared/imageBucket";
 import {checkedBulkWriter} from "../shared/checkedBulkWriter";
@@ -10,14 +15,13 @@ import {checkedBulkWriter} from "../shared/checkedBulkWriter";
  *
  * @param {string} groupId The group
  * @param {string} campaignId The campaign
- * @return {admin.firestore.DocumentReference} The record
+ * @return {DocumentReference} The record
  */
 export function campaignDeletionRef(
   groupId: string,
   campaignId: string
-): admin.firestore.DocumentReference {
-  return admin
-    .firestore()
+): DocumentReference {
+  return getFirestore()
     .collection("groups")
     .doc(groupId)
     .collection("campaignDeletions")
@@ -40,7 +44,7 @@ export async function finishCampaignDeletion(
   groupId: string,
   campaignId: string
 ): Promise<void> {
-  const groupRef = admin.firestore().collection("groups").doc(groupId);
+  const groupRef = getFirestore().collection("groups").doc(groupId);
   const campaignRef = groupRef.collection("campaigns").doc(campaignId);
   const deletionRef = campaignDeletionRef(groupId, campaignId);
 
@@ -85,7 +89,7 @@ export async function finishCampaignDeletion(
   // so this stays correct by construction instead of relying on a
   // hardcoded list. It finds descendants whether or not the root still
   // exists, so a retry after a partial failure picks up the rest.
-  await admin.firestore().recursiveDelete(campaignRef);
+  await getFirestore().recursiveDelete(campaignRef);
 
   // 3. The campaign's images (T021). They are keyed by the same path as
   // the campaign, so one prefix covers every entity's files. The trailing
@@ -136,10 +140,9 @@ export async function resumeCampaignDeletions(
   now: Date,
   budget = RESUME_BUDGET
 ): Promise<ResumeResult> {
-  const records = await admin
-    .firestore()
+  const records = await getFirestore()
     .collectionGroup("campaignDeletions")
-    .orderBy(admin.firestore.FieldPath.documentId())
+    .orderBy(FieldPath.documentId())
     .limit(budget + 1)
     .get();
 
@@ -151,7 +154,7 @@ export async function resumeCampaignDeletions(
 
   for (const record of records.docs.slice(0, budget)) {
     const requestedAt = record.get("requestedAt");
-    const age = requestedAt instanceof admin.firestore.Timestamp ?
+    const age = requestedAt instanceof Timestamp ?
       now.getTime() - requestedAt.toMillis() :
       Infinity;
     if (age < RESUME_AFTER_MS) continue;

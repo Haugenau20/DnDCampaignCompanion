@@ -1,5 +1,10 @@
 // functions/src/shared/groupAdmins.ts
-import * as admin from "firebase-admin";
+import {
+  DocumentSnapshot,
+  getFirestore,
+  QuerySnapshot,
+  Transaction,
+} from "firebase-admin/firestore";
 
 /**
  * The reads that decide whether a group keeps an admin, taken inside a
@@ -7,11 +12,11 @@ import * as admin from "firebase-admin";
  */
 interface AdminSnapshot {
   /** The member stepping away, or undefined when they are not in the group. */
-  self: admin.firestore.DocumentSnapshot;
+  self: DocumentSnapshot;
   /** Every admin of the group, `self` included when they are one. */
-  admins: admin.firestore.QuerySnapshot;
+  admins: QuerySnapshot;
   /** Up to two members of the group -- enough to tell "anyone else?". */
-  anyMembers: admin.firestore.QuerySnapshot;
+  anyMembers: QuerySnapshot;
 }
 
 /**
@@ -25,18 +30,17 @@ interface AdminSnapshot {
  * write their own, so their transactions conflict, one retries, and the retry
  * sees the first one's demotion (AUTH-001).
  *
- * @param {admin.firestore.Transaction} transaction The transaction to read in
+ * @param {Transaction} transaction The transaction to read in
  * @param {string} groupId The group
  * @param {string} userId The member stepping away
  * @return {Promise<AdminSnapshot>} The reads
  */
 export async function readAdmins(
-  transaction: admin.firestore.Transaction,
+  transaction: Transaction,
   groupId: string,
   userId: string
 ): Promise<AdminSnapshot> {
-  const users = admin
-    .firestore()
+  const users = getFirestore()
     .collection("groups")
     .doc(groupId)
     .collection("users");
@@ -111,7 +115,7 @@ export async function stepDownAsAdmin(
 ): Promise<string | null> {
   if (groupIds.length === 0) return null;
 
-  return admin.firestore().runTransaction(async (transaction) => {
+  return getFirestore().runTransaction(async (transaction) => {
     const snapshots: AdminSnapshot[] = [];
     for (const groupId of groupIds) {
       snapshots.push(await readAdmins(transaction, groupId, userId));

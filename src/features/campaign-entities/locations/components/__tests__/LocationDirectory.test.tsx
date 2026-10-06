@@ -413,8 +413,14 @@ describe('LocationDirectory', () => {
       openTwisty('Kingdom of Valor');
       openTwisty('Silverkeep');
 
+      // The shared row's indent (`RosterRow`'s `depth`, T063); the row used
+      // to pad its own line instead. A top-level row has none.
       const indentOf = (id: string) =>
-        (container.querySelector(`#location-${id} > div`) as HTMLElement).style.paddingLeft;
+        (
+          container.querySelector(
+            `#location-${id} > div > div > [data-testid="roster-indent"]`
+          ) as HTMLElement | null
+        )?.style.width ?? '0px';
 
       expect(indentOf('region-1')).toBe('0px');
       expect(indentOf('city-1')).toBe('30px');
@@ -430,8 +436,14 @@ describe('LocationDirectory', () => {
       const { container } = render(<LocationDirectory locations={chain} />);
       for (let i = 0; i < 5; i += 1) openTwisty(`Level ${i}`);
 
+      // The shared row's indent (`RosterRow`'s `depth`, T063); the row used
+      // to pad its own line instead. A top-level row has none.
       const indentOf = (id: string) =>
-        (container.querySelector(`#location-${id} > div`) as HTMLElement).style.paddingLeft;
+        (
+          container.querySelector(
+            `#location-${id} > div > div > [data-testid="roster-indent"]`
+          ) as HTMLElement | null
+        )?.style.width ?? '0px';
 
       expect(indentOf('n4')).toBe('120px');
       expect(indentOf('n5')).toBe('120px');

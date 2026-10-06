@@ -1,5 +1,9 @@
 // functions/src/imageMaintenance/sweepOrphanedImages.ts
-import * as admin from "firebase-admin";
+import {
+  DocumentReference,
+  getFirestore,
+  Timestamp,
+} from "firebase-admin/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import type {File, GetFilesOptions} from "@google-cloud/storage";
 import {imageBucket} from "../shared/imageBucket";
@@ -85,13 +89,13 @@ async function pendingUploads(
   now: Date,
   maxDeletes: number
 ): Promise<{held: Set<string>; expired: number}> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const entries = await db.collectionGroup("pendingUploads").get();
 
   const held = new Set<string>();
-  const expired: admin.firestore.DocumentReference[] = [];
+  const expired: DocumentReference[] = [];
   entries.docs.forEach((entry) => {
-    const createdAt = entry.get("createdAt") as admin.firestore.Timestamp | undefined;
+    const createdAt = entry.get("createdAt") as Timestamp | undefined;
     const age = createdAt?.toMillis ? now.getTime() - createdAt.toMillis() : Infinity;
     const path = entry.get("path");
     if (age < PENDING_LEASE_MS && typeof path === "string") held.add(path);
@@ -119,7 +123,7 @@ async function pendingUploads(
  * @return {Promise<Set<string>>} The referenced object paths
  */
 async function referencedPaths(): Promise<Set<string>> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const [npcs, locations, campaigns, groups] = await Promise.all([
     db.collectionGroup("npcs").select("image").get(),
     db.collectionGroup("locations").select("image").get(),

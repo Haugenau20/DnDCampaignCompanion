@@ -4,7 +4,7 @@ import {
   HttpsError,
   beforeUserCreated,
 } from "firebase-functions/v2/identity";
-import * as admin from "firebase-admin";
+import {getFirestore} from "firebase-admin/firestore";
 import {
   REFUSAL,
   accountLimitReached,
@@ -65,7 +65,7 @@ export async function admitAccount(event: AuthBlockingEvent): Promise<void> {
 
   if (isEmulatorSeedAccount(event, email)) return;
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const reservation = await findLiveReservation(db, email);
   if (!reservation) {
     throw new HttpsError(
