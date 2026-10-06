@@ -36,8 +36,9 @@ OpenAI for note extraction, called only from Cloud Functions.
 
 ## Development
 
-This is a personal project, and **outside contributions aren't being accepted during the beta**.
-If you want to read or run the code anyway:
+This is a personal project, and **outside contributions aren't being accepted during the beta**
+([`CONTRIBUTING.md`](CONTRIBUTING.md) says what is welcome; security reports go privately, per
+[`SECURITY.md`](SECURITY.md)). If you want to read or run the code anyway:
 
 - [`CLAUDE.md`](CLAUDE.md) covers running it locally against the Firebase emulators, testing, and
   the architecture.

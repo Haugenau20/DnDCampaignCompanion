@@ -1,0 +1,21 @@
+name: Idea or feature request
+description: Something the app could do, or do better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The situation at or after the table, rather than the feature you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: Your idea, if you have one.
+  - type: textarea
+    id: today
+    attributes:
+      label: How you manage today
+      description: Optional. A workaround, or another tool you use for it.

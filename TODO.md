@@ -40,7 +40,6 @@ adjusted for the images focus above.
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T110 | A PR's preview site cannot be signed in to | S | needs investigation | Only PR review is affected, and previews touch production data, so whether to allow it comes first |
-| low | T112 | Code of conduct, contributing guide, issue and PR templates | S | open | Public repo; the PR template's checklist is behind CI |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | The maintainer flagged it as not important |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | needs scoping | Bookkeeping; needs a definition of stale first |
 
@@ -565,26 +564,6 @@ time anyone edits it.
 ---
 
 ## Documentation
-
-### T112 — Code of conduct, contribution guidelines, issue and PR templates
-**Type** docs · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The repo is public with issues enabled, and GitHub's community profile scores it
-57%: README, licence and PR template present; code of conduct, contributing
-guide and issue templates missing (`gh api …/community/profile`).
-
-- **Where**: new `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` and
-  `.github/ISSUE_TEMPLATE/`; the existing `.github/pull_request_template.md`.
-- **The PR template is stale**: its checklist names `tsc`, `npm test` and
-  `npm run build`, but not `lint`, `lint:tests`, `check:bundle` or the
-  `firebase/functions` suite, and it says "no new failures against the
-  recorded baseline" where `CLAUDE.md` now requires a fully green suite. The
-  privacy-policy item is still current.
-- **Catch**: `README.md:39` says outside contributions are not accepted during
-  the beta; the contributing guide must say the same, or that changes first.
-  An issue template on a public repo should also send security reports
-  somewhere private, and there is no `SECURITY.md` to point at.
-- **Source**: todo.txt, 2026-10-06 (four inbox lines, merged)
 
 ### T113 — Clean up `docs/` and delete what is stale
 **Type** docs · **Size** M · **Status** needs scoping · **Verified** 2026-10-06
