@@ -61,8 +61,6 @@ line and run `npm ci` (or `npm ci --os=win32` for one install).
   skips the export**, and `status` says nothing is running. Check ports 3000/4000/5001/8080/9099/9199.
 - Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
   in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
-- The header overflows horizontally below ~380px on **every** route (tracked in `TODO.md`). If your
-  page "overflows at 320px", check whether the offender is inside `header`/`footer` first.
 - **Signing in as another user in a browser check.** There are no passwords: sign-in is a magic link
   or Google, and the Auth emulator keeps every link in an outbox instead of sending mail. In the dev
   server the "Check your inbox" screen has a dev-only **Open the emulator's link** button

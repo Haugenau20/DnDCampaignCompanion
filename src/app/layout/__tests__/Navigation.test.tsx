@@ -209,20 +209,20 @@ describe("Navigation", () => {
     test("defaults to the inline variant", () => {
       const { container } = render(<Navigation />);
       const nav = container.querySelector("nav")!;
-      expect(nav.className).toContain("md:flex");
+      expect(nav.className).toContain("lg:flex");
       expect(nav.className).not.toContain("navigation");
     });
 
-    test("the inline variant is hidden below md, where it cannot fit the bar", () => {
+    test("the inline variant is hidden below lg, where it cannot fit the bar", () => {
       const { container } = render(<Navigation variant="inline" />);
       expect(container.querySelector("nav")!.className).toContain("hidden");
     });
 
-    test("the mobile variant keeps its own strip and hides from md up", () => {
+    test("the mobile variant keeps its own strip and hides from lg up", () => {
       const { container } = render(<Navigation variant="mobile" />);
       const nav = container.querySelector("nav")!;
       expect(nav.className).toContain("navigation");
-      expect(nav.className).toContain("md:hidden");
+      expect(nav.className).toContain("lg:hidden");
     });
 
     test("both variants expose the same destinations", () => {

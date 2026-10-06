@@ -57,6 +57,10 @@ export interface NavigationProps {
    * what removes the second full-height navigation row on desktop. `mobile` keeps
    * the icon-over-label row as its own strip, where a single bar cannot hold seven
    * destinations plus search.
+   *
+   * The switch is at `lg` (1024px), not `md`: at 768px the title, five items plus
+   * `More`, search and the account came to ~800px in a ~720px bar, so it overflowed
+   * and crushed the campaign chip to its chevron.
    */
   variant?: 'inline' | 'mobile';
 }
@@ -105,7 +109,7 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
 
   if (variant === 'mobile') {
     return (
-      <nav className="navigation nav-on-card md:hidden" aria-label="Main">
+      <nav className="navigation nav-on-card lg:hidden" aria-label="Main">
         <div className="max-w-7xl mx-auto px-2">
           {/* `gap-1` plus per-item minimums rather than `justify-between`: the
               row must be allowed to exceed the viewport and scroll, which is
@@ -193,13 +197,13 @@ const Navigation: React.FC<NavigationProps> = ({ variant = 'inline' }) => {
   };
 
   return (
-    <nav className="hidden md:flex items-center gap-1 lg:gap-2 nav-on-chrome" aria-label="Main">
+    <nav className="hidden lg:flex items-center gap-2 nav-on-chrome" aria-label="Main">
       {inlineItems.map((item) => renderNavButton(item))}
       {overflowItems.map((item) => renderNavButton(item, 'hidden nav:block'))}
 
       {/* `nav:hidden` lives on this wrapper, not the button: at and above the
           `nav` breakpoint the button itself used to go `display:none` while
-          this `div.relative` stayed a flex item, costing dead `gap-1 lg:gap-2`
+          this `div.relative` stayed a flex item, costing dead `gap-2`
           space in the nav row and leaving an open panel rendered (just
           invisible) if the viewport widened past `nav` while it was open.
           Hiding the wrapper removes it from the flex layout entirely and

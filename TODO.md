@@ -23,9 +23,9 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T075 | Rename the site; header crowded | M | open | The name is parked (2026-10-06); the header overflow below ~380px is open now, without it |
 | medium | T103 | Replay browser checks: Playwright in CI | L | open | Decided 2026-10-06: a few journeys first, and a defect found in the browser lands with a test |
 | low | T083 | A save warns when the text changed since the editor opened | S | open | Decided 2026-10-06: warn and let them choose, instead of last-write-wins |
+| low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -299,7 +299,7 @@ around.
 - **Source**: todo.txt, 2026-10-02 (two inbox lines, merged); decided 2026-10-06
 
 ### T075 — Rename the site, and uncrowd the header
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-06
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06
 
 **Decided (maintainer, 2026-10-03): the name drops "D&D", and the site
 mentions D&D nowhere**, not even in a tagline or a disclaimer. The maintainer
@@ -317,7 +317,8 @@ for the crowded header the maintainer reported (busy, some text cut off).
   uses no WotC content otherwise (the shipped code has no setting names or rules
   terms; Faerûn, Waterdeep and Neverwinter appear only in test fixtures), so once
   the name goes, no notice is needed.
-- **Name to replace** (measured 2026-10-03): `Header.tsx:98-99`, `Footer.tsx:38`
+- **Name to replace** (measured 2026-10-03): the title link in `Header.tsx` (its
+  `aria-label` and three breakpoint labels, the shortest just "D&D"), `Footer.tsx:38`
   (as "© {year} D&D Campaign Companion"), `SignInPage.tsx:82`, `JoinPage.tsx:98`,
   `CampaignBanner.tsx:98`, `public/index.html:9,12`, `public/manifest.json:2-3`,
   the contact mail's subject and body (`firebase/functions/src/contact.ts:364,392,437`,
@@ -338,21 +339,16 @@ for the crowded header the maintainer reported (busy, some text cut off).
   later, but that means the auth authorised domains, the magic link's `continueUrl`
   and existing bookmarks, and `CLAUDE.md`, docs and scripts, which name the
   project id throughout. That would be its own item.
-- **Where**: `src/app/layout/Header.tsx:89-100` — one row carries the name, the
-  context switcher, the inline nav, search and the account menu. The full name
-  shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
-  Companion" below it. The campaign/group name in the context switcher
+- **Where**: `src/app/layout/Header.tsx` — one row carries the name, the
+  context switcher, the inline nav (from `lg`), search and the account menu. The
+  full name shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
+  Companion" from `sm`, "D&D" below it. The campaign/group name in the context switcher
   truncates by design at `max-w-[9rem] md:max-w-[14rem]`
   (`ContextTrigger.tsx:51`). Which truncation the maintainer means was **not**
   confirmed — that needs the running app.
-- **Folded in**: the header overflows horizontally below ~380px on every route
-  (logo and account block both at `min-width: auto`). `CLAUDE.md` called that
-  "tracked in `TODO.md`", but no entry held it until this one.
 - **Decided (maintainer, 2026-10-06): the name is parked** until the maintainer
   has one; it then decides whether a logo carries it and how much room the
-  header gets back. **The overflow below ~380px does not wait for it**: fix
-  that now, and leave the rename, the logo and the "which truncation" question
-  for when the name comes.
+  header gets back, and the "which truncation" question is settled then.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03
 
