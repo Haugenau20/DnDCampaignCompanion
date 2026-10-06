@@ -34,6 +34,7 @@ import {
   RosterFilterPills,
   RosterGroup,
   RosterRow,
+  RosterName,
   type RosterSegment,
   type RosterFilterOption,
   RosterSkeleton,
@@ -610,36 +611,29 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                         />
                       }
                     >
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {/* The "Quest" pill that sat here is gone: the last cell in the
-                              same row already reads "Converted to quest", so the pill was
-                              the same fact a second time, in a box, next to the name. */}
-                          <Typography
-                            variant="body"
-                            // An unnamed rumour reads as unfinished rather than as
-                            // a record actually called "Untitled rumour".
-                            color={displayed ? undefined : 'muted'}
-                            className="font-semibold truncate font-heading"
-                          >
-                            {name}
-                          </Typography>
-                          {/*
+                      {/* The "Quest" pill that sat by the name is gone: the last cell
+                          in the same row already reads "Converted to quest", so the
+                          pill was the same fact a second time, in a box. */}
+                      <RosterName
+                        name={name}
+                        // An unnamed rumour reads as unfinished rather than as
+                        // a record actually called "Untitled rumour".
+                        muted={!displayed}
+                        detail={rumor.sourceName}
+                        badge={
+                          /*
                             Loud on purpose. Keeping a draft across a route change
                             is only an improvement if the row says it is holding
                             one -- otherwise persistence is just a quieter way to
                             lose work, because you would believe you had saved.
-                          */}
-                          {unsavedIds.has(rumor.id) && (
+                          */
+                          unsavedIds.has(rumor.id) ? (
                             <span className="shrink-0 px-2 py-0.5 rounded-full text-xs feedback-warning-edge chip-toggle chip-toggle-selected">
                               Unsaved
                             </span>
-                          )}
-                        </div>
-                        <Typography variant="body-sm" color="secondary" className="text-sm truncate">
-                          {rumor.sourceName}
-                        </Typography>
-                      </div>
+                          ) : undefined
+                        }
+                      />
 
                       {/*
                         A false rumour is red and struck through: the strike keeps

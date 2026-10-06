@@ -284,16 +284,14 @@ the same foundation.
   band carries no accent") stays true but stops mattering on these pages; a
   light card can carry accent controls. Verify in a browser, both themes, at
   phone width.
-- **Reported 2026-10-04: "entries" on the location page differ from the other
-  pages.** Read as the table notes, the one list both pages share. Both render
-  `NoteHistory`, but the location's (`LocationDetailPage.tsx:752-786`) sits in
-  an `EntityPageSection` titled "Notes from the table", with no "oldest first",
-  no saved confirmation (`onSaved` is a no-op) and the default row spacing. The
-  NPC's (`NPCDetailPage.tsx:1129-1176`) is its own card titled "Notes", with a
-  saved notice and padded rows. Quests have no table notes. If "entries" meant
-  something else, ask the maintainer.
-- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; location
-  notes added from todo.txt, 2026-10-04
+- **The table notes differ too.** Both pages render `NoteHistory`, but the
+  location's (`LocationDetailPage.tsx`) sits in an `EntityPageSection` titled
+  "Notes from the table", with no "oldest first", no saved confirmation
+  (`onSaved` is a no-op) and the default row spacing. The NPC's
+  (`NPCDetailPage.tsx`) is its own card titled "Notes", with a saved notice and
+  padded rows. Quests have no table notes.
+- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the notes
+  difference measured 2026-10-04
 
 ### T074 — Default pictures where none has been uploaded
 **Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02

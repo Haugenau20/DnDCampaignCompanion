@@ -20,6 +20,7 @@ import {
   RosterFilterSelect,
   RosterGroup,
   RosterRow,
+  RosterName,
   type RosterSegment,
   type RosterFilterOption,
   RosterSkeleton,
@@ -38,7 +39,7 @@ interface QuestDirectoryProps {
 
 /** Column template shared by every row, so the columns line up across groups. */
 const ROW_GRID =
-  'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.7fr)_130px_190px_150px_26px]';
+  'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.7fr)_130px_190px_26px]';
 
 /**
  * Fixed, ordered groups instead of the location-based grouping NPCs use.
@@ -379,14 +380,12 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                         />
                       }
                     >
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <Typography
-                          variant="body"
-                          className="font-semibold truncate font-heading"
-                        >
-                          {quest.title}
-                        </Typography>
-                      </div>
+                      {/* Where it happens is the line under the title, as an
+                          NPC's title is: every directory row is two lines. */}
+                      <RosterName
+                        name={quest.title}
+                        detail={questLocationName.get(quest.id)}
+                      />
 
                       <RosterStatus tone={STATUS_TONE[quest.status]}>
                         {quest.status.charAt(0).toUpperCase() + quest.status.slice(1)}
@@ -409,14 +408,6 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                           </div>
                         )}
                       </div>
-
-                      <Typography
-                        variant="body-sm"
-                        color="secondary"
-                        className="hidden md:block text-sm truncate"
-                      >
-                        {questLocationName.get(quest.id) || '—'}
-                      </Typography>
                     </RosterRow>
                   );
                 })}

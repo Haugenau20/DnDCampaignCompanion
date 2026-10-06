@@ -1,6 +1,6 @@
 // src/features/campaign-entities/quests/components/__tests__/QuestDirectory.test.tsx
 import React from 'react';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor, getDefaultNormalizer } from '@testing-library/react';
 import QuestDirectory from '../QuestDirectory';
 import type { Quest, QuestObjective } from '../../types';
 import type { NPC } from '../../../npcs/types';
@@ -422,11 +422,20 @@ describe('QuestDirectory', () => {
       expect(row.getByText('Dungeon')).toBeInTheDocument();
     });
 
-    it('shows a dash when the quest has no location', () => {
+    // CHANGED (T063): the location is the line under the title now, as an
+    // NPC's title is, and an empty second line stays empty -- it used to be a
+    // column of its own, where a dash marked the gap.
+    it('leaves the line under the title empty when the quest has no location', () => {
       mockQuestContext.quests = [makeQuest({ id: 'q-no-loc', title: 'No Location Quest' })];
       renderPage();
       const row = within(expandButton('No Location Quest'));
-      expect(row.getByText('—')).toBeInTheDocument();
+      expect(row.queryByText('—')).not.toBeInTheDocument();
+      // The blank line, matched as written: the default normaliser trims it.
+      expect(
+        row.getByText(' ', {
+          normalizer: getDefaultNormalizer({ trim: false, collapseWhitespace: false }),
+        })
+      ).toBeInTheDocument();
     });
 
     // #1412: `quest.location` holds an id, so this cell printed slugs.

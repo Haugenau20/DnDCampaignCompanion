@@ -19,6 +19,7 @@ import {
   RosterFilterPills,
   RosterGroup,
   RosterRow,
+  RosterName,
   RosterField,
   type RosterSegment,
   RosterSkeleton,
@@ -468,23 +469,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                       </div>
                     }
                   >
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <Typography
-                        variant="body"
-                        className="font-semibold truncate font-heading"
-                      >
-                        {npc.name}
-                      </Typography>
-                      {npc.title && (
-                        <Typography
-                          variant="body-sm"
-                          color="secondary"
-                          className="text-sm truncate"
-                        >
-                          {npc.title}
-                        </Typography>
-                      )}
-                    </div>
+                    <RosterName name={npc.name} detail={npc.title} />
 
                     <RosterStatus
                       tone={STATUS_TONE[npc.status] ?? 'valence-1'}
