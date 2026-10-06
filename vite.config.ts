@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 /**
  * Every `process.env.REACT_APP_*` name under `dir`. The source keeps CRA's
@@ -27,9 +26,30 @@ function reactAppNames(dir: string): Set<string> {
   return names;
 }
 
+/**
+ * The `REACT_APP_*` values for `mode`: the environment (CI's secrets) wins
+ * over .env files, as it did under CRA.
+ *
+ * A .env file saved as "UTF-8 with BOM" (Notepad's habit) hands Vite 8 its
+ * first key with the BOM still on it, and a prefix filter then drops it --
+ * `REACT_APP_USE_EMULATORS` was lost that way, and the dev server quietly
+ * targeted production. So every key is read and the BOM stripped here.
+ * Only a file's key can carry one; applying those first lets the
+ * environment's own value still win.
+ */
+function reactAppEnv(mode: string): Record<string, string> {
+  const raw = Object.entries(loadEnv(mode, process.cwd(), ""));
+  const fromFileWithBom = ([key]: [string, string]) => key.startsWith("﻿");
+  const env: Record<string, string> = {};
+  for (const [key, value] of [...raw.filter(fromFileWithBom), ...raw.filter((e) => !fromFileWithBom(e))]) {
+    const name = key.replace(/^﻿/, "");
+    if (name.startsWith("REACT_APP_")) env[name] = value;
+  }
+  return env;
+}
+
 export default defineConfig(({ mode }) => {
-  // The environment (CI's secrets) wins over .env files, as it did under CRA.
-  const env = loadEnv(mode, process.cwd(), "REACT_APP_");
+  const env = reactAppEnv(mode);
   const names = new Set([...Object.keys(env), ...reactAppNames(path.join(process.cwd(), "src"))]);
   const define = Object.fromEntries(
     [...names].map((name) => [
@@ -39,8 +59,9 @@ export default defineConfig(({ mode }) => {
   );
 
   return {
-    // tsconfigPaths: the bare `baseUrl` imports (`core/types/common`) and `@/`.
-    plugins: [react(), tsconfigPaths()],
+    plugins: [react()],
+    // The bare `baseUrl` imports (`core/types/common`) and `@/`.
+    resolve: { tsconfigPaths: true },
     define,
     server: {
       // IPv4 on purpose: start-dev.ps1's health check asks 127.0.0.1:3000.
@@ -52,12 +73,6 @@ export default defineConfig(({ mode }) => {
     preview: { host: "127.0.0.1", port: 4173, strictPort: true },
     // `build/`: firebase.json serves it and the Hosting workflows copy it.
     // Source maps shipped under CRA too, and check-bundle-size's hint reads them.
-    build: {
-      outDir: "build",
-      sourcemap: true,
-      // The entry is ~850 kB minified, over Rollup's 500 kB warning.
-      // scripts/check-bundle-size.js is its real gate (T030), gzipped.
-      chunkSizeWarningLimit: 1000,
-    },
+    build: { outDir: "build", sourcemap: true },
   };
 });
