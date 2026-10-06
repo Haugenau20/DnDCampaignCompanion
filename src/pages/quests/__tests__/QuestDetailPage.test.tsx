@@ -664,6 +664,82 @@ describe('places inside this quest', () => {
     )).toEqual({ keyLocations: [{ name: 'Added meanwhile' }] });
     expect(mockUpdateQuest).not.toHaveBeenCalled();
   });
+
+  // #1421: a quest written before places were prep notes can list a whole
+  // location as a place. Promoting it would make a second Erebor.
+  describe('a place that is already a location', () => {
+    const withPlaces = (keyLocations: any[]) => {
+      mockQuests = [{ ...QUEST, keyLocations }];
+    };
+
+    it('links to that location instead of offering to make one', () => {
+      withPlaces([
+        { name: 'erebor', description: 'The Lonely Mountain' },
+        { name: 'Secret door', description: '' },
+      ]);
+      renderPage();
+      const places = section('Places inside this quest');
+
+      fireEvent.click(within(places).getByRole('button', { name: /^Erebor/ }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/erebor');
+      expect(within(places).getByText('The Lonely Mountain')).toBeInTheDocument();
+      // Only the secret door can still be promoted.
+      expect(within(places).getAllByRole('button', { name: 'Make it a location' })).toHaveLength(1);
+    });
+
+    it('shows the location under its current name when the place holds its id', () => {
+      withPlaces([{ name: 'The Lonely Mountain', description: '', locationId: 'erebor' }]);
+      renderPage();
+      const places = section('Places inside this quest');
+
+      expect(within(places).getByRole('button', { name: /^Erebor/ })).toBeInTheDocument();
+      expect(within(places).queryByText('The Lonely Mountain')).not.toBeInTheDocument();
+    });
+
+    it('can still be taken off the quest', async () => {
+      withPlaces([{ name: 'Erebor', description: '', locationId: 'erebor' }]);
+      renderPage();
+      fireEvent.click(
+        within(section('Places inside this quest')).getByRole('button', { name: 'Remove Erebor' })
+      );
+
+      await waitFor(() =>
+        expect(mockUpdateQuest).toHaveBeenCalledWith('reclaim-erebor', { keyLocations: [] })
+      );
+    });
+
+    it('stores the location’s id when a place added names one', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Add another place' }));
+      fireEvent.change(screen.getByLabelText('Add a place'), { target: { value: 'erebor' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add place' }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuest).toHaveBeenCalledWith('reclaim-erebor', {
+          keyLocations: [
+            { name: 'Secret door', description: 'Hidden entrance on the western side' },
+            { name: 'erebor', description: '', locationId: 'erebor' },
+          ],
+        })
+      );
+    });
+
+    it('stores no id for a place that names no location', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Add another place' }));
+      fireEvent.change(screen.getByLabelText('Add a place'), { target: { value: 'Hidden lake' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add place' }));
+
+      await waitFor(() =>
+        expect(mockUpdateQuest).toHaveBeenCalledWith('reclaim-erebor', {
+          keyLocations: [
+            { name: 'Secret door', description: 'Hidden entrance on the western side' },
+            { name: 'Hidden lake', description: '' },
+          ],
+        })
+      );
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

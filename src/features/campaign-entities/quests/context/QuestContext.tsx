@@ -67,16 +67,13 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // to an id would need the full locations array, which not every consumer
   // of this helper is guaranteed to have (see `referencesLocation`'s doc
   // comment; `NPCContext`'s sibling helper is the concrete case that needs
-  // it). `keyLocations` is a separate concept -- named locations mentioned in
-  // the quest write-up, not a reference to a Location record -- so it keeps
-  // its own comparison against the Location's `name` rather than joining the
-  // id/legacy-text fallback above; case-insensitive to match everything else
-  // here.
+  // it). A place inside the quest (`keyLocations`) counts too when it is
+  // that Location: by the id it stored, else by its name (#1421).
   const getQuestsByLocation = useCallback((location: Location) => {
     return quests.filter(quest =>
       referencesLocation(quest, location) ||
-      quest.keyLocations?.some(
-        keyLocation => keyLocation.name.toLowerCase() === location.name.toLowerCase()
+      quest.keyLocations?.some(place =>
+        referencesLocation({ locationId: place.locationId, location: place.name }, location)
       )
     );
   }, [quests]);

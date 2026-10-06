@@ -653,6 +653,35 @@ describe('QuestContext Behavioral Testing', () => {
       const matches = questContext.getQuestsByLocation(dungeon);
       expect(matches.map((quest: any) => quest.id)).toEqual(['1']);
     });
+
+    // #1421: a place stored with the location's id still matches after the
+    // location is renamed, and an id never matches a different location.
+    test('matches a keyLocation by the locationId it stored, whatever its name says', async () => {
+      const renamed = { id: 'dungeon-123', name: 'The Deep Halls' };
+      const other = { id: 'other', name: 'Dark Dungeon' };
+
+      const mockQuests = [
+        { id: '1', title: 'Quest with a linked place', location: 'elsewhere', keyLocations: [{ name: 'Dark Dungeon', description: '', locationId: 'dungeon-123' }] },
+      ];
+
+      mockUseQuestData.mockReturnValue({
+        quests: mockQuests,
+        loading: false,
+        error: null,
+        getQuestById: jest.fn(),
+        refreshQuests: mockRefreshQuests,
+        hasRequiredContext: true,
+      });
+
+      renderQuestContext();
+
+      await waitFor(() => {
+        expect(questContext).toBeDefined();
+      });
+
+      expect(questContext.getQuestsByLocation(renamed).map((quest: any) => quest.id)).toEqual(['1']);
+      expect(questContext.getQuestsByLocation(other)).toEqual([]);
+    });
   });
 
   describe('Quest Update Behavior', () => {

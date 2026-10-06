@@ -1,7 +1,31 @@
 # Bug #1421 — `Quest.keyLocations` stores free text, not references to Location records
 
 ## Status
-🔍 DISCOVERED — 2026-08-01. Scoped out of the `locationId` work deliberately.
+✅ FIXED — 2026-10-06. Discovered 2026-08-01 and scoped out of the `locationId` work deliberately.
+
+## Resolution
+
+Phase 15 removed most of this before it was picked up. Key locations became the quest page's
+"Places inside this quest" (`15-5`): free-text prep notes about places inside the quest's
+location, which a promotion turns into a Location record and takes off the quest. `QuestDirectory`
+no longer renders them, so its name match is gone, and `QuestFormSections` was deleted with the
+old form (`15-8`).
+
+What was left: a quest written before that redesign can list a whole location as a place (the
+sample Fellowship quest lists The Shire and Rivendell). The page showed it as text with *Make it a
+location*, and promoting it would have created a second Rivendell.
+
+- `QuestLocation` gains an optional `locationId`, stored when a place is added under the name of a
+  location the campaign already has, so the link survives a rename.
+- A place that resolves -- by that id, else by its name, which is how older entries resolve --
+  links to the location under its current name and offers no promotion. It can still be removed.
+- `getQuestsByLocation` matches places through the shared `referencesLocation`, as the bug
+  recommended, instead of its own name comparison.
+- `resolveLocation` in `locations/utils/location-display.ts` returns the record a reference points
+  at; `resolveLocationName` is now that plus its verbatim fallback.
+
+Older places are not backfilled: they resolve by name until removed (the same choice T079 makes
+for `location`).
 
 ## Category
 Architecture / data model

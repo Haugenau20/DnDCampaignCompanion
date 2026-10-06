@@ -1,5 +1,10 @@
 // src/features/campaign-entities/locations/utils/__tests__/location-display.test.ts
-import { resolveLocationName, referencesLocation, indexLocationNames } from '../location-display';
+import {
+  resolveLocation,
+  resolveLocationName,
+  referencesLocation,
+  indexLocationNames,
+} from '../location-display';
 import { Location } from '../../types';
 
 function makeLocation(overrides: Partial<Location> = {}): Location {
@@ -122,6 +127,49 @@ describe('resolveLocationName with an index', () => {
       }
     }
   );
+});
+
+// #1421: a page that links to the place needs the record, not just its name.
+describe('resolveLocation', () => {
+  test('returns the record a resolving locationId names, whatever the free text says', () => {
+    expect(resolveLocation({ locationId: 'rivendell', location: 'Mines of Moria' }, locations)).toBe(
+      rivendell
+    );
+  });
+
+  test('follows a rename: the id still finds the record under its new name', () => {
+    const renamed = makeLocation({ id: 'rivendell', name: 'Imladris' });
+    expect(resolveLocation({ locationId: 'rivendell', location: 'Rivendell' }, [renamed])).toBe(
+      renamed
+    );
+  });
+
+  test('falls back to the free text, by id or by case-insensitive name', () => {
+    expect(resolveLocation({ location: 'mines-of-moria' }, locations)).toBe(moria);
+    expect(resolveLocation({ location: 'RIVENDELL' }, locations)).toBe(rivendell);
+  });
+
+  test('falls back to the free text when the locationId no longer resolves', () => {
+    expect(resolveLocation({ locationId: 'gone', location: 'Rivendell' }, locations)).toBe(rivendell);
+  });
+
+  test('returns nothing for a reference that names no record', () => {
+    expect(resolveLocation({ location: 'Lothlorien' }, locations)).toBeUndefined();
+    expect(resolveLocation({ locationId: 'gone' }, locations)).toBeUndefined();
+    expect(resolveLocation({}, locations)).toBeUndefined();
+  });
+
+  test('answers the same from an index as from the array', () => {
+    const index = indexLocationNames(locations);
+    for (const reference of [
+      { locationId: 'rivendell' },
+      { location: 'rivendell' },
+      { locationId: 'gone', location: 'mines-of-moria' },
+      { location: 'Lothlorien' },
+    ]) {
+      expect(resolveLocation(reference, index)).toBe(resolveLocation(reference, locations));
+    }
+  });
 });
 
 describe('referencesLocation', () => {
