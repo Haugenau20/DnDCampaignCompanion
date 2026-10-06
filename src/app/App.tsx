@@ -1,5 +1,5 @@
 // src/app/App.tsx
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { NavigationProvider } from 'shared/context/NavigationContext';
 import { SearchProvider } from 'shared/context/SearchContext';
@@ -19,69 +19,75 @@ import Layout from 'app/layout/Layout';
 import EditRouteRedirect from 'app/EditRouteRedirect';
 import RecordRoute from 'app/RecordRoute';
 import RouteFallback from 'app/RouteFallback';
-import { lazyPage } from 'app/lazyPage';
+import { lazyPage, prefetchPages } from 'app/lazyPage';
 
 // Eager: the front door, which most visits open on, and the not-found page,
 // which is a few lines and should never be the thing that fails to load.
 import HomePage from 'pages/HomePage';
 import NotFoundPage from 'pages/NotFoundPage';
 
-// Everything else loads on first visit (T030). `webpackPrefetch` then fetches
+// Everything else loads on first visit (T030). `prefetchPages` then fetches
 // each chunk at idle once the app is up, so a later visit finds it cached.
 // The admin and auth pages are imported from their own files rather than
 // `user-management`'s barrel: the barrel is already in `main.js` for its
 // providers, and a page reached through it could not be split off.
-const StoryPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/story'), 'StoryPage');
-const SagaPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/story'), 'SagaPage');
-const SagaEditPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/story'), 'SagaEditPage');
-const ChaptersPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/story'), 'ChaptersPage');
-const ChapterCreatePage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/story'), 'ChapterCreatePage');
-const ChapterEditPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/story'), 'ChapterEditPage');
-const QuestsPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/quests'), 'QuestsPage');
-const QuestCreatePage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/quests'), 'QuestCreatePage');
-const QuestDetailPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/quests'), 'QuestDetailPage');
-const NPCsPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/npcs'), 'NPCsPage');
-const NPCsCreatePage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/npcs'), 'NPCsCreatePage');
-const NPCDetailPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/npcs'), 'NPCDetailPage');
-const LocationsPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/locations'), 'LocationsPage');
-const LocationCreatePage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/locations'), 'LocationCreatePage');
-const LocationDetailPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/locations'), 'LocationDetailPage');
-const RumorsPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/rumors'), 'RumorsPage');
-const NotesPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/notes'), 'NotesPage');
-const NotePage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/notes'), 'NotePage');
-const PrivacyPolicyPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/PrivacyPolicyPage'), 'default');
-const ContactPage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/ContactPage'), 'default');
-const ProfilePage = lazyPage(() => import(/* webpackPrefetch: true */ 'pages/profile'), 'ProfilePage');
+const StoryPage = lazyPage(() => import('pages/story'), 'StoryPage');
+const SagaPage = lazyPage(() => import('pages/story'), 'SagaPage');
+const SagaEditPage = lazyPage(() => import('pages/story'), 'SagaEditPage');
+const ChaptersPage = lazyPage(() => import('pages/story'), 'ChaptersPage');
+const ChapterCreatePage = lazyPage(() => import('pages/story'), 'ChapterCreatePage');
+const ChapterEditPage = lazyPage(() => import('pages/story'), 'ChapterEditPage');
+const QuestsPage = lazyPage(() => import('pages/quests'), 'QuestsPage');
+const QuestCreatePage = lazyPage(() => import('pages/quests'), 'QuestCreatePage');
+const QuestDetailPage = lazyPage(() => import('pages/quests'), 'QuestDetailPage');
+const NPCsPage = lazyPage(() => import('pages/npcs'), 'NPCsPage');
+const NPCsCreatePage = lazyPage(() => import('pages/npcs'), 'NPCsCreatePage');
+const NPCDetailPage = lazyPage(() => import('pages/npcs'), 'NPCDetailPage');
+const LocationsPage = lazyPage(() => import('pages/locations'), 'LocationsPage');
+const LocationCreatePage = lazyPage(() => import('pages/locations'), 'LocationCreatePage');
+const LocationDetailPage = lazyPage(() => import('pages/locations'), 'LocationDetailPage');
+const RumorsPage = lazyPage(() => import('pages/rumors'), 'RumorsPage');
+const NotesPage = lazyPage(() => import('pages/notes'), 'NotesPage');
+const NotePage = lazyPage(() => import('pages/notes'), 'NotePage');
+const PrivacyPolicyPage = lazyPage(() => import('pages/PrivacyPolicyPage'), 'default');
+const ContactPage = lazyPage(() => import('pages/ContactPage'), 'default');
+const ProfilePage = lazyPage(() => import('pages/profile'), 'ProfilePage');
 const AdminLayout = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/admin/pages/AdminLayout'),
+  () => import('features/user-management/admin/pages/AdminLayout'),
   'default'
 );
 const AdminPeoplePage = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/admin/pages/AdminPeoplePage'),
+  () => import('features/user-management/admin/pages/AdminPeoplePage'),
   'default'
 );
 const AdminCampaignsPage = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/admin/pages/AdminCampaignsPage'),
+  () => import('features/user-management/admin/pages/AdminCampaignsPage'),
   'default'
 );
 const AdminGroupPage = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/admin/pages/AdminGroupPage'),
+  () => import('features/user-management/admin/pages/AdminGroupPage'),
   'default'
 );
 const SignInPage = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/auth/pages/SignInPage'),
+  () => import('features/user-management/auth/pages/SignInPage'),
   'default'
 );
 const EmailLinkPage = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/auth/pages/EmailLinkPage'),
+  () => import('features/user-management/auth/pages/EmailLinkPage'),
   'default'
 );
 const JoinPage = lazyPage(
-  () => import(/* webpackPrefetch: true */ 'features/user-management/groups/pages/JoinPage'),
+  () => import('features/user-management/groups/pages/JoinPage'),
   'default'
 );
 
 const App: React.FC = () => {
+  // Production only: in jest and the dev server it would import every page
+  // for nothing.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') prefetchPages();
+  }, []);
+
   return (
     <ErrorBoundary>
       <FirebaseProvider>

@@ -20,6 +20,9 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 - Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
   Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
   the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
+- **The emulators need Java 21+** (firebase-tools 15). `start` checks it first and says what it found;
+  emulators that exit while starting have their last output printed, and the full log is
+  `firebase/emulator-start.log`.
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
   emulator data to `firebase/emulator-data`; `start` re-imports it if present). A failed export
   stops nothing; `-Force` stops anyway and loses the changes since the last export. `stop` ends only
@@ -35,25 +38,23 @@ permissive ones. Starting emulators by hand? Pass `--config firebase.emulators.j
 enforce production rules against dev data and Storage (9199) is missing.
 
 There is no Docker anywhere: CI builds the shipped site directly, from the lockfile
-(`npm ci --legacy-peer-deps`, then `npm run build` with `CI: false` — see T059 and T107).
+(`npm ci`, then `npm run build` — see T107).
 
 ### If the dev server reports errors that `tsc` and `npm run build` do not
-Almost certainly a stale cache. `npm start` and `npm run build` keep **separate** webpack caches, so
-every gate can be green while the dev server compiles something else. The signature is an error
-quoting a *new* line in one file while claiming a *stale* fact about another. Confirm the symbol is
-really present on disk and `npx tsc --noEmit` is clean, then:
+Vite pre-bundles dependencies into `node_modules/.vite`. After a dependency change or a branch switch
+under a running dev server, a stale pre-bundle can report errors no gate sees: stop it, then
+`rm -rf node_modules/.vite` (or `npx vite --force`) and start again. Neither the dev server nor the
+build type-checks; `npx tsc --noEmit` does.
 
-```
-rm -rf node_modules/.cache
-```
-
-and restart the dev server. **A `git checkout` while the dev server runs reliably causes this** —
-the errors name files from whichever branch you visited.
+**`os = "linux"` in a user `~/.npmrc` breaks Vite on Windows**: npm then installs Rollup's and
+esbuild's Linux binaries, and the dev server and build fail with `Cannot find module
+'@rollup/rollup-win32-x64-msvc'`. Remove the line and reinstall (`npm ci`).
 
 ### Environment gotchas
 - The scripts' health checks must use `127.0.0.1` and `Invoke-WebRequest -UseBasicParsing`. Until
   2026-09-24 they used `localhost` without it, and always failed: Windows PowerShell's default
-  parser refuses to run non-interactively, and the dev server listens on IPv4 only, so `localhost`
+  parser refuses to run non-interactively, and the dev server listens on IPv4 only (`server.host` in
+  `vite.config.ts`), so `localhost`
   tries `::1` first and outlasts the 2 s timeout. Symptoms, if they return: `start`/`restart` claims
   the emulators "failed to start within 45 seconds" and never runs `npm start`, `stop` **silently
   skips the export**, and `status` says nothing is running. Check ports 3000/4000/5001/8080/9099/9199.
@@ -88,8 +89,8 @@ the errors name files from whichever branch you visited.
   read the baseline's diff — `--update` records a rise just as readily
 - Single file, fast: `npx jest --testTimeout=5000 --maxWorkers=1 --testPathPattern="<pattern>"`
 
-**Baseline**: 0 failed / 2 skipped / 5629 passed / 5631 total across 284 suites (2026-09-26,
-`main` at `3c42ec8`, via `npm run test:ci`). The 2 skips are #901's, closed as testability-only.
+**Baseline**: 0 failed / 2 skipped / 6049 passed / 6051 total across 315 suites (2026-10-06,
+`main` at `aac8ae1`, via `npm run test:ci`). The 2 skips are #901's, closed as testability-only.
 - **Measure a new baseline; never carry one forward.** Past figures went stale by up to 25 suites
   because they were taken on branches that later merged. If your run disagrees, run the suites you
   touched alone and reconcile the delta before assuming a regression.
@@ -201,29 +202,28 @@ maintainer watches CI and asks when something needs doing.
 
 1. `npx tsc --noEmit` — type errors block the deploy
 2. `npm test` — must be fully green
-3. **`npm run build` — required, not implied by the two above.** webpack honours tsconfig `baseUrl`
-   but **ignores `paths`**, so `@/...` imports pass `tsc` and jest and then fail the build with
-   `Module not found`. Use bare `baseUrl` imports (`core/types/common`) in anything that ships; `@/`
-   is safe only in `__tests__/` and `test-utils/`. A new top-level `src/` directory must also be
-   added to the resolver allow-list in `jest.config.ts`.
-4. **`npm run check:bundle`** after the build: `main.js` must stay under the ceiling in
+3. **`npm run build` — required, not implied by the two above.** It is the only gate that bundles,
+   and Vite does not type-check (gate 1 does). A module that only resolves under jest, or a
+   `process.env` name `vite.config.ts` does not replace, fails here. A new top-level `src/` directory
+   must also be added to the resolver allow-list in `jest.config.ts`.
+4. **`npm run check:bundle`** after the build: the entry (what `build/index.html` loads) must stay under the ceiling in
    `scripts/check-bundle-size.js` (T030). Over it usually means an eager module (a provider, the
    layout, a barrel's public API) now imports something only one page needs. Raising the ceiling
    is allowed; say in the PR what grew and why it belongs in the entry bundle.
 
-**`package.json` declares `"sideEffects": ["*.css"]`**: webpack may drop any other module in `src/`
-whose exports nobody uses, which is how the feature barrels stop dragging every page into `main.js`
-(T030). A module imported only for what it does on load (`import "./x"`) is silently dropped by
-webpack, in the dev server and the build alike, while jest still runs it, so no test can catch
-it. Add such a file to the list. Route pages load through `app/lazyPage.ts`; a page added to `App.tsx` should too.
+**`package.json` declares `"sideEffects": ["*.css"]`**: Rollup (`vite build`) may drop any other module
+in `src/` whose exports nobody uses, which is how the feature barrels stay out of the entry bundle
+(T030). A module imported only for what it does on load (`import "./x"`) is silently dropped from the
+build, while the dev server (which does not tree-shake) and jest still run it, so neither shows it. Add such a file to the list. Route pages load through `app/lazyPage.ts`; a page added to `App.tsx` should too.
 
-**Four resolvers disagree; no single gate catches all of them:**
+**Three resolvers agree on `baseUrl` and `@/`; `ts-node` honours neither.** Bare `baseUrl` imports
+(`core/types/common`) remain the convention in shipped code.
 
 | Resolver | `baseUrl` | `paths` (`@/…`) |
 |---|---|---|
 | `tsc --noEmit` | ✅ | ✅ |
 | jest | ✅ (via `moduleNameMapper`) | ✅ |
-| webpack (`npm run build`) | ✅ | ❌ |
+| Vite (`npm start`, `npm run build`, via `vite-tsconfig-paths`) | ✅ | ✅ |
 | **`ts-node`** | **❌** | **❌** |
 
 `ts-node` has no `tsconfig-paths` here, so anything under `src/utils/__dev__/` (operator tooling run

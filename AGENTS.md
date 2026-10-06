@@ -111,17 +111,10 @@ belt-and-braces rather than load-bearing.
 
 #### If the dev server reports errors that `tsc` and `npm run build` do not
 
-Almost certainly a stale cache, not a source defect. `npm start` and `npm run build` keep
-**separate** webpack 5 filesystem caches, so the three gates below can all be green while the dev
-server compiles something else entirely. The signature is an error quoting a *new* line in one file
-while claiming a *stale* fact about another.
-
-```
-rm -rf node_modules/.cache        # default-development, babel-loader, tsconfig.tsbuildinfo
-```
-
-then restart the dev server. Confirm first that the export/symbol really is missing — check the file
-on disk and run `npx tsc --noEmit` — before assuming either answer.
+Vite pre-bundles dependencies into `node_modules/.vite`. After a dependency change or a branch switch
+under a running dev server, a stale pre-bundle can report errors no gate sees: stop it, then
+`rm -rf node_modules/.vite` (or `npx vite --force`) and start again. Neither the dev server nor the
+build type-checks; `npx tsc --noEmit` does.
 
 ### Testing Commands
 - Run test suite: `npm test` (jest)
@@ -139,23 +132,21 @@ Two catalogued defects are currently pinned by tests that assert the **defective
 dismiss one as an expected marker without checking the tracker first.
 
 ### Verifying a change before proposing a merge
-- `npx tsc --noEmit` — type errors block the deploy, since `react-scripts build` type-checks all of `src/`
+- `npx tsc --noEmit` — type errors block the deploy (CI's `Type-check` step; Vite does not type-check)
 - `npm test` — compare the failure count against the recorded baseline
-- **`npm run build` — required, and not implied by the two above.** `react-scripts`' webpack honours
-  tsconfig `baseUrl` but **ignores `paths`**, so `@/...` alias imports pass both `tsc` and jest and
-  then fail the production build with `Module not found`. Use bare `baseUrl` imports
-  (`types/common`, `shared/attribution`) in anything that ships; `@/` is safe only in `__tests__/`
-  and `test-utils/`, which are never bundled. Adding a new top-level `src/` directory also means
-  adding it to the resolver allow-list in `jest.config.ts`.
+- **`npm run build` — required, and not implied by the two above.** It is the only gate that
+  bundles: a module that only resolves under jest, or a `process.env` name `vite.config.ts` does not
+  replace, fails here. Adding a new top-level `src/` directory also means adding it to the resolver
+  allow-list in `jest.config.ts`.
 
-**Four resolvers disagree, and no single gate catches all of them.** Keep the whole table in mind
-before assuming green means green:
+**Three resolvers agree on `baseUrl` and `@/`; `ts-node` honours neither.** Bare `baseUrl` imports
+remain the convention in shipped code:
 
 | Resolver | `baseUrl` | `paths` (`@/…`) |
 |---|---|---|
 | `tsc --noEmit` | ✅ | ✅ |
 | jest | ✅ (via `moduleNameMapper`) | ✅ |
-| webpack (`npm run build`) | ✅ | ❌ |
+| Vite (`npm start`, `npm run build`, via `vite-tsconfig-paths`) | ✅ | ✅ |
 | **`ts-node`** | **❌** | **❌** |
 
 `ts-node` has no `tsconfig-paths` registration in this repo, so it resolves only relative and

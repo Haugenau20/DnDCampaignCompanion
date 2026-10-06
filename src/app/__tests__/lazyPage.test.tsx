@@ -1,7 +1,7 @@
 // src/app/__tests__/lazyPage.test.tsx
 import React, { Suspense } from "react";
 import { render, screen } from "@testing-library/react";
-import { lazyPage } from "app/lazyPage";
+import { lazyPage, prefetchPages } from "app/lazyPage";
 
 /**
  * Requirements, from the helper's contract:
@@ -15,11 +15,21 @@ const FLAG = "lazyPage:reloaded";
 const originalLocation = window.location;
 const reload = jest.fn();
 
-/** What webpack rejects a failed chunk request with. */
+/**
+ * What a browser rejects a missing route chunk with, once a deploy has removed
+ * it and Hosting answers its URL with index.html. Each engine words it
+ * differently; Vite's preload helper words a missing stylesheet its own way.
+ */
+const MISSING_CHUNK_ERRORS: Array<[string, () => Error]> = [
+  ["Chromium", () => new TypeError("Failed to fetch dynamically imported module: https://example.test/assets/QuestsPage-abc123.js")],
+  ["Firefox", () => new TypeError("error loading dynamically imported module: https://example.test/assets/QuestsPage-abc123.js")],
+  ["Safari", () => new TypeError("Importing a module script failed.")],
+  ["Vite, for a stylesheet", () => new Error("Unable to preload CSS for /assets/QuestsPage-abc123.css")],
+];
+
+/** The Chromium wording, for the tests that are not about wording. */
 function chunkLoadError(): Error {
-  const error = new Error("Loading chunk 123 failed.");
-  error.name = "ChunkLoadError";
-  return error;
+  return MISSING_CHUNK_ERRORS[0][1]();
 }
 
 /** A loader that fails, typed as the page module it failed to be. */
@@ -83,8 +93,8 @@ describe("lazyPage", () => {
     expect(await screen.findByText("the quests")).toBeInTheDocument();
   });
 
-  test("a missing chunk reloads the page and marks the session", async () => {
-    const Page = lazyPage(failing(chunkLoadError()), "default");
+  test.each(MISSING_CHUNK_ERRORS)("a missing chunk (%s) reloads the page and marks the session", async (_engine, makeError) => {
+    const Page = lazyPage(failing(makeError()), "default");
 
     renderLazy(Page);
 
@@ -102,7 +112,7 @@ describe("lazyPage", () => {
 
     renderLazy(Page);
 
-    expect(await screen.findByTestId("boundary")).toHaveTextContent("Loading chunk 123 failed.");
+    expect(await screen.findByTestId("boundary")).toHaveTextContent("Failed to fetch dynamically imported module");
     expect(reload).not.toHaveBeenCalled();
   });
 
@@ -139,5 +149,51 @@ describe("lazyPage", () => {
 
     expect(await screen.findByTestId("boundary")).toBeInTheDocument();
     expect(reload).not.toHaveBeenCalled();
+  });
+});
+
+describe("prefetchPages", () => {
+  let idle: (() => void) | undefined;
+
+  beforeEach(() => {
+    idle = undefined;
+    (window as unknown as { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback = (cb) => {
+      idle = cb;
+      return 1;
+    };
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { requestIdleCallback?: unknown }).requestIdleCallback;
+  });
+
+  // The registry is module-wide, so the pages earlier tests declared are
+  // prefetched too; each test asserts only on its own loaders.
+  test("loads every page once the browser is idle, and not before", () => {
+    const quests = jest.fn(() => Promise.resolve({ default: () => null }));
+    const notes = jest.fn(() => Promise.resolve({ default: () => null }));
+    lazyPage(quests, "default");
+    lazyPage(notes, "default");
+
+    prefetchPages();
+    expect(quests).not.toHaveBeenCalled();
+
+    idle?.();
+    expect(quests).toHaveBeenCalledTimes(1);
+    expect(notes).toHaveBeenCalledTimes(1);
+  });
+
+  test("a failed prefetch is swallowed and never reloads", async () => {
+    const missing = jest.fn(() => Promise.reject(chunkLoadError()));
+    lazyPage(missing, "default");
+
+    prefetchPages();
+    idle?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(missing).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem(FLAG)).toBeNull();
   });
 });
