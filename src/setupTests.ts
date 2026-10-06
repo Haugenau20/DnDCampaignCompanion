@@ -31,7 +31,6 @@ if (typeof globalThis.crypto.randomUUID !== 'function') {
 // loads, so without this every suite that imports the router fails to run
 // before any test does ("TextEncoder is not defined"). Browsers have both.
 if (typeof globalThis.TextEncoder === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { TextEncoder, TextDecoder } = require('util');
   Object.assign(globalThis, { TextEncoder, TextDecoder });
 }
