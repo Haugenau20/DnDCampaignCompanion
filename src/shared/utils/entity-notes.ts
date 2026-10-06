@@ -1,4 +1,5 @@
 // src/shared/utils/entity-notes.ts
+import { EditConflictError } from './edit-conflict';
 
 /**
  * The shape an NPC's and a location's notes share.
@@ -41,6 +42,12 @@ const indexOfNote = <T extends EntityNote>(notes: readonly T[], target: T): numb
  * The date and author stay: a note records when something happened at the
  * table and who wrote it down, and fixing a typo changes neither.
  *
+ * When `target` is gone but exactly one note has its date and author, that is
+ * the same note with text another player changed since this editor opened
+ * (T083): the save is refused with their text, so the editor can offer a
+ * choice. Unless it already says `text` -- then both made the same fix.
+ *
+ * @throws {EditConflictError} when the note's text changed since `target` was read
  * @throws when `target` is not in `notes` (see `NOTE_CHANGED_MESSAGE`)
  */
 export const replaceNoteText = <T extends EntityNote>(
@@ -48,6 +55,15 @@ export const replaceNoteText = <T extends EntityNote>(
   target: T,
   text: string
 ): T[] => {
+  if (!notes.some((note) => sameNote(note, target))) {
+    const sameSlot = notes.filter((note) => sameNote(note, { ...target, text: note.text }));
+    if (sameSlot.length === 1) {
+      if (sameSlot[0].text === text) {
+        return [...notes];
+      }
+      throw new EditConflictError(sameSlot[0].text);
+    }
+  }
   const index = indexOfNote(notes, target);
   return notes.map((note, i) => (i === index ? { ...note, text } : note));
 };

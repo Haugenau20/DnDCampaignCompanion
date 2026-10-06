@@ -2,6 +2,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import NoteHistory from "../NoteHistory";
+import { EditConflictError } from "shared/utils/edit-conflict";
 
 // The real Dialog portals and traps focus; what is under test here is what
 // the note list asks it to say and do.
@@ -174,5 +175,28 @@ describe("NoteHistory", () => {
       expect(await screen.findByText("Permission denied")).toBeInTheDocument();
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
+  });
+
+  // T083: another player edited the same note after this editor opened.
+  it("keeps mine over their edit by naming the note as they left it", async () => {
+    const onEdit = jest
+      .fn()
+      .mockRejectedValueOnce(new EditConflictError("Rode to Isengard at dawn."))
+      .mockResolvedValue(undefined);
+    renderHistory({ onEdit });
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^Edit the note from / })[1]);
+    const field = screen.getByDisplayValue("Rode to Isengard.");
+    fireEvent.change(field, { target: { value: "Rode to Orthanc." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+
+    const alert = await screen.findByRole("alert");
+    fireEvent.click(within(alert).getByRole("button", { name: "Keep mine" }));
+
+    await waitFor(() => expect(onEdit).toHaveBeenCalledTimes(2));
+    expect(onEdit).toHaveBeenLastCalledWith(
+      { ...notes[1], text: "Rode to Isengard at dawn." },
+      "Rode to Orthanc."
+    );
   });
 });

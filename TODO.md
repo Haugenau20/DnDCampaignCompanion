@@ -17,26 +17,19 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T083–T101 were triaged 2026-10-04 from the code
-review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
-adjusted for the images focus above.
-
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T075 | Rename the site; header crowded | M | open | The name is parked (2026-10-06); the header overflow below ~380px is open now, without it |
 | medium | T103 | Replay browser checks: Playwright in CI | L | open | Decided 2026-10-06: a few journeys first, and a defect found in the browser lands with a test |
-| low | T083 | A save warns when the text changed since the editor opened | S | open | Decided 2026-10-06: warn and let them choose, instead of last-write-wins |
+| low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
-| low | T065 | `start-dev.ps1` runs the global Firebase CLI, not the pin | S | open | Decided 2026-10-06: start-dev runs the repo's pinned CLI, so the local emulators run what CI runs |
 | low | T117 | Pin Node and Java with mise | S | open | Decided 2026-10-06: the maintainer runs Node 23.7 against CI's 22; one `mise.toml` sets every machine and CI |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
 | low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
-| low | T110 | Preview sites say that sign-in is off | S | open | Decided 2026-10-06: previews stay signed-out on purpose, since they run unmerged code against production data |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
 
@@ -87,7 +80,7 @@ closes, and the ID is the anchor into its report for the reproduction,
 evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
-- Every confirmed finding not yet fixed is covered by an entry: T083–T101.
+- Every confirmed finding has been fixed; none is open here.
 - **Not filed**: the reviews' unverified leads, and the optional refactors.
   They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
@@ -299,7 +292,7 @@ around.
 - **Source**: todo.txt, 2026-10-02 (two inbox lines, merged); decided 2026-10-06
 
 ### T075 — Rename the site, and uncrowd the header
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-06
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06
 
 **Decided (maintainer, 2026-10-03): the name drops "D&D", and the site
 mentions D&D nowhere**, not even in a tagline or a disclaimer. The maintainer
@@ -317,7 +310,8 @@ for the crowded header the maintainer reported (busy, some text cut off).
   uses no WotC content otherwise (the shipped code has no setting names or rules
   terms; Faerûn, Waterdeep and Neverwinter appear only in test fixtures), so once
   the name goes, no notice is needed.
-- **Name to replace** (measured 2026-10-03): `Header.tsx:98-99`, `Footer.tsx:38`
+- **Name to replace** (measured 2026-10-03): the title link in `Header.tsx` (its
+  `aria-label` and three breakpoint labels, the shortest just "D&D"), `Footer.tsx:38`
   (as "© {year} D&D Campaign Companion"), `SignInPage.tsx:82`, `JoinPage.tsx:98`,
   `CampaignBanner.tsx:98`, `public/index.html:9,12`, `public/manifest.json:2-3`,
   the contact mail's subject and body (`firebase/functions/src/contact.ts:364,392,437`,
@@ -338,61 +332,18 @@ for the crowded header the maintainer reported (busy, some text cut off).
   later, but that means the auth authorised domains, the magic link's `continueUrl`
   and existing bookmarks, and `CLAUDE.md`, docs and scripts, which name the
   project id throughout. That would be its own item.
-- **Where**: `src/app/layout/Header.tsx:89-100` — one row carries the name, the
-  context switcher, the inline nav, search and the account menu. The full name
-  shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
-  Companion" below it. The campaign/group name in the context switcher
+- **Where**: `src/app/layout/Header.tsx` — one row carries the name, the
+  context switcher, the inline nav (from `lg`), search and the account menu. The
+  full name shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
+  Companion" from `sm`, "D&D" below it. The campaign/group name in the context switcher
   truncates by design at `max-w-[9rem] md:max-w-[14rem]`
   (`ContextTrigger.tsx:51`). Which truncation the maintainer means was **not**
   confirmed — that needs the running app.
-- **Folded in**: the header overflows horizontally below ~380px on every route
-  (logo and account block both at `min-width: auto`). `CLAUDE.md` called that
-  "tracked in `TODO.md`", but no entry held it until this one.
 - **Decided (maintainer, 2026-10-06): the name is parked** until the maintainer
   has one; it then decides whether a logo carries it and how much room the
-  header gets back. **The overflow below ~380px does not wait for it**: fix
-  that now, and leave the rename, the logo and the "which truncation" question
-  for when the name comes.
+  header gets back, and the "which truncation" question is settled then.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03
-
-### T083 — A save warns when the text changed since the editor opened
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06
-
-Edits write only their own fields, and every list (objectives, notes,
-relations, tags) is worked out from the record the server holds, in a
-transaction. One case is left: two people editing the same text field (a
-description, a note's text) from the same version -- the second save replaces
-the first, with no warning.
-
-**Decided (maintainer, 2026-10-06): warn and let them choose.** The save
-compares, inside the transaction it already runs, the field's stored value with
-the value the editor started from. When they differ it writes nothing and shows
-both versions: keep theirs, keep mine, or edit from theirs.
-
-- **Where**: `RecordChange` and `updateDataAfterReading`, the transaction every
-  edit already goes through; the inline editors pass the value they opened with.
-- **Findings**: DATA-003 (03), the remaining case.
-- **Source**: code review, 2026-10-04; decided 2026-10-06
-
-### T110 — Preview sites say that sign-in is off
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06
-
-**Decided (maintainer, 2026-10-06): a PR's preview site stays signed-out, on
-purpose.** Previews run unmerged code against **production** data, and their
-hostnames change per PR, so signing in there would let unreviewed code write
-real records. Signed-in screens are reviewed on the dev server. What is left is
-saying so, so a reviewer does not take the refusal for a bug.
-
-- **Where**: the preview build (`.github/workflows/firebase-hosting-pull-request.yml`,
-  the Build step) passes `REACT_APP_*` values that `vite.config.ts` replaces in
-  the source. A `REACT_APP_PREVIEW: "true"` there, read by `SignInPage.tsx` and
-  `JoinPage.tsx`, can show "Preview build: sign-in is off" in place of the form.
-  The live deploy (`firebase-hosting-merge.yml`) does not set it.
-- **Why sign-in fails there** was never read and no longer needs to be: App
-  Check's reCAPTCHA key or Auth's authorised domains, which list only the live
-  hostnames.
-- **Source**: todo.txt, 2026-10-06; decided 2026-10-06
 
 ### T111 — Is it worth expanding the notes feature?
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-06
@@ -421,35 +372,6 @@ important**.
 ---
 
 ## Tech debt and platform
-
-### T065 — `start-dev.ps1` runs the global Firebase CLI, not the repo's pin
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The repo pins `firebase-tools` **15.22.4** in `firebase/package.json`, and CI's
-`functions` suite runs on it. `start-dev.ps1` runs the **global** CLI, which on
-the maintainer's machine is **15.32.1** (2026-10-06): the local emulators no
-longer run the version CI tests. firebase-tools 15 needs **Java 21**, 15.22.4
-included; under Java 17 the emulators exit at once.
-
-**Decided (maintainer, 2026-10-06): `start-dev.ps1` runs the repo's pinned
-CLI**, so the local emulators run what CI runs, whatever is installed globally.
-
-- **Where**: `scripts/start-dev.ps1` calls `firebase` by name for
-  `emulators:export` and `emulators:start` (the latter through `cmd /c`), both
-  from inside `firebase/`, where `npx firebase` resolves the pin. Then
-  `firebase/package.json`'s note asking for a global 15.22.4 goes, and
-  CLAUDE.md's line on starting the emulators by hand uses the pin too.
-- **Then**: one `start-dev.ps1` stop/start round trip: `stop` must export (its
-  output is shown now) before it ends this project's port listeners, and
-  nothing else.
-- **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
-  through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
-  proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
-  of the Firestore emulator (403), and the Storage rules suite fails 11 tests.
-  Still so on 15.31.0. Bisected 2026-09-28: 15.22.4 good, 15.23.0 bad. No proxy
-  (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
-  set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
-- **Source**: todo.txt, 2026-09-24; pinned 2026-09-28; decided 2026-10-06
 
 ### T117 — Pin Node and Java with mise
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
@@ -482,7 +404,7 @@ and the desktop, a laptop and CI all read the same file.
   `actions/setup-node`. CLAUDE.md's setup notes (Java 21) point at `mise install`.
 - **Catch**: mise's Windows support is newer than on macOS and Linux, which is
   why the machine comes before CI. The Firebase CLI stays in
-  `firebase/package.json`'s pin (T065), not in mise. The gitignored `.env` files
+  `firebase/package.json`'s pin, not in mise. The gitignored `.env` files
   and `firebase/emulator-data/` still move to a new machine by hand.
 - **Source**: maintainer, 2026-10-06
 

@@ -1,9 +1,9 @@
-﻿// src/app/layout/__tests__/Header.test.tsx
+// src/app/layout/__tests__/Header.test.tsx
 // Behavioral tests for the Header component.
 // Header pulls in many contexts and feature components — mock aggressively.
 
 import React from "react";
-import { render, screen, act, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../Header";
 
@@ -218,6 +218,29 @@ describe("Header", () => {
       // Title uses responsive text — either "D&D Campaign Companion" or "D&D Companion"
       const titleLink = screen.getByRole("link", { name: /D&D/i });
       expect(titleLink).toBeInTheDocument();
+    });
+
+    // Below `sm` the visible title is just "D&D"; a screen reader still hears
+    // the whole name, whichever label the breakpoint shows.
+    test("names the whole site to a screen reader at every width", () => {
+      render(<Header />);
+      expect(
+        screen.getByRole("link", { name: "D&D Campaign Companion, home" })
+      ).toBeInTheDocument();
+    });
+
+    // The bar overflowed below ~380px while the title sat at `min-width: auto`
+    // and crushed the campaign chip to its chevron. jsdom cannot measure the
+    // layout, so this pins the declared shrink order: the title never yields,
+    // and the chip is what truncates.
+    test("the title never shrinks", () => {
+      setupMocks({
+        user: { uid: "u1" },
+        activeGroup: { id: "g1", name: "The Fellowship" },
+      });
+      render(<Header />);
+
+      expect(screen.getByRole("link", { name: /D&D/ })).toHaveClass("shrink-0");
     });
 
     // Successor to "should render the menu toggle button": the hamburger this

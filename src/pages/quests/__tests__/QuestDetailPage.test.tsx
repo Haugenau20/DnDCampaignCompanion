@@ -362,7 +362,9 @@ describe('objectives', () => {
       expect(mockEditQuestObjective).toHaveBeenCalledWith(
         'reclaim-erebor',
         'obj-1',
-        'Find the secret door mentioned in the map'
+        'Find the secret door mentioned in the map',
+        // The wording the editor opened with, for the conflict check (T083).
+        'Find the secret door'
       )
     );
   });

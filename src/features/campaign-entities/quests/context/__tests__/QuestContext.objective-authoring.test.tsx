@@ -13,6 +13,7 @@ import { render, act } from '@testing-library/react';
 import { QuestProvider, useQuests } from '../QuestContext';
 import { Quest } from '../../types';
 import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
+import { EditConflictError } from 'shared/utils/edit-conflict';
 
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
@@ -166,6 +167,40 @@ describe('QuestContext — authoring objectives', () => {
         completed: true,
       });
       expect(objectives.map((o: any) => o.id)).toEqual(['obj-1', 'obj-2', 'obj-3']);
+    });
+
+    // T083: the wording the editor opened with is checked against the stored
+    // one inside the write, so a rewording made since is never overwritten.
+    it('writes nothing when someone reworded it since the editor opened', async () => {
+      renderWith();
+      await act(async () => {
+        await expect(
+          context.editQuestObjective('reclaim-erebor', 'obj-1', 'Find the hidden door', 'Find the door')
+        ).rejects.toEqual(expect.objectContaining({ theirs: 'Find the secret door' }));
+      });
+      expect(updateData).not.toHaveBeenCalled();
+    });
+
+    it('rewords when the stored wording is still the one the editor opened with', async () => {
+      renderWith();
+      await act(async () => {
+        await context.editQuestObjective(
+          'reclaim-erebor',
+          'obj-1',
+          'Find the hidden door',
+          'Find the secret door'
+        );
+      });
+      expect(writtenObjectives()[0].description).toBe('Find the hidden door');
+    });
+
+    it('refuses with the conflict error the editor recognises', async () => {
+      renderWith();
+      await act(async () => {
+        await expect(
+          context.editQuestObjective('reclaim-erebor', 'obj-1', 'x', 'Something else')
+        ).rejects.toBeInstanceOf(EditConflictError);
+      });
     });
 
     it('refuses to empty an objective', async () => {

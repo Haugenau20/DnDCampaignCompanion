@@ -85,7 +85,13 @@ const Header: React.FC = () => {
           {/* One bar carries branding, campaign context, navigation, search and
               account. This was three stacked layers — a header, a full-height
               navigation row, and a page-level view toggle — before any content. */}
-          <div className="flex items-center gap-3">
+          {/* Shrink order on a phone: the title shortens by breakpoint (three
+              steps, below), and then only the campaign chip yields -- it
+              truncates (`min-w-0` on its wrapper). The title, search and the
+              account are `shrink-0`: until 2026-10 the title and the account
+              both sat at `min-width: auto`, crushing the chip to its chevron
+              and pushing the bar past the viewport below ~380px. */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Left side - Logo */}
             <Link
               to="/"
@@ -93,10 +99,12 @@ const Header: React.FC = () => {
               e.preventDefault();
               navigate('/');
               }}
-              className="text-xl font-bold whitespace-nowrap header-title"
+              aria-label="D&D Campaign Companion, home"
+              className="shrink-0 whitespace-nowrap text-xl font-bold header-title"
             >
               <span className="title:inline hidden">D&D Campaign Companion</span>
-              <span className="title:hidden">D&D Companion</span>
+              <span className="hidden sm:inline title:hidden">D&D Companion</span>
+              <span className="sm:hidden">D&D</span>
             </Link>
 
             {/* Campaign context, and the door onto changing it. Previously a
@@ -106,7 +114,7 @@ const Header: React.FC = () => {
               <>
                 <span
                   aria-hidden="true"
-                  className="w-px h-6 self-center opacity-40 bg-chrome-border"
+                  className="shrink-0 w-px h-6 self-center opacity-40 bg-chrome-border"
                 ></span>
                 <ContextSwitcher onJoinGroup={() => navigate('/join')} />
               </>
@@ -135,7 +143,7 @@ const Header: React.FC = () => {
             </div>
 
             {/* Right side - Account */}
-            <div className="flex items-center justify-center gap-2">
+            <div className="shrink-0 flex items-center justify-center gap-2">
               {user ? (
                 /* One named menu carries everything the hamburger used to:
                    profile, group members, report a problem, admin panel and

@@ -20,6 +20,8 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 - Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
   Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
   the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
+- The script runs the **repo's pinned Firebase CLI** (`firebase/package.json`), never a global one,
+  and installs it (`npm --prefix firebase ci`) when it is missing or not the pinned version.
 - **The emulators need Java 21+** (firebase-tools 15). `start` checks it first and says what it found;
   emulators that exit while starting have their last output printed, and the full log is
   `firebase/emulator-start.log`.
@@ -28,14 +30,22 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
   stops nothing; `-Force` stops anyway and loses the changes since the last export. `stop` ends only
   what listens on this project's ports (and what those processes started), not every `java`.
 - Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
+- **The emulator data is yours to use up** (maintainer, 2026-10-06). Create, edit and delete
+  records, sign in as any seeded account, change settings, race two tabs against each other: whatever
+  a check needs, without asking and without putting things back afterwards. A full reset is
+  `manage-dev-data.ps1 -Action clear` then `-Action generate`. **The one exception is AI entity
+  extraction**: the emulator's `extractEntities` can reach the real OpenAI API on the project's key,
+  so every run costs money. Trigger it only when the check is about extraction, once, not in loops.
 - **Never stop a dev server or the emulators you did not start in this session.** The maintainer
   usually has them running. Need to switch branches under a running dev server? Ask first, or use a
   worktree.
 
 The emulators run from **`firebase/firebase.emulators.json`**, not `firebase.json`: `firebase.json`
 names the **production** rulesets (`*.rules.prod`, which CI deploys), while the emulators need the
-permissive ones. Starting emulators by hand? Pass `--config firebase.emulators.json` too, or they
-enforce production rules against dev data and Storage (9199) is missing.
+permissive ones. Starting emulators by hand? Run the pin (`npx firebase …` from `firebase/`, after
+`npm --prefix firebase ci`; without that install `npx` silently falls back to a global CLI) and pass
+`--config firebase.emulators.json` too, or they enforce production rules against dev data and
+Storage (9199) is missing.
 
 There is no Docker anywhere: CI builds the shipped site directly, from the lockfile
 (`npm ci`, then `npm run build` — see T107).
@@ -61,8 +71,6 @@ line and run `npm ci` (or `npm ci --os=win32` for one install).
   skips the export**, and `status` says nothing is running. Check ports 3000/4000/5001/8080/9099/9199.
 - Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
   in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
-- The header overflows horizontally below ~380px on **every** route (tracked in `TODO.md`). If your
-  page "overflows at 320px", check whether the offender is inside `header`/`footer` first.
 - **Signing in as another user in a browser check.** There are no passwords: sign-in is a magic link
   or Google, and the Auth emulator keeps every link in an outbox instead of sending mail. In the dev
   server the "Check your inbox" screen has a dev-only **Open the emulator's link** button
@@ -197,6 +205,10 @@ plus `npm run lint`, `npm run lint:tests`, the `firebase/functions` suite and `n
 before the deploy, which waits on them. A ruleset on `main` requires `test / test`, `test / functions`
 and `test / bundle`, so a red PR cannot merge; a new job in `test.yml` gates nothing until the
 maintainer adds it there. Changed a function? Run `npm --prefix firebase run test:functions` too.
+
+**A PR's preview site is signed out on purpose**: it runs unmerged code against production data, so the
+preview build sets `REACT_APP_PREVIEW` and `/signin` and `/join` say sign-in is off. Check signed-in
+screens on the dev server; never set that variable in the live deploy.
 
 **Never watch CI or PRs after pushing** — the maintainer's standing rule (2026-09-27). Do not
 subscribe to PR activity, poll check runs, `/loop`, schedule check-ins (`send_later`, routines,

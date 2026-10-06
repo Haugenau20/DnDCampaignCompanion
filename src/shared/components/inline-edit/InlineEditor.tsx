@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Button from 'core/components/Button';
 import Input from 'core/components/Input';
 import Typography from 'core/components/Typography';
+import { isEditConflict } from 'shared/utils/edit-conflict';
 
 /** Where a write has got to. Every one of these is said in words. */
 export type SaveState = 'idle' | 'saving' | 'slow' | 'failed';
@@ -31,8 +32,13 @@ export interface InlineEditorProps {
   /**
    * Performs the write. Must reject on failure -- a resolved promise is taken
    * as "the server has it", and nothing here shows success before that.
+   *
+   * `openedWith` is the text the edit started from: `initialValue`, or the
+   * other person's text once the user chose to build on it. A write that
+   * compares it with the stored text and rejects with an `EditConflictError`
+   * (see `editedText`) gets the choice below instead of an error (T083).
    */
-  onSubmit: (value: string) => Promise<void>;
+  onSubmit: (value: string, openedWith: string) => Promise<void>;
   /** Called after a write the server accepted. */
   onSaved: () => void;
   /**
@@ -88,6 +94,12 @@ export interface InlineEditorProps {
  * helper below, and the error *replacing* the helper, on the `field.*` tokens
  * (A3). Phase 8 owns forms; this adds none of its own.
  *
+ * **Two people editing the same text** (T083): when the write refuses because
+ * the stored text moved on since the editor opened, nothing was written, and
+ * the editor shows the other version beside the user's own and asks: keep
+ * theirs, keep mine, or edit from theirs. Silently replacing their words, or
+ * silently dropping the user's, were the two options this replaces.
+ *
  * Focus is deliberately not restored from here. The control that opened this
  * editor is unmounted while the editor is on screen, so its ref is null at the
  * moment this component would call `focus()` -- the button does not exist again
@@ -112,6 +124,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const [value, setValue] = useState(initialValue);
   const [state, setState] = useState<SaveState>('idle');
   const [errorText, setErrorText] = useState<string | null>(null);
+  // The text this edit builds on: what the editor opened with, until the user
+  // chooses to build on the other person's version after a conflict.
+  const [openedWith, setOpenedWith] = useState(initialValue);
+  // The other person's text, while the user is choosing what to do about it.
+  const [theirs, setTheirs] = useState<string | null>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
 
   // Opening an editor moves the caret into it, so a keyboard user is not left
@@ -127,7 +144,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const trimmed = value.trim();
   // An optional field may be saved empty, but only when there is something to
   // clear: emptying a field that was already empty would be a write of nothing.
-  const canSubmit = trimmed !== '' || (optional && initialValue.trim() !== '');
+  const canSubmit = trimmed !== '' || (optional && openedWith.trim() !== '');
 
   // Promote to `slow` rather than to `failed`. The write has not failed -- it
   // may well land the moment the connection returns -- so claiming it did would
@@ -141,22 +158,31 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
     return () => clearTimeout(timer);
   }, [state]);
 
-  const handleSubmit = async () => {
-    if (!canSubmit || saving) {
-      return;
-    }
+  /**
+   * Writes `text` as an edit of `base`. Keep mine passes the other person's
+   * text as the base, which is what makes the second attempt an overwrite the
+   * user chose rather than another conflict.
+   */
+  const write = async (text: string, base: string) => {
     setState('saving');
     setErrorText(null);
+    setTheirs(null);
     try {
-      await onSubmit(trimmed);
+      await onSubmit(text, base);
       if (clearOnSave) {
         setValue('');
       }
+      setOpenedWith(clearOnSave ? '' : text);
       setState('idle');
       onSaved();
     } catch (error) {
       // The typed value is untouched on purpose. `state` returns to a form the
       // user can act on rather than staying stuck in "saving".
+      if (isEditConflict(error)) {
+        setState('idle');
+        setTheirs(error.theirs);
+        return;
+      }
       setState('failed');
       setErrorText(
         error instanceof Error && error.message
@@ -164,6 +190,40 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
           : 'Could not save. Your text is still here -- try again.'
       );
     }
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit || saving) {
+      return;
+    }
+    await write(trimmed, openedWith);
+  };
+
+  /** Their version stands: back out, or (for a composer) start from it. */
+  const keepTheirs = () => {
+    if (theirs === null) return;
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    setValue(theirs);
+    setOpenedWith(theirs);
+    setTheirs(null);
+  };
+
+  /** Mine replaces theirs, now that the user has seen what that replaces. */
+  const keepMine = () => {
+    if (theirs === null) return;
+    void write(trimmed, theirs);
+  };
+
+  /** Their text goes into the field, to be edited and saved over. */
+  const editFromTheirs = () => {
+    if (theirs === null) return;
+    setValue(theirs);
+    setOpenedWith(theirs);
+    setTheirs(null);
+    fieldRef.current?.focus();
   };
 
   return (
@@ -190,8 +250,33 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         helperText={helperText}
       />
 
+      {theirs !== null && (
+        <div role="alert" className="flex flex-col gap-2 rounded-md p-3 card">
+          <Typography variant="body-sm" className="font-semibold">
+            Someone else changed this while you were editing. Nothing was saved.
+          </Typography>
+          <Typography variant="caption" color="secondary">
+            Their version
+          </Typography>
+          <Typography variant="body-sm" className="whitespace-pre-wrap">
+            {theirs === '' ? <span className="italic">Empty</span> : theirs}
+          </Typography>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={keepTheirs}>
+              Keep theirs
+            </Button>
+            <Button size="sm" variant="ghost" onClick={keepMine} disabled={trimmed === '' && !optional}>
+              Keep mine
+            </Button>
+            <Button size="sm" variant="ghost" onClick={editFromTheirs}>
+              Edit from theirs
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className={actionsClassName ?? 'flex items-center gap-3'}>
-        <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || saving}>
+        <Button size="sm" onClick={handleSubmit} disabled={!canSubmit || saving || theirs !== null}>
           {saving ? 'Saving...' : submitLabel}
         </Button>
         {/* Enabled again once the save is slow: a user who is stuck must be

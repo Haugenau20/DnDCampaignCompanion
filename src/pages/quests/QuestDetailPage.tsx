@@ -30,6 +30,7 @@ import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import { InlineEditor } from 'shared/components/inline-edit';
+import { editedText } from 'shared/utils/edit-conflict';
 import { useInlineEditing } from 'shared/hooks/useInlineEditing';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 
@@ -664,7 +665,7 @@ const QuestDetailPage: React.FC = () => {
                 rows={1}
                 initialValue={quest.title}
                 submitLabel="Save title"
-                onSubmit={(value) => save({ title: value })}
+                onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
               />
@@ -676,7 +677,7 @@ const QuestDetailPage: React.FC = () => {
                 helperText="What the party agreed to, in a sentence or two."
                 initialValue={quest.description ?? ''}
                 submitLabel="Save description"
-                onSubmit={(value) => save({ description: value })}
+                onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
               />
@@ -709,8 +710,8 @@ const QuestDetailPage: React.FC = () => {
               updateQuestObjective(quest.id, objectiveId, completed)
             }
             onAdd={(description) => addQuestObjective(quest.id, description)}
-            onEdit={(objectiveId, description) =>
-              editQuestObjective(quest.id, objectiveId, description)
+            onEdit={(objectiveId, description, openedWith) =>
+              editQuestObjective(quest.id, objectiveId, description, openedWith)
             }
             onMove={(objectiveId, direction) =>
               moveQuestObjective(quest.id, objectiveId, direction)
@@ -728,7 +729,7 @@ const QuestDetailPage: React.FC = () => {
                 initialValue={quest.background ?? ''}
                 optional
                 submitLabel="Save background"
-                onSubmit={(value) => save({ background: value })}
+                onSubmit={(value, openedWith) => save(editedText('background', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
               />
