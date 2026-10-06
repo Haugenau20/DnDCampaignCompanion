@@ -26,7 +26,7 @@ adjusted for the images focus above.
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
-| medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
+| medium | T109 | "Keep me signed in for 30 days" ends after a day away | S | open | Remembered users are signed out after 24h idle, against what the checkbox and privacy page say |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
 | low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -38,6 +38,11 @@ adjusted for the images focus above.
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
+| low | T110 | A PR's preview site cannot be signed in to | S | needs investigation | Only PR review is affected, and previews touch production data, so whether to allow it comes first |
+| low | T108 | Build with `CI=true` in CI | S | open | The build already compiles without warnings; this keeps it that way |
+| low | T112 | Code of conduct, contributing guide, issue and PR templates | S | open | Public repo; the PR template's checklist is behind CI |
+| low | T111 | Is it worth expanding the notes feature? | L | needs scoping | The maintainer flagged it as not important |
+| nit | T113 | Clean up `docs/` and delete what is stale | M | needs scoping | Bookkeeping; needs a definition of stale first |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -146,6 +151,52 @@ documents agreed with each other and none of them agreed with the product.
 ## Bugs
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
+
+### T109 — "Keep me signed in for 30 days" ends after a day away
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-06
+
+The sign-in checkbox and the privacy page promise a 30-day session, but a
+remembered session still ends after 24 hours without activity, so anyone who
+skips a day is signed out on their next visit.
+
+- **Where**: `AuthService.checkSessionExpired`
+  (`core/services/firebase/auth/AuthService.ts:192-214`) applies
+  `INACTIVITY_TIMEOUT` (24h, `core/constants/time.ts:16`) whatever
+  `rememberMe` says. `useSessionManager.ts:29-31` runs it on startup and signs out.
+  The promises: `SignInForm.tsx:285`, `SessionTimeoutWarning.tsx:142`, and
+  `PrivacyPolicyPage.tsx:163-165` ("ends after 24 hours of inactivity, or
+  lasts 30 days if you asked to be remembered").
+- **Catch**: `AuthService.test.ts:283-292` asserts the current behaviour with
+  `rememberMe: true`, so this is a requirement to settle, not just a code fix:
+  does a remembered session time out when idle at all, and does the privacy
+  page's second mention (`:280-281`, "time out on their own") still hold? Also,
+  the expiry is enforced only in the browser (`localStorage.sessionInfo`); the
+  Firebase session itself does not expire.
+- **Unverified**: found by reading the code, not reproduced in a browser.
+- **Source**: todo.txt, 2026-10-06
+
+### T110 — A PR's preview site cannot be signed in to
+**Type** bug · **Size** S · **Status** needs investigation · **Verified** 2026-10-06
+
+The maintainer reports that sign-in fails on the preview channels PRs deploy
+to, and suspects App Check.
+
+- **Where**: previews are built with the production config and reCAPTCHA key
+  (`.github/workflows/firebase-hosting-pull-request.yml:35-47`) and get a
+  `dnd-campaign-companion--pr…web.app` hostname. App Check
+  (`core/services/firebase/config/appCheck.ts`) is enforced on Authentication,
+  and a reCAPTCHA v3 key only works on the domains listed on it. Separately, the
+  magic link's `continueUrl` is the page's own origin (`SignInForm.tsx:101-104`),
+  which Firebase Auth refuses unless it is an authorised domain.
+- **Unverified**: both lists live in consoles (reCAPTCHA, Auth → Settings), not
+  the repo, and neither was read. First step: open a preview, try a sign-in,
+  and read the error code (`auth/firebase-app-check-token-is-invalid` vs
+  `auth/unauthorized-continue-uri` / `auth/unauthorized-domain`).
+- **Catch**: preview channel hostnames change per PR, so allowing them one at a
+  time does not scale, and allowing all of `web.app` admits every Firebase site.
+  Previews also run unmerged code against **production** data. Deciding whether
+  they should be signed in to at all comes before making it work.
+- **Source**: todo.txt, 2026-10-06
 
 ---
 
@@ -382,6 +433,28 @@ for the crowded header the maintainer reported (busy, some text cut off).
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03
 
+### T111 — Is it worth expanding the notes feature?
+**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-06
+
+The maintainer asks whether notes should grow: several areas per person, quicker
+ways to add things, and maybe drawing for rough drafts. Flagged as **not
+important**.
+
+- **Measured**: a note today is a title, one plain-text body
+  (`NoteEditor.tsx:629`, a growing textarea), tags and an active/archived
+  status. It is private to its author (`groups/{g}/users/{u}/notes`), and its
+  links to campaign records come from AI extraction (`CampaignLinksPanel`). Quick
+  add (`shared/components/quick-add/quickAddEntity.ts:24`) creates NPCs,
+  quests and locations, not notes. There is no drawing anywhere in the app.
+- **Questions before sizing**: what "areas" means (notebooks, sections in one
+  note, per-session pages?); whether quick add should create a note or add a line
+  to an existing one; whether a drawing is stored as an image (Storage, which
+  has its own quota and orphan sweep) or as vector data in Firestore.
+- **Related**: `docs/architecture/migration/deep-dive-feature-enhancements.md`
+  sketches session templates and collaborative editing for notes (ideas only,
+  nothing built).
+- **Source**: todo.txt, 2026-10-06
+
 ---
 
 ## Tech debt and platform
@@ -469,6 +542,65 @@ time anyone edits it.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted
 
+### T108 — Build with `CI=true` in CI
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
+
+All three workflows build with `CI: false`, so a react-scripts compile warning
+never fails the build. The inbox note assumed lint issues would need fixing
+first. **They do not**: `CI=true npm run build` on `fix/t100-dev-scripts`
+(`23376db`) printed "Compiled successfully." and exited 0 (2026-10-06, local,
+Node 23; CI runs Node 22).
+
+- **Where**: `test.yml:109-115`, `firebase-hosting-merge.yml:130-136`,
+  `firebase-hosting-pull-request.yml:32-38`, each with a comment explaining
+  the flag. `CLAUDE.md:38` describes it too.
+- **Catch**: flip all three together. If only the deploy flips, a warning that
+  `test.yml` lets through blocks the deploy after merge, which is the case the
+  comment in `test.yml` was written to prevent.
+- **Source**: todo.txt, 2026-10-06
+
+---
+
+## Documentation
+
+### T112 — Code of conduct, contribution guidelines, issue and PR templates
+**Type** docs · **Size** S · **Status** open · **Verified** 2026-10-06
+
+The repo is public with issues enabled, and GitHub's community profile scores it
+57%: README, licence and PR template present; code of conduct, contributing
+guide and issue templates missing (`gh api …/community/profile`).
+
+- **Where**: new `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md` and
+  `.github/ISSUE_TEMPLATE/`; the existing `.github/pull_request_template.md`.
+- **The PR template is stale**: its checklist names `tsc`, `npm test` and
+  `npm run build`, but not `lint`, `lint:tests`, `check:bundle` or the
+  `firebase/functions` suite, and it says "no new failures against the
+  recorded baseline" where `CLAUDE.md` now requires a fully green suite. The
+  privacy-policy item is still current.
+- **Catch**: `README.md:39` says outside contributions are not accepted during
+  the beta; the contributing guide must say the same, or that changes first.
+  An issue template on a public repo should also send security reports
+  somewhere private, and there is no `SECURITY.md` to point at.
+- **Source**: todo.txt, 2026-10-06 (four inbox lines, merged)
+
+### T113 — Clean up `docs/` and delete what is stale
+**Type** docs · **Size** M · **Status** needs scoping · **Verified** 2026-10-06
+
+`docs/README.md` already sets the rule: "a document nothing cites any more is
+deleted rather than archived". Nobody has applied it across the folder.
+
+- **Measured**: 475 files, 11 MB. `docs/reviews/` is 288 of them and 6.1 MB,
+  most of it evidence (246 files; pass 5's alone is 3.3 MB), which the review
+  reports cite and TODO.md's code-review entries point into. Of the 218 Markdown files outside evidence folders, 38 are
+  cited by **filename** nowhere: 36 design handoffs (`design/plan/handoff/06-*`
+  to `14-*`, four under `15-entity-authoring/handoff/`) and two superpowers
+  plans. But the handoffs are cited by **phase id** from code comments
+  (`15-6` in 15 files, `12-3a` in 10), so a filename scan undercounts.
+- **Answer first**: what counts as stale. Uncited by filename and by id?
+  Superseded by the code (status banners, per `docs/README.md`)? And does
+  review evidence stay once its findings are closed in TODO.md?
+- **Source**: todo.txt, 2026-10-06
+
 ---
 
 ## Decisions
@@ -523,22 +655,6 @@ in the repo, so this is console work plus whatever copy is decided.
   sending domain is T057's blocker, not this item's.
 - **Unverified**: how much of the email-link template the console lets you
   edit.
-- **Source**: todo.txt, 2026-10-04
-
-### T106 — Should the production rules be public on GitHub?
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-10-04
-
-- **Measured**: the repository is **public** (`gh repo view`).
-  `firestore.rules.prod` and `storage.rules.prod` hold no identities or secrets:
-  global admin is a profile flag (`firestore.rules.prod:155-158`), not a
-  hard-coded uid or email.
-- **What it changes**: the Firebase web config is public by design, and the
-  rules are what protect the data. Hiding them protects nothing that correct
-  rules don't. But public rules make any open hole easy to find.
-- **To decide**: keep them public, or make the repo private (moving them
-  elsewhere would break the deploy, which takes them from the repo since
-  T105). Either way, the exposure
-  is a hole in the rules, not their visibility.
 - **Source**: todo.txt, 2026-10-04
 
 ---
