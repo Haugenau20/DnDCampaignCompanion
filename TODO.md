@@ -23,22 +23,22 @@ adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
-| medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
-| low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
+| medium | T075 | Rename the site; header crowded | M | open | The name is parked (2026-10-06); the header overflow below ~380px is open now, without it |
+| medium | T103 | Replay browser checks: Playwright in CI | L | open | Decided 2026-10-06: a few journeys first, and a defect found in the browser lands with a test |
+| low | T083 | A save warns when the text changed since the editor opened | S | open | Decided 2026-10-06: warn and let them choose, instead of last-write-wins |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
-| low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
+| low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
+| low | T065 | `start-dev.ps1` runs the global Firebase CLI, not the pin | S | open | Decided 2026-10-06: start-dev runs the repo's pinned CLI, so the local emulators run what CI runs |
+| low | T117 | Pin Node and Java with mise | S | open | Decided 2026-10-06: the maintainer runs Node 23.7 against CI's 22; one `mise.toml` sets every machine and CI |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
-| low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
-| low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
+| low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
+| low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
-| low | T110 | A PR's preview site cannot be signed in to | S | needs investigation | Only PR review is affected, and previews touch production data, so whether to allow it comes first |
-| low | T111 | Is it worth expanding the notes feature? | L | needs scoping | The maintainer flagged it as not important |
-| nit | T113 | Clean up `docs/` and delete what is stale | M | needs scoping | Bookkeeping; needs a definition of stale first |
+| low | T110 | Preview sites say that sign-in is off | S | open | Decided 2026-10-06: previews stay signed-out on purpose, since they run unmerged code against production data |
+| low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
+| nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -148,28 +148,7 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T110 — A PR's preview site cannot be signed in to
-**Type** bug · **Size** S · **Status** needs investigation · **Verified** 2026-10-06
-
-The maintainer reports that sign-in fails on the preview channels PRs deploy
-to, and suspects App Check.
-
-- **Where**: previews are built with the production config and reCAPTCHA key
-  (`.github/workflows/firebase-hosting-pull-request.yml:35-47`) and get a
-  `dnd-campaign-companion--pr…web.app` hostname. App Check
-  (`core/services/firebase/config/appCheck.ts`) is enforced on Authentication,
-  and a reCAPTCHA v3 key only works on the domains listed on it. Separately, the
-  magic link's `continueUrl` is the page's own origin (`SignInForm.tsx:101-104`),
-  which Firebase Auth refuses unless it is an authorised domain.
-- **Unverified**: both lists live in consoles (reCAPTCHA, Auth → Settings), not
-  the repo, and neither was read. First step: open a preview, try a sign-in,
-  and read the error code (`auth/firebase-app-check-token-is-invalid` vs
-  `auth/unauthorized-continue-uri` / `auth/unauthorized-domain`).
-- **Catch**: preview channel hostnames change per PR, so allowing them one at a
-  time does not scale, and allowing all of `web.app` admits every Firebase site.
-  Previews also run unmerged code against **production** data. Deciding whether
-  they should be signed in to at all comes before making it work.
-- **Source**: todo.txt, 2026-10-06
+None open here.
 
 ---
 
@@ -252,7 +231,7 @@ The same email can keep the magic link for signing in on the device that opens i
 - **Source**: maintainer, 2026-09-24
 
 ### T063 — The NPC, location and quest pages look like three products
-**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-02
+**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-06
 
 **Decided (maintainer, 2026-10-02): the location and quest pages move toward
 the NPC page** — its light card, its general layout and its way of editing.
@@ -275,9 +254,10 @@ the same foundation.
   pages each copying it — grow `EntityPageShell` into that (or replace it),
   with the image shape as an option. The NPC page should end up on the same
   shell as the other two, which is what Phase 15 meant it to be.
-- **Open for the plan**: where the wide location picture sits once there is no
-  band (across the top of the identity card is the obvious reading). Show the
-  maintainer that before building.
+- **Decided (maintainer, 2026-10-06): the wide picture sits full-width above
+  the card**, on the page above both columns, light and with no text on it; the
+  identity card and the sidebar start below it. A location with no picture
+  starts with the card.
 - **Catch**: this reverses Phase 15's band header on two pages. Tests that pin
   the band (`entity-page.test.tsx`, the location and quest page suites) change
   because the requirement changed — say so in the PR, test by test. D125 ("the
@@ -291,38 +271,35 @@ the same foundation.
   (`NPCDetailPage.tsx`) is its own card titled "Notes", with a saved notice and
   padded rows. Quests have no table notes.
 - **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the notes
-  difference measured 2026-10-04
+  difference measured 2026-10-04; the picture's place decided 2026-10-06
 
-### T074 — Default pictures where none has been uploaded
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-02
+### T074 — Default pictures for the dashboard banner and the party crest
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-06
 
-The maintainer would like default imagery for the dashboard banner and the
-party crest — maybe several, one picked at random when the campaign or group
-is created — and asks the same of NPCs and locations.
+The maintainer would like default imagery where nothing has been uploaded.
+
+**Decided (maintainer, 2026-10-06): only the dashboard banner and the party
+crest get a default.** It is **shown when nothing is uploaded and never stored**
+on the record, picked from a few bundled images by the campaign's or group's id,
+so a campaign keeps the same picture on every visit and nothing needs a
+backfill. NPCs and locations keep their sigils, which T063's cards are designed
+around.
 
 - **Where**: the banner `CampaignBanner.tsx` (no picture → plain band plus the
-  campaign's sigil), the crest `PartyCrest.tsx` (no crest → a hatched panel),
-  NPCs (`NPCDetailPage.tsx`, sigil instead of a portrait) and locations
-  (`EntityPageShell`, plain band). Images today are uploads to Storage only;
-  the repo ships no image assets (`public/` holds `index.html` and
-  `manifest.json`).
-- **Catch**: every one of those empty states is **deliberate design**, written
-  down where it lives: "the empty state is the design rather than a
-  placeholder" (`PartyCrest.tsx:21-24`, `CampaignBanner.tsx:28-31`), and
-  `colour-schema.md` D45 ("a band with no picture is the plain band"). This
-  reverses those, so it is a design decision first. Then: where the pictures
-  come from and under what licence, and the bundle (`check:bundle`) if they
-  ship in the app. "Chosen at creation" leaves every existing campaign, group,
-  NPC and location without one unless they are backfilled.
-- **Related**: T063 — its goal is that the three entity pages look alike *with
-  no photo*. Decide this one first, or decide them together.
-- **Questions before sizing**: which surfaces get defaults; whether a default
-  is stored on the record or shown only when nothing is uploaded; where the
-  art comes from.
-- **Source**: todo.txt, 2026-10-02 (two inbox lines, merged)
+  campaign's sigil) and the crest `PartyCrest.tsx` (no crest → a hatched panel).
+  Images today are uploads to Storage only; the repo ships no image assets.
+- **Catch**: both empty states are **deliberate design**, written down where
+  they live: "the empty state is the design rather than a placeholder"
+  (`PartyCrest.tsx:21-24`, `CampaignBanner.tsx:28-31`), and `colour-schema.md`
+  D45 ("a band with no picture is the plain band"). Rewrite those in the same
+  PR, and say test by test which tests changed because the requirement did.
+- **The art**: public-domain (CC0) images only, so no attribution is owed;
+  record each one's source beside it. Load them with the component, not in the
+  entry bundle (`check:bundle`), and keep each small (webp, tens of kB).
+- **Source**: todo.txt, 2026-10-02 (two inbox lines, merged); decided 2026-10-06
 
 ### T075 — Rename the site, and uncrowd the header
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-03
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-06
 
 **Decided (maintainer, 2026-10-03): the name drops "D&D", and the site
 mentions D&D nowhere**, not even in a tagline or a disclaimer. The maintainer
@@ -371,10 +348,51 @@ for the crowded header the maintainer reported (busy, some text cut off).
 - **Folded in**: the header overflows horizontally below ~380px on every route
   (logo and account block both at `min-width: auto`). `CLAUDE.md` called that
   "tracked in `TODO.md`", but no entry held it until this one.
-- **Answer first**: the new name, from the maintainer. It decides whether a
-  logo carries it and how much room the header gets back.
+- **Decided (maintainer, 2026-10-06): the name is parked** until the maintainer
+  has one; it then decides whether a logo carries it and how much room the
+  header gets back. **The overflow below ~380px does not wait for it**: fix
+  that now, and leave the rename, the logo and the "which truncation" question
+  for when the name comes.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03
+
+### T083 — A save warns when the text changed since the editor opened
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06
+
+Edits write only their own fields, and every list (objectives, notes,
+relations, tags) is worked out from the record the server holds, in a
+transaction. One case is left: two people editing the same text field (a
+description, a note's text) from the same version -- the second save replaces
+the first, with no warning.
+
+**Decided (maintainer, 2026-10-06): warn and let them choose.** The save
+compares, inside the transaction it already runs, the field's stored value with
+the value the editor started from. When they differ it writes nothing and shows
+both versions: keep theirs, keep mine, or edit from theirs.
+
+- **Where**: `RecordChange` and `updateDataAfterReading`, the transaction every
+  edit already goes through; the inline editors pass the value they opened with.
+- **Findings**: DATA-003 (03), the remaining case.
+- **Source**: code review, 2026-10-04; decided 2026-10-06
+
+### T110 — Preview sites say that sign-in is off
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-06
+
+**Decided (maintainer, 2026-10-06): a PR's preview site stays signed-out, on
+purpose.** Previews run unmerged code against **production** data, and their
+hostnames change per PR, so signing in there would let unreviewed code write
+real records. Signed-in screens are reviewed on the dev server. What is left is
+saying so, so a reviewer does not take the refusal for a bug.
+
+- **Where**: the preview build (`.github/workflows/firebase-hosting-pull-request.yml`,
+  the Build step) passes `REACT_APP_*` values that `vite.config.ts` replaces in
+  the source. A `REACT_APP_PREVIEW: "true"` there, read by `SignInPage.tsx` and
+  `JoinPage.tsx`, can show "Preview build: sign-in is off" in place of the form.
+  The live deploy (`firebase-hosting-merge.yml`) does not set it.
+- **Why sign-in fails there** was never read and no longer needs to be: App
+  Check's reCAPTCHA key or Auth's authorised domains, which list only the live
+  hostnames.
+- **Source**: todo.txt, 2026-10-06; decided 2026-10-06
 
 ### T111 — Is it worth expanding the notes feature?
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-06
@@ -382,6 +400,8 @@ for the crowded header the maintainer reported (busy, some text cut off).
 The maintainer asks whether notes should grow: several areas per person, quicker
 ways to add things, and maybe drawing for rough drafts. Flagged as **not
 important**.
+
+**Kept for later, not now** (maintainer, 2026-10-06). Do not scope it until asked.
 
 - **Measured**: a note today is a title, one plain-text body
   (`NoteEditor.tsx:629`, a growing textarea), tags and an active/archived
@@ -402,29 +422,7 @@ important**.
 
 ## Tech debt and platform
 
-### T026 — The reader's chapter drawer cannot be scrolled with a finger
-**Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
-
-Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
-(2026-10-03).
-
-- **Where**: below `lg` the rail is a drawer, opened from the "Chapters" button
-  in `src/pages/story/StoryPage.tsx` and rendered by
-  `features/storytelling/stories/components/ChapterRail.tsx`.
-- **Measured in desktop Chrome, 320px iframe**: the drawer is viewport-high,
-  its list is a real scroll container (600px tall over 1,204px of rows), and
-  `elementFromPoint` finds the list's own rows across it: nothing covers it.
-  No code in `src/` registers touch handlers or sets `touch-action`. Its list
-  now has `overscroll-contain`, so reaching its end no longer scrolls the page
-  behind, which is the nearest thing to the report that could be checked.
-- **Next step**: on the phone it was seen on, note the browser, then open the
-  drawer on a chapter late in a long campaign and drag the list. A desktop
-  window cannot answer this: the browser agent has no touch input.
-- **Source**: todo.txt, 2026-09-16; narrowed 2026-10-02
-
----
-
-### T065 — The maintainer's global Firebase CLI is past the repo's pin
+### T065 — `start-dev.ps1` runs the global Firebase CLI, not the repo's pin
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
 
 The repo pins `firebase-tools` **15.22.4** in `firebase/package.json`, and CI's
@@ -433,9 +431,16 @@ the maintainer's machine is **15.32.1** (2026-10-06): the local emulators no
 longer run the version CI tests. firebase-tools 15 needs **Java 21**, 15.22.4
 included; under Java 17 the emulators exit at once.
 
-- `npm i -g firebase-tools@15.22.4` to match CI, or decide the global CLI may
-  float. Then one `start-dev.ps1` stop/start round trip: `stop` must export
-  (its output is shown now) before it ends this project's port listeners, and
+**Decided (maintainer, 2026-10-06): `start-dev.ps1` runs the repo's pinned
+CLI**, so the local emulators run what CI runs, whatever is installed globally.
+
+- **Where**: `scripts/start-dev.ps1` calls `firebase` by name for
+  `emulators:export` and `emulators:start` (the latter through `cmd /c`), both
+  from inside `firebase/`, where `npx firebase` resolves the pin. Then
+  `firebase/package.json`'s note asking for a global 15.22.4 goes, and
+  CLAUDE.md's line on starting the emulators by hand uses the pin too.
+- **Then**: one `start-dev.ps1` stop/start round trip: `stop` must export (its
+  output is shown now) before it ends this project's port listeners, and
   nothing else.
 - **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
   through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
@@ -444,8 +449,69 @@ included; under Java 17 the emulators exit at once.
   Still so on 15.31.0. Bisected 2026-09-28: 15.22.4 good, 15.23.0 bad. No proxy
   (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
-- **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
+- **Source**: todo.txt, 2026-09-24; pinned 2026-09-28; decided 2026-10-06
 
+### T117 — Pin Node and Java with mise
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
+
+CI and the deployed functions run Node 22 (`node-version: 22` in every
+workflow, `"node": "22"` in `firebase/functions/package.json`); the
+maintainer's machine runs Node 23.7, which is end-of-life. Nothing in the repo
+says which version to use locally: the root `package.json` has no `engines`,
+and there is no version file. It already shows: the Functions emulator runs the
+functions on 23 ("requested node 22 doesn't match your global version"), and
+ESLint 10 warns that it wants `^22.13 || >=24`. Java 21, for the emulators, is
+a second hand install.
+
+**Decided (maintainer, 2026-10-06): mise.** One `mise.toml` in the repo pins
+Node and Java; mise installs them per machine and switches by folder, so a
+version change is a line in the repo rather than an install on each machine,
+and the desktop, a laptop and CI all read the same file.
+
+- **Not Docker, not a dev container**: they would pin the OS as well, but cost
+  file speed on Windows (the repo would move into WSL2), a rewritten
+  `start-dev.ps1`, and every gate run through the container. The project has no
+  system services -- Firebase runs in its own emulators -- so that much
+  reproducibility is not needed now (YAGNI). **Not Volta**: unmaintained; its
+  README recommends mise.
+- **Plan**: `mise.toml` with `node = "22"` and `java = "21"`. The maintainer
+  installs mise (`winget install jdx.mise`, with its shims on PATH so
+  PowerShell, Git Bash and VS Code all see the pinned versions) and runs
+  `mise install`; then the dev server, the emulators and the gates are run on
+  that machine. Only after that, CI: `jdx/mise-action` in place of
+  `actions/setup-node`. CLAUDE.md's setup notes (Java 21) point at `mise install`.
+- **Catch**: mise's Windows support is newer than on macOS and Linux, which is
+  why the machine comes before CI. The Firebase CLI stays in
+  `firebase/package.json`'s pin (T065), not in mise. The gitignored `.env` files
+  and `firebase/emulator-data/` still move to a new machine by hand.
+- **Source**: maintainer, 2026-10-06
+
+### T103 — Replay browser checks: Playwright in CI
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-06
+
+Claude-in-Chrome checks catch what jsdom cannot (see "What phase 15 learned"),
+but each one is a one-off: nothing replays it, so a defect it found can come
+back unnoticed.
+
+**Decided (maintainer, 2026-10-06): Playwright in CI**, driving the production
+build against the emulators with seeded data, starting with a handful of
+journeys: signing in, moving between pages, creating and editing an entity, the
+location tree, and a quest's place that links to its location. From then on **a
+defect found in the browser lands with a test** that replays it.
+Claude-in-Chrome stays for exploring.
+
+- **Measured**: the repo has no browser test runner (`package.json` has no
+  Playwright, Cypress or Puppeteer). The code review's passes 4–5 did build
+  one outside the repo: Playwright Core driving the production build against
+  the emulators with seeded fixtures (`docs/reviews/2026-10-04/pass-4/evidence/probes/runtime/`,
+  `run.cjs` and `helpers.cjs`), written for Linux paths.
+- **Starting point**: CI's `functions` job already starts the emulators (Java
+  included), which an end-to-end job would also need.
+- **Catch**: size L, so its own plan first: seeding (`manage-dev-data.ps1`'s
+  generators), signing in without an inbox (the Auth emulator's `oobCodes`
+  endpoint, as CLAUDE.md describes), and a new job in `test.yml` -- which gates
+  nothing until the maintainer adds it to the ruleset on `main`.
+- **Source**: todo.txt, 2026-10-04; decided 2026-10-06
 
 ### T116 — `firebase-admin` 13 → 14 in the functions
 **Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-06
@@ -470,7 +536,7 @@ modular API only, so the code itself is ready for 14. Two things hold the bump.
   `firebase-admin` 13 and the modular API landed first
 
 ### T079 — Do old documents still lack `locationId`?
-**Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
 
 NPCs and quests refer to a location by `locationId`. Documents written
 before that field existed carry only the free-text `location`, and still
@@ -479,21 +545,27 @@ resolve through a legacy fallback (`resolveLocationName` and
 shipped without a migration (`d6d9847`): such a document gains an id the next
 time anyone edits it.
 
-- **Answer first**: how many documents **in production** still have no
-  `locationId`. Not the emulator: its imported data can be arbitrarily old.
-  `src/utils/__dev__/normalizeChapterDateModified.ts` is a working template
-  for an audit / migrate / revert pass.
-- **Then**: none left, and the fallback can go; some left, and either backfill
-  them or keep the fallback on purpose.
+**Decided (maintainer, 2026-10-06): a read-only audit first.**
+
+- **Plan**: a script modelled on `src/utils/__dev__/normalizeChapterDateModified.ts`
+  (audit / migrate / revert), with relative imports (`ts-node` honours no
+  paths; see CLAUDE.md). The maintainer runs its audit mode against
+  **production** with their own credentials. It only counts and lists the NPCs
+  and quests that have a `location` but no `locationId`, and which of those
+  resolve to a record. The emulator cannot answer this: its imported data can
+  be arbitrarily old.
+- **Then**: none left, and the fallback can go; some left, and either migrate
+  them (the script's migrate mode, which has a revert) or keep the fallback on
+  purpose.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
-  was deleted
+  was deleted; decided 2026-10-06
 
 ---
 
 ## Documentation
 
 ### T113 — Clean up `docs/` and delete what is stale
-**Type** docs · **Size** M · **Status** needs scoping · **Verified** 2026-10-06
+**Type** docs · **Size** M · **Status** open · **Verified** 2026-10-06
 
 `docs/README.md` already sets the rule: "a document nothing cites any more is
 deleted rather than archived". Nobody has applied it across the folder.
@@ -505,51 +577,17 @@ deleted rather than archived". Nobody has applied it across the folder.
   to `14-*`, four under `15-entity-authoring/handoff/`) and two superpowers
   plans. But the handoffs are cited by **phase id** from code comments
   (`15-6` in 15 files, `12-3a` in 10), so a filename scan undercounts.
-- **Answer first**: what counts as stale. Uncited by filename and by id?
-  Superseded by the code (status banners, per `docs/README.md`)? And does
-  review evidence stay once its findings are closed in TODO.md?
-- **Source**: todo.txt, 2026-10-06
+- **Decided (maintainer, 2026-10-06), what stale means**: a document goes when
+  nothing cites it by filename **or** by its phase id (`15-6`, `12-3a`, as code
+  comments do), and review evidence goes once every finding it backs is closed.
+  Anything still cited stays. The PR lists every deletion and why.
+- **Source**: todo.txt, 2026-10-06; stale defined 2026-10-06
 
 ---
 
 ## Decisions
 
 Open questions that block work until the maintainer answers them.
-
-### T083 — Two people saving the same text field: last one wins
-**Type** decision · **Size** S · **Status** open · **Verified** 2026-10-04
-
-Edits write only their own fields, and every list (objectives, notes,
-relations, tags) is worked out from the record the server holds, in a
-transaction. One case is left, on purpose until decided: two people editing
-the same text field (a description, a note's text) from the same version --
-the second save replaces the first, with no warning.
-
-- **To decide**: is last-write-wins acceptable for a party's shared journal,
-  or should a save notice that the field changed since the editor opened
-  (compare the value it started from, inside the same transaction, and ask)?
-  `RecordChange` and `updateDataAfterReading` are the place it would go.
-- **Findings**: DATA-003 (03), the remaining case.
-- **Source**: code review, 2026-10-04
-
-### T103 — Browser checks are not reproducible
-**Type** decision · **Size** L · **Status** needs scoping · **Verified** 2026-10-04
-
-Claude-in-Chrome checks catch what jsdom cannot (see "What phase 15 learned"),
-but each one is a one-off: nothing replays it, so a defect it found can come
-back unnoticed.
-
-- **Measured**: the repo has no browser test runner (`package.json` has no
-  Playwright, Cypress or Puppeteer). The code review's passes 4–5 did build
-  one outside the repo: Playwright Core driving the production build against
-  the emulators with seeded fixtures (`docs/reviews/2026-10-04/pass-4/evidence/probes/runtime/`,
-  `run.cjs` and `helpers.cjs`), written for Linux paths.
-- **Starting point**: CI's `functions` job already starts the emulators (Java
-  included), which an end-to-end job would also need.
-- **To decide**: which journeys become replayable tests, whether every defect
-  found in the browser must land with one, and what stays exploratory in
-  Claude-in-Chrome. Size depends on the answer.
-- **Source**: todo.txt, 2026-10-04
 
 ### T104 — Update the Firebase email templates
 **Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-04
