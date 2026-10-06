@@ -169,10 +169,11 @@ Creator** on itself. The emulator needs nothing, so no test catches it — the l
 claim failing as `internal`. Expired `deviceSignIns` docs are deleted lazily by `startDeviceSignIn`;
 a Firestore TTL policy on `expiresAt` is the intended sweep.
 
-**Inside the Functions emulator, `admin.firestore` is a wrapped stand-in without `FieldValue`,
-`FieldPath` or `Timestamp`.** Import them from `firebase-admin/firestore`. The jest suite uses the
-real namespace, so `admin.firestore.FieldValue.serverTimestamp()` passes every test and then fails
-every call in the dev app ("Cannot read properties of undefined"). Only a browser check finds it.
+**The functions use only the modular `firebase-admin` API** (`getFirestore()`, `getAuth()`,
+`FieldValue` from `firebase-admin/firestore`, ...); keep it that way. Inside the Functions emulator
+the namespaced `admin.firestore` is a stand-in without `FieldValue`, `FieldPath` or `Timestamp`, so
+code using it passed every jest test and failed every call in the dev app. `firebase-admin` 14
+removes the namespace altogether.
 
 **Rules are deployed from the repo** (T105): every merge to `main` deploys `firestore.rules.prod`
 and `storage.rules.prod`, so a change to either is live once merged, and a console edit lasts only

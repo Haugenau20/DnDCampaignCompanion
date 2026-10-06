@@ -32,7 +32,7 @@ adjusted for the images focus above.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
-| low | T116 | `firebase-admin` 13 → 14 in the functions | M | in progress | Last server-side advisory (`uuid`), on a path the functions do not use; 14 drops the namespaced API they use |
+| low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
 | low | T074 | Default pictures where none uploaded | M | needs scoping | Reverses deliberate empty-state design (D45); pairs with T063 |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
@@ -448,23 +448,26 @@ included; under Java 17 the emulators exit at once.
 
 
 ### T116 — `firebase-admin` 13 → 14 in the functions
-**Type** debt · **Size** M · **Status** in progress · **Verified** 2026-10-06
+**Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-06
 
-The functions run `firebase-functions` 7 on `firebase-admin` 13. One advisory
-is left in their production dependencies, `uuid` below 11.1.1 inside
-`firebase-admin` (missing bounds check when a buffer is passed to v3/v5/v6; the
-functions call none of them), and `npm audit` fixes it only by moving to 14.
+The functions run `firebase-functions` 7 on `firebase-admin` 13, through the
+modular API only, so the code itself is ready for 14. Two things hold the bump.
 
-- **Catch**: 14 removes the namespaced API ("Remove Deprecated Legacy Namespace
-  Support"): `admin.firestore()`, `admin.auth()`, `admin.storage()` and the
-  `admin.firestore.*` types, about 110 uses across `src/` and `test/`. Move them
-  to the modular imports (`getFirestore`, `getAuth`, `getStorage`, types from
-  `firebase-admin/firestore`) on 13 first, where both work, then bump.
-- **Check**: `npm --prefix firebase run test:functions`, and a browser pass over
-  the callables (CLAUDE.md: the emulator's wrapped `admin.firestore` hides what
-  jest does not).
-- **Source**: todo.txt (`npm ci` warnings), 2026-10-06; `firebase-functions` 7
-  and `firebase-admin` 13 landed first
+- **It clears nothing yet.** The one advisory left, `uuid` below 11.1.1
+  (bounds check in v3/v5/v6 with a buffer; nothing here calls those), stays on
+  14: it arrives through `@google-cloud/storage` 8.2.0 → `gaxios` 6.7.1, which
+  pins `uuid` ^9, and 8.2.0 was the latest on 2026-10-06. Wait for a Storage
+  release on `gaxios` 7.
+- **The functions' jest cannot load 14's dependencies** (tried 2026-10-06; Node
+  22 itself loads them fine). `jwks-rsa` 4 `require()`s `jose` 6, which is ES
+  modules only: every suite that imports Auth fails to run, and transpiling
+  `jose` through ts-jest fixes that. But `teeny-request` (under Storage) loads
+  `node-fetch` 3 with a dynamic `import()`, which jest allows only under
+  `--experimental-vm-modules` -- and with that flag jest treats `jose` as ESM
+  again, so the 91 tests that touch Storage fail one way or the other. The way
+  through is a jest that loads real ES modules, or transpiling that whole chain.
+- **Source**: todo.txt (`npm ci` warnings), 2026-10-06; `firebase-functions` 7,
+  `firebase-admin` 13 and the modular API landed first
 
 ### T079 — Do old documents still lack `locationId`?
 **Type** debt · **Size** S · **Status** needs investigation · **Verified** 2026-10-03
