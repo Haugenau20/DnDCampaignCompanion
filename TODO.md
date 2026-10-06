@@ -32,7 +32,6 @@ adjusted for the images focus above.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided 2026-10-02: locations and quests adopt the NPC page's light card; location picture stays wide |
 | low | T065 | Global Firebase CLI past the repo's pin | S | open | The maintainer's CLI is 15.32.1, CI's 15.22.4; harmless without a proxy |
-| low | T114 | React Router 6 → 7 | M | open | Closes the last advisory in the browser bundle, which the app's own `next` check already blocks |
 | low | T115 | ESLint 8 is end-of-life | M | open | Tooling only; ESLint 9 means a flat config without `eslint-config-react-app` |
 | low | T116 | `firebase-admin` 12 → 14 in the functions | M | open | Last server-side advisories (`node-forge`, `uuid`); neither path is one the functions use |
 | low | T079 | Do old documents still lack `locationId`? | S | needs investigation | The legacy free-text fallback stays until production says no document needs it |
@@ -449,27 +448,6 @@ included; under Java 17 the emulators exit at once.
   (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
   set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
 - **Source**: todo.txt, 2026-09-24; pinned 2026-09-28
-
-### T114 — React Router 6 → 7
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
-
-`react-router-dom` 6.30.6 carries two advisories `npm audit` cannot fix inside
-v6; the first fixed release is 7.18.0.
-
-- **Reachability, measured 2026-10-06**: GHSA-wrjc-x8rr-h8h6 (open redirect via
-  a backslash in `<Link>` / `useNavigate`) needs an attacker-chosen path. The
-  only one the app navigates to is sign-in's `next`, and `safeNextPath`
-  (`features/user-management/auth/utils/next-path.ts:45-52`) already rejects
-  backslashes, raw and decoded. GHSA-337j-9hxr-rhxg is SSR hydration, which an
-  SPA never runs. So this is hygiene, not an open hole.
-- **Where**: `src/index.tsx:87` opts into `v7_startTransition` only; the dev
-  console warns about `v7_relativeSplatPath` and the other flags. Turn the
-  remaining future flags on one at a time first, then bump; `react-router-dom`
-  becomes a re-export of `react-router` in v7.
-- **Catch**: router behaviour is what jsdom sees least. Browser-check
-  navigation, the lazy pages' fallback (`app/RouteFallback.tsx`) and sign-in's
-  `next` round trip.
-- **Source**: todo.txt (`npm ci` warnings), 2026-10-06
 
 ### T115 — ESLint 8 is end-of-life
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06

@@ -78,21 +78,13 @@ root.render(
         Firebase Hosting rewrites every path to index.html, so a deep link
         reaches the router directly and unknown paths meet NotFoundPage.
 
-        `v7_startTransition` runs every navigation as a React transition. The
+        BrowserRouter runs every navigation as a React transition (React
+        Router 7's default; `useTransitions={false}` would turn it off). The
         route pages load on first visit (T030); inside a transition React keeps
         the current page up until the next one's chunk has arrived, instead of
-        swapping in the route fallback and back. It is React Router 7's
-        default, so this is the behaviour an upgrade would bring anyway.
-
-        `v7_relativeSplatPath` resolves a relative link inside a splat route
-        (`path="*"`) against the whole matched path rather than the route's
-        parent. Also v7's default. The app's only splat is `NotFoundPage`, and
-        nothing in it or anywhere else navigates to a relative path, so it
-        changes no address today; it is on so the v7 bump changes nothing.
-        The other v6 future flags apply only to data routers
-        (`createBrowserRouter`), which the app does not use.
+        swapping in the route fallback and back.
       */}
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <BrowserRouter>
         <App />
       </BrowserRouter>
     </ThemeProvider>

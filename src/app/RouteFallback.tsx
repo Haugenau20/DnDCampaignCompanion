@@ -5,7 +5,7 @@ import React from "react";
  * What the main column shows while a route's chunk is on its way.
  *
  * Only a cold load of a deep link ever sees it. Moving between pages does
- * not: the router runs navigation as a transition (`v7_startTransition` in
+ * not: the router runs navigation as a transition (React Router 7's default; see
  * `index.tsx`), and React keeps the page you are on until the next one can
  * render, rather than swapping it for this and back -- the flash-to-skeleton
  * that `15-7` found and removed from every write.

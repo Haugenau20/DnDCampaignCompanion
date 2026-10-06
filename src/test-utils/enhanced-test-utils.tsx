@@ -107,12 +107,7 @@ const TestWrapper: FC<TestWrapperProps> = ({
   // "useX must be used within a XProvider" before any of skipProviders even
   // matters.
   return (
-    <BrowserRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <BrowserRouter>
       <ThemeProvider>
         <FirebaseProvider>
           {withProvider(NavigationProvider,
