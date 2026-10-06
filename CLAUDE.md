@@ -30,6 +30,12 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
   stops nothing; `-Force` stops anyway and loses the changes since the last export. `stop` ends only
   what listens on this project's ports (and what those processes started), not every `java`.
 - Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
+- **The emulator data is yours to use up** (maintainer, 2026-10-06). Create, edit and delete
+  records, sign in as any seeded account, change settings, race two tabs against each other: whatever
+  a check needs, without asking and without putting things back afterwards. A full reset is
+  `manage-dev-data.ps1 -Action clear` then `-Action generate`. **The one exception is AI entity
+  extraction**: the emulator's `extractEntities` can reach the real OpenAI API on the project's key,
+  so every run costs money. Trigger it only when the check is about extraction, once, not in loops.
 - **Never stop a dev server or the emulators you did not start in this session.** The maintainer
   usually has them running. Need to switch branches under a running dev server? Ask first, or use a
   worktree.
