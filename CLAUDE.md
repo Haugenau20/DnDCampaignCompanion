@@ -20,6 +20,8 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 - Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
   Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
   the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
+- The script runs the **repo's pinned Firebase CLI** (`firebase/package.json`), never a global one,
+  and installs it (`npm --prefix firebase ci`) when it is missing or not the pinned version.
 - **The emulators need Java 21+** (firebase-tools 15). `start` checks it first and says what it found;
   emulators that exit while starting have their last output printed, and the full log is
   `firebase/emulator-start.log`.
@@ -34,8 +36,10 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 
 The emulators run from **`firebase/firebase.emulators.json`**, not `firebase.json`: `firebase.json`
 names the **production** rulesets (`*.rules.prod`, which CI deploys), while the emulators need the
-permissive ones. Starting emulators by hand? Pass `--config firebase.emulators.json` too, or they
-enforce production rules against dev data and Storage (9199) is missing.
+permissive ones. Starting emulators by hand? Run the pin (`npx firebase …` from `firebase/`, after
+`npm --prefix firebase ci`; without that install `npx` silently falls back to a global CLI) and pass
+`--config firebase.emulators.json` too, or they enforce production rules against dev data and
+Storage (9199) is missing.
 
 There is no Docker anywhere: CI builds the shipped site directly, from the lockfile
 (`npm ci`, then `npm run build` — see T107).

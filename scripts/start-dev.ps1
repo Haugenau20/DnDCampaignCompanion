@@ -21,6 +21,34 @@ $MinJavaVersion = 21
 # the window they run in closes as soon as they exit.
 $EmulatorLog = Join-Path $PSScriptRoot "..\firebase\emulator-start.log"
 
+# The repo's pinned Firebase CLI (firebase/package.json), never the global
+# one: the emulators then run the version CI's functions suite tests, whatever
+# is installed on the machine (T065). Relative to firebase/, where both the
+# export and the start run.
+$FirebaseCli = ".\node_modules\.bin\firebase.cmd"
+
+# Installs the pinned CLI when it is missing or not the pinned version, as
+# after a bump. Returns whether the pin is in place.
+function Install-PinnedFirebaseCli {
+    $root = Join-Path $PSScriptRoot "..\firebase"
+    $pinned = (Get-Content -Raw (Join-Path $root "package.json") | ConvertFrom-Json).devDependencies.'firebase-tools'
+    $installedManifest = Join-Path $root "node_modules\firebase-tools\package.json"
+    $installed = if (Test-Path $installedManifest) {
+        (Get-Content -Raw $installedManifest | ConvertFrom-Json).version
+    } else { $null }
+    if ($installed -eq $pinned -and (Test-Path (Join-Path $root $FirebaseCli))) { return $true }
+
+    $found = if ($installed) { $installed } else { "none" }
+    Write-Host "Installing the pinned Firebase CLI $pinned (found $found)..." -ForegroundColor Yellow
+    # Out-Host: shown, not returned (see Invoke-EmulatorExport).
+    npm --prefix firebase ci | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "   npm --prefix firebase ci failed." -ForegroundColor Red
+        return $false
+    }
+    return $true
+}
+
 # The installed Java's major version, or 0 when there is none. `java -version`
 # prints to stderr; run through cmd, the stream is merged before PowerShell
 # sees it, so 5.1 never wraps it in an error record.
@@ -77,12 +105,13 @@ function Get-ProjectProcessIds {
 # `firebase` is a native command, so a failure sets $LASTEXITCODE and never
 # reaches a catch (T100, OPS-001).
 function Invoke-EmulatorExport {
+    if (-not (Install-PinnedFirebaseCli)) { return $false }
     Push-Location "firebase"
     try {
         # Out-Host: the CLI's output is shown, not returned. Returned, it joins
         # the boolean in an array that `if` always reads as true, so a failed
         # export looked like success and `stop` went ahead.
-        firebase emulators:export "./emulator-data" --force --config firebase.emulators.json | Out-Host
+        & $FirebaseCli emulators:export "./emulator-data" --force --config firebase.emulators.json | Out-Host
         return ($LASTEXITCODE -eq 0)
     } catch {
         Write-Host "   $_" -ForegroundColor Red
@@ -120,7 +149,8 @@ function Start-DevelopmentEnvironment {
         return $false
     }
 
-    # Step 2: Start Firebase Emulators
+    # Step 2: Start Firebase Emulators, on the repo's pinned CLI
+    if (-not (Install-PinnedFirebaseCli)) { return $false }
     Write-Host "Starting Firebase emulators..." -ForegroundColor Yellow
     
     $import = if ($hasData) { " --import ./emulator-data" } else { "" }
@@ -132,7 +162,7 @@ function Start-DevelopmentEnvironment {
     # cmd merges the CLI's stderr; Tee-Object shows it in the window and keeps
     # it in $EmulatorLog. Encoded, so the nested quotes survive Start-Process.
     $command = "Set-Location '$(Resolve-Path firebase)'; " +
-        "cmd /c `"firebase emulators:start --config firebase.emulators.json$import 2>&1`" | " +
+        "cmd /c `"$FirebaseCli emulators:start --config firebase.emulators.json$import 2>&1`" | " +
         "Tee-Object -FilePath '$EmulatorLog'"
     $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
     # Never quote an earlier run's output as this one's.
@@ -240,6 +270,10 @@ function Stop-DevelopmentEnvironment {
         return $true
     }
     foreach ($processId in $processIds) {
+        # Gone already: an earlier `/T` took it down with its parent (the
+        # CLI's node takes the emulators' java with it). Asking taskkill again
+        # only prints an error, which a caller capturing stderr sees as fatal.
+        if (-not (Get-Process -Id $processId -ErrorAction SilentlyContinue)) { continue }
         $name = (Get-Process -Id $processId -ErrorAction SilentlyContinue).ProcessName
         Write-Host "   Stopping $name (PID $processId) and what it started" -ForegroundColor Gray
         taskkill /PID $processId /T /F | Out-Null

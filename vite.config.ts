@@ -48,6 +48,24 @@ function reactAppEnv(mode: string): Record<string, string> {
   return env;
 }
 
+/**
+ * This checkout's `firebase/` folder, which the dev server must not watch.
+ *
+ * The frontend imports nothing from it, and on Windows a watched directory
+ * cannot be renamed: `emulators:export` writes to a temporary folder beside
+ * `emulator-data` and renames it into place, so with the dev server running
+ * every export failed with EPERM -- and `start-dev.ps1 -Action stop`, which
+ * refuses to stop without an export, refused every time (found 2026-10-06,
+ * T065). The emulators' own logs there change constantly, too.
+ */
+const FIREBASE_DIR = path.resolve(__dirname, "firebase").toLowerCase();
+
+/** True for `firebase/` itself and everything under it. */
+const isInFirebaseDir = (watched: string): boolean => {
+  const resolved = path.resolve(watched).toLowerCase();
+  return resolved === FIREBASE_DIR || resolved.startsWith(FIREBASE_DIR + path.sep);
+};
+
 export default defineConfig(({ mode }) => {
   const env = reactAppEnv(mode);
   const names = new Set([...Object.keys(env), ...reactAppNames(path.join(process.cwd(), "src"))]);
@@ -69,6 +87,7 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       strictPort: true,
       open: true,
+      watch: { ignored: [isInFirebaseDir] },
     },
     preview: { host: "127.0.0.1", port: 4173, strictPort: true },
     // `build/`: firebase.json serves it and the Hosting workflows copy it.

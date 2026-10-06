@@ -25,7 +25,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
-| low | T065 | `start-dev.ps1` runs the global Firebase CLI, not the pin | S | open | Decided 2026-10-06: start-dev runs the repo's pinned CLI, so the local emulators run what CI runs |
 | low | T117 | Pin Node and Java with mise | S | open | Decided 2026-10-06: the maintainer runs Node 23.7 against CI's 22; one `mise.toml` sets every machine and CI |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
@@ -374,35 +373,6 @@ important**.
 
 ## Tech debt and platform
 
-### T065 — `start-dev.ps1` runs the global Firebase CLI, not the repo's pin
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
-
-The repo pins `firebase-tools` **15.22.4** in `firebase/package.json`, and CI's
-`functions` suite runs on it. `start-dev.ps1` runs the **global** CLI, which on
-the maintainer's machine is **15.32.1** (2026-10-06): the local emulators no
-longer run the version CI tests. firebase-tools 15 needs **Java 21**, 15.22.4
-included; under Java 17 the emulators exit at once.
-
-**Decided (maintainer, 2026-10-06): `start-dev.ps1` runs the repo's pinned
-CLI**, so the local emulators run what CI runs, whatever is installed globally.
-
-- **Where**: `scripts/start-dev.ps1` calls `firebase` by name for
-  `emulators:export` and `emulators:start` (the latter through `cmd /c`), both
-  from inside `firebase/`, where `npx firebase` resolves the pin. Then
-  `firebase/package.json`'s note asking for a global 15.22.4 goes, and
-  CLAUDE.md's line on starting the emulators by hand uses the pin too.
-- **Then**: one `start-dev.ps1` stop/start round trip: `stop` must export (its
-  output is shown now) before it ends this project's port listeners, and
-  nothing else.
-- **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
-  through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
-  proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
-  of the Firestore emulator (403), and the Storage rules suite fails 11 tests.
-  Still so on 15.31.0. Bisected 2026-09-28: 15.22.4 good, 15.23.0 bad. No proxy
-  (a normal desktop, a GitHub runner) is unaffected, but cloud agent sessions
-  set one. Re-run `npm --prefix firebase run test:functions` behind a proxy before bumping.
-- **Source**: todo.txt, 2026-09-24; pinned 2026-09-28; decided 2026-10-06
-
 ### T117 — Pin Node and Java with mise
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
 
@@ -434,7 +404,7 @@ and the desktop, a laptop and CI all read the same file.
   `actions/setup-node`. CLAUDE.md's setup notes (Java 21) point at `mise install`.
 - **Catch**: mise's Windows support is newer than on macOS and Linux, which is
   why the machine comes before CI. The Firebase CLI stays in
-  `firebase/package.json`'s pin (T065), not in mise. The gitignored `.env` files
+  `firebase/package.json`'s pin, not in mise. The gitignored `.env` files
   and `firebase/emulator-data/` still move to a new machine by hand.
 - **Source**: maintainer, 2026-10-06
 
