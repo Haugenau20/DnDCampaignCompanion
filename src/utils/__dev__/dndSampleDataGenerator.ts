@@ -76,10 +76,13 @@ export const generateSampleData = async () => {
     console.log('Sample data generation complete!');
   } catch (error) {
     console.error('Error generating sample data:', error);
+    // Rethrown: swallowed, a failed run resolved, and the entry point
+    // announced a complete dataset and exited 0 (T100, OPS-003).
+    throw error;
   }
 };
 
 // Run the generator when called directly
 if (require.main === module) {
-  generateSampleData();
+  generateSampleData().catch(() => process.exit(1));
 }

@@ -1,5 +1,5 @@
 // src/features/campaign-entities/rumors/types.ts
-import { BaseContent, DomainData, RecordChange, IdentifiableContent } from 'core/types/common';
+import { BaseContent, DomainData, RecordChange, IdentifiableContent, CreateAlongside } from 'core/types/common';
 
 export type RumorStatus = 'confirmed' | 'unconfirmed' | 'false';
 export type SourceType = 'npc' | 'tavern' | 'notice' | 'traveler' | 'other';
@@ -82,7 +82,8 @@ export interface RumorContextValue extends RumorContextState {
   getRumorsByNPC: (npcId: string) => Rumor[];
   updateRumorStatus: (rumorId: string, status: RumorStatus) => Promise<void>;
   updateRumorNote: (rumorId: string, note: DomainData<RumorNote> & IdentifiableContent) => Promise<void>;
-  addRumor: (rumor: DomainData<Rumor>) => Promise<string>;
+  /** `alongside`: a change to another record that commits with this one (T088). */
+  addRumor: (rumor: DomainData<Rumor>, alongside?: CreateAlongside) => Promise<string>;
   /**
    * Write `change` to the rumour: the fields it names, and nothing else
    * (T083). Never the whole record -- a copy from the listener can be behind

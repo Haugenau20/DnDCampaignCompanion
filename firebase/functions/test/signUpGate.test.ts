@@ -103,6 +103,17 @@ describe("reserveSignUp", () => {
       expect((await reservationDoc()).exists).toBe(false);
     });
 
+    it("a token for a group being deleted (T037)", async () => {
+      await seedToken();
+      await db.doc(`groups/${GROUP}`).update({deleting: true});
+      const error = await expectHttpsError(
+        reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"}),
+        "failed-precondition"
+      );
+      expect(error.message).toMatch(/being deleted/);
+      expect((await reservationDoc()).exists).toBe(false);
+    });
+
     it("anyone once the project is at the account limit", async () => {
       await seedToken();
       await fillAccounts(MAX_ACCOUNTS);

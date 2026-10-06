@@ -8,6 +8,7 @@ import { useCampaignContextStatus } from "shared/hooks/useCampaignContextStatus"
 import { buildCreationAttribution } from "core/attribution";
 import { useNavigate } from 'react-router-dom';
 import { where } from "firebase/firestore";
+import type { CreateAlongside } from "core/types/common";
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from "shared/hooks/useListenerDemand";
 
 // Create the context with initial undefined value
@@ -342,6 +343,55 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [getNoteById, isNotYetCreated, documentService, notesCollection]);
   
   /**
+   * Create the record an extracted entity becomes, and mark the entity
+   * converted into it, as one commit (T088, DATA-005).
+   *
+   * A saved note's mark goes to `create` as the change that commits with the
+   * record: created first and marked after, a failed mark left the record
+   * behind while the note still offered to convert it again. The mark is
+   * worked out from the note as the server holds it, and refuses an entity
+   * that is already converted, so a retry after an unseen success makes
+   * nothing. A draft exists only in this provider's state, with nothing
+   * stored to commit with: it is marked here once the record exists.
+   */
+  const convertInto = useCallback(async (
+    noteId: string,
+    entityId: string,
+    create: (alongside?: CreateAlongside<Note>) => Promise<string>
+  ): Promise<string> => {
+    const note = getNoteById(noteId);
+    if (!note) throw new Error("Note not found");
+
+    if (isNotYetCreated(note)) {
+      const createdId = await create();
+      await markEntityAsConverted(noteId, entityId, createdId);
+      return createdId;
+    }
+
+    if (!notesCollection) {
+      throw new Error("User not authenticated or no active group");
+    }
+
+    return create({
+      collection: notesCollection,
+      id: noteId,
+      change: (current, createdId) => {
+        if (!current) throw new Error("Note not found");
+        const entities = current.extractedEntities ?? [];
+        const target = entities.find(e => e.id === entityId);
+        if (!target) throw new Error("Entity not found in note");
+        if (target.isConverted) throw new Error("This has already been converted");
+        return {
+          extractedEntities: entities.map(e =>
+            e.id === entityId ? { ...e, isConverted: true, convertedToId: createdId } : e
+          ),
+          updatedAt: new Date().toISOString(),
+        };
+      },
+    });
+  }, [getNoteById, isNotYetCreated, markEntityAsConverted, notesCollection]);
+
+  /**
    * Convert an extracted entity to a campaign element.
    *
    * Three of the four navigate to a create page with the extracted fields in
@@ -472,7 +522,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           ? extraData.status
           : 'unconfirmed';
 
-        const rumorId = await addRumor({
+        const rumor = {
           title: extraData.title || entity.text,
           content: extraData.content || '',
           status,
@@ -490,11 +540,13 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           relatedNPCs: [],
           relatedLocations: [],
           notes: [],
-        });
+        };
+        // The rumour and the note's mark commit together (T088). A draft
+        // note has no mark to send; it is marked once the rumour exists.
+        const rumorId = await convertInto(noteId, entityId, (alongside) =>
+          alongside ? addRumor(rumor, alongside) : addRumor(rumor)
+        );
 
-        // Done here rather than by a form on arrival, which is what the
-        // create page used to be for.
-        await markEntityAsConverted(noteId, entityId, rumorId);
         navigate(`/rumors?highlight=${rumorId}`);
         return rumorId;
       }
@@ -534,7 +586,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     // Return empty string since we're not creating immediately. The rumour
     // branch returned above, with a real id.
     return "";
-  }, [getNoteById, navigate, addRumor, markEntityAsConverted]);
+  }, [getNoteById, navigate, addRumor, convertInto]);
   
   /**
    * Archive a note
@@ -589,6 +641,7 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
     archiveNote,
     deleteNote,
     markEntityAsConverted,
+    convertInto,
   };
   
   return (

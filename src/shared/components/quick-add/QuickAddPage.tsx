@@ -39,9 +39,9 @@ const QuickAddPage: React.FC<QuickAddPageProps> = ({
   const location = useLocation();
   const gate = usePageGate(gateKey, { mode: "write" });
 
-  // Note conversion's handoff, unchanged: it still arrives as router state and
-  // `noteId`/`entityId` still travel beside the payload to
-  // `markEntityAsConverted`.
+  // Note conversion's handoff: it arrives as router state, and
+  // `noteId`/`entityId` travel beside the payload to `convertInto`, which
+  // marks the entity in the same commit as the record (T088).
   const noteId = location.state?.noteId as string | undefined;
   const entityId = location.state?.entityId as string | undefined;
   const { initialName, initialLine, carry, parentId } = splitInitialData(

@@ -82,9 +82,13 @@ function Generate-SampleData {
         # Copy .env file for the script to use
         Copy-Item -Path ".env.development" -Destination ".env" -Force
         
-        # Run the generator script
+        # Run the generator script. A native command's failure sets
+        # $LASTEXITCODE and never reaches the catch below (T100, OPS-003).
         npx ts-node ./src/utils/__dev__/generateSampleData.ts
-        
+        if ($LASTEXITCODE -ne 0) {
+            throw "the generator exited with code $LASTEXITCODE; the emulators may hold part of the sample data"
+        }
+
         Write-Host "Sample data generated successfully!" -ForegroundColor Green
         Write-Host "You can view the data in the Firebase Emulator UI at http://localhost:4000" -ForegroundColor Cyan
         Write-Host ""
@@ -128,7 +132,10 @@ function Export-EmulatorData {
     try {
         Write-Host "Exporting to ../firebase/emulator-data..." -ForegroundColor Cyan
         firebase emulators:export "../firebase/emulator-data" --force --config firebase.emulators.json
-        
+        if ($LASTEXITCODE -ne 0) {
+            throw "firebase emulators:export exited with code $LASTEXITCODE"
+        }
+
         # Check results
         if (Test-Path "../firebase/emulator-data") {
             $fileCount = (Get-ChildItem -Path "../firebase/emulator-data" -Recurse -ErrorAction SilentlyContinue).Count

@@ -333,8 +333,10 @@ describe('StoryContext Bug Discovery Tests', () => {
     });
 
     // REWRITTEN (T032): ids are no longer padded order numbers, so there is
-    // no padding edge case left. What remains of the requirement is that a
-    // high order is stored as given.
+    // no padding edge case left. CHANGED (T088): it was "a high order is
+    // stored as given". Orders are places now, and every structural change
+    // renumbers to 1, 2, 3, ... (decided 2026-10-05), so a place past the end
+    // is the end: here, the first and only chapter.
     test('BUG: should handle a high order number', async () => {
       renderStoryContext();
 
@@ -356,7 +358,7 @@ describe('StoryContext Bug Discovery Tests', () => {
           type: 'set',
           collection: 'groups/group-1/campaigns/campaign-1/chapters',
           id: chapterId,
-          data: expect.objectContaining({ id: chapterId, order: 999 })
+          data: expect.objectContaining({ id: chapterId, order: 1 })
         }
       ]);
     });

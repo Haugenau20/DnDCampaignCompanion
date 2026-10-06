@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFirestore } from 'features/user-management';
 import { AUTH_STATE_CHANGED_EVENT } from 'features/user-management';
-import { DomainData } from 'core/types/common';
+import { CreateAlongside, DomainData } from 'core/types/common';
 import { DocumentAlreadyExistsError } from 'core/services/firebase/data/DocumentAlreadyExistsError';
 
 interface UseFirebaseDataOptions<T> {
@@ -99,6 +99,9 @@ export function useFirebaseData<T extends Record<string, any>>(
     createDocument,
     updateDocumentWithAttribution,
     updateDocumentAfterReading,
+    updateDocumentsAfterReading,
+    queryFromServer,
+    createDocumentWithUpdates,
     deleteDocument
   } = useFirestore();
 
@@ -259,7 +262,11 @@ export function useFirebaseData<T extends Record<string, any>>(
    * optimistic appends, never a fetched collection, and reading it would be a
    * mistake the option name warns against.
    */
-  const addData = useCallback(async (newData: DomainData<T> & { id?: string }, documentId?: string) => {
+  const addData = useCallback(async (
+    newData: DomainData<T> & { id?: string },
+    documentId?: string,
+    alongside?: CreateAlongside
+  ) => {
     setLoading(true);
     setError(null);
     try {
@@ -267,7 +274,15 @@ export function useFirebaseData<T extends Record<string, any>>(
       const id = documentId ||
                 (options.idField ? (newData as unknown as T)[options.idField] as string : crypto.randomUUID());
 
-      await createDocument(options.collection, newData, id);
+      if (alongside) {
+        // One transaction: the record and the change commit together (T088).
+        await createDocumentWithUpdates(options.collection, id, alongside.collection, async (read) => ({
+          create: newData,
+          updates: [{ id: alongside.id, data: alongside.change(await read(alongside.id), id) }],
+        }));
+      } else {
+        await createDocument(options.collection, newData, id);
+      }
       if (!subscribing) {
         setData(prevData => [...prevData, { ...newData, id } as unknown as T]);
       }
@@ -285,7 +300,7 @@ export function useFirebaseData<T extends Record<string, any>>(
     } finally {
       setLoading(false);
     }
-  }, [subscribing, options.collection, options.idField, createDocument]);
+  }, [subscribing, options.collection, options.idField, createDocument, createDocumentWithUpdates]);
 
   const updateData = useCallback(async (id: string, updatedData: Partial<T>) => {
     setLoading(true);
@@ -332,6 +347,37 @@ export function useFirebaseData<T extends Record<string, any>>(
     }
   }, [options.collection, updateDocumentAfterReading]);
 
+  /**
+   * `updateDataAfterReading` for several records at once: `decide` reads by
+   * id inside one transaction and returns the updates, possibly none (T088).
+   * See `DocumentService.updateDocumentsAfterReading`.
+   */
+  const updateManyAfterReading = useCallback(async (
+    decide: (read: (id: string) => Promise<T | undefined>) => Promise<Array<{ id: string; data: Partial<T> }>>
+  ) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (options.collection === null) throw new Error(NO_CAMPAIGN);
+      await updateDocumentsAfterReading<T>(options.collection, decide);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update data';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [options.collection, updateDocumentsAfterReading]);
+
+  /**
+   * The records whose `field` equals `value`, as the server holds them now,
+   * never the local cache (T088). Offline, it fails.
+   */
+  const queryData = useCallback(async (field: string, value: unknown): Promise<T[]> => {
+    if (options.collection === null) throw new Error(NO_CAMPAIGN);
+    return queryFromServer<T>(options.collection, field, value);
+  }, [options.collection, queryFromServer]);
+
   const deleteData = useCallback(async (id: string) => {
     setLoading(true);
     setError(null);
@@ -359,6 +405,8 @@ export function useFirebaseData<T extends Record<string, any>>(
     addData,
     updateData,
     updateDataAfterReading,
+    updateManyAfterReading,
+    queryData,
     deleteData,
     setDocument: addData // Backward compatibility
   };

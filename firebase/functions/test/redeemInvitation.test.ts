@@ -56,6 +56,19 @@ describe("redeemInvitation", () => {
       await expectHttpsError(redeem({groupId: GROUP, token: TOKEN, username: "Frodo"}, "u1"), "not-found");
     });
 
+    it("a token for a group being deleted, and grants nothing (T037)", async () => {
+      await seed();
+      await db.doc(`groups/${GROUP}`).update({deleting: true});
+      const error = await expectHttpsError(
+        redeem({groupId: GROUP, token: TOKEN, username: "Frodo"}, "u1"),
+        "failed-precondition"
+      );
+      expect(error.message).toMatch(/being deleted/);
+      expect((await db.doc("users/u1").get()).exists).toBe(false);
+      expect((await db.doc(`groups/${GROUP}/users/u1`).get()).exists).toBe(false);
+      expect((await tokenDoc()).data()?.used).toBe(false);
+    });
+
     it("a used token, and grants nothing", async () => {
       await seed({used: true, usedBy: "someone-else"});
       const error = await expectHttpsError(

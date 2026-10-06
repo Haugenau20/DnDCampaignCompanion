@@ -30,6 +30,7 @@ import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import { InlineEditor } from 'shared/components/inline-edit';
 import { useInlineEditing } from 'shared/hooks/useInlineEditing';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 
 /** What points at this quest, from the three collections that can. */
 interface InboundLink {
@@ -144,6 +145,7 @@ const QuestDetailPage: React.FC = () => {
   } = useQuests();
   const { npcs } = useNPCs();
   const { locations, createLocation } = useLocations();
+  const questsPath = useCampaignCollectionPath('quests');
   const { rumors } = useRumors();
   const { notes } = useNotes();
 
@@ -318,7 +320,10 @@ const QuestDetailPage: React.FC = () => {
    * fill the location tree with stubs nobody has been to.
    */
   const promotePlace = async (place: QuestLocation) => {
-    if (!quest) return;
+    if (!quest || !questsPath) return;
+    // The place comes off the quest in the same commit as the location is
+    // created (T088): as a second write, a failure left the location behind
+    // and the place still offering to be promoted again.
     const newId = await createLocation({
       name: place.name,
       type: 'poi',
@@ -332,10 +337,18 @@ const QuestDetailPage: React.FC = () => {
       relatedQuests: [quest.id],
       notes: [],
       tags: [],
+    }, {
+      collection: questsPath,
+      id: quest.id,
+      change: (current) => {
+        if (!current) throw new Error('Quest not found');
+        return {
+          keyLocations: (current.keyLocations ?? []).filter(
+            (entry: QuestLocation) => entry.name !== place.name
+          ),
+        };
+      },
     });
-    await save((current) => ({
-      keyLocations: (current.keyLocations ?? []).filter((entry) => entry.name !== place.name),
-    }));
     navigateToPage(`/locations/${newId}`);
   };
 

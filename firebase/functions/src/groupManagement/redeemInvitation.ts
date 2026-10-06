@@ -101,6 +101,15 @@ export const redeemInvitation = functions.onCall(
           );
         }
 
+        // A group being deleted admits nobody (T037): its deletion has
+        // taken, or is about to take, the group off every member's account.
+        if (groupDoc.get("deleting") === true) {
+          throw new functions.HttpsError(
+            "failed-precondition",
+            "This group is being deleted."
+          );
+        }
+
         const problem = registrationTokenProblem(tokenDoc.data() ?? {});
         if (problem === "used") {
           throw new functions.HttpsError(

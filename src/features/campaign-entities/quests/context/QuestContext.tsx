@@ -1,7 +1,7 @@
 // src/features/campaign-entities/quests/context/QuestContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Quest, QuestStatus, QuestContextValue } from '../types';
-import { DomainData, RecordChange } from 'core/types/common';
+import { DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { useQuestData } from '../hooks/useQuestData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { writeRecordChange } from '../../shared/writeRecordChange';
@@ -239,7 +239,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [questForObjectiveWrite, writeObjectives]);
 
   // Add quest
-  const addQuest = useCallback(async (questData: DomainData<Quest>) => {
+  const addQuest = useCallback(async (questData: DomainData<Quest>, alongside?: CreateAlongside) => {
     if (!user || !userProfile) {
       throw new Error('User must be authenticated to add quests');
     }
@@ -269,7 +269,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       name: questData.title,
       issuedIds: issuedIds.current,
       isLoaded: (candidateId) => Boolean(getQuestById(candidateId)),
-      write: (candidateId) => addData(buildQuest(candidateId), candidateId)
+      write: (candidateId) => addData(buildQuest(candidateId), candidateId, ...(alongside ? [alongside] : []))
     });
 
     return id;

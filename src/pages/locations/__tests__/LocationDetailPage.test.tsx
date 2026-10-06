@@ -441,6 +441,49 @@ describe('LocationDetailPage — deleting a parent (§6.2, item 6)', () => {
     ).toBeInTheDocument();
   });
 
+  // T088: a deletion that failed partway leaves its mark, and a marked place
+  // takes no edit. The page says so, and offers the one thing that works.
+  describe('a place whose deletion stopped partway', () => {
+    beforeEach(() => {
+      mockLocations = TREE.map((l) =>
+        l.id === 'gondolin' ? { ...l, deleting: 'promote-to-grandparent' } : l
+      );
+    });
+
+    it('says so, and offers to finish instead of to delete', () => {
+      renderPage();
+      expect(screen.getByText(/Deleting Gondolin stopped partway/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Finish deleting' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete location' })).not.toBeInTheDocument();
+    });
+
+    it('offers no edit, since the rules refuse every one', () => {
+      renderPage();
+      expect(screen.queryByRole('button', { name: /Rename/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Move elsewhere/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Add another feature/ })).not.toBeInTheDocument();
+    });
+
+    it('finishes it the way it started, without asking again, then leaves the page', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Finish deleting' }));
+
+      await waitFor(() =>
+        expect(mockDeleteLocation).toHaveBeenCalledWith('gondolin', 'promote-to-grandparent')
+      );
+      await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledWith('/locations'));
+    });
+
+    it('stays, and says why, when finishing fails too', async () => {
+      mockDeleteLocation.mockRejectedValueOnce(new Error('You are offline.'));
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Finish deleting' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('You are offline.');
+      expect(mockNavigateToPage).not.toHaveBeenCalled();
+    });
+  });
+
   it('promotes by default, because losing a subtree is the irreversible answer', async () => {
     const dialog = openDelete();
     fireEvent.click(dialog.getByRole('button', { name: /Delete Gondolin/ }));
@@ -681,22 +724,28 @@ describe('LocationDetailPage — features are not children (§6.4, item 7)', () 
     expect(features.getByText('White towers')).toBeInTheDocument();
   });
 
-  it('promotes a feature into a real place inside this one', async () => {
+  // CHANGED for T088 (DATA-005): the feature used to come off the parent in
+  // a second write after the create, so a failed second write left the new
+  // place behind and a retry made another. It now commits with the create.
+  it('promotes a feature into a real place inside this one, taking it off the parent in the same write', async () => {
     renderPage();
     const row = screen.getByText('White towers').closest('li') as HTMLElement;
     fireEvent.click(within(row).getByRole('button', { name: 'Make it a place' }));
 
     await waitFor(() => expect(mockCreateLocation).toHaveBeenCalled());
-    expect(mockCreateLocation.mock.calls[0][0]).toMatchObject({
-      name: 'White towers',
-      parentId: 'gondolin',
+    const [place, alongside] = mockCreateLocation.mock.calls[0];
+    expect(place).toMatchObject({ name: 'White towers', parentId: 'gondolin' });
+    expect(alongside).toMatchObject({
+      collection: 'groups/group-1/campaigns/campaign-1/locations',
+      id: 'gondolin',
     });
-    // ...and it stops being a line of scenery on the parent.
-    await waitFor(() =>
-      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', {
-        features: ['Seven gates'],
-      })
-    );
+    // ...and it stops being a line of scenery on the parent, worked out from
+    // the parent as the server holds it: a feature added meanwhile stays.
+    expect(alongside.change(
+      { id: 'gondolin', features: ['Seven gates', 'White towers', 'The fountain'] },
+      'white-towers'
+    )).toEqual({ features: ['Seven gates', 'The fountain'] });
+    expect(mockUpdateLocation).not.toHaveBeenCalled();
   });
 
   it('adds a feature without creating a location', async () => {

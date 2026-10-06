@@ -3,6 +3,7 @@
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react';
 import { LocationProvider, useLocations } from 'features/campaign-entities/locations/context/LocationContext';
+import { serverThrough } from '@/test-utils/update-after-reading';
 
 /**
  * T021: deleting a location also deletes its picture -- and, when the whole
@@ -37,6 +38,8 @@ jest.mock('shared/hooks/useFirebaseData', () => ({
   useFirebaseData: () => ({
     addData: jest.fn(),
     updateData: mockUpdateData,
+    // The server, for a delete (T088): this suite's records.
+    ...serverThrough<any>(mockUpdateData, () => mockLocations),
     deleteData: mockDeleteData,
     error: null,
   }),

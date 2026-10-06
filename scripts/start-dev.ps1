@@ -4,7 +4,12 @@
 param (
     [Parameter(Mandatory=$false)]
     [ValidateSet("start", "stop", "restart", "status", "export")]
-    [string]$Action = "start"
+    [string]$Action = "start",
+
+    # stop/restart: stop even when the export fails, losing every change since
+    # the last successful export. Without it, a failed export leaves the
+    # emulators running so nothing is lost (T100, OPS-001).
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +33,44 @@ function Test-ReactDevServer {
     }
 }
 
+# The ports this checkout's services listen on: the emulators named in
+# firebase/firebase.emulators.json, the emulator hub, logging and Firestore's
+# websocket (the CLI's defaults), and the React dev server.
+function Get-ProjectPorts {
+    $config = Get-Content -Raw "./firebase/firebase.emulators.json" | ConvertFrom-Json
+    $ports = @(4400, 4500, 9150, 3000)
+    foreach ($emulator in $config.emulators.PSObject.Properties) {
+        if ($emulator.Value.port) { $ports += [int]$emulator.Value.port }
+    }
+    return $ports | Sort-Object -Unique
+}
+
+# The processes listening on this checkout's ports, and nothing else. Stop
+# used to force-stop every java process on the machine, other projects'
+# emulators included (T100, OPS-002).
+function Get-ProjectProcessIds {
+    $ports = Get-ProjectPorts
+    $listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $ports -contains $_.LocalPort -and $_.OwningProcess -gt 0 }
+    return $listeners | Select-Object -ExpandProperty OwningProcess -Unique
+}
+
+# Exports the running emulators' data. Returns whether the export succeeded:
+# `firebase` is a native command, so a failure sets $LASTEXITCODE and never
+# reaches a catch (T100, OPS-001).
+function Invoke-EmulatorExport {
+    Push-Location "firebase"
+    try {
+        firebase emulators:export "./emulator-data" --force --config firebase.emulators.json
+        return ($LASTEXITCODE -eq 0)
+    } catch {
+        Write-Host "   $_" -ForegroundColor Red
+        return $false
+    } finally {
+        Pop-Location
+    }
+}
+
 function Start-DevelopmentEnvironment {
     Write-Host "Starting Full Development Environment..." -ForegroundColor Green
     Write-Host "   Firebase Emulators + React Dev Server" -ForegroundColor Cyan
@@ -37,7 +80,17 @@ function Start-DevelopmentEnvironment {
     $dataDir = "./firebase/emulator-data"
     $hasData = (Test-Path $dataDir) -and (Get-ChildItem -Path $dataDir -Recurse -ErrorAction SilentlyContinue).Count -gt 0
     
-    # Step 1: Start Firebase Emulators
+    # Step 1: Compile the Cloud Functions. The emulator runs the compiled
+    # `lib/`, which git ignores: without this it ran whatever was last built,
+    # or nothing (T100, OPS-004).
+    Write-Host "Compiling Cloud Functions..." -ForegroundColor Yellow
+    npm --prefix firebase/functions run build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "   Cloud Functions failed to compile - not starting." -ForegroundColor Red
+        return $false
+    }
+
+    # Step 2: Start Firebase Emulators
     Write-Host "Starting Firebase emulators..." -ForegroundColor Yellow
     
     Push-Location "firebase"
@@ -71,10 +124,10 @@ function Start-DevelopmentEnvironment {
         Write-Host "   Firebase emulators started!" -ForegroundColor Green
     } else {
         Write-Host "   Firebase emulators failed to start within $timeout seconds" -ForegroundColor Red
-        return
+        return $false
     }
-    
-    # Step 2: Start React Dev Server
+
+    # Step 3: Start React Dev Server
     Write-Host "Starting React dev server..." -ForegroundColor Yellow
     
     # Start React dev server in a new window
@@ -114,66 +167,62 @@ function Start-DevelopmentEnvironment {
     Write-Host "  Functions: http://localhost:5001" -ForegroundColor White
     Write-Host "  Storage: http://localhost:9199" -ForegroundColor White
     Write-Host ""
+    Write-Host "Edited a Cloud Function? npm --prefix firebase/functions run build" -ForegroundColor Gray
     Write-Host "To stop everything: .\start-dev.ps1 -Action stop" -ForegroundColor Yellow
+    return $true
 }
 
 function Stop-DevelopmentEnvironment {
     Write-Host "Stopping Development Environment..." -ForegroundColor Yellow
-    
-    # Export emulator data first
+
+    # Export emulator data first. A failed export stops here, with the
+    # emulators still running and their data intact, unless -Force says to
+    # lose it (T100, OPS-001).
     if (Test-EmulatorsRunning) {
         Write-Host "Exporting emulator data..." -ForegroundColor Cyan
-        Push-Location "firebase"
-        try {
-            firebase emulators:export "./emulator-data" --force --config firebase.emulators.json
+        if (Invoke-EmulatorExport) {
             Write-Host "   Data exported successfully" -ForegroundColor Green
-        } catch {
-            Write-Host "   Failed to export data" -ForegroundColor Yellow
-        } finally {
-            Pop-Location
+        } elseif ($Force) {
+            Write-Host "   Export failed - stopping anyway (-Force). Changes since the last export are lost." -ForegroundColor Yellow
+        } else {
+            Write-Host "   Export failed - nothing was stopped, so no data is lost." -ForegroundColor Red
+            Write-Host "   Fix the export and try again, or stop without it: .\start-dev.ps1 -Action stop -Force" -ForegroundColor Yellow
+            return $false
         }
     }
-    
-    # Stop all related processes
+
+    # Stop this checkout's processes: whatever listens on its ports, with
+    # everything those processes started (the emulators' java, the dev
+    # server's workers). Nothing else on the machine is touched.
     Write-Host "Stopping processes..." -ForegroundColor Cyan
-    
-    try {
-        # Stop Firebase processes
-        $firebaseProcesses = Get-Process -Name "firebase*" -ErrorAction SilentlyContinue
-        if ($firebaseProcesses) {
-            Write-Host "   Stopping Firebase processes..." -ForegroundColor Gray
-            $firebaseProcesses | Stop-Process -Force
-        }
-        
-        # Stop Java processes (Firebase emulators)
-        $javaProcesses = Get-Process -Name "java" -ErrorAction SilentlyContinue
-        if ($javaProcesses) {
-            Write-Host "   Stopping emulator processes..." -ForegroundColor Gray
-            $javaProcesses | Stop-Process -Force
-        }
-        
-        # Stop Node processes (React dev server)
-        $nodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { 
-            $_.ProcessName -eq "node" -and $_.MainWindowTitle -like "*npm*" 
-        }
-        if ($nodeProcesses) {
-            Write-Host "   Stopping React dev server..." -ForegroundColor Gray
-            $nodeProcesses | Stop-Process -Force
-        }
-        
-        Write-Host "All development processes stopped" -ForegroundColor Green
-        
-    } catch {
-        Write-Host "Some processes may still be running: $_" -ForegroundColor Yellow
-        Write-Host "You may need to close terminal windows manually" -ForegroundColor Yellow
+    $processIds = @(Get-ProjectProcessIds)
+    if ($processIds.Count -eq 0) {
+        Write-Host "   Nothing of this project is running" -ForegroundColor Gray
+        return $true
     }
+    foreach ($processId in $processIds) {
+        $name = (Get-Process -Id $processId -ErrorAction SilentlyContinue).ProcessName
+        Write-Host "   Stopping $name (PID $processId) and what it started" -ForegroundColor Gray
+        taskkill /PID $processId /T /F | Out-Null
+    }
+
+    $left = @(Get-ProjectProcessIds)
+    if ($left.Count -gt 0) {
+        Write-Host "Still listening on this project's ports: PID $($left -join ', ')" -ForegroundColor Yellow
+        return $false
+    }
+    Write-Host "All development processes stopped" -ForegroundColor Green
+    return $true
 }
 
 function Restart-DevelopmentEnvironment {
     Write-Host "Restarting Development Environment..." -ForegroundColor Cyan
-    Stop-DevelopmentEnvironment
+    if (-not (Stop-DevelopmentEnvironment)) {
+        Write-Host "Not restarting: the stop did not finish." -ForegroundColor Red
+        return $false
+    }
     Start-Sleep -Seconds 3
-    Start-DevelopmentEnvironment
+    return (Start-DevelopmentEnvironment)
 }
 
 function Show-DevelopmentStatus {
@@ -223,15 +272,12 @@ function Export-EmulatorData {
     }
     
     Write-Host "Exporting emulator data..." -ForegroundColor Cyan
-    Push-Location "firebase"
-    try {
-        firebase emulators:export "./emulator-data" --force --config firebase.emulators.json
+    if (Invoke-EmulatorExport) {
         Write-Host "Data exported to ./firebase/emulator-data" -ForegroundColor Green
-    } catch {
-        Write-Host "Failed to export data: $_" -ForegroundColor Red
-    } finally {
-        Pop-Location
+        return $true
     }
+    Write-Host "Failed to export data" -ForegroundColor Red
+    return $false
 }
 
 function Show-Help {
@@ -242,7 +288,7 @@ function Show-Help {
     Write-Host ""
     Write-Host "Actions:" -ForegroundColor Yellow
     Write-Host "  start    - Start Firebase emulators + React dev server (default)" -ForegroundColor White
-    Write-Host "  stop     - Stop all development services and export data" -ForegroundColor White
+    Write-Host "  stop     - Export data, then stop this project's services (-Force: stop even if the export fails)" -ForegroundColor White
     Write-Host "  restart  - Stop and start all services" -ForegroundColor White
     Write-Host "  status   - Show status of all services" -ForegroundColor White
     Write-Host "  export   - Export emulator data" -ForegroundColor White
@@ -253,22 +299,23 @@ function Show-Help {
     Write-Host "  .\start-dev.ps1 -Action stop       # Stop everything" -ForegroundColor Gray
 }
 
-# Main script logic
+# Main script logic. A failed action exits nonzero, so a caller can tell.
+$succeeded = $true
 switch ($Action) {
     "start" {
-        Start-DevelopmentEnvironment
+        $succeeded = Start-DevelopmentEnvironment
     }
     "stop" {
-        Stop-DevelopmentEnvironment
+        $succeeded = Stop-DevelopmentEnvironment
     }
     "restart" {
-        Restart-DevelopmentEnvironment
+        $succeeded = Restart-DevelopmentEnvironment
     }
     "status" {
         Show-DevelopmentStatus
     }
     "export" {
-        Export-EmulatorData
+        $succeeded = Export-EmulatorData
     }
     "help" {
         Show-Help
@@ -279,3 +326,5 @@ switch ($Action) {
 if (-not $Action) {
     Show-Help
 }
+
+if ($succeeded -eq $false) { exit 1 }

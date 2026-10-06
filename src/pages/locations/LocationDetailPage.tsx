@@ -40,6 +40,7 @@ import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
 import { useInlineEditing } from 'shared/hooks/useInlineEditing';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 
 /** The eight kinds a place can be, as the select offers them. */
 const TYPE_OPTIONS: LocationType[] = [
@@ -133,6 +134,7 @@ const LocationDetailPage: React.FC = () => {
     deleteLocation,
     createLocation,
   } = useLocations();
+  const locationsPath = useCampaignCollectionPath('locations');
   const { npcs } = useNPCs();
   const { quests } = useQuests();
   const { rumors } = useRumors();
@@ -163,6 +165,7 @@ const LocationDetailPage: React.FC = () => {
     'name' | 'description' | 'feature' | 'tag'
   >();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   const index = useMemo(() => buildLocationIndex(locations), [locations]);
   const insideCount = location ? insideCountOf(index, location.id) : 0;
@@ -296,7 +299,10 @@ const LocationDetailPage: React.FC = () => {
    * for when the party actually arrives somewhere that was a line of scenery.
    */
   const promoteFeature = async (feature: string) => {
-    if (!location) return;
+    if (!location || !locationsPath) return;
+    // The feature comes off this place in the same commit as the new place is
+    // created (T088): as a second write, a failure left the new place behind
+    // and the feature still offering to be promoted again.
     await createLocation({
       name: feature,
       type: 'poi',
@@ -308,10 +314,14 @@ const LocationDetailPage: React.FC = () => {
       relatedQuests: [],
       notes: [],
       tags: [],
+    }, {
+      collection: locationsPath,
+      id: location.id,
+      change: (current) => {
+        if (!current) throw new Error('Location not found');
+        return { features: (current.features ?? []).filter((f: string) => f !== feature) };
+      },
     });
-    await save((current) => ({
-      features: (current.features ?? []).filter((f) => f !== feature),
-    }));
   };
 
   const handleDelete = async (childStrategy: Parameters<typeof deleteLocation>[1]) => {
@@ -320,7 +330,9 @@ const LocationDetailPage: React.FC = () => {
     navigateToPage('/locations');
   };
 
-  const canAct = gate.canAct;
+  // A place being deleted takes no edit -- the rules refuse every one (T088)
+  // -- so none is offered; only finishing the deletion is.
+  const canAct = gate.canAct && !location?.deleting;
 
   return (
     <>
@@ -572,7 +584,36 @@ const LocationDetailPage: React.FC = () => {
                 */}
                 <AttributionInfo item={location} />
 
-                {canAct && (
+                {/* A deletion that failed partway leaves its mark, and the rules
+                    refuse every edit to a marked place (T088): the one thing
+                    left to do is finish it, the way it started. */}
+                {gate.canAct && location.deleting && (
+                  <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
+                    <Typography variant="body-sm" color="secondary">
+                      Deleting {location.name} stopped partway. It takes no
+                      changes until it is finished.
+                    </Typography>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="delete-button"
+                      onClick={() => {
+                        setFinishError(null);
+                        handleDelete(location.deleting).catch((err: unknown) =>
+                          setFinishError(err instanceof Error ? err.message : 'Could not finish deleting')
+                        );
+                      }}
+                    >
+                      Finish deleting
+                    </Button>
+                    {finishError && (
+                      <Typography variant="body-sm" color="error" role="alert">
+                        {finishError}
+                      </Typography>
+                    )}
+                  </div>
+                )}
+                {canAct && !location.deleting && (
                   <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
                     <Button
                       variant="ghost"

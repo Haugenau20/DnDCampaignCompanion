@@ -1,7 +1,7 @@
 // src/features/campaign-entities/npcs/context/NPCContext.tsx
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { NPC, NPCContextValue, NPCRelationship, NPCNote, NPCStatus } from '../types';
-import { DomainData, RecordChange } from 'core/types/common';
+import { DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { useNPCData } from '../hooks/useNPCData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { writeRecordChange } from '../../shared/writeRecordChange';
@@ -134,7 +134,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const issuedIds = useRef<Set<string>>(new Set());
 
   // Add a new NPC
-  const addNPC = useCallback(async (npcData: DomainData<NPC>): Promise<string> => {
+  const addNPC = useCallback(async (npcData: DomainData<NPC>, alongside?: CreateAlongside): Promise<string> => {
     if (!hasRequiredContext) {
       throw new Error('Cannot add NPC: No group or campaign selected');
     }
@@ -152,7 +152,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       name: npcData.name,
       issuedIds: issuedIds.current,
       isLoaded: (candidateId) => Boolean(getNPCById(candidateId)),
-      write: (candidateId) => addData({ ...npcData, id: candidateId }, candidateId)
+      write: (candidateId) => addData({ ...npcData, id: candidateId }, candidateId, ...(alongside ? [alongside] : []))
     });
 
     return id;

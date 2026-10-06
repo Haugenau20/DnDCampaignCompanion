@@ -17,17 +17,14 @@ is hurt while it waits · `nit` bookkeeping or polish
 **Maintainer's focus** (2026-09-24): everything touching Firebase Storage and images
 on the site is `high`, ahead of anything that would otherwise rank there.
 
-The rows for T083–T101 and T037's rise were triaged 2026-10-04 from the code
+The rows for T083–T101 were triaged 2026-10-04 from the code
 review's severities (see [The 2026-10 code review](#the-2026-10-code-review)),
 adjusted for the images focus above.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| high | T037 | A group cannot be deleted | L | open | Members' data cannot be removed with their group. Decided 2026-10-02, plan first |
 | medium | T075 | Rename the site; header crowded | M | needs scoping | The name carries WotC's trademark, and the decision (2026-10-03) is to drop it; the new name is the maintainer's to pick |
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
-| medium | T088 | Concurrent structural edits corrupt locations, chapter order, conversions | L | open | Orphaned places, duplicate orders, an extra record per retry of a note conversion or promotion |
-| medium | T100 | `start-dev.ps1` stop can lose data and kills unrelated Java | M | open | Local edits lost on a failed export |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | medium | T106 | Should the production rules be public? | S | open | Public repo; public rules make any hole in them easy to find |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
@@ -90,13 +87,11 @@ evidence and fix direction. Read the report at pickup rather than copying it
 here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
 
 - Every confirmed finding not yet fixed is covered by an entry: T083–T101.
-  The ones filed under T037 were closed on 2026-10-05.
 - **Not filed**: the reviews' unverified leads, and the optional refactors.
   They stay in the reports.
 - **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its open findings were filed under T037 (closed
-  2026-10-05); the rest
-  of that scope stays unreviewed by decision.
+  (maintainer, 2026-10-04). Its open findings are closed; the rest of that
+  scope stays unreviewed by decision.
 - App source was byte-identical to the reviewed commit `64fe195` when these were
   filed, and each entry's primary location was opened on 2026-10-04.
 
@@ -152,38 +147,6 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T088 — Concurrent structural edits corrupt locations, chapter order and conversions
-**Type** bug · **Size** L · **Status** open · **Verified** 2026-10-05
-
-Each of these decides from a stale local copy, then writes:
-
-- **Location delete** (DATA-006): `deleteLocation` takes the children from
-  the local list, so a child added or moved in during a delete is orphaned,
-  and one moved out is still deleted. Moves are transactional now
-  (`updateDataAfterReading`), but a transaction reads documents, not
-  queries, so it cannot find "every child" either. Needs a design.
-- **Chapter order** (DATA-007): `StoryContext.tsx:472-488` shifts orders from
-  the local list; concurrent inserts gave 1, 2, 3, 3. **Catch**: the same
-  limit. A transaction cannot read "all chapters", so serializing this needs
-  a shared document every structural change reads and writes (an order list
-  or a version, plus a rules change and a backfill for existing campaigns),
-  or a deliberate tiebreak (gaps, and a stable second key such as
-  `dateAdded`) that makes duplicates harmless. The maintainer's call; plan
-  first.
-- **The other conversions** (DATA-005, 03; pass 5 reproduced the first, 17):
-  each creates the new record, then marks its source in a second write, so
-  a failed mark leaves the record behind and a retry makes another.
-  Converting a note's detected entity (`useQuickAddCreate.ts:158-179` then
-  `NoteContext.markEntityAsConverted`), a note into a rumour, and promoting
-  free text into a place (`promoteFeature`, `LocationDetailPage.tsx:298`;
-  `promotePlace`, `QuestDetailPage.tsx:320`). Rumour conversions already
-  commit both halves as one transaction
-  (`DocumentService.createDocumentWithUpdates`); that is the tool, but each
-  of these crosses a context: the note is a private document under `users/`,
-  and the create runs through another entity's context (NPC, location), so
-  the two halves have to meet in one call first.
-- **Source**: code review, 2026-10-04
-
 ---
 
 ## Features and enhancements
@@ -202,6 +165,8 @@ neither.
   confirmation has to say how many places that removes in total. One batch is
   atomic, so the descendants-first ordering `deleteLocation` keeps for its
   sequential writes stops mattering. Delete pictures after the documents.
+  It must still mark each place `deleting` and ask the server what is inside
+  it, as `deleteLocation` does, or a place added inside meanwhile is orphaned.
 - **The pattern to copy**: `shared/hooks/useSelection` (mode and ticked ids),
   `campaign-entities/shared/EntityBatchActions.tsx` (the bar: statuses, an
   optional Delete and its confirmation), and a batched pair on the context that
@@ -443,40 +408,6 @@ Reported by the maintainer on a phone (2026-10-02). **Not reproduced**
 
 ---
 
-### T037 — A group cannot be deleted
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-05
-
-The deletions it would build on are sound since 2026-10-05: the last-admin
-guard is transactional, a failed account deletion can be retried, and
-`deleteCampaign` is resumable (a record in `groups/{g}/campaignDeletions/{c}`,
-a daily `resumeCampaignDeletionsDaily` for deletions nobody retried) and
-closed to writes while it runs (the campaign's `deleting` mark, enforced by
-`campaignOpen` in the production rules). Uploads are not fenced: a picture
-uploaded into a campaign being deleted is left to the image sweeps.
-
-**Decided (maintainer, 2026-10-02): group deletion will be built** — it is a
-plan to write, not something to start without one. The maintainer's reason is
-data retention: as long as a group cannot be deleted, the app keeps its
-members' data with no way to remove it. The plan should say what is deleted
-and what is kept (e.g. a member's own profile when they belong to another
-group), and check what account deletion (`deleteUser`) already leaves behind,
-since the two answer the same question.
-
-No service method, no Cloud Function. Not a small one either: deleting a group
-means cascading through its campaigns (each with its own subcollections), its
-`users`, its `usernames` reservations and its `registrationTokens`, plus every
-member's notes for every campaign in it.
-
-- **Precedent**: `deleteCampaign`, an Admin SDK `recursiveDelete` in a
-  callable, resumable through a deletion record outside the subtree it
-  deletes. Group deletion needs the same: the group document cannot record
-  its own unfinished deletion. Its doc comment at
-  `src/core/services/firebase/campaign/CampaignService.ts:225` explains why a
-  client cannot do this itself.
-- **Meanwhile**: `/admin/group`'s danger zone offers **Leave group** only,
-  which is implemented (`removeUserFromGroup`).
-- **Source**: Phase 14.3, while building `/admin/group`
-
 ### T059 — Create React App's peer dependencies no longer resolve
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-09-24
 
@@ -507,7 +438,9 @@ the **global** CLI:
 
 - `npm i -g firebase-tools@15.22.4`, then one `start-dev.ps1` start/stop round
   trip. The PowerShell script itself was not run; only the import/export it
-  performs was.
+  performs was. The round trip also checks what was only run with stubs on
+  2026-10-05: start compiling `firebase/functions` first, and stop exporting
+  before it ends this project's port listeners (and nothing else).
 - **Why not latest**: from 15.23.0 the CLI's HTTP client sends every request
   through `HTTPS_PROXY`, `127.0.0.1` included, and ignores `NO_PROXY`. Behind a
   proxy the Storage emulator's `firestore.get()` then reaches the proxy instead
@@ -535,21 +468,6 @@ time anyone edits it.
   them or keep the fallback on purpose.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted
-
-### T100 — `start-dev.ps1` stop can lose data and kills unrelated Java; start skips compiling Functions
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-04
-
-- OPS-001: `scripts/start-dev.ps1:128-129` runs the export and prints "Data
-  exported successfully" regardless: `firebase` is a native command, so a
-  failed export never reaches the `catch`. Then it shuts the emulators down.
-- OPS-002: `:148-152` force-stops every `java` process on the machine.
-- OPS-004: start never builds `firebase/functions`, so the emulators can run
-  missing or stale compiled code while the UI looks ready.
-- OPS-003: the sample-data generator logs a failure, then announces completion
-  and exits 0, which `manage-dev-data.ps1` trusts.
-- **Findings**: 13. OPS-001/002 are source-only; the reviewers could not run
-  PowerShell. **Catch**: do it with T065's start/stop round trip.
-- **Source**: code review, 2026-10-04
 
 ---
 

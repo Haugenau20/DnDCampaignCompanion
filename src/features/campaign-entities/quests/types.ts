@@ -1,5 +1,5 @@
 // src/features/campaign-entities/quests/types.ts
-import { BaseContent, DomainData, RecordChange } from 'core/types/common';
+import { BaseContent, DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { Location } from '../locations/types';
 
 export type QuestStatus = 'active' | 'completed' | 'failed';
@@ -83,7 +83,8 @@ export interface QuestContextValue extends QuestContextState {
   addQuestObjective: (questId: string, description: string) => Promise<void>;
   editQuestObjective: (questId: string, objectiveId: string, description: string) => Promise<void>;
   moveQuestObjective: (questId: string, objectiveId: string, direction: 'up' | 'down') => Promise<void>;
-  addQuest: (quest: DomainData<Quest>) => Promise<string>;
+  /** `alongside`: a change to another record that commits with this one (T088). */
+  addQuest: (quest: DomainData<Quest>, alongside?: CreateAlongside) => Promise<string>;
   /**
    * Write `change` to the quest: the fields it names, and nothing else
    * (T083). Never the whole record -- a copy from the listener can be behind

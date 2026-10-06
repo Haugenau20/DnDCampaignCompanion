@@ -2,6 +2,7 @@
 import * as admin from "firebase-admin";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {imageBucket} from "../shared/imageBucket";
+import {checkedBulkWriter} from "../shared/checkedBulkWriter";
 
 /**
  * The record of a campaign deletion that has started and not yet finished,
@@ -50,25 +51,16 @@ export async function finishCampaignDeletion(
   // delete their notes and progress for this campaign, and clear
   // activeCampaignId on any profile that still points at it.
   //
-  // BulkWriter rather than WriteBatch: a batch caps at 500 operations, and
-  // a long-running campaign can exceed that (a weekly game with 5 players
-  // reaches it in two years of session notes). BulkWriter chunks and
-  // retries on its own, so there is no limit to trip over.
-  //
-  // `close()` never rejects: a write that exhausted its retries rejects
-  // only its own promise (DATA-004). So every write's outcome is kept,
-  // caught on the spot so none goes unhandled, and checked after.
+  // A bulk writer: a long-running campaign can pass a batch's 500
+  // operations (a weekly game with 5 players reaches it in two years of
+  // session notes).
   const groupUsersSnapshot = await groupRef.collection("users").get();
 
-  const writer = admin.firestore().bulkWriter();
-  const outcomes: Promise<{error: unknown} | null>[] = [];
-  const observe = (write: Promise<unknown>) => {
-    outcomes.push(write.then(() => null, (error) => ({error})));
-  };
+  const writer = checkedBulkWriter();
 
   for (const userDoc of groupUsersSnapshot.docs) {
     if (userDoc.data()?.activeCampaignId === campaignId) {
-      observe(writer.update(userDoc.ref, {activeCampaignId: null}));
+      writer.update(userDoc.ref, {activeCampaignId: null});
     }
 
     const notesSnapshot = await userDoc.ref
@@ -76,29 +68,15 @@ export async function finishCampaignDeletion(
       .where("campaignId", "==", campaignId)
       .get();
 
-    notesSnapshot.docs.forEach((noteDoc) => {
-      observe(writer.delete(noteDoc.ref));
-    });
+    notesSnapshot.docs.forEach((noteDoc) => writer.delete(noteDoc.ref));
 
     // Each member's reading progress for this campaign (T073), which
     // sits beside their notes, keyed by the campaign's id. Deleting a
     // document that does not exist succeeds, so no read is needed.
-    observe(writer.delete(
-      userDoc.ref.collection("story-progress").doc(campaignId)
-    ));
+    writer.delete(userDoc.ref.collection("story-progress").doc(campaignId));
   }
 
-  await writer.close();
-  const failures = (await Promise.all(outcomes))
-    .filter((outcome): outcome is {error: unknown} => outcome !== null);
-  if (failures.length > 0) {
-    const first = failures[0].error;
-    throw new Error(
-      `${failures.length} member record(s) could not be cleaned up: ${
-        first instanceof Error ? first.message : String(first)
-      }`
-    );
-  }
+  await writer.close("member record(s)");
 
   // 2. Recursively delete the campaign document and every subcollection
   // beneath it (npcs, locations, quests, rumors, chapters,

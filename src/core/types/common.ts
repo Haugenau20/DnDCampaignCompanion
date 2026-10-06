@@ -58,6 +58,28 @@ export interface BaseContent extends IdentifiableContent, ContentAttribution {
 export type DomainData<T> = Omit<T, keyof ContentAttribution | 'id'>;
 
 /**
+ * A change to another record that commits with a create, or not at all
+ * (T088, DATA-005).
+ *
+ * For an action that turns one thing into a record: a note's detected entity
+ * into an NPC, a location's feature into a place. Created first and changed
+ * after, a failed change left the new record behind and every retry made
+ * another. `change` is given the other record as the server holds it, inside
+ * the transaction, and the id the new record got; it may run more than once,
+ * and throwing refuses the whole action.
+ *
+ * @typeParam S - the other record's type
+ */
+export interface CreateAlongside<S = any> {
+  /** The other record's collection: a name or a full path. */
+  collection: string;
+  /** The other record's id. */
+  id: string;
+  /** The fields to write on the other record. */
+  change: (current: (S & { id: string }) | undefined, createdId: string) => Partial<S>;
+}
+
+/**
  * What an update writes to one record (T083): the fields to set, or a
  * function that works them out from the record as the server holds it.
  *

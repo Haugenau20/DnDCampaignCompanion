@@ -17,10 +17,13 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 
 ## Running the Project
 
-- Start: **`.\scripts\start-dev.ps1 -Action start`** — Firebase emulators, then `npm start`, both
-  directly on the host. **No Docker.**
+- Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
+  Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
+  the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
-  emulator data to `firebase/emulator-data`; `start` re-imports it if present)
+  emulator data to `firebase/emulator-data`; `start` re-imports it if present). A failed export
+  stops nothing; `-Force` stops anyway and loses the changes since the last export. `stop` ends only
+  what listens on this project's ports (and what those processes started), not every `java`.
 - Sample data: `.\scripts\manage-dev-data.ps1 -Action generate`
 - **Never stop a dev server or the emulators you did not start in this session.** The maintainer
   usually has them running. Need to switch branches under a running dev server? Ask first, or use a
@@ -54,7 +57,6 @@ the errors name files from whichever branch you visited.
   tries `::1` first and outlasts the 2 s timeout. Symptoms, if they return: `start`/`restart` claims
   the emulators "failed to start within 45 seconds" and never runs `npm start`, `stop` **silently
   skips the export**, and `status` says nothing is running. Check ports 3000/4000/5001/8080/9099/9199.
-- `-Action stop` can leave an orphaned `react-scripts` holding port 3000.
 - Responsive checks: a maximized Chrome window ignores resize below its minimum width. Render the app
   in a 320px-wide iframe instead — media queries evaluate against the iframe's own viewport.
 - The header overflows horizontally below ~380px on **every** route (tracked in `TODO.md`). If your
@@ -122,7 +124,7 @@ from 15.23.0 the CLI ignores `NO_PROXY`, so behind a proxy the Storage rules sui
 The reason is recorded in that file.
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
-  `redeemInvitation`, `setMemberRole`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`
+  `redeemInvitation`, `setMemberRole`, `deleteGroup`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`
   whose handler is exported as `admitAccount`), the last-admin guard in `removeUserFromGroup` /
   `deleteUser`, device sign-in (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`),
   and `extractEntities`'s party exclusion — with OpenAI stubbed by `jest.mock("openai")`, the way to
@@ -134,6 +136,8 @@ The reason is recorded in that file.
   the month. `now` is injected because the Storage emulator cannot backdate a file's `timeCreated`.
   `resumeCampaignDeletionsDaily` likewise: its body `resumeCampaignDeletions(now)` finishes campaign
   deletions that failed and were never retried (their record in `groups/{g}/campaignDeletions`).
+  `resumeGroupDeletionsDaily` the same for groups: `resumeGroupDeletions(now)`, records in the
+  top-level `groupDeletions`.
   `sweepContactThrottleDaily` too: `sweepContactThrottle(now)` deletes the contact form's expired
   budgets (`contactThrottle`), which the privacy page promises are gone within a day.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
@@ -161,6 +165,11 @@ in production requires the functions' runtime service account to hold **Service 
 Creator** on itself. The emulator needs nothing, so no test catches it — the live symptom is every
 claim failing as `internal`. Expired `deviceSignIns` docs are deleted lazily by `startDeviceSignIn`;
 a Firestore TTL policy on `expiresAt` is the intended sweep.
+
+**Inside the Functions emulator, `admin.firestore` is a wrapped stand-in without `FieldValue`,
+`FieldPath` or `Timestamp`.** Import them from `firebase-admin/firestore`. The jest suite uses the
+real namespace, so `admin.firestore.FieldValue.serverTimestamp()` passes every test and then fails
+every call in the dev app ("Cannot read properties of undefined"). Only a browser check finds it.
 
 **Rules are deployed from the repo** (T105): every merge to `main` deploys `firestore.rules.prod`
 and `storage.rules.prod`, so a change to either is live once merged, and a console edit lasts only

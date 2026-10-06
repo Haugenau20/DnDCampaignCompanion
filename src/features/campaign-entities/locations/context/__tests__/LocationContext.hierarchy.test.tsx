@@ -12,6 +12,7 @@ import React from 'react';
 import { render, act } from '@testing-library/react';
 import { LocationProvider, useLocations } from '../LocationContext';
 import { Location } from '../../types';
+import { serverThrough } from '@/test-utils/update-after-reading';
 
 const mockUseAuth = jest.fn();
 const mockUseUser = jest.fn();
@@ -99,6 +100,8 @@ describe('LocationContext — moving and deleting in a tree', () => {
       updateDataAfterReading: jest.fn(async (id: string, decide: any) =>
         updateData(id, await decide(async (other: string) => serverTree.find((l) => l.id === other)))
       ),
+      // A delete asks the server what is inside, and marks or moves it (T088).
+      ...serverThrough<Location>(updateData, () => serverTree),
       deleteData,
     });
 
@@ -208,7 +211,10 @@ describe('LocationContext — moving and deleting in a tree', () => {
         await context.deleteLocation('gondolin', 'promote-to-grandparent');
       });
 
-      expect(order).toEqual(['update:kings-square', 'delete:gondolin']);
+      // CHANGED for T088: the place is marked first, so nothing can be added
+      // inside it while its children move out. The order this test is about
+      // -- children re-homed before the parent goes -- is unchanged.
+      expect(order).toEqual(['update:gondolin', 'update:kings-square', 'delete:gondolin']);
     });
 
     it('promotes to the top level when the deleted place had no parent', async () => {
@@ -229,7 +235,14 @@ describe('LocationContext — moving and deleting in a tree', () => {
         'kings-square',
         'gondolin',
       ]);
-      expect(updateData).not.toHaveBeenCalled();
+      // CHANGED for T088: it was "writes nothing but the deletes". Each place
+      // is now marked before what is inside it is asked for, and that is all
+      // it writes besides the deletes.
+      expect(updateData.mock.calls).toEqual([
+        ['gondolin', { deleting: 'delete-subtree' }],
+        ['kings-square', { deleting: 'delete-subtree' }],
+        ['fountain', { deleting: 'delete-subtree' }],
+      ]);
     });
 
     it('still takes the subtree when no strategy is named', async () => {
@@ -252,6 +265,7 @@ describe('LocationContext — moving and deleting in a tree', () => {
     // Asserted, not eyeballed. Without the visited sets these calls do not
     // return and the suite times out.
     beforeEach(() => {
+      serverTree = [place('a', 'Alpha', 'b'), place('b', 'Beta', 'a'), place('inner', 'Inner', 'a')];
       mockUseLocationData.mockReturnValue({
         locations: [
           place('a', 'Alpha', 'b'),

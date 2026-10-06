@@ -218,6 +218,13 @@ const PrivacyPolicyPage: React.FC = () => {
               and your place in the story are deleted.
             </Typography>
             <Typography>
+              A group&apos;s admin can delete the whole group. That deletes it
+              for everyone: every campaign in it and everything written there,
+              every member&apos;s private notes and place in the story, and its
+              pictures. Members keep their accounts and any other groups they
+              are in.
+            </Typography>
+            <Typography>
               Pictures are shown to the members of the group they belong to.
               Each one is served from a link that is hard to guess, and anyone
               who has its link can open it — the app only ever gives that link

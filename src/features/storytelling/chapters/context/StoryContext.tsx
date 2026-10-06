@@ -1,8 +1,9 @@
 // src/features/storytelling/chapters/context/StoryContext.tsx
-import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { Chapter, ChapterProgress, StoryProgress } from '../types';
 import { DomainData } from 'core/types/common';
 import { useChapterData } from '../hooks/useChapterData';
+import { inReadingOrder, numberedInReadingOrder } from '../utils/chapter-order';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'features/user-management';
@@ -91,6 +92,28 @@ const moveTo = (chapter: Chapter, order: number): ChapterWrite => ({
 });
 
 /**
+ * The moves that put `sequence` at places 1, 2, 3, ... -- one for each chapter
+ * whose stored `order` is not already its place (T088).
+ *
+ * Every structural change ends here, so it rewrites whatever is out of place,
+ * not only what it moved itself: a shared order or a gap left by a concurrent
+ * change is healed by the next one.
+ *
+ * @param sequence The chapters as stored, in the reading order they should have
+ * @param skip The chapter whose own write carries its place, if any
+ */
+const placeWrites = (sequence: Chapter[], skip?: string): ChapterWrite[] =>
+  sequence.flatMap((chapter, index) =>
+    chapter.id !== skip && chapter.order !== index + 1 ? [moveTo(chapter, index + 1)] : []
+  );
+
+/** `list` with `item` at `place` (1-based), clamped to the list's ends. */
+const withAt = <T,>(list: T[], item: T, place: number): T[] => {
+  const index = Math.min(Math.max(place - 1, 0), list.length);
+  return [...list.slice(0, index), item, ...list.slice(index)];
+};
+
+/**
  * A new chapter's id: `chapter-` and a random suffix, the same shape notes use
  * (T029). It never encodes order, and it cannot collide with an older
  * `chapter-NN` id.
@@ -161,11 +184,21 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Use existing hooks for data
   const demand = useListenerDemand();
   const { 
-    chapters, 
+    chapters: storedChapters, 
     loading: chaptersLoading, 
     error: chaptersError, 
     hasRequiredContext
   } = useChapterData({ enabled: demand.wanted });
+
+  /*
+    Two lists of the same chapters (T088). `chapters`, which every reader
+    gets, is numbered by place: two chapters can share a stored `order` after
+    concurrent inserts, and a reader should never see "3, 3". `reading` keeps
+    the stored values, which the structural changes below need to know what
+    is out of place.
+  */
+  const reading = useMemo(() => inReadingOrder(storedChapters), [storedChapters]);
+  const chapters = useMemo(() => numberedInReadingOrder(storedChapters), [storedChapters]);
   
   // `autoFetch: false` because nothing renders off this instance's `data`:
   // chapters come from `useChapterData()` above. Writes name this render's
@@ -443,8 +476,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [storedProgress, chapters.length]);
 
   /**
-   * Update a chapter. A change of `order` moves it, and shifts every chapter
-   * between its old and new place by one to make room -- all in one batch.
+   * Update a chapter. A change of `order` (its place, as readers see it) moves
+   * it there and renumbers every chapter out of place -- all in one batch.
    */
   const updateChapter = useCallback(async (chapterId: string, updates: Partial<Chapter>) => {
     if (!user) {
@@ -472,37 +505,34 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    const oldOrder = chapter.order;
-    const newOrder = fields.order;
-    if (newOrder < 1) {
+    if (fields.order < 1) {
       throw new Error('Chapter order must be at least 1');
     }
 
-    // Moving later pulls the chapters it passes back by one; moving earlier
-    // pushes them on by one. Only `order` changes on them, so their created*
-    // and modified* fields stay exactly as their authors left them (#1203).
-    const passed = chapters.filter(c => c.id !== chapterId && (oldOrder < newOrder
-      ? c.order > oldOrder && c.order <= newOrder
-      : c.order >= newOrder && c.order < oldOrder));
-    const shift = oldOrder < newOrder ? -1 : 1;
+    // The others move by place. Only `order` changes on them, so their
+    // created* and modified* fields stay exactly as their authors left them
+    // (#1203).
+    const stored = reading.find(c => c.id === chapterId)!;
+    const sequence = withAt(reading.filter(c => c.id !== chapterId), stored, fields.order);
+    const place = sequence.indexOf(stored) + 1;
 
     await commitChapterWrites(chaptersPath, [
-      ...passed.map(c => moveTo(c, c.order + shift)),
+      ...placeWrites(sequence, chapterId),
       {
         type: 'update',
         id: chapterId,
         data: {
           ...fields,
+          order: place,
           ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
         }
       }
     ]);
-  }, [updateData, chapters, getChapterById, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
+  }, [updateData, reading, getChapterById, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
 
   /**
-   * Create a chapter at `chapterData.order`, or after the last one. Inserting
-   * before existing chapters moves each of them on by one, in the same batch
-   * that writes the new chapter.
+   * Create a chapter at place `chapterData.order`, or after the last one, and
+   * renumber every chapter out of place, in the same batch that writes it.
    */
   const createChapter = useCallback(async (chapterData: DomainData<Chapter>) => {
     if (!user) {
@@ -513,19 +543,18 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    const newOrder = chapterData.order ?? (chapters.length > 0
-      ? Math.max(...chapters.map(c => c.order)) + 1
-      : 1);
-
     // Keep in sync with the identical guard in updateChapter
-    if (newOrder < 1) {
+    if (chapterData.order !== undefined && chapterData.order < 1) {
       throw new Error('Chapter order must be at least 1');
     }
 
     const chapterId = generateChapterId();
+    const placeholder = { id: chapterId } as Chapter;
+    const sequence = withAt(reading, placeholder, chapterData.order ?? reading.length + 1);
+    const newOrder = sequence.indexOf(placeholder) + 1;
 
     await commitChapterWrites(chaptersPath, [
-      ...chapters.filter(c => c.order >= newOrder).map(c => moveTo(c, c.order + 1)),
+      ...placeWrites(sequence, chapterId),
       {
         type: 'set',
         id: chapterId,
@@ -542,9 +571,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ]);
 
     return chapterId;
-  }, [chapters, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
+  }, [reading, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
 
-  /** Delete a chapter, and move every later chapter back by one to close the gap. */
+  /** Delete a chapter, and renumber every chapter out of place to close the gap. */
   const deleteChapter = useCallback(async (chapterId: string) => {
     if (!user) {
       throw new Error('You must be signed in to delete chapters');
@@ -561,9 +590,9 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     await commitChapterWrites(chaptersPath, [
       { type: 'delete', id: chapterId },
-      ...chapters.filter(c => c.order > chapter.order).map(c => moveTo(c, c.order - 1))
+      ...placeWrites(reading.filter(c => c.id !== chapterId))
     ]);
-  }, [getChapterById, chapters, user, hasRequiredContext, chaptersPath]);
+  }, [getChapterById, reading, user, hasRequiredContext, chaptersPath]);
 
   /** Renumber the chapters 1, 2, 3, ... in their current order, closing any gaps. */
   const reorderChapters = useCallback(async () => {
@@ -575,15 +604,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
-    const sortedChapters = [...chapters].sort((a, b) => a.order - b.order);
-    await commitChapterWrites(
-      chaptersPath,
-      sortedChapters
-        .map((chapter, index) => ({ chapter, order: index + 1 }))
-        .filter(({ chapter, order }) => chapter.order !== order)
-        .map(({ chapter, order }) => moveTo(chapter, order))
-    );
-  }, [chapters, user, hasRequiredContext, chaptersPath]);
+    await commitChapterWrites(chaptersPath, placeWrites(reading));
+  }, [reading, user, hasRequiredContext, chaptersPath]);
 
   // `isLoading` means "there is nothing to show yet" (T044), so it is exactly
   // `useChapterData`'s `loading` -- which already stops counting a refetch
