@@ -11,12 +11,14 @@ import {
 import { useNavigation } from 'shared/context/NavigationContext';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import PageShell from 'shared/components/page-shell/PageShell';
-import { RosterEmpty } from 'core/components/Roster';
+import { RosterEmpty, RosterBatchBar } from 'core/components/Roster';
+import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
+import useSelection from 'shared/hooks/useSelection';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import Button from 'core/components/Button';
 import ResumeBar from './components/ResumeBar';
 import StoryViewTabs from './components/StoryViewTabs';
-import { Plus, List, Grid } from 'lucide-react';
+import { Plus, List, Grid, Trash } from 'lucide-react';
 import { clsx } from 'clsx';
 import { readLocalStorage, writeLocalStorage } from 'core/utils/local-storage';
 
@@ -42,6 +44,9 @@ function normaliseFilterMode(stored: string | null): FilterMode {
   return stored === 'unread' ? 'unread' : 'all';
 }
 
+/** "1 chapter", "3 chapters". */
+const countChapters = (n: number) => `${n} chapter${n === 1 ? '' : 's'}`;
+
 /**
  * Session chapters index: campaign-wide resume bar, a search + unread
  * filter row, and the chapter list itself in either list or shelf form.
@@ -63,14 +68,20 @@ const ChaptersPage: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { chapters, storyProgress, isLoading } = useStory();
+  const { chapters, storyProgress, isLoading, deleteChapters } = useStory();
   const { navigateToPage } = useNavigation();
+  /** Selection mode for deleting several chapters at once (T017); the list view only. */
+  const selection = useSelection();
+  const { clear: clearSelection } = selection;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const gate = usePageGate('story', { loading: isLoading });
 
   useEffect(() => {
     writeLocalStorage(VIEW_PREFERENCE_KEY, viewMode);
-  }, [viewMode]);
+    // The shelf has no checkboxes, so a selection made in the list cannot follow it there.
+    if (viewMode !== 'list') clearSelection();
+  }, [viewMode, clearSelection]);
 
   useEffect(() => {
     writeLocalStorage(FILTER_PREFERENCE_KEY, filterMode);
@@ -210,6 +221,17 @@ const ChaptersPage: React.FC = () => {
                 </button>
               </div>
 
+              {gate.canAct && viewMode === 'list' && (
+                <Button
+                  variant={selection.active ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={selection.toggleActive}
+                  className="ml-auto"
+                >
+                  {selection.active ? 'Exit Selection' : 'Select Chapters'}
+                </Button>
+              )}
+
               <div className="flex rounded-lg p-1 bg-secondary ml-auto">
                 <button
                   type="button"
@@ -239,6 +261,32 @@ const ChaptersPage: React.FC = () => {
               </div>
             </div>
 
+            {selection.active && selection.selected.size > 0 && (
+              <div className="mb-4">
+                <RosterBatchBar label={`${countChapters(selection.selected.size)} selected`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(true)}
+                    startIcon={<Trash size={16} className="feedback-error" />}
+                  >
+                    Delete
+                  </Button>
+                </RosterBatchBar>
+                <DeleteConfirmationDialog
+                  isOpen={confirmingDelete}
+                  onClose={() => setConfirmingDelete(false)}
+                  onConfirm={async () => {
+                    await deleteChapters(Array.from(selection.selected));
+                    clearSelection();
+                  }}
+                  itemName={countChapters(selection.selected.size)}
+                  itemType={selection.selected.size === 1 ? 'chapter' : 'chapters'}
+                  message={`Delete ${countChapters(selection.selected.size)}? The chapters after them are renumbered to close the gap.`}
+                />
+              </div>
+            )}
+
             {visibleItems.length === 0 ? (
               <RosterEmpty
                 title="No chapters match this view"
@@ -250,6 +298,11 @@ const ChaptersPage: React.FC = () => {
                 onChapterSelect={handleChapterSelect}
                 onEditChapter={handleEditChapter}
                 isAdmin={gate.canAct}
+                selection={
+                  selection.active
+                    ? { selected: selection.selected, onToggle: selection.setSelected }
+                    : undefined
+                }
               />
             ) : (
               <BookshelfView

@@ -25,6 +25,20 @@ export interface ChapterViewProps {
   isAdmin?: boolean;
 }
 
+/**
+ * Selection mode for the page's batch delete (T017). While it is set every row
+ * is a checkbox: a click ticks the row rather than opening the chapter.
+ */
+export interface ChapterSelection {
+  selected: Set<string>;
+  onToggle: (chapterId: string, selected: boolean) => void;
+}
+
+/** {@link ChapterList}'s props: the shared view props, plus selection, which only the list offers. */
+export interface ChapterListProps extends ChapterViewProps {
+  selection?: ChapterSelection;
+}
+
 /** Action button label, one per read state. */
 const ACTION_LABEL: Record<ChapterReadState, string> = {
   read: 'Reread',
@@ -69,19 +83,36 @@ const ChapterRowView: React.FC<{
   onChapterSelect: (chapterId: string) => void;
   onEditChapter?: (chapterId: string) => void;
   isAdmin?: boolean;
-}> = ({ item, onChapterSelect, onEditChapter, isAdmin }) => {
+  selection?: ChapterSelection;
+}> = ({ item, onChapterSelect, onEditChapter, isAdmin, selection }) => {
   const { chapter, state, percentRead, isCurrent } = item;
   const isMuted = state === 'read' && !isCurrent;
+  const isTicked = selection?.selected.has(chapter.id) ?? false;
 
   return (
     <div
       className={clsx(
         'flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1 py-3 px-2 border-b card-border last:border-b-0',
         'selectable-item cursor-pointer transition-colors',
-        isCurrent && 'border-l-4 border-l-accent bg-accent'
+        isCurrent && 'border-l-4 border-l-accent bg-accent',
+        isTicked && 'roster-row-selected'
       )}
-      onClick={() => onChapterSelect(chapter.id)}
+      onClick={() =>
+        selection ? selection.onToggle(chapter.id, !isTicked) : onChapterSelect(chapter.id)
+      }
     >
+      {selection && (
+        <input
+          type="checkbox"
+          aria-label={`Select ${chapter.title}`}
+          checked={isTicked}
+          onChange={(event) => selection.onToggle(chapter.id, event.target.checked)}
+          // The row's own click would toggle it a second time.
+          onClick={(event) => event.stopPropagation()}
+          className="shrink-0"
+        />
+      )}
+
       {/* Chapter number */}
       <div className="w-8 sm:w-11 shrink-0">
         <Typography variant="body-sm" color="secondary" centered>
@@ -132,20 +163,23 @@ const ChapterRowView: React.FC<{
 
       {/* Action(s) — the row itself is clickable, but the action always has a
           real <button> so it stays keyboard-reachable. stopPropagation keeps
-          a click here from also firing the row's own onClick. */}
-      <div
-        className="shrink-0 flex items-center gap-1 ml-auto sm:ml-0"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <Button variant="ghost" size="sm" onClick={() => onChapterSelect(chapter.id)}>
-          {ACTION_LABEL[state]}
-        </Button>
-        {isAdmin && onEditChapter && (
-          <Button variant="ghost" size="sm" onClick={() => onEditChapter(chapter.id)}>
-            Edit
+          a click here from also firing the row's own onClick. Selection mode
+          has no actions: the checkbox is the row's one control. */}
+      {!selection && (
+        <div
+          className="shrink-0 flex items-center gap-1 ml-auto sm:ml-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Button variant="ghost" size="sm" onClick={() => onChapterSelect(chapter.id)}>
+            {ACTION_LABEL[state]}
           </Button>
-        )}
-      </div>
+          {isAdmin && onEditChapter && (
+            <Button variant="ghost" size="sm" onClick={() => onEditChapter(chapter.id)}>
+              Edit
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -183,11 +217,12 @@ const RunRowView: React.FC<{
  * nobody has opened yet collapsed into a single line rather than three
  * empty-looking section headers.
  */
-const ChapterList: React.FC<ChapterViewProps> = ({
+const ChapterList: React.FC<ChapterListProps> = ({
   items,
   onChapterSelect,
   onEditChapter,
   isAdmin = false,
+  selection,
 }) => {
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
   const [showAllTrailing, setShowAllTrailing] = useState(false);
@@ -269,6 +304,7 @@ const ChapterList: React.FC<ChapterViewProps> = ({
                     onChapterSelect={onChapterSelect}
                     onEditChapter={onEditChapter}
                     isAdmin={isAdmin}
+                    selection={selection}
                   />
                 ) : (
                   <React.Fragment key={row.id}>
@@ -285,6 +321,7 @@ const ChapterList: React.FC<ChapterViewProps> = ({
                           onChapterSelect={onChapterSelect}
                           onEditChapter={onEditChapter}
                           isAdmin={isAdmin}
+                          selection={selection}
                         />
                       ))}
                   </React.Fragment>

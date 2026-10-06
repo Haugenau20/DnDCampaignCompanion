@@ -1,6 +1,6 @@
 // src/pages/story/__tests__/ChaptersPage.test.tsx
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import ChaptersPage from "../ChaptersPage";
 
@@ -59,6 +59,7 @@ interface StoryContextMock {
   chapters: any[];
   storyProgress: { currentChapter: string; chapterProgress: Record<string, any> };
   isLoading: boolean;
+  deleteChapters?: jest.Mock;
 }
 
 const NO_PROGRESS = { currentChapter: "", chapterProgress: {} };
@@ -109,6 +110,14 @@ jest.mock("features/storytelling", () => ({
     >
       {props.items?.map((item: any) => (
         <div key={item.chapter.id}>
+          {props.selection && (
+            <input
+              type="checkbox"
+              aria-label={`Select ${item.chapter.title}`}
+              checked={props.selection.selected.has(item.chapter.id)}
+              onChange={(e) => props.selection.onToggle(item.chapter.id, e.target.checked)}
+            />
+          )}
           <span data-testid={`list-title-${item.chapter.id}`}>{item.chapter.title}</span>
           <button
             data-testid={`list-select-${item.chapter.id}`}
@@ -521,6 +530,69 @@ describe("ChaptersPage", () => {
     it("passes the full item count to BookshelfView", () => {
       renderPage();
       expect(screen.getByTestId("bookshelf-view")).toHaveAttribute("data-count", "3");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // T017: deleting several chapters at once, from the list view
+  // -------------------------------------------------------------------------
+  describe("batch delete", () => {
+    beforeEach(() => {
+      localStorage.setItem("chapters-view-preference", "list");
+      mockStoryContext.deleteChapters = jest.fn().mockResolvedValue(undefined);
+    });
+
+    const enterSelection = () => fireEvent.click(screen.getByRole("button", { name: "Select Chapters" }));
+    const tick = (title: string) => fireEvent.click(screen.getByRole("checkbox", { name: `Select ${title}` }));
+
+    it("offers selection in the list view only", () => {
+      renderPage();
+      expect(screen.getByRole("button", { name: "Select Chapters" })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /shelf/i }));
+      expect(screen.queryByRole("button", { name: "Select Chapters" })).not.toBeInTheDocument();
+    });
+
+    it("offers no selection while signed out", () => {
+      mockUser = null;
+      renderPage();
+      expect(screen.queryByRole("button", { name: "Select Chapters" })).not.toBeInTheDocument();
+    });
+
+    it("deletes every ticked chapter in one call, only after confirmation, then leaves selection mode", async () => {
+      renderPage();
+      enterSelection();
+      tick("The Beginning");
+      tick("Aftermath");
+
+      expect(screen.getByText("2 chapters selected")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+      expect(mockStoryContext.deleteChapters).not.toHaveBeenCalled();
+
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByText(/Delete 2 chapters\?/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/renumbered/)).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole("button", { name: /delete chapters/i }));
+
+      await waitFor(() =>
+        expect(mockStoryContext.deleteChapters).toHaveBeenCalledWith(["chapter-01", "chapter-03"])
+      );
+      expect(mockStoryContext.deleteChapters).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(screen.queryByRole("checkbox")).not.toBeInTheDocument());
+    });
+
+    it("keeps a failed delete in the dialog, and the selection with it", async () => {
+      mockStoryContext.deleteChapters = jest.fn().mockRejectedValue(new Error("permission-denied"));
+      renderPage();
+      enterSelection();
+      tick("A Hard Day");
+
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.click(within(dialog).getByRole("button", { name: /delete chapter/i }));
+
+      expect(await within(dialog).findByText("permission-denied")).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Select A Hard Day" })).toBeChecked();
     });
   });
 });

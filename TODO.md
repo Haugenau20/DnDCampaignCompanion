@@ -27,7 +27,6 @@ adjusted for the images focus above.
 | medium | T026 | Reader's chapter drawer won't touch-scroll | S | needs investigation | Reported on a phone; desktop Chrome cannot reproduce it, so it needs the phone first |
 | medium | T103 | Browser checks are not reproducible | L | needs scoping | Browser-found defects can return unnoticed; phase 15 showed jsdom misses them |
 | low | T083 | Two people saving the same text field: last one wins | S | open | A decision, not a defect: no edit reverts another field or list any more |
-| low | T017 | Batch delete for locations; batch actions for chapters | M | needs scoping | Every roster has batch status now; deleting several places needs a decision about what is inside them |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -177,34 +176,6 @@ to, and suspects App Check.
 ---
 
 ## Features and enhancements
-
-### T017 — Batch delete for locations, and batch actions for chapters
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-03
-
-Rumours, NPCs and quests can be selected and then deleted or given a status in
-one go; locations can be given a status but not deleted; the chapter list has
-neither.
-
-- **Locations -- decide first**: deleting one place asks what becomes of what
-  is inside it (`LocationChildStrategy`: delete the subtree, or move the
-  children up to the grandparent). A selection can mix parents, children and
-  unrelated places, so it needs one answer for all of them, and the
-  confirmation has to say how many places that removes in total. One batch is
-  atomic, so the descendants-first ordering `deleteLocation` keeps for its
-  sequential writes stops mattering. Delete pictures after the documents.
-  It must still mark each place `deleting` and ask the server what is inside
-  it, as `deleteLocation` does, or a place added inside meanwhile is orphaned.
-- **The pattern to copy**: `shared/hooks/useSelection` (mode and ticked ids),
-  `campaign-entities/shared/EntityBatchActions.tsx` (the bar: statuses, an
-  optional Delete and its confirmation), and a batched pair on the context that
-  writes through `campaign-entities/shared/commitEntityWrites.ts`, as
-  `QuestContext`'s `updateQuestsStatus` and `deleteQuests` do. Stamp
-  modification attribution yourself: a batch writes its data as given.
-  `QuestDirectory.batch.test.tsx` is the test pattern.
-- **Chapters are different**: the list is `ChapterList.tsx`, not a roster, and
-  chapters have no status. Deleting several also has to keep the remaining
-  chapters' `order` contiguous, which `StoryContext.deleteChapter` does for one.
-- **Source**: todo.txt, 2026-09-16
 
 ### T054 — Sign in with Discord
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-09-23

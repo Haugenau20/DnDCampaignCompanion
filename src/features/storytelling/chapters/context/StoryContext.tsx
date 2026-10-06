@@ -142,6 +142,8 @@ interface StoryContextValue extends StoryContextState {
   updateChapter: (chapterId: string, updates: Partial<Chapter>) => Promise<void>;
   /** Delete a chapter */
   deleteChapter: (chapterId: string) => Promise<void>;
+  /** Delete several chapters and renumber the rest, as one batch (T017). */
+  deleteChapters: (chapterIds: string[]) => Promise<void>;
   /** Reorder chapters after deletion or insertion */
   reorderChapters: () => Promise<void>;
   /** Whether the required context (group and campaign) is available */
@@ -594,6 +596,27 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ]);
   }, [getChapterById, reading, user, hasRequiredContext, chaptersPath]);
 
+  /**
+   * Delete several chapters and renumber the rest 1, 2, 3, ... (T017), as one
+   * batch: all or nothing, like every other structural change. A chapter no
+   * longer in the list is skipped, since it is already gone.
+   */
+  const deleteChapters = useCallback(async (chapterIds: string[]) => {
+    if (!user) {
+      throw new Error('You must be signed in to delete chapters');
+    }
+
+    if (!hasRequiredContext) {
+      throw new Error('No active group or campaign selected');
+    }
+
+    const doomed = new Set(chapterIds.filter(id => getChapterById(id)));
+    await commitChapterWrites(chaptersPath, [
+      ...[...doomed].map((id): ChapterWrite => ({ type: 'delete', id })),
+      ...placeWrites(reading.filter(c => !doomed.has(c.id)))
+    ]);
+  }, [getChapterById, reading, user, hasRequiredContext, chaptersPath]);
+
   /** Renumber the chapters 1, 2, 3, ... in their current order, closing any gaps. */
   const reorderChapters = useCallback(async () => {
     if (!user) {
@@ -645,6 +668,7 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     createChapter,
     updateChapter,
     deleteChapter,
+    deleteChapters,
     reorderChapters,
     hasRequiredContext
   };
