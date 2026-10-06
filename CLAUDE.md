@@ -20,6 +20,9 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
 - Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
   Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
   the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
+- **The emulators need Java 21+** (firebase-tools 15). `start` checks it first and says what it found;
+  emulators that exit while starting have their last output printed, and the full log is
+  `firebase/emulator-start.log`.
 - Stop / restart / status: `.\scripts\start-dev.ps1 -Action stop|restart|status` (`stop` exports
   emulator data to `firebase/emulator-data`; `start` re-imports it if present). A failed export
   stops nothing; `-Force` stops anyway and loses the changes since the last export. `stop` ends only

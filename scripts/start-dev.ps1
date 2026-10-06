@@ -14,6 +14,24 @@ param (
 
 $ErrorActionPreference = "Stop"
 
+# firebase-tools 15 refuses to start the emulators on anything older.
+$MinJavaVersion = 21
+
+# The emulators' output while they start, so a start that fails can say why:
+# the window they run in closes as soon as they exit.
+$EmulatorLog = Join-Path $PSScriptRoot "..\firebase\emulator-start.log"
+
+# The installed Java's major version, or 0 when there is none. `java -version`
+# prints to stderr; run through cmd, the stream is merged before PowerShell
+# sees it, so 5.1 never wraps it in an error record.
+function Get-JavaMajorVersion {
+    if (-not (Get-Command java -ErrorAction SilentlyContinue)) { return 0 }
+    $text = cmd /c "java -version 2>&1" | Out-String
+    if ($text -match 'version "1\.(\d+)') { return [int]$Matches[1] }  # "1.8.0" is Java 8
+    if ($text -match 'version "(\d+)') { return [int]$Matches[1] }
+    return 0
+}
+
 # Function to check if services are running
 function Test-EmulatorsRunning {
     try {
@@ -61,7 +79,10 @@ function Get-ProjectProcessIds {
 function Invoke-EmulatorExport {
     Push-Location "firebase"
     try {
-        firebase emulators:export "./emulator-data" --force --config firebase.emulators.json
+        # Out-Host: the CLI's output is shown, not returned. Returned, it joins
+        # the boolean in an array that `if` always reads as true, so a failed
+        # export looked like success and `stop` went ahead.
+        firebase emulators:export "./emulator-data" --force --config firebase.emulators.json | Out-Host
         return ($LASTEXITCODE -eq 0)
     } catch {
         Write-Host "   $_" -ForegroundColor Red
@@ -75,7 +96,15 @@ function Start-DevelopmentEnvironment {
     Write-Host "Starting Full Development Environment..." -ForegroundColor Green
     Write-Host "   Firebase Emulators + React Dev Server" -ForegroundColor Cyan
     Write-Host ""
-    
+
+    $java = Get-JavaMajorVersion
+    if ($java -lt $MinJavaVersion) {
+        $found = if ($java -eq 0) { "no Java" } else { "Java $java" }
+        Write-Host "   The Firebase emulators need Java $MinJavaVersion or later; found $found." -ForegroundColor Red
+        Write-Host "   Install it (winget install EclipseAdoptium.Temurin.21.JDK), put it first on PATH, and open a new terminal." -ForegroundColor Yellow
+        return $false
+    }
+
     # Check if data exists for import
     $dataDir = "./firebase/emulator-data"
     $hasData = (Test-Path $dataDir) -and (Get-ChildItem -Path $dataDir -Recurse -ErrorAction SilentlyContinue).Count -gt 0
@@ -84,7 +113,8 @@ function Start-DevelopmentEnvironment {
     # `lib/`, which git ignores: without this it ran whatever was last built,
     # or nothing (T100, OPS-004).
     Write-Host "Compiling Cloud Functions..." -ForegroundColor Yellow
-    npm --prefix firebase/functions run build
+    # Out-Host for the same reason as the export: shown, not returned.
+    npm --prefix firebase/functions run build | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Write-Host "   Cloud Functions failed to compile - not starting." -ForegroundColor Red
         return $false
@@ -93,25 +123,27 @@ function Start-DevelopmentEnvironment {
     # Step 2: Start Firebase Emulators
     Write-Host "Starting Firebase emulators..." -ForegroundColor Yellow
     
-    Push-Location "firebase"
-    try {
-        if ($hasData) {
-            Write-Host "   Importing existing emulator data..." -ForegroundColor Gray
-            Start-Process -FilePath "powershell" -ArgumentList @("-Command", "firebase emulators:start --config firebase.emulators.json --import ./emulator-data") -WindowStyle Minimized
-        } else {
-            Write-Host "   Starting fresh emulators..." -ForegroundColor Gray
-            Start-Process -FilePath "powershell" -ArgumentList @("-Command", "firebase emulators:start --config firebase.emulators.json") -WindowStyle Minimized
-        }
+    $import = if ($hasData) { " --import ./emulator-data" } else { "" }
+    if ($hasData) {
+        Write-Host "   Importing existing emulator data..." -ForegroundColor Gray
+    } else {
+        Write-Host "   Starting fresh emulators..." -ForegroundColor Gray
     }
-    finally {
-        Pop-Location
-    }
-    
-    # Wait for emulators to start
+    # cmd merges the CLI's stderr; Tee-Object shows it in the window and keeps
+    # it in $EmulatorLog. Encoded, so the nested quotes survive Start-Process.
+    $command = "Set-Location '$(Resolve-Path firebase)'; " +
+        "cmd /c `"firebase emulators:start --config firebase.emulators.json$import 2>&1`" | " +
+        "Tee-Object -FilePath '$EmulatorLog'"
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    # Never quote an earlier run's output as this one's.
+    Remove-Item $EmulatorLog -ErrorAction SilentlyContinue
+    $emulators = Start-Process -FilePath "powershell" -ArgumentList @("-EncodedCommand", $encoded) -WindowStyle Minimized -PassThru
+
+    # Wait for emulators to start, or to exit trying
     Write-Host "   Waiting for Firebase emulators..." -ForegroundColor Gray
     $timeout = 45
     $count = 0
-    while (-not (Test-EmulatorsRunning) -and $count -lt $timeout) {
+    while (-not (Test-EmulatorsRunning) -and -not $emulators.HasExited -and $count -lt $timeout) {
         Start-Sleep -Seconds 1
         $count++
         if ($count % 5 -eq 0) {
@@ -119,11 +151,18 @@ function Start-DevelopmentEnvironment {
         }
     }
     Write-Host ""
-    
+
     if (Test-EmulatorsRunning) {
         Write-Host "   Firebase emulators started!" -ForegroundColor Green
     } else {
-        Write-Host "   Firebase emulators failed to start within $timeout seconds" -ForegroundColor Red
+        if ($emulators.HasExited) {
+            Write-Host "   The Firebase emulators exited while starting. Their last output:" -ForegroundColor Red
+        } else {
+            Write-Host "   Firebase emulators failed to start within $timeout seconds. Their output so far:" -ForegroundColor Red
+        }
+        Get-Content $EmulatorLog -Tail 15 -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host "     $_" -ForegroundColor Gray }
+        Write-Host "   Full log: $EmulatorLog" -ForegroundColor Yellow
         return $false
     }
 
