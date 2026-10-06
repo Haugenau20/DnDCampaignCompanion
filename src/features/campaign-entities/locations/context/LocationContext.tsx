@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Location, LocationStatus, LocationContextValue, LocationNote, LocationChildStrategy } from '../types';
 import { descendantIdsDeepestFirst, parentChainReaches, wouldCreateCycle } from '../utils/location-tree';
+import { planBatchDelete } from '../utils/batch-delete';
 import { HIGHLIGHT_DEPTH_CAP } from 'shared/hooks/useHighlightTarget';
 import { DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { useLocationData } from '../hooks/useLocationData';
@@ -127,8 +128,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   /**
    * Sets the status of several locations in one batch (T017): one round trip,
-   * and all or nothing. There is no batch delete: deleting one location asks
-   * what becomes of its children, and a selection has no single answer yet.
+   * and all or nothing.
    */
   const updateLocationsStatus = useCallback(async (locationIds: string[], status: LocationStatus): Promise<void> => {
     if (!user || !activeGroupId || !activeCampaignId) {
@@ -235,9 +235,10 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
    * A deletion that fails partway leaves its marks, and calling this again
    * finishes it, the way it started: nothing is marked twice.
    */
-  const deleteLocation = useCallback(async (
+  const deletePlace = useCallback(async (
     locationId: string,
-    childStrategy: LocationChildStrategy = 'delete-subtree'
+    childStrategy: LocationChildStrategy,
+    ifMissing: 'throw' | 'skip'
   ): Promise<void> => {
     if (!user || !activeGroupId || !activeCampaignId) {
       throw new Error('User must be authenticated and group/campaign context must be set to delete a location');
@@ -247,10 +248,15 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let root: Location | undefined;
     await updateManyAfterReading(async (read) => {
       root = await read(locationId);
-      if (!root) throw new Error('Location not found');
+      if (!root) {
+        if (ifMissing === 'skip') return [];
+        throw new Error('Location not found');
+      }
       return root.deleting ? [] : [{ id: locationId, data: { deleting: childStrategy } }];
     });
-    const place = root!;
+    // Assigned inside the callback, which narrowing cannot see.
+    const place = root as Location | undefined;
+    if (!place) return;
     const strategy = place.deleting ?? childStrategy;
 
     /**
@@ -341,6 +347,35 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     discards.forEach(discard => discard());
   }, [user, activeGroupId, activeCampaignId, deleteData, queryData, updateManyAfterReading]);
 
+  const deleteLocation = useCallback(
+    (locationId: string, childStrategy: LocationChildStrategy = 'delete-subtree') =>
+      deletePlace(locationId, childStrategy, 'throw'),
+    [deletePlace]
+  );
+
+  /**
+   * Delete several places, with one answer for what is inside them (T017).
+   *
+   * Each ticked place goes through the same protocol as {@link deleteLocation}
+   * -- marked, then the server asked what is inside it -- so a place added
+   * inside one meanwhile is never orphaned. That makes this a sequence, not
+   * one atomic batch: a failure partway leaves the places before it deleted,
+   * and running it again finishes the rest, since a place already gone is
+   * skipped rather than refused. `planBatchDelete` orders the sequence so that
+   * deleting everything inside starts from the outermost place, and moving it
+   * up starts from the innermost, letting each child climb to the nearest
+   * place that is not being deleted.
+   */
+  const deleteLocations = useCallback(async (
+    locationIds: string[],
+    childStrategy: LocationChildStrategy
+  ): Promise<void> => {
+    const { order } = planBatchDelete(locations, locationIds);
+    for (const id of order[childStrategy]) {
+      await deletePlace(id, childStrategy, 'skip');
+    }
+  }, [locations, deletePlace]);
+
   // Ids issued during this session but not yet reflected in `locations`. Two
   // locations can be created back-to-back within a single `act()` / event
   // handler before the first create has re-rendered this provider -- a
@@ -391,6 +426,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     updateLocationStatus,
     updateLocationsStatus,
     deleteLocation,
+    deleteLocations,
     createLocation,
     refreshLocations,
     hasRequiredContext

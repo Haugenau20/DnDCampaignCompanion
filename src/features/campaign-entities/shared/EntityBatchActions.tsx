@@ -26,6 +26,17 @@ export interface EntityBatchActionsProps<S extends string> {
   onDelete?: (ids: string[]) => Promise<void>;
   /** What deleting takes with it, said in the confirmation after "Delete 3 NPCs?". */
   deleteConsequence?: string;
+  /**
+   * A confirmation of the directory's own, in place of the plain one, for an
+   * entity whose delete asks something first (locations: what becomes of the
+   * places inside). It calls `onDeleted` once the delete has gone through.
+   */
+  renderDeleteDialog?: (dialog: {
+    ids: string[];
+    isOpen: boolean;
+    onClose: () => void;
+    onDeleted: () => void;
+  }) => React.ReactNode;
   /** Called once an action has gone through, to leave selection mode. */
   onComplete: () => void;
 }
@@ -34,7 +45,8 @@ export interface EntityBatchActionsProps<S extends string> {
  * A directory's batch actions (T017): set the status of every ticked record,
  * or delete them all. Each is one batched write, so a failure changes
  * nothing; a failed status change is reported under the bar, a failed delete
- * in its dialog, which stays open.
+ * in its dialog, which stays open. A directory that brings its own delete
+ * dialog (`renderDeleteDialog`) answers for how its delete fails.
  *
  * Rumours keep their own bar (`RumorBatchActions`), because combine and
  * convert-to-quest belong to no other entity.
@@ -46,6 +58,7 @@ function EntityBatchActions<S extends string>({
   onStatus,
   onDelete,
   deleteConsequence,
+  renderDeleteDialog,
   onComplete,
 }: EntityBatchActionsProps<S>): React.ReactElement | null {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -95,7 +108,7 @@ function EntityBatchActions<S extends string>({
             {label}
           </Button>
         ))}
-        {onDelete && (
+        {(onDelete || renderDeleteDialog) && (
           <Button
             variant="ghost"
             size="sm"
@@ -108,7 +121,14 @@ function EntityBatchActions<S extends string>({
         )}
       </RosterBatchBar>
 
-      {onDelete && (
+      {renderDeleteDialog?.({
+        ids,
+        isOpen: confirmingDelete,
+        onClose: () => setConfirmingDelete(false),
+        onDeleted: onComplete,
+      })}
+
+      {onDelete && !renderDeleteDialog && (
         <DeleteConfirmationDialog
           isOpen={confirmingDelete}
           onClose={() => setConfirmingDelete(false)}

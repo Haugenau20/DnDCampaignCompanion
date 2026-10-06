@@ -31,6 +31,8 @@ import {
 import { STATUS_ORDER, formatLocationStatus } from '../utils/location-presentation';
 import useSelection from 'shared/hooks/useSelection';
 import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
+import DeleteLocationsDialog from './DeleteLocationsDialog';
+import { planBatchDelete } from '../utils/batch-delete';
 
 interface LocationDirectoryProps {
   locations: Location[];
@@ -79,11 +81,7 @@ const TYPE_FILTERS: RosterFilterOption[] = [
  * the page can now write a parent — so a tree render that does not terminate is
  * no longer a hypothetical (`PERF-11`, T033).
  */
-/**
- * The batch actions' statuses, in the status bar's order. There is no batch
- * Delete: deleting one place asks what becomes of what is inside it, and a
- * selection has no single answer to that yet (T017).
- */
+/** The batch actions' statuses, in the status bar's order (T017). */
 const BATCH_STATUSES: Array<BatchStatusOption<LocationStatus>> = STATUS_ORDER.map(({ key }) => ({
   value: key,
   label: `Mark ${formatLocationStatus(key)}`,
@@ -100,7 +98,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
 
   const { getNPCById } = useNPCs();
   const { getQuestById } = useQuests();
-  const { updateLocationStatus, updateLocationsStatus } = useLocations();
+  const { updateLocationStatus, updateLocationsStatus, deleteLocations } = useLocations();
   /** Selection mode for the batch actions (T017). */
   const selection = useSelection();
   // Unpacked for `renderRow`'s dependency list: calling a method on the object
@@ -394,6 +392,20 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           noun={{ one: 'location', many: 'locations' }}
           statuses={BATCH_STATUSES}
           onStatus={updateLocationsStatus}
+          // Mounted only while open: the plan walks every ticked subtree, and
+          // each opening starts from the default answer.
+          renderDeleteDialog={({ ids, isOpen, onClose, onDeleted }) => isOpen && (
+            <DeleteLocationsDialog
+              isOpen
+              onClose={onClose}
+              count={ids.length}
+              plan={planBatchDelete(locations, ids)}
+              onConfirm={async (strategy) => {
+                await deleteLocations(ids, strategy);
+                onDeleted();
+              }}
+            />
+          )}
           onComplete={selection.clear}
         />
       )}

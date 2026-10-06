@@ -4,6 +4,7 @@ import Dialog from 'core/components/Dialog';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
 import { LocationChildStrategy } from '../types';
+import LocationChildStrategyChoice from './LocationChildStrategyChoice';
 
 export interface DeleteLocationDialogProps {
   isOpen: boolean;
@@ -71,48 +72,26 @@ export const DeleteLocationDialog: React.FC<DeleteLocationDialogProps> = ({
         </Typography>
 
         {childCount > 0 && (
-          <fieldset className="flex flex-col gap-2 border-0 p-0 m-0">
-            <legend className="sr-only">What happens to the {places} inside</legend>
-            {(
-              [
-                {
-                  value: 'promote-to-grandparent' as const,
-                  label: grandparentName
-                    ? `Keep them — move the ${places} into ${grandparentName}`
-                    : `Keep them — move the ${places} to the top level`,
-                  detail: 'Anything inside them travels with them.',
-                },
-                {
-                  value: 'delete-subtree' as const,
-                  label: `Delete them too — ${name} and everything inside it`,
-                  detail: 'Every place below it goes, at every depth.',
-                },
-              ]
-            ).map((option) => (
-              <label
-                key={option.value}
-                className="flex items-start gap-3 p-3 rounded-md card-border border cursor-pointer selectable-item"
-              >
-                <input
-                  type="radio"
-                  name="location-child-strategy"
-                  value={option.value}
-                  checked={strategy === option.value}
-                  onChange={() => setStrategy(option.value)}
-                  disabled={isDeleting}
-                  className="mt-1 shrink-0"
-                />
-                <span className="min-w-0">
-                  <Typography variant="body-sm" className="block">
-                    {option.label}
-                  </Typography>
-                  <Typography variant="body-sm" color="secondary" className="block text-xs">
-                    {option.detail}
-                  </Typography>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+          <LocationChildStrategyChoice
+            legend={`What happens to the ${places} inside`}
+            options={[
+              {
+                value: 'promote-to-grandparent',
+                label: grandparentName
+                  ? `Keep them — move the ${places} into ${grandparentName}`
+                  : `Keep them — move the ${places} to the top level`,
+                detail: 'Anything inside them travels with them.',
+              },
+              {
+                value: 'delete-subtree',
+                label: `Delete them too — ${name} and everything inside it`,
+                detail: 'Every place below it goes, at every depth.',
+              },
+            ]}
+            value={strategy}
+            onChange={setStrategy}
+            disabled={isDeleting}
+          />
         )}
 
         <Typography variant="body-sm" color="secondary">
