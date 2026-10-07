@@ -19,6 +19,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
+| medium | T119 | Review the Firestore data model before scaling | L | needs investigation | Must come before any user scaling (maintainer, 2026-10-07); found a two-halved NPC↔quest link and unpaged reads while filing |
+| medium | T120 | Plan how a new group starts on its own | L | needs scoping | A group can't start without the maintainer, and the 20-account cap blocks wider outreach; the deliverable is a plan, the building is a later entry |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -267,6 +269,44 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
+### T120 — Plan how a new group starts on its own
+**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-07
+
+Suppose the site were sent tomorrow to 30 groups that have never used it. Can
+they sign up, create a group and get going? **Today they cannot.** This entry's
+deliverable is a plan: what is missing, the decisions it needs, and the order to
+build it in. The building itself is a later entry. Invitations into a group that
+already exists are out of scope; they work.
+
+- **Measured** (read in the code; the full workaround below was not run):
+  (1) No account exists without an invitation into an existing group. The
+  sign-up gate admits only an email holding a reservation, and only
+  `reserveSignUp`, given a valid invitation token, makes one
+  (`gateAccountCreation.ts:69`, `signUpGate.ts`).
+  (2) The whole project is capped at **20 accounts** (`signUpGate.ts:23`,
+  checked at `gateAccountCreation.ts:78`). Thirty groups will not fit.
+  (3) The only "create group" form is on `/admin/group`
+  (`AdminGroupPage.tsx:62`). `AdminLayout.tsx:131,148` shows it only to an
+  admin of the group they have open. Someone in no group is told "Join a group:
+  ask whoever set up your campaign for a join link"
+  (`GatedPageState.tsx:107,122`).
+  (4) The `createGroup` callable itself accepts any signed-in caller, with no
+  limit and no throttle (`createGroup.ts:27`). When the global profile has no
+  username, the creator is named "Admin" (`:69`).
+- **The only path today**: the maintainer creates each group, invites its first
+  player, promotes them (`setMemberRole`) and leaves (`AdminGroupPage.tsx:279`).
+  That is manual, uses up the account cap, and lets the maintainer read every
+  group until they leave.
+- **The plan must decide**: who may start a group (open sign-up, or a
+  group-less "founder" invitation the maintainer hands out); the account cap and
+  cost at scale (AI extraction allows each user 10 calls a day, 30 a week, 100 a
+  month: `entityExtraction.ts:94`); throttling `createGroup`; and the first run
+  (group, first campaign, inviting the players).
+- **Related**: T119 (review the data model before scaling); T075 and T118 (the
+  name and the domain the outreach will carry); `/privacy` and the contact form
+  as they stand.
+- **Source**: `/todo`, 2026-10-07
+
 ---
 
 ## Tech debt and platform
@@ -314,6 +354,8 @@ time anyone edits it.
 - **Catch**: the sample-data generators write the legacy shape themselves --
   a `location` slug and no `locationId` (the dev emulator, 2026-10-07: 37
   NPCs and 20 quests). Removing the fallback means they write `locationId` too.
+- **See also**: T119, the full review of the data model, should take in
+  whatever this audit finds.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted; decided 2026-10-06; the audit written 2026-10-07
 ### T118 — Move the site to `muninn.quest`, and hide the old project id
@@ -365,6 +407,52 @@ the workflows.
 - **Catch**: the domain does not settle T075's name. If the site is to be called
   Muninn, the maintainer should say so there.
 - **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
+
+### T119 — Review the Firestore data model before the site scales
+**Type** debt · **Size** L · **Status** needs investigation · **Verified** 2026-10-07
+
+The data model dates from the project's first weeks and has been changed one
+fix at a time since. Before anyone scales the site up, review it whole, and
+write up three things: what the model is now, what is worth changing in it (and
+how to migrate production data, which holds real campaigns), and how it would be
+designed from scratch today. The review is the deliverable; nothing gets changed
+until the maintainer has read it.
+
+- **Where to start**: `firebase/firestore.rules.prod` maps every path. Content is
+  `groups/{g}/campaigns/{c}/{npcs,locations,quests,rumors,chapters,saga}`;
+  private data is `groups/{g}/users/{uid}/{notes,story-progress}`; membership is
+  the `groups` array on the global `users/{uid}`, which every rule `get()`s
+  (`isGroupMember`, line 296). Writes go through
+  `core/services/firebase/data/DocumentService.ts`. Entity shapes are in each
+  feature's `types.ts`.
+- **Found while filing** (read in the code, not run in the app):
+  (1) The NPC↔quest link is stored twice, `NPC.connections.relatedQuests` and
+  `Quest.relatedNPCIds`. Each detail page reads and writes only its own half
+  (`NPCDetailPage.tsx:503`, `QuestDetailPage.tsx:230,611`), so a link added
+  on one page does not show on the other. Locations have the same overlap:
+  `Location.connectedNPCs` against `NPC.locationId`.
+  (2) Nothing pages or limits a read. There is no `limit`, `orderBy` or
+  `startAfter` anywhere in `src/`, and `useCampaignCollection` streams whole
+  collections, chapter text included.
+  (3) `firestore.indexes.json` has not changed since 2025-03-25 (`938667a`), and
+  the deploy leaves it out (`--only firestore:rules,storage`). Its 20 composite
+  indexes cover queries the client never makes: every query in `src/` filters on
+  one field with no `orderBy` (`DocumentService.queryFromServer` and
+  `queryDocuments`, and `NoteContext.tsx:112`), and those need no composite
+  index. What production actually has is **unverified**.
+  (4) Notes on NPCs, locations and rumors are arrays inside the record, so a
+  record grows toward Firestore's 1 MiB document limit. The race on appending
+  was already fixed (T083).
+- **Overlaps**: T079 (the legacy free-text `location` alongside `locationId`)
+  belongs in this review. So do the field renames that
+  `docs/architecture/migration/database-field-alignment.md` plans (`dateAdded` →
+  `createdAt` and others), which no one has done.
+- **Catch**: any change to a path or field touches three layers that ship in a
+  fixed order (functions, then rules, then frontend), plus a production
+  migration. The from-scratch design also has to say whether Firestore is still
+  the right store, since the Firestore location was fixed when the project was
+  created (T118).
+- **Source**: `/todo`, 2026-10-07
 
 ---
 
