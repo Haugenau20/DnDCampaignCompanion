@@ -11,6 +11,8 @@ import ServiceRegistry from '../core/ServiceRegistry';
 import type UserService from '../user/UserService';
 import { Group } from '../../../types/user';
 import { StoredImage } from '../../../types/storedImage';
+import { assertTextFits } from '../data/TextTooLongError';
+import { NAMED_DOCUMENT_TEXT_LIMITS } from '../../../constants/textLimits';
 import { httpsCallable } from 'firebase/functions';
 
   /**
@@ -181,16 +183,16 @@ import { httpsCallable } from 'firebase/functions';
       if (!name) {
         throw new Error('A group needs a name');
       }
+      const description = (updates.description ?? '').trim();
+      // The rules cap both (T119); refused here first, saying which.
+      assertTextFits(NAMED_DOCUMENT_TEXT_LIMITS, { name, description });
 
       const isAdmin = await this.userService.isUserAdmin(groupId, userId);
       if (!isAdmin) {
         throw new Error('Only group admins can edit the group');
       }
 
-      await updateDoc(doc(this.db, 'groups', groupId), {
-        name,
-        description: (updates.description ?? '').trim()
-      });
+      await updateDoc(doc(this.db, 'groups', groupId), { name, description });
     }
 
     /**

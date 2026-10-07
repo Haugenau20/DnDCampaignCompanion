@@ -20,6 +20,27 @@ describe("createGroup", () => {
     it("a name that is only whitespace", async () => {
       await expectHttpsError(create({name: "   "}, "gandalf"), "invalid-argument");
     });
+
+    // T119: the rules cap a group's name and description for the client's
+    // edits; the group is written here, past the rules, so the same caps are
+    // checked here.
+    it("a name over 200 characters, or a description over 10,000, creating nothing", async () => {
+      await expectHttpsError(create({name: "x".repeat(201)}, "gandalf"), "invalid-argument");
+      await expectHttpsError(
+        create({name: "Fellowship", description: "x".repeat(10_001)}, "gandalf"), "invalid-argument"
+      );
+      expect((await db.collection("groups").get()).size).toBe(0);
+    });
+
+    it("a description that is not text", async () => {
+      await expectHttpsError(create({name: "Fellowship", description: {long: true}}, "gandalf"), "invalid-argument");
+      expect((await db.collection("groups").get()).size).toBe(0);
+    });
+
+    it("nothing at the limits: a name of 200 and a description of 10,000", async () => {
+      const {groupId} = await create({name: "x".repeat(200), description: "y".repeat(10_000)}, "gandalf");
+      expect((await db.doc(`groups/${groupId}`).get()).data()?.description).toHaveLength(10_000);
+    });
   });
 
   // The transaction wrote the group before it read the caller's profile, and

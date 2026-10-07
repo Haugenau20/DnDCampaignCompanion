@@ -1,5 +1,6 @@
 // src/features/campaign-entities/rumors/components/ConvertToQuestDialog.tsx
 import React, { useState, useEffect } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { Rumor } from '../types';
 import type { Quest, QuestObjective } from '../../quests/types';
 import Dialog from '../../../../core/components/Dialog';
@@ -218,6 +219,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
           <Input
             label="Title *"
             value={title}
+            maxLength={TEXT_LIMITS.line}
             onChange={(e) => setTitle(e.target.value)}
             required
             disabled={isSubmitting}
@@ -226,6 +228,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
           <Input
             label="Description *"
             value={description}
+            maxLength={TEXT_LIMITS.text}
             onChange={(e) => setDescription(e.target.value)}
             isTextArea
             required
@@ -235,6 +238,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
           <Input
             label="Location"
             value={location}
+            maxLength={TEXT_LIMITS.line}
             onChange={(e) => setLocation(e.target.value)}
             disabled={isSubmitting}
           />
@@ -242,6 +246,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
           <Input
             label="Background"
             value={background}
+            maxLength={TEXT_LIMITS.text}
             onChange={(e) => setBackground(e.target.value)}
             isTextArea
             disabled={isSubmitting}
@@ -271,6 +276,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
                   <div className="flex-1">
                     <Input
                       value={objective.description || ''}
+                      maxLength={TEXT_LIMITS.text}
                       onChange={(e) => handleObjectiveChange(objective.id!, e.target.value)}
                       placeholder="Objective description"
                       disabled={isSubmitting}

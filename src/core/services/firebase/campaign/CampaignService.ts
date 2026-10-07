@@ -12,6 +12,8 @@ import {
   import type UserService from '../user/UserService';
   import { Campaign } from '../../../types/user';
   import { createDocumentIfAbsent } from '../data/createDocumentIfAbsent';
+  import { assertTextFits } from '../data/TextTooLongError';
+  import { NAMED_DOCUMENT_TEXT_LIMITS } from '../../../constants/textLimits';
 
   /**
    * How many ids `createCampaign` tries before giving up: the slug, then the
@@ -63,6 +65,8 @@ import {
       if (!userId) {
         throw new Error('Not authenticated');
       }
+      // The rules cap both (T119); refused here first, saying which.
+      assertTextFits(NAMED_DOCUMENT_TEXT_LIMITS, { name, description });
       
       // Check if user is a member of this group
       const userProfileDoc = await this.userService.getGroupUserProfile(groupId, userId);
@@ -211,6 +215,8 @@ import {
       if (!userId) {
         throw new Error('Not authenticated');
       }
+      // The rules cap the name and description (T119); refused here first.
+      assertTextFits(NAMED_DOCUMENT_TEXT_LIMITS, data as Record<string, unknown>);
       
       // Check if user is a member of this group
       const userProfileDoc = await this.userService.getGroupUserProfile(groupId, userId);

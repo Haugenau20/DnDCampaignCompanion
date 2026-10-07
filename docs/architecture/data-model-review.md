@@ -24,8 +24,8 @@ In the order worth doing:
 1. **Store each relationship once** ([F1](#f1-relationships-are-stored-twice-or-one-way-only)).
    A link added on an NPC's page does not show on the quest's page. This is the one finding players
    can see today.
-2. **Bound what members write** ([F4](#f4-nothing-bounds-what-a-member-writes)): cap the size of
-   names and text, in the forms and then in the rules. At scale this is the abuse and cost vector.
+2. **Bound what members write** ([F4](#f4-nothing-bounds-what-a-member-writes)): the forms cap
+   names and text; the rules still have to. At scale this is the abuse and cost vector.
 3. **Turn on the client cache, then page the reads** ([F2](#f2-every-read-is-a-whole-collection)).
    Today every page load re-reads every collection it listens to, in full.
 4. **Move growing lists out of their parent document** ([F3](#f3-some-documents-grow-without-bound)):
@@ -200,17 +200,18 @@ The rules name the six kinds of record a campaign holds (`namingField`, `firesto
 and refuse any other collection. A new record must carry its `name` or `title` as text, and no
 client creates a group document. What no rule checks is **size**: a member can write a name, a
 description or a chapter of any length, up to Firestore's 1 MiB per document, into any number of
-records. Nor does any form cap a field's length today.
+records. The app caps them (`TEXT_LIMITS` in `src/core/constants/textLimits.ts`: the forms stop
+typing, and `DocumentService` refuses a longer write), but a client that skips the app is not
+stopped.
 
 Among friends, none of this matters. At scale, one bad actor with one invitation can fill a
 campaign with large records that every member downloads (F2) and that the group pays to store.
 
-**Recommendation.** Caps on `name`/`title` and on the large text fields (`description`, `content`,
-a chapter's text, the saga), in two merges:
-
-1. The forms enforce the caps (a `maxLength`, and a check before the write).
-2. A later merge adds the same caps to the rules with `.size()`, pinned by the rules suite with the
-   usual control. A rule that refuses what the live frontend still sends must follow it.
+**Recommendation.** The same caps in the rules with `.size()`, field by field as
+`RECORD_TEXT_LIMITS` lists them, checked only on the fields a write changes, so a record stored
+before the caps can still be edited. Pinned by the rules suite with the usual control, and merged
+only once the frontend that caps the forms is live. `.size()` counts as `String.length` does
+(measured 2026-10-07), so text the app lets through is never refused.
 
 Rules cannot count records. Paging (F2) bounds what each member downloads, and any member can
 delete junk.

@@ -1014,6 +1014,42 @@ describe('NoteContext Behavioral Tests', () => {
       );
     });
 
+    // T119: with no extracted title, the rumour is named after the passage the
+    // extraction found, which can be longer than a title may be. It is cut to
+    // fit rather than refused: the whole passage is still the rumour's content.
+    test('cuts a title taken from a long passage to 200 characters', async () => {
+      const passage = 'They say '.repeat(30);
+      const rumorEntity: ExtractedEntity = {
+        ...mockEntity,
+        text: passage,
+        type: 'rumor',
+        extraData: { content: passage, status: 'unconfirmed' }
+      };
+
+      let capturedContext: any;
+      render(
+        <NoteProvider>
+          <TestComponent onRender={(ctx) => capturedContext = ctx} />
+        </NoteProvider>
+      );
+      await waitFor(() => {
+        expect(capturedContext.isLoading).toBe(false);
+      });
+      await act(async () => {
+        createdId = await capturedContext.createNote('Test Note', 'Test content');
+      });
+      await act(async () => {
+        await capturedContext.updateNote(createdId, { extractedEntities: [rumorEntity] });
+      });
+      await act(async () => {
+        await capturedContext.convertEntity(createdId, 'entity-1', 'rumor');
+      });
+
+      expect(mockAddRumor).toHaveBeenCalledWith(
+        expect.objectContaining({ title: passage.slice(0, 200), content: passage })
+      );
+    });
+
     test('should throw error when converting entity from nonexistent note', async () => {
       let capturedContext: any;
       render(

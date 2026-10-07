@@ -24,6 +24,8 @@ import { ContentAttribution } from '../../../types/common';
 import { buildCreationAttribution, buildModificationAttribution } from '../../../attribution';
 import { DocumentAlreadyExistsError } from './DocumentAlreadyExistsError';
 import { createDocumentIfAbsent } from './createDocumentIfAbsent';
+import { assertTextFits } from './TextTooLongError';
+import { RECORD_TEXT_LIMITS } from '../../../constants/textLimits';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents
@@ -105,6 +107,27 @@ class DocumentService extends BaseFirebaseService {
       throw new Error('No active group selected');
     }
     return activeGroupId;
+  }
+
+  /**
+   * Refuses a write that puts more text in a campaign record's field than the
+   * production rules accept (T119), before anything is sent, so the player
+   * reads which field is too long instead of "permission denied". Only the
+   * records directly under a campaign are capped (`RECORD_TEXT_LIMITS`).
+   *
+   * @param collectionRef The collection being written
+   * @param data The fields about to be written
+   * @throws {TextTooLongError} naming the first field that is too long
+   */
+  private assertTextFits(collectionRef: { path: string }, data: unknown): void {
+    const [root, , campaigns, , recordType, ...deeper] = collectionRef.path.split('/');
+    if (root !== 'groups' || campaigns !== 'campaigns' || !recordType || deeper.length > 0) {
+      return;
+    }
+    const limits = RECORD_TEXT_LIMITS[recordType];
+    if (limits && typeof data === 'object' && data !== null) {
+      assertTextFits(limits, data as Record<string, unknown>);
+    }
   }
 
   /**
@@ -191,6 +214,7 @@ class DocumentService extends BaseFirebaseService {
     // this create is in flight cannot move it (T082).
     const collectionRef = this.getCollectionRef(collectionName);
     const groupId = this.groupOf(collectionRef);
+    this.assertTextFits(collectionRef, data);
 
     /** The document with its creation attribution. */
     const withAttribution = async (): Promise<DocumentData> => ({
@@ -236,6 +260,7 @@ class DocumentService extends BaseFirebaseService {
     options?: { merge: boolean }
   ): Promise<void> {
     const collectionRef = this.getCollectionRef(collectionName);
+    this.assertTextFits(collectionRef, data);
     const docRef = doc(collectionRef, documentId);
     if (options) {
       await setDoc(docRef, data as DocumentData, options);
@@ -260,6 +285,7 @@ class DocumentService extends BaseFirebaseService {
     // resolved after it, so switching campaign while that read was out sent
     // the edit to a same-id record in the other campaign (T082).
     const collectionRef = this.getCollectionRef(collectionName);
+    this.assertTextFits(collectionRef, data);
     const docRef = doc(collectionRef, documentId) as DocumentReference<T>;
 
     // Get modification attribution metadata with character information
@@ -310,6 +336,7 @@ class DocumentService extends BaseFirebaseService {
         return snapshot.exists() ? ({ ...(snapshot.data() as T), id: snapshot.id }) : undefined;
       };
       const fields = await decide(read);
+      this.assertTextFits(collectionRef, fields);
       transaction.update(doc(collectionRef, documentId), {
         ...fields,
         ...attributionMetadata
@@ -346,6 +373,7 @@ class DocumentService extends BaseFirebaseService {
         return snapshot.exists() ? ({ ...(snapshot.data() as T), id: snapshot.id }) : undefined;
       };
       const updates = await decide(read);
+      updates.forEach((update) => this.assertTextFits(collectionRef, update.data));
       for (const update of updates) {
         transaction.update(doc(collectionRef, update.id), {
           ...update.data,
@@ -423,6 +451,8 @@ class DocumentService extends BaseFirebaseService {
         return snapshot.exists() ? ({ ...(snapshot.data() as S), id: snapshot.id }) : undefined;
       };
       const { create, updates } = await decide(read);
+      this.assertTextFits(collectionRef, create);
+      updates.forEach((update) => this.assertTextFits(sourceRef, update.data));
       // Attribution only once the id is known to be free, as in `createDocument`.
       const creation = await this.getCreationAttribution(groupId);
       const modification = await this.getModificationAttribution(groupId);
@@ -452,6 +482,7 @@ class DocumentService extends BaseFirebaseService {
     data: Partial<WithFieldValue<T>>
   ): Promise<void> {
     const collectionRef = this.getCollectionRef(collectionName);
+    this.assertTextFits(collectionRef, data);
     const docRef = doc(collectionRef, documentId) as DocumentReference<T>;
     await updateDoc(docRef, data as Partial<DocumentData>);
   }
@@ -622,6 +653,9 @@ class DocumentService extends BaseFirebaseService {
     
     for (const op of operations) {
       const collectionRef = this.getCollectionRef(op.collection);
+      if (op.type !== 'delete') {
+        this.assertTextFits(collectionRef, op.data);
+      }
       const docRef = doc(collectionRef, op.id);
       
       switch (op.type) {

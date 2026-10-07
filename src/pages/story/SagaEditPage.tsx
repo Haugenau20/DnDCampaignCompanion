@@ -1,5 +1,6 @@
 // pages/story/SagaEditPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import Typography from '../../core/components/Typography';
 import Input from '../../core/components/Input';
 import MarkdownToolbar from '../../core/components/MarkdownToolbar';
@@ -182,6 +183,7 @@ const SagaEditPage: React.FC = () => {
               <Input
                 label="Saga Title"
                 value={title}
+                maxLength={TEXT_LIMITS.line}
                 onChange={(e) => setTitle(e.target.value)}
                 fullWidth
                 required
@@ -197,6 +199,7 @@ const SagaEditPage: React.FC = () => {
                   ref={contentRef}
                   label="Saga Content"
                   value={content}
+                  maxLength={TEXT_LIMITS.saga}
                   onChange={(e) => setContent(e.target.value)}
                   fullWidth
                   isTextArea

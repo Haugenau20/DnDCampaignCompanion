@@ -1,5 +1,6 @@
 // src/features/user-management/admin/pages/AdminGroupPage.tsx
 import React, { useEffect, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { Link } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
@@ -326,6 +327,7 @@ const AdminGroupPage: React.FC = () => {
           <Input
             label="Name"
             value={editName}
+            maxLength={TEXT_LIMITS.line}
             onChange={(event) => setEditName(event.target.value)}
             required
             disabled={saving}
@@ -334,6 +336,7 @@ const AdminGroupPage: React.FC = () => {
           <Input
             label="Description (optional)"
             value={editDescription}
+            maxLength={TEXT_LIMITS.text}
             onChange={(event) => setEditDescription(event.target.value)}
             disabled={saving}
             isTextArea={true}
@@ -386,6 +389,7 @@ const AdminGroupPage: React.FC = () => {
           <Input
             label="Name"
             value={name}
+            maxLength={TEXT_LIMITS.line}
             onChange={(event) => setName(event.target.value)}
             required
             disabled={creating}
@@ -395,6 +399,7 @@ const AdminGroupPage: React.FC = () => {
           <Input
             label="Description (optional)"
             value={description}
+            maxLength={TEXT_LIMITS.text}
             onChange={(event) => setDescription(event.target.value)}
             disabled={creating}
             isTextArea={true}

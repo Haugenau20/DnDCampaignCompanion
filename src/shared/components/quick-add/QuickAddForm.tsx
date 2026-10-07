@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import Button from "core/components/Button";
 import Input from "core/components/Input";
+import { TEXT_LIMITS } from "core/constants/textLimits";
 import Typography from "core/components/Typography";
 import {
   QUICK_ADD_SPECS,
@@ -174,6 +175,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
         label={spec.labels.nameLabel}
         placeholder={spec.labels.namePlaceholder}
         value={name}
+        maxLength={TEXT_LIMITS.line}
         onChange={(event) => setName(event.target.value)}
         error={fieldErrors.name}
         aria-invalid={Boolean(fieldErrors.name)}
@@ -186,6 +188,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({
         label={spec.labels.lineLabel}
         placeholder={spec.labels.linePlaceholder}
         value={line}
+        maxLength={TEXT_LIMITS.text}
         onChange={(event) => setLine(event.target.value)}
         error={fieldErrors.line}
         aria-invalid={Boolean(fieldErrors.line)}

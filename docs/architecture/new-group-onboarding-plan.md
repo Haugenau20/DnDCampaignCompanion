@@ -178,7 +178,7 @@ links.
 
 | Step | What | Depends on | Size |
 |---|---|---|---|
-| 0 | **T119 F4**: cap the size of what members write | nothing | M |
+| 0 | **T119 F4**: cap the size of what members write, in the rules (the forms do) | nothing | S |
 | 1 | **Founder invitations**: the collection, a maintainer-only way to issue them (an Admin-SDK script like `audit-location-ids.js`), `reserveSignUp` and the gate accepting them | 0 | M |
 | 2 | **`createGroup` guarded**: spends a founder invitation or an allowance; takes the founder's name; App Check on the three callables | 1 | M |
 | 3 | **The first run**: the group-less home offers "I have a founder link"; the guided flow of D5; the empty-campaign call to action | 2 | M |

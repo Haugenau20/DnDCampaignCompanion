@@ -3,6 +3,7 @@ import type { NPC } from "features/campaign-entities";
 import type { Location, Quest } from "features/campaign-entities";
 import { normaliseObjectives } from "features/campaign-entities";
 import type { DomainData } from "core/types/common";
+import { TEXT_LIMITS, tooLongMessage } from "core/constants/textLimits";
 import type { QuickAddCarry, QuickAddEntity } from "./quickAddEntity";
 
 // The vocabulary lives in `quickAddEntity.ts`, which imports no feature; it is
@@ -264,8 +265,12 @@ export function validateQuickAdd(
 ): QuickAddErrors {
   const spec = QUICK_ADD_SPECS[entity];
   const errors: QuickAddErrors = {};
-  if (!values.name.trim()) errors.name = spec.messages.name;
-  if (!values.line.trim()) errors.line = spec.messages.line;
+  const name = values.name.trim();
+  const line = values.line.trim();
+  if (!name) errors.name = spec.messages.name;
+  else if (name.length > TEXT_LIMITS.line) errors.name = tooLongMessage(name.length, TEXT_LIMITS.line);
+  if (!line) errors.line = spec.messages.line;
+  else if (line.length > TEXT_LIMITS.text) errors.line = tooLongMessage(line.length, TEXT_LIMITS.text);
   return errors;
 }
 

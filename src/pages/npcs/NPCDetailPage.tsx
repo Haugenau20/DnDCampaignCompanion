@@ -1,5 +1,6 @@
 // src/pages/npcs/NPCDetailPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { useParams } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
@@ -653,6 +654,7 @@ const NPCDetailPage: React.FC = () => {
                 rows={1}
                 initialValue={npc.name}
                 submitLabel="Save name"
+                maxLength={TEXT_LIMITS.line}
                 onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
                 onSaved={() => afterSave('name')}
                 onCancel={() => {
@@ -685,6 +687,7 @@ const NPCDetailPage: React.FC = () => {
                 initialValue={npc.title ?? ''}
                 optional
                 submitLabel="Save title"
+                maxLength={TEXT_LIMITS.line}
                 onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
                 onSaved={() => afterSave('title')}
                 onCancel={() => {
@@ -808,6 +811,7 @@ const NPCDetailPage: React.FC = () => {
                       initialValue={npc.occupation ?? ''}
                       optional
                       submitLabel="Save role"
+                      maxLength={TEXT_LIMITS.line}
                       placeholder="Wizard"
                       onSubmit={(value, openedWith) => save(editedText('occupation', value, openedWith))}
                       onSaved={() => afterSave('occupation')}
@@ -835,6 +839,7 @@ const NPCDetailPage: React.FC = () => {
                       initialValue={npc.race ?? ''}
                       optional
                       submitLabel="Save race"
+                      maxLength={TEXT_LIMITS.line}
                       placeholder="Maia"
                       onSubmit={(value, openedWith) => save(editedText('race', value, openedWith))}
                       onSaved={() => afterSave('race')}
@@ -1003,6 +1008,7 @@ const NPCDetailPage: React.FC = () => {
                       helperText="Free text — a company, an order, a house."
                       rows={1}
                       submitLabel="Add affiliation"
+                      maxLength={TEXT_LIMITS.line}
                       placeholder="The Fellowship"
                       clearOnSave
                       onSubmit={(value) =>
@@ -1062,6 +1068,7 @@ const NPCDetailPage: React.FC = () => {
                       label="Add a tag"
                       rows={1}
                       submitLabel="Add tag"
+                      maxLength={TEXT_LIMITS.line}
                       placeholder="wizard"
                       clearOnSave
                       onSubmit={(value) =>
@@ -1098,6 +1105,7 @@ const NPCDetailPage: React.FC = () => {
                   helperText="A sentence or two about who they are."
                   initialValue={npc.description ?? ''}
                   submitLabel="Save description"
+                  maxLength={TEXT_LIMITS.text}
                   onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
                   onSaved={() => afterSave('description')}
                   onCancel={() => {
@@ -1143,6 +1151,7 @@ const NPCDetailPage: React.FC = () => {
                         initialValue={value ?? ''}
                         optional
                         submitLabel={`Save ${label.toLowerCase()}`}
+                        maxLength={TEXT_LIMITS.text}
                         onSubmit={(next, openedWith) => save(editedText(field, next, openedWith))}
                         onSaved={() => afterSave(field)}
                         onCancel={() => {

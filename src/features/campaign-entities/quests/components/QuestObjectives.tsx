@@ -1,5 +1,6 @@
 // src/features/campaign-entities/quests/components/QuestObjectives.tsx
 import React, { useEffect, useRef, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
@@ -107,6 +108,7 @@ export const QuestObjectives: React.FC<QuestObjectivesProps> = ({
                     rows={1}
                     initialValue={objective.description}
                     submitLabel="Save objective"
+                    maxLength={TEXT_LIMITS.text}
                     onSubmit={(value, openedWith) => onEdit(objective.id, value, openedWith)}
                     onSaved={() => setEditingId(null)}
                     onCancel={() => setEditingId(null)}
@@ -216,6 +218,7 @@ export const QuestObjectives: React.FC<QuestObjectivesProps> = ({
               helperText="One thing the party agreed to do. It joins the end of the list."
               rows={1}
               submitLabel="Add objective"
+              maxLength={TEXT_LIMITS.text}
               placeholder="Find the secret door"
               clearOnSave
               onSubmit={onAdd}

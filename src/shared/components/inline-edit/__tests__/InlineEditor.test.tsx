@@ -21,6 +21,35 @@ const renderEditor = (props: Partial<React.ComponentProps<typeof InlineEditor>> 
 };
 
 describe("InlineEditor", () => {
+  // T119: the rules refuse a field over its limit, so the editor stops typing
+  // there and will not send a stored value that is already over it.
+  describe("a field with a length limit", () => {
+    it("stops typing at the limit", () => {
+      const { field } = renderEditor({ maxLength: 12 });
+      expect(field).toHaveAttribute("maxLength", "12");
+    });
+
+    it("will not save text already over the limit, and says why", () => {
+      const { onSubmit, field } = renderEditor({ initialValue: "Mithrandir the Grey", maxLength: 12 });
+
+      expect(field).toHaveAccessibleDescription("Too long: 19 characters, and this can hold 12.");
+      const save = screen.getByRole("button", { name: "Save title" });
+      expect(save).toBeDisabled();
+      fireEvent.click(save);
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it("saves once it is shortened to fit", async () => {
+      const { onSubmit, onSaved, field } = renderEditor({ initialValue: "Mithrandir the Grey", maxLength: 12 });
+
+      fireEvent.change(field, { target: { value: "Mithrandir" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save title" }));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      expect(onSubmit).toHaveBeenCalledWith("Mithrandir", "Mithrandir the Grey");
+    });
+  });
+
   describe("a required field", () => {
     it("refuses an empty value", () => {
       const { onSubmit, field } = renderEditor({ initialValue: "The Grey" });

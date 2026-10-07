@@ -561,6 +561,24 @@ describe('GroupService', () => {
       );
       expect(mockUpdateDoc).not.toHaveBeenCalled();
     });
+
+    // T119: the rules cap a group's name and description.
+    test('refuses a name over 200 characters or a description over 10,000 without writing', async () => {
+      mockIsUserAdmin.mockResolvedValue(true);
+      const svc = GroupService.getInstance();
+      await expect(svc.updateGroup('g1', { name: 'x'.repeat(201) }))
+        .rejects.toThrow('The name is too long to save: 201 characters, and it can hold 200.');
+      await expect(svc.updateGroup('g1', { name: 'The Company', description: 'x'.repeat(10_001) }))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'description' });
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+
+    test('takes a name of exactly 200 characters', async () => {
+      mockIsUserAdmin.mockResolvedValueOnce(true);
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      await GroupService.getInstance().updateGroup('g1', { name: 'x'.repeat(200) });
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── removeUserFromGroup ────────────────────────────────────────────────────

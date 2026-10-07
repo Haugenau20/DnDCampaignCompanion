@@ -68,6 +68,12 @@ export interface InlineEditorProps {
    * a name, a description or a new entry is required, an NPC's title is not.
    */
   optional?: boolean;
+  /**
+   * The most text the field may hold (`TEXT_LIMITS`, T119). Typing stops
+   * there, and a stored value already longer cannot be saved until it is
+   * shortened: the rules would refuse it.
+   */
+  maxLength?: number;
 }
 
 /**
@@ -120,6 +126,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   clearOnSave = false,
   actionsClassName,
   optional = false,
+  maxLength,
 }) => {
   const [value, setValue] = useState(initialValue);
   const [state, setState] = useState<SaveState>('idle');
@@ -144,7 +151,8 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   const trimmed = value.trim();
   // An optional field may be saved empty, but only when there is something to
   // clear: emptying a field that was already empty would be a write of nothing.
-  const canSubmit = trimmed !== '' || (optional && openedWith.trim() !== '');
+  const fits = maxLength === undefined || trimmed.length <= maxLength;
+  const canSubmit = fits && (trimmed !== '' || (optional && openedWith.trim() !== ''));
 
   // Promote to `slow` rather than to `failed`. The write has not failed -- it
   // may well land the moment the connection returns -- so claiming it did would
@@ -235,6 +243,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         label={label}
         placeholder={placeholder}
         value={value}
+        maxLength={maxLength}
         disabled={saving}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={(event) => {
@@ -265,7 +274,7 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
             <Button size="sm" variant="ghost" onClick={keepTheirs}>
               Keep theirs
             </Button>
-            <Button size="sm" variant="ghost" onClick={keepMine} disabled={trimmed === '' && !optional}>
+            <Button size="sm" variant="ghost" onClick={keepMine} disabled={!fits || (trimmed === '' && !optional)}>
               Keep mine
             </Button>
             <Button size="sm" variant="ghost" onClick={editFromTheirs}>
