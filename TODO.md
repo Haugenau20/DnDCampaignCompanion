@@ -19,7 +19,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); waits on the maintainer's choice of route, then a spike |
+| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
 | medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -402,17 +402,18 @@ Two documents, both written 2026-10-07. Nothing has been changed.
 - [`docs/architecture/backend-structure-options.md`](docs/architecture/backend-structure-options.md)
   is the structural question: was the backend any good, and would another
   structure be better, whatever the effort? It gives a verdict on today's
-  structure, six routes (three on Firestore, SQL Connect, Supabase, Convex), a
-  decision matrix and a recommendation: **move to Postgres**. That means
-  Supabase if Docker for local development is acceptable again, SQL Connect if
-  not, either way after a spike that the document specifies.
+  structure, seven routes (three on Firestore, SQL Connect, Supabase, Convex,
+  Cloudflare), a decision matrix with fixed and usage cost scored separately,
+  and a recommendation: **spike Convex first** (no fixed fee, live updates and
+  transactions built in), Cloudflare D1 second ($5/month, real SQL integrity),
+  and restructure Firestore as the fallback. Supabase is the best end state,
+  but at $25/month it does not fit a site with no income.
 - [`docs/architecture/data-model-review.md`](docs/architecture/data-model-review.md)
   is how the code uses the data today: nine findings and their fixes within
   Firestore. A move to Postgres makes most of them moot.
 
-- **Blocked on the maintainer**: choose a route (the Docker question decides
-  between the two Postgres routes), then answer the review's three remaining
-  questions. The production checks in the review (indexes, campaign sizes, how
+- **Blocked on the maintainer**: agree the spike order, then answer the
+  review's three remaining questions. The production checks in the review (indexes, campaign sizes, how
   often links disagree) inform the migration but do not block the choice.
 - **Then**: the spike, as its own entry; then the migration or the Firestore
   restructure, as entries of their own. Removing the unused global-admin grants
