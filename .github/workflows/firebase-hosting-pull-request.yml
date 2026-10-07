@@ -49,10 +49,13 @@ jobs:
           mkdir -p firebase/build
           cp -r build/* firebase/build/
 
-      # Deploy to Firebase Hosting
+      # Deploy to Firebase Hosting: a preview channel on the site muninn.quest is
+      # served from, not the default site, which is to become a redirect (T118).
+      # The cleanup workflow looks for channels on both.
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION }}
           projectId: dnd-campaign-companion
+          target: muninn-quest
           entryPoint: ./firebase

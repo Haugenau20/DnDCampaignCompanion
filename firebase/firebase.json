@@ -15,20 +15,39 @@
   "storage": {
     "rules": "storage.rules.prod"
   },
-  "hosting": {
-    "public": "build",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
+  "//4": "TWO HOSTING SITES (T118). `muninn-quest` carries the custom domain muninn.quest, which is where the site lives. `dnd-campaign-companion` is the project's default site: its web.app and firebaseapp.com addresses cannot be removed, and it serves the same app until it becomes a redirect to muninn.quest. A plain `--only hosting` deploys both; PR previews deploy `muninn-quest` alone (`--only hosting:muninn-quest`; the CLI matches a site id like a target).",
+  "hosting": [
+    {
+      "site": "muninn-quest",
+      "public": "build",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "site": "dnd-campaign-companion",
+      "public": "build",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
   "emulators": {
     "auth": {
       "port": 9099
