@@ -26,7 +26,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
 | low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
-| low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
+| low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
 | low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
@@ -395,30 +395,28 @@ modular API only, so the code itself is ready for 14. Two things hold the bump.
   `firebase-admin` 13 and the modular API landed first
 
 ### T079 — Do old documents still lack `locationId`?
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-07
 
-NPCs and quests refer to a location by `locationId`. Documents written
-before that field existed carry only the free-text `location`, and still
-resolve through a legacy fallback (`resolveLocationName` and
+NPCs and quests (and rumors) refer to a location by `locationId`. Documents
+written before that field existed carry only the free-text `location`, and
+still resolve through a legacy fallback (`resolveLocationName` and
 `referencesLocation` in `locations/utils/location-display.ts`). The field
 shipped without a migration (`d6d9847`): such a document gains an id the next
 time anyone edits it.
 
-**Decided (maintainer, 2026-10-06): a read-only audit first.**
-
-- **Plan**: a script modelled on `src/utils/__dev__/normalizeChapterDateModified.ts`
-  (audit / migrate / revert), with relative imports (`ts-node` honours no
-  paths; see CLAUDE.md). The maintainer runs its audit mode against
-  **production** with their own credentials. It only counts and lists the NPCs
-  and quests that have a `location` but no `locationId`, and which of those
-  resolve to a record. The emulator cannot answer this: its imported data can
-  be arbitrarily old.
+- **Blocked on the maintainer**: run the read-only audit against production,
+  with your own Google login (it needs gcloud; the steps are at the top of
+  `firebase/functions/scripts/audit-location-ids.js`). It counts, per campaign,
+  the NPCs, quests and rumors whose place resolves only through the fallback
+  (by id, or by name), and lists them; it writes nothing.
 - **Then**: none left, and the fallback can go; some left, and either migrate
-  them (the script's migrate mode, which has a revert) or keep the fallback on
-  purpose.
+  them (a migrate mode with a revert, on the same script) or keep the fallback
+  on purpose.
+- **Catch**: the sample-data generators write the legacy shape themselves --
+  a `location` slug and no `locationId` (the dev emulator, 2026-10-07: 37
+  NPCs and 20 quests). Removing the fallback means they write `locationId` too.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
-  was deleted; decided 2026-10-06
-
+  was deleted; decided 2026-10-06; the audit written 2026-10-07
 ### T118 — Move the site to `muninn.quest`, and hide the old project id
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
 
