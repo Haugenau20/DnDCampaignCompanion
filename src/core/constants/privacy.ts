@@ -20,12 +20,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-10-06";
+export const PRIVACY_LAST_UPDATED = "2026-10-07";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "If you ask to be remembered, you now stay signed in for the full 30 days, however long you are away between visits.",
-  "If you don't, nothing changes: your session still ends after 24 hours without activity.",
+  "We now say plainly that the person who runs the site can reach what is stored here, private notes included, though nothing in the app shows them to anyone else.",
+  "If you can no longer sign in, we will delete your account for you when you ask.",
 ]
 
 /**

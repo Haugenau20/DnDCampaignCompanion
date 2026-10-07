@@ -162,11 +162,8 @@ What the founder sees, in order, as one guided flow rather than three admin page
 owner, through the console and the Admin SDK. The app grants it to nobody: the global-admin flag
 (`users/{uid}.isAdmin`) no longer opens anything in the rules or the functions.
 
-**Recommendation:**
-
-- Issue founder invitations (step 1) with an Admin-SDK script, not a callable behind a flag.
-- `/privacy` says plainly that the operator can technically reach the data. That is true with or
-  without the flag, and strangers should be told.
+**Recommendation:** issue founder invitations (step 1) with an Admin-SDK script, not a callable
+behind a flag.
 
 ---
 
@@ -184,7 +181,7 @@ links.
 | 3 | **The first run**: the group-less home offers "I have a founder link"; the guided flow of D5; the empty-campaign call to action | 2 | M |
 | 4 | **Caps and budgets**: a per-group member cap, the account counter, the project cap raised, the project-wide AI budget | 2 | M |
 | 5 | **T119 F2's cache** (`persistentLocalCache`) | nothing | S |
-| 6 | **`/privacy`** updated for D1 and D6 | 1, D6 decided | S |
+| 6 | **`/privacy`** updated for D1 | 1 | S |
 
 Every step that changes a flow lands with its e2e journey (`e2e/`). Step 3's journey runs the whole
 path: founder link → group → campaign → invitation → second player joins. Functions changes get

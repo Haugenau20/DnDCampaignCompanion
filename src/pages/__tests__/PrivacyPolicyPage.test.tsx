@@ -191,6 +191,25 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     expect(mockNavigateToPage).toHaveBeenCalledWith("/contact");
   });
 
+  // T120 D6: the operator can reach the data through the console whatever the
+  // app allows, and a stranger should be told so rather than infer it.
+  it("says whoever runs the site can reach what is stored, private notes included", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#groups-and-sharing");
+    expect(section!.textContent).toMatch(
+      /the person who runs this site can reach everything stored here, private notes included/i
+    );
+    expect(section!.textContent).toMatch(/nothing in the app shows anyone else's private notes/i);
+  });
+
+  // `scripts/delete-account.js`: the button needs a sign-in, a request does not.
+  it("offers to delete the account of someone who can no longer sign in", () => {
+    const { container } = render(<PrivacyPolicyPage />);
+    const section = container.querySelector("#retention");
+    expect(section!.textContent).toMatch(/if you can no longer sign in/i);
+    expect(section!.textContent).toMatch(/we will delete it for you/i);
+  });
+
   it("says concretely what survives leaving a group", () => {
     const { container } = render(<PrivacyPolicyPage />);
     const section = container.querySelector("#groups-and-sharing");
