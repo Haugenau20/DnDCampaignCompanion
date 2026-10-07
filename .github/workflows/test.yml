@@ -135,10 +135,20 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
 
       # `--with-deps` installs the system libraries too, which the cache does
-      # not hold, so it runs on a cache hit as well.
+      # not hold, so it runs on a cache hit as well. That runs apt-get, and the
+      # runner's first apt mirror (azure.archive.ubuntu.com) sometimes stops
+      # answering: apt then waits out its long default timeout on every file,
+      # and the job hit its 20 minutes here (2026-10-07, twice; a healthy run
+      # takes about 2). The runner reads its mirrors from a list
+      # (/etc/apt/apt-mirrors.txt), so a short timeout lets apt give up on the
+      # silent one and use the next. The step's own limit fails a hang in
+      # minutes, not at the job's.
       - name: Install Chromium
         working-directory: e2e
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 8
+        run: |
+          echo 'Acquire::http::Timeout "15"; Acquire::https::Timeout "15"; Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99-fail-fast
+          npx playwright install --with-deps chromium
 
       # Playwright runs the journeys without type-checking them.
       - name: Type-check the journeys
