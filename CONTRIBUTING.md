@@ -6,7 +6,7 @@ the work.
 
 ## What is welcome
 
-- **Bug reports and ideas**, as [issues](https://github.com/Haugenau20/DnDCampaignCompanion/issues/new/choose).
+- **Bug reports and ideas**, as [issues](https://github.com/Haugenau20/Muninn/issues/new/choose).
   Use the templates; they ask for what makes a report actionable.
 - **Security problems**, privately. Never in an issue: see [`SECURITY.md`](SECURITY.md).
 - Reading, running and forking the code under its [licence](LICENSE).

@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/Haugenau20/DnDCampaignCompanion/security/advisories/new
+    url: https://github.com/Haugenau20/Muninn/security/advisories/new
     about: Privately, never in a public issue. See SECURITY.md.
   - name: Account, group or invitation problems
-    url: https://dnd-campaign-companion.web.app/contact
+    url: https://muninn.quest/contact
     about: Anything about your own account or data goes through the site's contact form, not a public issue.
