@@ -25,7 +25,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T118 | Finish the move to `muninn.quest` | S | open | The site, sign-in and mail run on `muninn.quest`; left: the repo's name and URLs, and Google's branding check |
+| low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
@@ -334,22 +334,16 @@ The site lives on `muninn.quest` (Hosting site `muninn-quest`). The project's
 default site, `dnd-campaign-companion` (`web.app`, `firebaseapp.com`), answers
 every address with a 301 to the same path there; `firebase/firebase.json`
 records how that was checked. Sign-in runs on `muninn.quest`
-(`REACT_APP_AUTH_DOMAIN`), and Firebase's mail comes from `noreply@muninn.quest`
-as "Muninn". **Decided (maintainer, 2026-10-06): keep the Firebase project**;
+(`REACT_APP_AUTH_DOMAIN`), Firebase's mail comes from `noreply@muninn.quest`
+as "Muninn", and the GitHub repo is `Haugenau20/Muninn`. The local checkout's
+folder keeps its old name on purpose: Claude's memory for the project is filed
+under the folder's path. **Decided (maintainer, 2026-10-06): keep the Firebase project**;
 its id stays in `CLAUDE.md`, the scripts and the workflows. A new project would
 have meant moving Firestore, Storage and Auth and setting up again everything
 outside the repo, to hide the id only in developer tools; reconsider only if
 something fixed at creation, such as the Firestore location, is wanted changed
 anyway. What is left:
 
-- **The repo** (maintainer): rename `DnDCampaignCompanion` on GitHub and change
-  its description ("Dungeons and Dragons Campain Companion for the Players.").
-  GitHub redirects the old URL, and CI's deploy secrets do not name the repo.
-  Renaming the local checkout's folder too strands Claude's memory for the
-  project, which is filed under the folder's path.
-- **The live URL in the repo**: `README.md:9`, `CODE_OF_CONDUCT.md:13` and
-  `.github/ISSUE_TEMPLATE/config.yml:7` still name `web.app`, which now works
-  only through the redirect.
 - **Google's branding check** (maintainer): Google's sign-in window shows the
   name "Muninn" only once Google verifies the consent screen's branding. Search
   Console verified `muninn.quest` on 2026-10-07; retry no earlier than 24 hours
@@ -369,8 +363,8 @@ anyway. What is left:
   switching the Google provider off and on; the one Firebase does not name
   (Authentication → Sign-in method → Google) can go, with a Google sign-in
   tried straight after.
-- **Source**: todo.txt, 2026-10-06; the site, sign-in, mail and redirect moved
-  2026-10-07
+- **Source**: todo.txt, 2026-10-06; the site, sign-in, mail, redirect and repo
+  moved 2026-10-07
 
 ### T119 — Review the Firestore data model before the site scales
 **Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-07

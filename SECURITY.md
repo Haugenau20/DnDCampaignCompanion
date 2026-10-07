@@ -4,7 +4,7 @@
 
 **Please don't open a public issue for a security problem.** Report it privately through GitHub:
 the repository's **Security** tab → **Report a vulnerability**
-([direct link](https://github.com/Haugenau20/DnDCampaignCompanion/security/advisories/new)).
+([direct link](https://github.com/Haugenau20/Muninn/security/advisories/new)).
 Only the maintainer sees the report.
 
 Include what you found, how to reproduce it, and what an attacker could do with it. A proof of

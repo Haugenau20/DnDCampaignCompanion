@@ -10,7 +10,7 @@ accept that the maintainer makes the final call on what the project does.
 ## Reporting
 
 Report conduct you think breaks this code through the site's
-[contact form](https://dnd-campaign-companion.web.app/contact), which works without signing in.
+[contact form](https://muninn.quest/contact), which works without signing in.
 Pick **Something else** and say it is a conduct report. Only the maintainer reads it, and the
 report stays private.
 

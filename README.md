@@ -6,7 +6,7 @@ A shared campaign journal for tabletop roleplaying **players**: the story so far
 sworn, the rumors you've heard, and every NPC and location you've met, written by whoever was at the
 table and credited to the character who played it.
 
-🔗 **[dnd-campaign-companion.web.app](https://dnd-campaign-companion.web.app/)** (private beta;
+🔗 **[muninn.quest](https://muninn.quest/)** (private beta;
 sign-in is by invitation only for now)
 
 ![Campaign home](docs/images/campaign-home.png)

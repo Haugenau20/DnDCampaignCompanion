@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for reporting. Please don't include anything private: no email addresses, invite links, or campaign content you wouldn't post publicly.
-        **Security problems go to [a private report](https://github.com/Haugenau20/DnDCampaignCompanion/security/advisories/new), never here.**
+        **Security problems go to [a private report](https://github.com/Haugenau20/Muninn/security/advisories/new), never here.**
   - type: textarea
     id: what-happened
     attributes:
