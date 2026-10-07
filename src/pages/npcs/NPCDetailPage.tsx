@@ -1,11 +1,9 @@
 // src/pages/npcs/NPCDetailPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import clsx from 'clsx';
 import { useParams } from 'react-router-dom';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import EntitySigil from 'core/components/EntitySigil';
-import ImageSlot from 'core/components/ImageSlot';
 import {
   useNPCs,
   useQuests,
@@ -17,12 +15,8 @@ import type { NPC, NPCNote, NPCRelationship, NPCStatus } from 'features/campaign
 import type { RecordChange } from 'core/types/common';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
-import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
-import {
-  entityImagePrefix,
-  isOwnBucketUrl,
-} from 'core/services/firebase/storage/ImageStorageService';
+import { entityImagePrefix } from 'core/services/firebase/storage/ImageStorageService';
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
@@ -32,7 +26,15 @@ import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor } from 'shared/components/inline-edit';
 import { editedText } from 'shared/utils/edit-conflict';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
-import { EntityNotes, FieldPrompt } from 'shared/components/entity-page';
+import {
+  EntityFact,
+  EntityNotes,
+  EntityPageSection,
+  EntityPageShell,
+  EntityProse,
+  FieldLabel,
+  FieldPrompt,
+} from 'shared/components/entity-page';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import { attachRefs, type AttachKind } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
@@ -163,46 +165,6 @@ const PROSE_BLOCKS: {
   },
 ];
 
-
-/** The uppercase micro-label every field on this page is introduced by. */
-const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Typography
-    variant="body-sm"
-    color="muted"
-    className="text-[11px] font-semibold uppercase tracking-wider"
-  >
-    {children}
-  </Typography>
-);
-
-/**
- * One card in the sidebar.
- *
- * Its title takes the page's own ink rather than the muted tone the field
- * labels use, so that a card heading and the group headings inside it are not
- * the same thing at the same weight. Relationships is the card that needs it:
- * a well-connected NPC puts five group labels under one card label, and if all
- * six look alike the grouping stops doing its job.
- */
-const SideCard: React.FC<{
-  title: React.ReactNode;
-  /** The card's one action, at the end of the heading row. */
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}> = ({ title, action, children }) => (
-  <section className="bg-secondary card-border rounded-lg p-5 flex flex-col gap-3">
-    <div className="flex items-center gap-2 flex-wrap">
-      <Typography
-        variant="body-sm"
-        className="text-[11px] font-semibold uppercase tracking-wider"
-      >
-        {title}
-      </Typography>
-      {action && <div className="ml-auto">{action}</div>}
-    </div>
-    {children}
-  </section>
-);
 
 /** The kinds of thing an NPC can be connected to, in the order they are shown. */
 /** An NPC with no `connections` stored yet. */
@@ -514,13 +476,6 @@ const NPCDetailPage: React.FC = () => {
     save: (image) => save({ image }),
   });
 
-  /**
-   * Whether the card has a portrait to show. Asked the way `ImageSlot` asks
-   * it: an image outside the app's own bucket is never drawn, so it must not
-   * take the sigil's place or reserve a frame either.
-   */
-  const hasPortrait = Boolean(npc?.image && isOwnBucketUrl(npc.image.url));
-
   /** Close one editor, credit the save in words, and take focus back. */
   const afterSave = (field: EditableField) => {
     closeField(field);
@@ -644,532 +599,264 @@ const NPCDetailPage: React.FC = () => {
     .filter(Boolean)
     .join(' · ');
 
+  const breadcrumb = [
+    { label: 'NPCs', href: '/npcs' },
+    ...(locationName ? [{ label: locationName, href: locationHref }] : []),
+    { label: npc?.name ?? 'Not found' },
+  ];
+
+  const titleTrigger = (node: HTMLButtonElement | null) => {
+    triggers.current.title = node;
+  };
+  /** A fact's opener, kept so focus can return to it once its editor closes. */
+  const factTrigger = (field: EditableField) => (node: HTMLElement | null) => {
+    triggers.current[field] = node as HTMLButtonElement | null;
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <Breadcrumb
-        items={[
-          { label: 'NPCs', href: '/npcs' },
-          ...(locationName ? [{ label: locationName, href: locationHref }] : []),
-          { label: npc?.name ?? 'Not found' },
-        ]}
-        className="mb-6"
-      />
-
-      {/* The page still says what it is in the states where the record cannot
-          be loaded -- signed out, no campaign picked, still resolving. */}
-      {gate.state !== 'ready' && (
-        <Typography variant="h1" className="mb-8">
-          NPC
-        </Typography>
-      )}
-
-      <GatedContent gate={gate}>
-        {npc ? (
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
-            <div className="flex flex-col gap-6 min-w-0">
-              {/* ---- Identity. The band and the card are one object. ---- */}
-              {/* A person is taller than they are wide, so the portrait
-                  stands beside the name rather than spanning the card as a
-                  location's picture does (T064). Without one there is no
-                  empty frame: the sigil is the NPC's picture until then. */}
-              <section className="card rounded-lg p-6 flex flex-col sm:flex-row sm:items-start gap-6">
-                {hasPortrait && (
-                  <ImageUploadControl
-                    variant="compact"
-                    className="w-40 sm:w-44 shrink-0 self-center sm:self-start"
-                    subject="portrait"
-                    hasImage
-                    onUpload={portrait.upload}
-                    onRemove={portrait.remove}
-                  >
-                    <ImageSlot
-                      className="portrait-frame aspect-[3/4]"
-                      label={`${npc.name} — no image added`}
-                      image={npc.image}
-                      alt={`Portrait of ${npc.name}`}
-                      loading="eager"
-                    />
-                  </ImageUploadControl>
-                )}
-
-                <div className="flex-1 min-w-0 flex flex-col gap-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-4 min-w-0">
-                      {!hasPortrait && (
-                        <ImageUploadControl
-                          variant="compact"
-                          placement="outside"
-                          className="shrink-0"
-                          subject="portrait"
-                          hasImage={false}
-                          onUpload={portrait.upload}
-                          onRemove={portrait.remove}
-                        >
-                          <EntitySigil entityId={npc.id} name={npc.name} size={56} />
-                        </ImageUploadControl>
-                      )}
-                      <div className="min-w-0 flex flex-col gap-1">
-                        {isEditing('name') ? (
-                          <InlineEditor
-                            label="Name"
-                            rows={1}
-                            initialValue={npc.name}
-                            submitLabel="Save name"
-                            onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
-                            onSaved={() => afterSave('name')}
-                            onCancel={() => {
-                              closeField('name');
-                              setReturnFocus('name');
-                            }}
-                          />
-                        ) : gate.canAct ? (
-                          // Click-to-edit rather than a fifth control in the
-                          // header: the value itself is the target, which is
-                          // how the description block already works.
-                          <button
-                            type="button"
-                            ref={(node) => {
-                              triggers.current.name = node;
-                            }}
-                            aria-label={`Edit the name ${npc.name}`}
-                            onClick={() => openOnly('name')}
-                            className="text-left rounded-md px-1 -mx-1 selectable-item"
-                          >
-                            <Typography variant="h1">{npc.name}</Typography>
-                          </button>
-                        ) : (
-                          <Typography variant="h1">{npc.name}</Typography>
-                        )}
-
-                        {isEditing('title') ? (
-                          <InlineEditor
-                            label="Title"
-                            helperText="What they are called — “The Grey”, “Innkeeper of Bree”."
-                            rows={1}
-                            initialValue={npc.title ?? ''}
-                            optional
-                            submitLabel="Save title"
-                            onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
-                            onSaved={() => afterSave('title')}
-                            onCancel={() => {
-                              closeField('title');
-                              setReturnFocus('title');
-                            }}
-                          />
-                        ) : subtitle ? (
-                          gate.canAct ? (
-                            <button
-                              type="button"
-                              ref={(node) => {
-                                triggers.current.title = node;
-                              }}
-                              aria-label="Edit the title"
-                              onClick={() => openOnly('title')}
-                              className="text-left rounded-md px-1 -mx-1 selectable-item"
-                            >
-                              <Typography color="secondary">{subtitle}</Typography>
-                            </button>
-                          ) : (
-                            <Typography color="secondary" className="mt-0.5">
-                              {subtitle}
-                            </Typography>
-                          )
-                        ) : (
-                          gate.canAct && (
-                            <FieldPrompt
-                              ref={(node) => {
-                                triggers.current.title = node;
-                              }}
-                              onClick={() => openOnly('title')}
-                            >
-                              What are they called?
-                            </FieldPrompt>
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    {gate.canAct && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Quiet: this page's accents are the controls that
-                            change something -- Add note and Delete. Opening
-                            every editor is not itself a write (D66).
-
-                            It no longer leaves the page. "Change five things at
-                            once" is a real thing to want, so the button stays
-                            and does it here; `/npcs/edit/:id` is `15-8`'s to
-                            retire, and nothing routes to it any more. */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditing(new Set(EVERY_FIELD))}
-                          startIcon={<Pencil className="w-4 h-4" />}
-                        >
-                          Edit all fields
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="delete-button"
-                          onClick={() => setConfirmingDelete(true)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* The standing facts, on one line in a fixed order, so two
-                      NPCs can be compared by looking at the same place twice.
-
-                      Each opens where it sits. The resting state is exactly
-                      what it was: a label and a word. */}
-                  <div
-                    className={clsx(
-                      'border-t divider pt-5 grid grid-cols-2 gap-4',
-                      // Beside a portrait the column is narrower, and four
-                      // across would wrap "Human (Dúnedain)" until there is room.
-                      hasPortrait ? 'xl:grid-cols-4' : 'sm:grid-cols-4'
-                    )}
-                  >
-                    <div className="flex flex-col gap-1">
-                      {isEditing('status') ? (
-                        <StateLadder
-                          label="Status"
-                          options={PRESENCE_OPTIONS}
-                          value={npc.status}
-                          ariaLabel={`Status of ${npc.name}`}
-                          onChange={(status: NPCStatus) =>
-                            save({ status }).then(() => afterSave('status'))
-                          }
-                        />
-                      ) : (
-                        <>
-                          <FieldLabel>Status</FieldLabel>
-                          {/* Hue *and* word. The word carries the fact on its
-                              own; the hue only agrees with it (design language
-                              §2). */}
-                          {gate.canAct ? (
-                            <button
-                              type="button"
-                              ref={(node) => {
-                                triggers.current.status = node;
-                              }}
-                              aria-label="Edit status"
-                              onClick={() => openOnly('status')}
-                              className="text-left rounded-md px-1 -mx-1 selectable-item"
-                            >
-                              <Typography
-                                variant="body-sm"
-                                className={`${PRESENCE_CLASS[npc.status] ?? 'valence-1'} font-medium`}
-                              >
-                                {capitalise(npc.status)}
-                              </Typography>
-                            </button>
-                          ) : (
-                            <Typography
-                              variant="body-sm"
-                              className={`${PRESENCE_CLASS[npc.status] ?? 'valence-1'} font-medium`}
-                            >
-                              {capitalise(npc.status)}
-                            </Typography>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      {isEditing('relationship') ? (
-                        <StateLadder
-                          label="Disposition"
-                          options={STANCE_OPTIONS}
-                          value={npc.relationship}
-                          ariaLabel={`Disposition of ${npc.name}`}
-                          onChange={(relationship: NPCRelationship) =>
-                            save({ relationship }).then(() => afterSave('relationship'))
-                          }
-                        />
-                      ) : (
-                        <>
-                          <FieldLabel>Disposition</FieldLabel>
-                          {gate.canAct ? (
-                            <button
-                              type="button"
-                              ref={(node) => {
-                                triggers.current.relationship = node;
-                              }}
-                              aria-label="Edit disposition"
-                              onClick={() => openOnly('relationship')}
-                              className="text-left rounded-md px-1 -mx-1 selectable-item"
-                            >
-                              <Typography
-                                variant="body-sm"
-                                className={DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown'}
-                              >
-                                {capitalise(npc.relationship)}
-                              </Typography>
-                            </button>
-                          ) : (
-                            <Typography
-                              variant="body-sm"
-                              className={DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown'}
-                            >
-                              {capitalise(npc.relationship)}
-                            </Typography>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      {isEditing('occupation') ? (
-                        <InlineEditor
-                          label="Role"
-                          rows={1}
-                          initialValue={npc.occupation ?? ''}
-                          optional
-                          submitLabel="Save role"
-                          placeholder="Wizard"
-                          onSubmit={(value, openedWith) => save(editedText('occupation', value, openedWith))}
-                          onSaved={() => afterSave('occupation')}
-                          onCancel={() => {
-                            closeField('occupation');
-                            setReturnFocus('occupation');
-                          }}
-                        />
-                      ) : (
-                        <>
-                          <FieldLabel>Role</FieldLabel>
-                          {npc.occupation ? (
-                            gate.canAct ? (
-                              <button
-                                type="button"
-                                ref={(node) => {
-                                  triggers.current.occupation = node;
-                                }}
-                                aria-label="Edit role"
-                                onClick={() => openOnly('occupation')}
-                                className="text-left rounded-md px-1 -mx-1 selectable-item"
-                              >
-                                <Typography variant="body-sm">{npc.occupation}</Typography>
-                              </button>
-                            ) : (
-                              <Typography variant="body-sm">{npc.occupation}</Typography>
-                            )
-                          ) : gate.canAct ? (
-                            <FieldPrompt
-                              ref={(node) => {
-                                triggers.current.occupation = node;
-                              }}
-                              onClick={() => openOnly('occupation')}
-                            >
-                              What do they do?
-                            </FieldPrompt>
-                          ) : (
-                            <Typography variant="body-sm">Unrecorded</Typography>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      {isEditing('race') ? (
-                        <InlineEditor
-                          label="Race"
-                          rows={1}
-                          initialValue={npc.race ?? ''}
-                          optional
-                          submitLabel="Save race"
-                          placeholder="Maia"
-                          onSubmit={(value, openedWith) => save(editedText('race', value, openedWith))}
-                          onSaved={() => afterSave('race')}
-                          onCancel={() => {
-                            closeField('race');
-                            setReturnFocus('race');
-                          }}
-                        />
-                      ) : (
-                        <>
-                          <FieldLabel>Race</FieldLabel>
-                          {npc.race ? (
-                            gate.canAct ? (
-                              <button
-                                type="button"
-                                ref={(node) => {
-                                  triggers.current.race = node;
-                                }}
-                                aria-label="Edit race"
-                                onClick={() => openOnly('race')}
-                                className="text-left rounded-md px-1 -mx-1 selectable-item"
-                              >
-                                <Typography variant="body-sm">{npc.race}</Typography>
-                              </button>
-                            ) : (
-                              <Typography variant="body-sm">{npc.race}</Typography>
-                            )
-                          ) : gate.canAct ? (
-                            <FieldPrompt
-                              ref={(node) => {
-                                triggers.current.race = node;
-                              }}
-                              onClick={() => openOnly('race')}
-                            >
-                              What race are they?
-                            </FieldPrompt>
-                          ) : (
-                            <Typography variant="body-sm">Unrecorded</Typography>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* ---- Description ---- */}
-              <section className="card rounded-lg p-6 flex flex-col gap-3">
-                {isEditing('description') ? (
-                  <InlineEditor
-                    label="Description"
-                    helperText="A sentence or two about who they are."
-                    initialValue={npc.description ?? ''}
-                    submitLabel="Save description"
-                    onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
-                    onSaved={() => afterSave('description')}
-                    onCancel={() => {
-                      closeField('description');
-                      setReturnFocus('description');
-                    }}
-                  />
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <FieldLabel>Description</FieldLabel>
-                      {gate.canAct && npc.description && (
-                        <Button
-                          ref={(node: HTMLButtonElement | null) => {
-                            triggers.current.description = node;
-                          }}
-                          variant="ghost"
-                          size="sm"
-                          // The page carries four of these now, and four
-                          // buttons called "Edit" are indistinguishable to a
-                          // screen reader. The accessible name still *contains*
-                          // the visible word, which is what WCAG 2.5.3 asks.
-                          aria-label="Edit description"
-                          onClick={() => openOnly('description')}
-                          startIcon={<Pencil className="w-3.5 h-3.5" />}
-                        >
-                          Edit
-                        </Button>
-                      )}
-                      {savedNotice('description')}
-                    </div>
-                    {npc.description ? (
-                      // Serif: this is the one piece of running prose the page
-                      // carries. Everything else is metadata and lists.
-                      <Typography className="font-serif italic text-lg leading-relaxed">
-                        {npc.description}
-                      </Typography>
-                    ) : gate.canAct ? (
-                      // The prompt *is* the control when there is nothing to
-                      // edit -- a pencil beside an empty field and a dashed
-                      // "+ Who are they?" under it are two ways into the same
-                      // editor, and the second one says what to write.
-                      <FieldPrompt
-                        onClick={() => openOnly('description')}
-                      >
-                        Who are they?
-                      </FieldPrompt>
-                    ) : (
-                      <Typography color="muted" className="italic">
-                        Nothing written yet
-                      </Typography>
-                    )}
-                  </>
-                )}
-              </section>
-
-              {/* ---- The three fields nothing else in the app renders ----
-
-                  A block with nothing in it now asks for something rather than
-                  disappearing. The card is still dropped entirely when all
-                  three are empty **and the reader cannot write**: a prompt is
-                  an invitation, and offering one to someone who is signed out
-                  would be an invitation to nothing. */}
-              {(npc.appearance || npc.personality || npc.background || gate.canAct) && (
-                <section className="card rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {PROSE_BLOCKS.map(({ field, label, prompt, helper }) => {
-                    const value = npc[field];
-                    return (
-                      <div key={field} className="flex flex-col gap-2">
-                        {isEditing(field) ? (
-                          <InlineEditor
-                            label={label}
-                            helperText={helper}
-                            initialValue={value ?? ''}
-                            optional
-                            submitLabel={`Save ${label.toLowerCase()}`}
-                            onSubmit={(next, openedWith) => save(editedText(field, next, openedWith))}
-                            onSaved={() => afterSave(field)}
-                            onCancel={() => {
-                              closeField(field);
-                              setReturnFocus(field);
-                            }}
-                          />
-                        ) : value ? (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <FieldLabel>{label}</FieldLabel>
-                              {gate.canAct && (
-                                <Button
-                                  ref={(node: HTMLButtonElement | null) => {
-                                    triggers.current[field] = node;
-                                  }}
-                                  variant="ghost"
-                                  size="sm"
-                                  aria-label={`Edit ${label.toLowerCase()}`}
-                                  onClick={() => openOnly(field)}
-                                  startIcon={<Pencil className="w-3.5 h-3.5" />}
-                                >
-                                  Edit
-                                </Button>
-                              )}
-                              {savedNotice(field)}
-                            </div>
-                            <Typography variant="body-sm">{value}</Typography>
-                          </>
-                        ) : (
-                          gate.canAct && (
-                            <FieldPrompt
-                              ref={(node) => {
-                                triggers.current[field] = node;
-                              }}
-                              onClick={() => openOnly(field)}
-                            >
-                              {prompt}
-                            </FieldPrompt>
-                          )
-                        )}
-                      </div>
-                    );
-                  })}
-                </section>
-              )}
-
-              {/* ---- Notes: the history, then somewhere to add to it ---- */}
-              <EntityNotes
-                notes={npc.notes}
-                canEdit={gate.canAct}
-                onAdd={addNote}
-                onEdit={editNote}
-                onDelete={deleteNote}
+    <>
+      {gate.state !== 'ready' || !npc ? (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <Breadcrumb items={breadcrumb} className="mb-6" />
+          {/* The page still says what it is in the states where the record
+              cannot be loaded -- signed out, no campaign picked, still
+              resolving. */}
+          {gate.state !== 'ready' && (
+            <Typography variant="h1" className="mb-8">
+              NPC
+            </Typography>
+          )}
+          <GatedContent gate={gate}>
+            <NPCNotFound onBack={() => navigateToPage('/npcs')} />
+          </GatedContent>
+        </div>
+      ) : (
+        <EntityPageShell
+          breadcrumb={breadcrumb}
+          entityId={npc.id}
+          name={npc.name}
+          // A person is taller than they are wide, so the portrait stands
+          // beside the name rather than spanning the page as a location's
+          // picture does (T064). Without one the sigil is their picture.
+          image={npc.image}
+          imageAlt={`Portrait of ${npc.name}`}
+          imageShape="tall"
+          imageUpload={
+            gate.canAct
+              ? { subject: 'portrait', onUpload: portrait.upload, onRemove: portrait.remove }
+              : undefined
+          }
+          heading={
+            isEditing('name') ? (
+              <InlineEditor
+                label="Name"
+                rows={1}
+                initialValue={npc.name}
+                submitLabel="Save name"
+                onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
+                onSaved={() => afterSave('name')}
+                onCancel={() => {
+                  closeField('name');
+                  setReturnFocus('name');
+                }}
               />
-            </div>
+            ) : gate.canAct ? (
+              // Click-to-edit rather than another control in the header: the
+              // value itself is the target.
+              <button
+                type="button"
+                ref={(node) => {
+                  triggers.current.name = node;
+                }}
+                aria-label={`Edit the name ${npc.name}`}
+                onClick={() => openOnly('name')}
+                className="text-left rounded-md px-1 -mx-1 selectable-item"
+              >
+                <Typography variant="h1">{npc.name}</Typography>
+              </button>
+            ) : undefined
+          }
+          subtitle={
+            isEditing('title') ? (
+              <InlineEditor
+                label="Title"
+                helperText="What they are called — “The Grey”, “Innkeeper of Bree”."
+                rows={1}
+                initialValue={npc.title ?? ''}
+                optional
+                submitLabel="Save title"
+                onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
+                onSaved={() => afterSave('title')}
+                onCancel={() => {
+                  closeField('title');
+                  setReturnFocus('title');
+                }}
+              />
+            ) : subtitle ? (
+              gate.canAct ? (
+                <button
+                  type="button"
+                  ref={titleTrigger}
+                  aria-label="Edit the title"
+                  onClick={() => openOnly('title')}
+                  className="text-left rounded-md px-1 -mx-1 selectable-item"
+                >
+                  <Typography color="secondary">{subtitle}</Typography>
+                </button>
+              ) : (
+                <Typography color="secondary" className="mt-0.5">
+                  {subtitle}
+                </Typography>
+              )
+            ) : (
+              gate.canAct && (
+                <FieldPrompt ref={titleTrigger} onClick={() => openOnly('title')}>
+                  What are they called?
+                </FieldPrompt>
+              )
+            )
+          }
+          actions={
+            gate.canAct && (
+              <>
+                {/* Quiet: this page's accents are the controls that change
+                    something -- Add note and Delete. Opening every editor is
+                    not itself a write (D66). "Change five things at once" is a
+                    real thing to want, so the button stays and does it here. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(new Set(EVERY_FIELD))}
+                  startIcon={<Pencil className="w-4 h-4" />}
+                >
+                  Edit all fields
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="delete-button"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Delete
+                </Button>
+              </>
+            )
+          }
+          facts={
+            // Hue *and* word for status and disposition. The word carries the
+            // fact on its own; the hue only agrees with it (design language §2).
+            <>
+              <EntityFact
+                label="Status"
+                editor={
+                  isEditing('status') && (
+                    <StateLadder
+                      label="Status"
+                      options={PRESENCE_OPTIONS}
+                      value={npc.status}
+                      ariaLabel={`Status of ${npc.name}`}
+                      onChange={(status: NPCStatus) =>
+                        save({ status }).then(() => afterSave('status'))
+                      }
+                    />
+                  )
+                }
+                onEdit={gate.canAct ? () => openOnly('status') : undefined}
+                triggerRef={factTrigger('status')}
+              >
+                <Typography
+                  variant="body-sm"
+                  className={`${PRESENCE_CLASS[npc.status] ?? 'valence-1'} font-medium`}
+                >
+                  {capitalise(npc.status)}
+                </Typography>
+              </EntityFact>
 
-            {/* --------------------------- sidebar --------------------------- */}
-            <div className="flex flex-col gap-6">
-              <SideCard
+              <EntityFact
+                label="Disposition"
+                editor={
+                  isEditing('relationship') && (
+                    <StateLadder
+                      label="Disposition"
+                      options={STANCE_OPTIONS}
+                      value={npc.relationship}
+                      ariaLabel={`Disposition of ${npc.name}`}
+                      onChange={(relationship: NPCRelationship) =>
+                        save({ relationship }).then(() => afterSave('relationship'))
+                      }
+                    />
+                  )
+                }
+                onEdit={gate.canAct ? () => openOnly('relationship') : undefined}
+                triggerRef={factTrigger('relationship')}
+              >
+                <Typography
+                  variant="body-sm"
+                  className={DISPOSITION_CLASS[npc.relationship] ?? 'disposition-unknown'}
+                >
+                  {capitalise(npc.relationship)}
+                </Typography>
+              </EntityFact>
+
+              <EntityFact
+                label="Role"
+                editor={
+                  isEditing('occupation') && (
+                    <InlineEditor
+                      label="Role"
+                      rows={1}
+                      initialValue={npc.occupation ?? ''}
+                      optional
+                      submitLabel="Save role"
+                      placeholder="Wizard"
+                      onSubmit={(value, openedWith) => save(editedText('occupation', value, openedWith))}
+                      onSaved={() => afterSave('occupation')}
+                      onCancel={() => {
+                        closeField('occupation');
+                        setReturnFocus('occupation');
+                      }}
+                    />
+                  )
+                }
+                onEdit={gate.canAct ? () => openOnly('occupation') : undefined}
+                triggerRef={factTrigger('occupation')}
+                prompt="What do they do?"
+              >
+                {npc.occupation && <Typography variant="body-sm">{npc.occupation}</Typography>}
+              </EntityFact>
+
+              <EntityFact
+                label="Race"
+                editor={
+                  isEditing('race') && (
+                    <InlineEditor
+                      label="Race"
+                      rows={1}
+                      initialValue={npc.race ?? ''}
+                      optional
+                      submitLabel="Save race"
+                      placeholder="Maia"
+                      onSubmit={(value, openedWith) => save(editedText('race', value, openedWith))}
+                      onSaved={() => afterSave('race')}
+                      onCancel={() => {
+                        closeField('race');
+                        setReturnFocus('race');
+                      }}
+                    />
+                  )
+                }
+                onEdit={gate.canAct ? () => openOnly('race') : undefined}
+                triggerRef={factTrigger('race')}
+                prompt="What race are they?"
+              >
+                {npc.race && <Typography variant="body-sm">{npc.race}</Typography>}
+              </EntityFact>
+            </>
+          }
+          aside={
+            <>
+              <EntityPageSection
+                muted
                 title={`Relationships${
                   relationships.length ? ` · ${relationships.length}` : ''
                 }`}
@@ -1333,9 +1020,9 @@ const NPCDetailPage: React.FC = () => {
                         : 'What do they belong to?'}
                     </FieldPrompt>
                   ))}
-              </SideCard>
+              </EntityPageSection>
 
-              <SideCard title="Tags">
+              <EntityPageSection title="Tags" muted>
                 {npc.tags?.length ? (
                   <div className="flex flex-wrap gap-2">
                     {npc.tags.map((tag, index) => (
@@ -1390,20 +1077,129 @@ const NPCDetailPage: React.FC = () => {
                       {npc.tags?.length ? 'Add another tag' : 'How would you find them again?'}
                     </FieldPrompt>
                   ))}
-              </SideCard>
+              </EntityPageSection>
 
-              <SideCard title="Record">
+              <EntityPageSection title="Record" muted>
                 {/* Created and last-modified are the only two points
                     `ContentAttribution` holds. Two facts, stated -- not a
                     timeline (Q12). */}
                 <AttributionInfo item={npc} />
-              </SideCard>
-            </div>
-          </div>
-        ) : (
-          <NPCNotFound onBack={() => navigateToPage('/npcs')} />
-        )}
-      </GatedContent>
+              </EntityPageSection>
+            </>
+          }
+        >
+          {/* ---- Description ---- */}
+          <EntityProse
+            label="Description"
+            editor={
+              isEditing('description') && (
+                <InlineEditor
+                  label="Description"
+                  helperText="A sentence or two about who they are."
+                  initialValue={npc.description ?? ''}
+                  submitLabel="Save description"
+                  onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
+                  onSaved={() => afterSave('description')}
+                  onCancel={() => {
+                    closeField('description');
+                    setReturnFocus('description');
+                  }}
+                />
+              )
+            }
+            onEdit={gate.canAct ? () => openOnly('description') : undefined}
+            triggerRef={(node) => {
+              triggers.current.description = node as HTMLButtonElement | null;
+            }}
+            prompt="Who are they?"
+            status={savedNotice('description')}
+          >
+            {npc.description && (
+              // Serif: this is the one piece of running prose the page
+              // carries. Everything else is metadata and lists.
+              <Typography className="font-serif italic text-lg leading-relaxed">
+                {npc.description}
+              </Typography>
+            )}
+          </EntityProse>
+
+          {/* ---- The three fields nothing else in the app renders ----
+
+              A block with nothing in it now asks for something rather than
+              disappearing. The card is still dropped entirely when all
+              three are empty **and the reader cannot write**: a prompt is
+              an invitation, and offering one to someone who is signed out
+              would be an invitation to nothing. */}
+          {(npc.appearance || npc.personality || npc.background || gate.canAct) && (
+            <section className="card rounded-lg p-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {PROSE_BLOCKS.map(({ field, label, prompt, helper }) => {
+                const value = npc[field];
+                return (
+                  <div key={field} className="flex flex-col gap-2">
+                    {isEditing(field) ? (
+                      <InlineEditor
+                        label={label}
+                        helperText={helper}
+                        initialValue={value ?? ''}
+                        optional
+                        submitLabel={`Save ${label.toLowerCase()}`}
+                        onSubmit={(next, openedWith) => save(editedText(field, next, openedWith))}
+                        onSaved={() => afterSave(field)}
+                        onCancel={() => {
+                          closeField(field);
+                          setReturnFocus(field);
+                        }}
+                      />
+                    ) : value ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <FieldLabel>{label}</FieldLabel>
+                          {gate.canAct && (
+                            <Button
+                              ref={(node: HTMLButtonElement | null) => {
+                                triggers.current[field] = node;
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              aria-label={`Edit ${label.toLowerCase()}`}
+                              onClick={() => openOnly(field)}
+                              startIcon={<Pencil className="w-3.5 h-3.5" />}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          {savedNotice(field)}
+                        </div>
+                        <Typography variant="body-sm">{value}</Typography>
+                      </>
+                    ) : (
+                      gate.canAct && (
+                        <FieldPrompt
+                          ref={(node) => {
+                            triggers.current[field] = node;
+                          }}
+                          onClick={() => openOnly(field)}
+                        >
+                          {prompt}
+                        </FieldPrompt>
+                      )
+                    )}
+                  </div>
+                );
+              })}
+            </section>
+          )}
+
+          {/* ---- Notes: the history, then somewhere to add to it ---- */}
+          <EntityNotes
+            notes={npc.notes}
+            canEdit={gate.canAct}
+            onAdd={addNote}
+            onEdit={editNote}
+            onDelete={deleteNote}
+          />
+        </EntityPageShell>
+      )}
 
       {npc && (
         <DeleteConfirmationDialog
@@ -1414,7 +1210,7 @@ const NPCDetailPage: React.FC = () => {
           itemType="NPC"
         />
       )}
-    </div>
+    </>
   );
 };
 

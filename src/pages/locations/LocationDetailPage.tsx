@@ -1,7 +1,7 @@
 // src/pages/locations/LocationDetailPage.tsx
 import React, { useMemo, useState } from 'react';
 import { useLocation as useRouterLocation, useParams } from 'react-router-dom';
-import { ArrowUpRight, Pencil, X } from 'lucide-react';
+import { ArrowUpRight, X } from 'lucide-react';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import Select from 'core/components/Select';
@@ -19,7 +19,7 @@ import {
   insideCountOf,
   ancestorPathOf,
   formatLocationType,
-  locationMetaLine,
+  formatLocationStatus,
   KNOWLEDGE_OPTIONS,
 } from 'features/campaign-entities';
 import type { Location, LocationNote, LocationType, LocationStatus } from 'features/campaign-entities';
@@ -30,7 +30,14 @@ import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
-import { EntityNotes, EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
+import {
+  EntityFact,
+  EntityNotes,
+  EntityPageShell,
+  EntityPageSection,
+  EntityProse,
+  FieldPrompt,
+} from 'shared/components/entity-page';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useQuickAdd } from 'shared/context/QuickAddContext';
 import { useNavigation } from 'shared/context/NavigationContext';
@@ -163,7 +170,7 @@ const LocationDetailPage: React.FC = () => {
 
   // Closing an editor hands focus back to what opened it (A11Y-007).
   const { editing, setEditing, closeEditor, triggerRef } = useInlineEditing<
-    'name' | 'description' | 'feature' | 'tag'
+    'name' | 'status' | 'type' | 'description' | 'feature' | 'tag'
   >();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -352,51 +359,171 @@ const LocationDetailPage: React.FC = () => {
           ]}
           entityId={location.id}
           name={location.name}
-          meta={locationMetaLine(
-            location,
-            parentName,
-            insideCount,
-            location.lastVisited ? formatNoteDate(location.lastVisited) : undefined
-          )}
           image={location.image}
           imageAlt={location.name}
+          imageShape="wide"
           imageUpload={
             canAct
               ? { subject: 'picture', onUpload: picture.upload, onRemove: picture.remove }
               : undefined
           }
-          bandControl={
-            canAct && (
-              <StateLadder
-                label="Knowledge"
-                tone="band"
-                options={KNOWLEDGE_OPTIONS}
-                value={location.status}
-                ariaLabel={`Knowledge of ${location.name}`}
-                onChange={(status: LocationStatus) =>
-                  updateLocationStatus(location.id, status)
-                }
+          heading={
+            editing === 'name' ? (
+              <InlineEditor
+                label="Name"
+                rows={1}
+                initialValue={location.name}
+                submitLabel="Save name"
+                onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
-            )
+            ) : canAct ? (
+              // The name itself is the target, as on the NPC page.
+              <button
+                type="button"
+                ref={triggerRef('name')}
+                aria-label={`Edit the name ${location.name}`}
+                onClick={() => setEditing('name')}
+                className="text-left rounded-md px-1 -mx-1 selectable-item"
+              >
+                <Typography variant="h1" className="break-words">
+                  {location.name}
+                </Typography>
+              </button>
+            ) : undefined
+          }
+          subtitle={
+            parentName && <Typography color="secondary">In {parentName}</Typography>
           }
           actions={
             canAct && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  openQuickAdd('location', { parentId: location.id })
-                }
-              >
-                Add a place inside
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openQuickAdd('location', { parentId: location.id })}
+                >
+                  Add a place inside
+                </Button>
+                {/* The dialog asks what happens to the places inside. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="delete-button"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Delete
+                </Button>
+              </>
             )
+          }
+          notice={
+            // A deletion that failed partway leaves its mark, and the rules
+            // refuse every edit to a marked place (T088): the one thing left to
+            // do is finish it, the way it started.
+            gate.canAct &&
+            location.deleting && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <Typography variant="body-sm" color="secondary">
+                  Deleting {location.name} stopped partway. It takes no changes
+                  until it is finished.
+                </Typography>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="delete-button"
+                  onClick={() => {
+                    setFinishError(null);
+                    handleDelete(location.deleting).catch((err: unknown) =>
+                      setFinishError(err instanceof Error ? err.message : 'Could not finish deleting')
+                    );
+                  }}
+                >
+                  Finish deleting
+                </Button>
+                {finishError && (
+                  <Typography variant="body-sm" color="error" role="alert">
+                    {finishError}
+                  </Typography>
+                )}
+              </div>
+            )
+          }
+          facts={
+            <>
+              <EntityFact
+                label="Knowledge"
+                editor={
+                  editing === 'status' && (
+                    <StateLadder
+                      label="Knowledge"
+                      options={KNOWLEDGE_OPTIONS}
+                      value={location.status}
+                      ariaLabel={`Knowledge of ${location.name}`}
+                      onChange={(status: LocationStatus) =>
+                        updateLocationStatus(location.id, status).then(closeEditor)
+                      }
+                    />
+                  )
+                }
+                onEdit={canAct ? () => setEditing('status') : undefined}
+                triggerRef={triggerRef('status')}
+              >
+                <Typography variant="body-sm" className="font-medium">
+                  {formatLocationStatus(location.status)}
+                </Typography>
+              </EntityFact>
+
+              <EntityFact
+                label="Type"
+                editor={
+                  editing === 'type' && (
+                    <Select
+                      label="Type"
+                      size="sm"
+                      autoFocus
+                      value={location.type}
+                      onChange={(event) =>
+                        void save({ type: event.target.value as LocationType }).then(closeEditor)
+                      }
+                      onBlur={closeEditor}
+                    >
+                      {TYPE_OPTIONS.map((type) => (
+                        <option key={type} value={type}>
+                          {formatLocationType(type)}
+                        </option>
+                      ))}
+                    </Select>
+                  )
+                }
+                onEdit={canAct ? () => setEditing('type') : undefined}
+                triggerRef={triggerRef('type')}
+              >
+                <Typography variant="body-sm">{formatLocationType(location.type)}</Typography>
+              </EntityFact>
+
+              <EntityFact label="Inside">
+                <Typography variant="body-sm">
+                  {insideCount > 0
+                    ? `${insideCount} place${insideCount === 1 ? '' : 's'}`
+                    : 'Nothing yet'}
+                </Typography>
+              </EntityFact>
+
+              <EntityFact label="Last visited">
+                {location.lastVisited && (
+                  <Typography variant="body-sm">{formatNoteDate(location.lastVisited)}</Typography>
+                )}
+              </EntityFact>
+            </>
           }
           aside={
             <>
               {/* ---------------------------- who is here --------------------------- */}
               <EntityPageSection
                 title="Who is here"
+                muted
                 count={peopleHere.length || undefined}
                 empty={
                   !canAct ? (
@@ -484,6 +611,7 @@ const LocationDetailPage: React.FC = () => {
               {/* -------------------------- what points here ------------------------ */}
               <EntityPageSection
                 title="What points here"
+                muted
                 empty={
                   <Typography variant="body-sm" color="muted" className="italic">
                     Nothing points here yet
@@ -519,7 +647,7 @@ const LocationDetailPage: React.FC = () => {
               </EntityPageSection>
 
               {/* -------------------------------- tags ------------------------------ */}
-              <EntityPageSection title="Tags">
+              <EntityPageSection title="Tags" muted>
                 <div className="flex flex-wrap gap-2">
                   {(location.tags ?? []).map((tag) => (
                     <span
@@ -571,146 +699,44 @@ const LocationDetailPage: React.FC = () => {
               </EntityPageSection>
 
               {/* ------------------------------ the record -------------------------- */}
-              <EntityPageSection title="Written here" muted>
+              <EntityPageSection title="Record" muted>
                 {/*
                   Created and last-modified are the only two points
                   `ContentAttribution` holds. Two facts, stated -- not a
                   timeline (§8).
                 */}
                 <AttributionInfo item={location} />
-
-                {/* A deletion that failed partway leaves its mark, and the rules
-                    refuse every edit to a marked place (T088): the one thing
-                    left to do is finish it, the way it started. */}
-                {gate.canAct && location.deleting && (
-                  <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
-                    <Typography variant="body-sm" color="secondary">
-                      Deleting {location.name} stopped partway. It takes no
-                      changes until it is finished.
-                    </Typography>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="delete-button"
-                      onClick={() => {
-                        setFinishError(null);
-                        handleDelete(location.deleting).catch((err: unknown) =>
-                          setFinishError(err instanceof Error ? err.message : 'Could not finish deleting')
-                        );
-                      }}
-                    >
-                      Finish deleting
-                    </Button>
-                    {finishError && (
-                      <Typography variant="body-sm" color="error" role="alert">
-                        {finishError}
-                      </Typography>
-                    )}
-                  </div>
-                )}
-                {canAct && !location.deleting && (
-                  <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="delete-button"
-                      onClick={() => setConfirmingDelete(true)}
-                    >
-                      Delete location
-                    </Button>
-                    {insideCount > 0 && (
-                      <Typography variant="body-sm" color="secondary" className="text-xs">
-                        — asks what happens to the {insideCount} place
-                        {insideCount === 1 ? '' : 's'} inside
-                      </Typography>
-                    )}
-                  </div>
-                )}
               </EntityPageSection>
             </>
           }
         >
-          {/* --------------------------- what this place is --------------------------- */}
-          <EntityPageSection
-            title="What this place is"
-            action={
-              canAct &&
-              editing !== 'name' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  ref={triggerRef('name')}
-                  onClick={() => setEditing('name')}
-                  startIcon={<Pencil className="w-3.5 h-3.5" />}
-                >
-                  Rename
-                </Button>
+          {/* ------------------------------- description ------------------------------ */}
+          <EntityProse
+            label="Description"
+            editor={
+              editing === 'description' && (
+                <InlineEditor
+                  label="Description"
+                  helperText="A sentence or two about the place itself."
+                  initialValue={location.description ?? ''}
+                  submitLabel="Save description"
+                  onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
+                  onSaved={closeEditor}
+                  onCancel={closeEditor}
+                />
               )
             }
+            onEdit={canAct ? () => setEditing('description') : undefined}
+            triggerRef={triggerRef('description')}
+            prompt="What is this place?"
           >
-            {editing === 'name' && (
-              <InlineEditor
-                label="Name"
-                rows={1}
-                initialValue={location.name}
-                submitLabel="Save name"
-                onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
-                onSaved={closeEditor}
-                onCancel={closeEditor}
-              />
-            )}
-
-            {canAct && (
-              <Select
-                label="Type"
-                size="sm"
-                value={location.type}
-                onChange={(event) =>
-                  void save({ type: event.target.value as LocationType })
-                }
-                className="max-w-xs"
-              >
-                {TYPE_OPTIONS.map((type) => (
-                  <option key={type} value={type}>
-                    {formatLocationType(type)}
-                  </option>
-                ))}
-              </Select>
-            )}
-
-            {editing === 'description' ? (
-              <InlineEditor
-                label="Description"
-                helperText="A sentence or two about the place itself."
-                initialValue={location.description ?? ''}
-                submitLabel="Save description"
-                onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
-                onSaved={closeEditor}
-                onCancel={closeEditor}
-              />
-            ) : location.description ? (
-              <button
-                type="button"
-                disabled={!canAct}
-                ref={triggerRef('description')}
-                onClick={() => setEditing('description')}
-                className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
-              >
-                {/* Serif: the one piece of running prose the page carries. */}
-                <Typography className="font-serif italic text-lg leading-relaxed">
-                  {location.description}
-                </Typography>
-              </button>
-            ) : canAct ? (
-              <FieldPrompt ref={triggerRef('description')} onClick={() => setEditing('description')}>
-                What is this place?
-              </FieldPrompt>
-            ) : (
-              <Typography color="muted" className="italic">
-                Nothing written yet
+            {location.description && (
+              // Serif: the one piece of running prose the page carries.
+              <Typography className="font-serif italic text-lg leading-relaxed">
+                {location.description}
               </Typography>
             )}
-          </EntityPageSection>
+          </EntityProse>
 
           {/* ----------------------------- where this sits ---------------------------- */}
           <WhereThisSits

@@ -3,10 +3,10 @@ import React from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
 import EntitySigil from 'core/components/EntitySigil';
+import ImageSlot from 'core/components/ImageSlot';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import ImageUploadControl, { ImageUploadControlProps } from 'shared/components/ImageUploadControl';
 import { bandPicture } from 'shared/components/BandPicture';
-import PicturedBand, { BandRegion } from 'shared/components/PicturedBand';
 import { StoredImage } from 'core/types/storedImage';
 
 export interface EntityPageBreadcrumbItem {
@@ -15,160 +15,196 @@ export interface EntityPageBreadcrumbItem {
 }
 
 export interface EntityPageShellProps {
-  /** The trail above the name. The record's own name is the last item. */
+  /** The trail above the card. The record's own name is the last item. */
   breadcrumb: EntityPageBreadcrumbItem[];
   /** The record's document id, which is what makes its mark stable. */
   entityId: string;
   /** The record's name, in the campaign's voice. */
   name: string;
   /**
-   * One line of standing facts under the name -- "City in Beleriand · 2 places
-   * inside · last visited 31 May 2025".
-   *
-   * One line, deliberately. A band that grows a second line of metadata is a
-   * band that has started being the record.
+   * The name as the page draws it, when that is more than a heading -- the
+   * click-to-edit button, or the editor that replaces it. It must contain the
+   * page's one `h1`. Defaults to the name as a plain `h1`.
    */
-  meta?: React.ReactNode;
-  /** The state control: a location's knowledge step, a quest's status. */
-  bandControl?: React.ReactNode;
-  /** Actions on the band. The one primary act, and nothing else. */
+  heading?: React.ReactNode;
+  /** One line under the name: what the record is, in a few words. */
+  subtitle?: React.ReactNode;
+  /** The card's actions, at the end of the name row. */
   actions?: React.ReactNode;
+  /**
+   * The standing facts, each a cell, laid out under a rule in a fixed grid so
+   * two records can be compared by looking at the same place twice.
+   */
+  facts?: React.ReactNode;
+  /** Something the reader must see before anything else, such as a deletion that stopped partway. */
+  notice?: React.ReactNode;
   /** Prose and structure. The left column, and the first on a phone. */
   children: React.ReactNode;
   /** Relations and record. The right column, and the second on a phone. */
   aside?: React.ReactNode;
-  /**
-   * The record's picture, drawn across the band behind its text.
-   *
-   * `PicturedBand` keeps each block of text on it -- the trail, the name,
-   * the controls -- readable: a silhouette of the band colour around each
-   * glyph, and a faint patch behind the block (design D10). A window at the
-   * band's top shows the picture above the text. Without a picture the band
-   * is drawn as it always was: most records never get one, and an empty slot
-   * on every one of them would be the page's main feature.
-   */
+  /** The record's picture. Without one the sigil stands in, and no empty frame is drawn. */
   image?: StoredImage | null;
   /** Alt text for `image`. */
   imageAlt?: string;
   /**
+   * The picture's shape. People are tall and places are wide: a "tall"
+   * picture stands beside the name, a "wide" one spans the page above the
+   * card and the sidebar, light and with nothing written on it.
+   */
+  imageShape?: 'wide' | 'tall';
+  /**
    * Add/replace/remove for `image`, for whoever may edit; omitted for everyone
-   * else. Laid over the band's top-right corner as a compact
-   * `ImageUploadControl` (T068). Its status and error note hangs below the
-   * band as a `card`, so none of it is text on the band (D125).
+   * else. Laid over the picture's corner, or over the sigil's while there is
+   * none -- so a record without a picture still has somewhere to add one.
    */
   imageUpload?: Pick<ImageUploadControlProps, 'subject' | 'onUpload' | 'onRemove'>;
   className?: string;
 }
 
 /**
- * The header and two-column body every entity page shares.
+ * The page every entity shares: a trail, an identity card, and a body of
+ * cards beside a sidebar.
  *
- * Built in `15-4` and consumed unchanged by `15-5` and `15-6` -- the quest and
- * NPC pages are the same object with different contents, and three pages that
- * each grew their own header is how the four directories ended up reading
- * `?highlight=` four different ways.
+ * Built from the NPC page's card (T063), which is what the location and quest
+ * pages moved toward: the content differs -- a person, a place, a quest -- and
+ * the frame is the same one. The name, its line, the actions and the standing
+ * facts sit in one light card; there is one image slot, in one of two shapes.
  *
- * **The band carries no accent.** `colour-schema.md` §5.2 solves `accent.*`
- * against page, card and sunken and not against the band; light `accent.ink`
- * #8D4F00 on band #26211C measures ~1.9:1, and `colour-schema.md` D125 rules
- * that none is authored for it. So everything on the band takes the band's
- * own pair -- see `.band-chip` in `components.css`. Nothing here names a colour.
- *
- * The body collapses to one column in DOM order, so a phone reads prose and
- * structure first and relations second. That order is the point: on a phone the
- * sidebar would otherwise sit between the name and the description.
+ * The body collapses to one column in DOM order, so a phone reads the card and
+ * the prose first and relations second. That order is the point: on a phone
+ * the sidebar would otherwise sit between the name and the description.
  */
 export const EntityPageShell: React.FC<EntityPageShellProps> = ({
   breadcrumb,
   entityId,
   name,
-  meta,
-  bandControl,
+  heading,
+  subtitle,
   actions,
+  facts,
+  notice,
   children,
   aside,
   image,
   imageAlt,
+  imageShape = 'wide',
   imageUpload,
   className,
 }) => {
   const picture = bandPicture(image);
+  const wide = picture && imageShape === 'wide';
+  const tall = picture && imageShape === 'tall';
 
-  const band = (
-    <PicturedBand
-      image={picture}
-      alt={imageAlt ?? ''}
-      className="hero-band py-6 sm:py-8"
-      innerClassName="px-4"
-      pictureTestId="entity-page-image"
-    >
-      <div className="max-w-7xl mx-auto flex flex-col gap-4">
-        {/* Sized to the trail, so its patch covers the words and not the row. */}
-        <BandRegion className="self-start max-w-full">
-          <Breadcrumb
-            items={breadcrumb}
-            tone="band"
-            // Room for the corner buttons, which sit level with the trail when
-            // there is no picture window above it.
-            className={clsx('py-0', imageUpload && !picture && 'pr-20')}
-          />
-        </BandRegion>
+  /** The picture in its frame, with its controls laid over it for an editor. */
+  const framed = (slot: React.ReactNode, frameClass: string) =>
+    imageUpload ? (
+      <ImageUploadControl variant="compact" className={frameClass} hasImage {...imageUpload}>
+        {slot}
+      </ImageUploadControl>
+    ) : (
+      <div className={frameClass}>{slot}</div>
+    );
 
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <BandRegion className="flex items-start gap-4 min-w-0">
-            <EntitySigil entityId={entityId} name={name} size={48} className="shrink-0" />
-            <div className="min-w-0 flex flex-col gap-1">
-              {/*
-                The name is the campaign's voice and takes the serif, which
-                `Typography`'s heading variants already carry (design language
-                §4). Everything else on this page is the application talking.
-              */}
-              <Typography variant="h1" className="text-3xl sm:text-4xl break-words">
-                {name}
-              </Typography>
-              {meta && (
-                <Typography variant="body-sm" className="hero-muted">
-                  {meta}
-                </Typography>
-              )}
-            </div>
-          </BandRegion>
-
-          {(bandControl || actions) && (
-            <BandRegion className="flex flex-wrap items-center gap-3 lg:justify-end shrink-0 self-start">
-              {bandControl}
-              {actions}
-            </BandRegion>
-          )}
-        </div>
-      </div>
-    </PicturedBand>
-  );
+  const sigil = <EntitySigil entityId={entityId} name={name} size={56} />;
 
   return (
-    <div className={clsx('px-4 py-4', className)}>
-      {/*
-        Full bleed, cancelling the container's own padding, so the band meets the
-        chrome above it with no seam of page colour between them -- the same
-        treatment `CampaignBanner` and `AdminLayout` already use.
-      */}
-      <div className="-mx-4 -mt-4">
-        {imageUpload ? (
-          <ImageUploadControl variant="compact" hasImage={Boolean(picture)} {...imageUpload}>
-            {band}
-          </ImageUploadControl>
-        ) : (
-          band
+    <div className={clsx('max-w-7xl mx-auto px-4 py-8', className)}>
+      <Breadcrumb items={breadcrumb} className="mb-6" />
+
+      {wide &&
+        framed(
+          <div data-testid="entity-page-image">
+            <ImageSlot
+              className="picture-frame aspect-[16/9] sm:aspect-[3/1]"
+              label={`${name} — no image added`}
+              image={picture}
+              alt={imageAlt ?? ''}
+              loading="eager"
+            />
+          </div>,
+          'mb-6'
         )}
-      </div>
 
       <div
         className={clsx(
-          'max-w-7xl mx-auto mt-6 grid gap-6 items-start',
-          aside ? 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]' : 'grid-cols-1'
+          'grid gap-6 items-start',
+          aside ? 'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem]' : 'grid-cols-1'
         )}
       >
-        <div className="flex flex-col gap-6 min-w-0">{children}</div>
+        <div className="flex flex-col gap-6 min-w-0">
+          {/* ---- Identity: the name, its line, its actions, its facts ---- */}
+          <section className="card rounded-lg p-6 flex flex-col sm:flex-row sm:items-start gap-6">
+            {tall &&
+              framed(
+                <div data-testid="entity-page-image">
+                  <ImageSlot
+                    className="portrait-frame aspect-[3/4]"
+                    label={`${name} — no image added`}
+                    image={picture}
+                    alt={imageAlt ?? ''}
+                    loading="eager"
+                  />
+                </div>,
+                'w-40 sm:w-44 shrink-0 self-center sm:self-start'
+              )}
+
+            <div className="flex-1 min-w-0 flex flex-col gap-5">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                {/* On a phone the sigil stands above the name: beside it, a
+                    long word in a heading-sized name ran out of room and
+                    broke mid-word. The name hyphenates where it must. */}
+                <div className="flex flex-col items-start sm:flex-row sm:items-center gap-4 min-w-0 [&_h1]:hyphens-auto">
+                  {!picture &&
+                    (imageUpload ? (
+                      <ImageUploadControl
+                        variant="compact"
+                        placement="outside"
+                        className="shrink-0"
+                        hasImage={false}
+                        {...imageUpload}
+                      >
+                        {sigil}
+                      </ImageUploadControl>
+                    ) : (
+                      <div className="shrink-0">{sigil}</div>
+                    ))}
+                  <div className="min-w-0 flex flex-col gap-1">
+                    {/* The name is the campaign's voice and takes the serif,
+                        which `Typography`'s heading variants carry. */}
+                    {heading ?? (
+                      <Typography variant="h1" className="break-words">
+                        {name}
+                      </Typography>
+                    )}
+                    {subtitle}
+                  </div>
+                </div>
+
+                {actions && (
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">{actions}</div>
+                )}
+              </div>
+
+              {notice}
+
+              {facts && (
+                <div
+                  className={clsx(
+                    'border-t divider pt-5 grid grid-cols-2 gap-4',
+                    // Beside a portrait the column is narrower, and four
+                    // across would wrap a long value until there is room.
+                    tall ? 'xl:grid-cols-4' : 'sm:grid-cols-4'
+                  )}
+                >
+                  {facts}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {children}
+        </div>
+
         {aside && <div className="flex flex-col gap-6 min-w-0">{aside}</div>}
       </div>
     </div>

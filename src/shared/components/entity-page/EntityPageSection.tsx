@@ -2,6 +2,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import Typography from 'core/components/Typography';
+import FieldLabel from './FieldLabel';
 
 export interface EntityPageSectionProps {
   /**
@@ -25,7 +26,11 @@ export interface EntityPageSectionProps {
   empty?: React.ReactNode;
   /** The section's contents, or nothing -- in which case `empty` renders. */
   children?: React.ReactNode;
-  /** Recessed rather than raised, for the record card at the foot of the aside. */
+  /**
+   * Recessed rather than raised: a card in the sidebar. Its title takes the
+   * page's ink rather than the muted label, so that a card heading and the
+   * group headings inside it are not the same thing at the same weight.
+   */
   muted?: boolean;
   className?: string;
 }
@@ -38,10 +43,11 @@ const isEmpty = (children: React.ReactNode): boolean =>
   (Array.isArray(children) && children.filter(Boolean).length === 0);
 
 /**
- * One card on an entity page.
+ * One card on an entity page: raised in the main column, recessed in the
+ * sidebar -- the two cards the NPC page drew for itself before T063 made them
+ * every entity page's.
  *
- * Built in `15-4` alongside `EntityPageShell` and consumed unchanged by `15-5`
- * and `15-6`. It exists mostly to make the empty state impossible to get wrong:
+ * It exists mostly to make the empty state impossible to get wrong:
  * every section on every entity page renders its prompt from the same place, so
  * a new section cannot accidentally ship an empty box.
  */
@@ -56,18 +62,22 @@ export const EntityPageSection: React.FC<EntityPageSectionProps> = ({
 }) => (
   <section
     className={clsx(
-      'rounded-lg p-5 flex flex-col gap-3',
-      muted ? 'bg-secondary card-border' : 'card',
+      'rounded-lg flex flex-col gap-3',
+      muted ? 'bg-secondary card-border p-5' : 'card p-6',
       className
     )}
   >
     <div className="flex items-center gap-2 flex-wrap">
-      <Typography
-        variant="body-sm"
-        className="text-[11px] font-semibold uppercase tracking-wider"
-      >
-        {title}
-      </Typography>
+      {muted ? (
+        <Typography
+          variant="body-sm"
+          className="text-[11px] font-semibold uppercase tracking-wider"
+        >
+          {title}
+        </Typography>
+      ) : (
+        <FieldLabel>{title}</FieldLabel>
+      )}
       {typeof count === 'number' && (
         <Typography variant="body-sm" color="muted" className="text-xs tabular-nums">
           {count}

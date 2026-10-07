@@ -33,7 +33,6 @@ export {
   moveObjective,
   objectiveProgressLabel,
   objectiveProgressOf,
-  questMetaLine,
 } from './quests/utils/quest-presentation';
 export type { ObjectiveProgress } from './quests/utils/quest-presentation';
 // Coerces whatever reaches a quest document into `QuestObjective[]`; the
@@ -73,7 +72,6 @@ export type { LocationIndex } from './locations/utils/location-tree';
 export {
   formatLocationType,
   formatLocationStatus,
-  locationMetaLine,
   KNOWLEDGE_OPTIONS,
   STATUS_ORDER,
   STATUS_TONE,

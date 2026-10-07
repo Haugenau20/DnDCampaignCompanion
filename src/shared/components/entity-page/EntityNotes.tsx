@@ -3,6 +3,7 @@ import React, { useEffect, useId, useMemo, useState } from 'react';
 import Typography from 'core/components/Typography';
 import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
 import type { EntityNote } from 'shared/utils/entity-notes';
+import FieldLabel from './FieldLabel';
 
 export interface EntityNotesProps<T extends EntityNote> {
   /** The record's notes, in stored order. Shown oldest first, which the heading says. */
@@ -55,14 +56,7 @@ export function EntityNotes<T extends EntityNote>({
   return (
     <section aria-labelledby={headingId} className="card rounded-lg overflow-hidden">
       <div className="px-6 pt-5 pb-3 flex items-center gap-3">
-        <Typography
-          id={headingId}
-          variant="body-sm"
-          color="muted"
-          className="text-[11px] font-semibold uppercase tracking-wider"
-        >
-          Notes
-        </Typography>
+        <FieldLabel id={headingId}>Notes</FieldLabel>
         <Typography variant="body-sm" color="muted" className="text-xs">
           {notes.length}
           {notes.length > 1 ? ' · oldest first' : ''}

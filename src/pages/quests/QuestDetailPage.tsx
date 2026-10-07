@@ -1,7 +1,7 @@
 // src/pages/quests/QuestDetailPage.tsx
 import React, { useMemo, useState } from 'react';
 import { useLocation as useRouterLocation, useParams } from 'react-router-dom';
-import { ArrowUpRight, Pencil, X } from 'lucide-react';
+import { ArrowUpRight, X } from 'lucide-react';
 import Typography from 'core/components/Typography';
 import Button from 'core/components/Button';
 import EntitySigil from 'core/components/EntitySigil';
@@ -14,7 +14,8 @@ import {
   resolveLocationName,
   QuestObjectives,
   DeleteQuestDialog,
-  questMetaLine,
+  formatQuestStatus,
+  objectiveProgressOf,
   QUEST_STATUS_OPTIONS,
   rumorTitleText,
 } from 'features/campaign-entities';
@@ -25,7 +26,13 @@ import AttributionInfo from 'shared/components/AttributionInfo';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
-import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
+import {
+  EntityFact,
+  EntityPageShell,
+  EntityPageSection,
+  EntityProse,
+  FieldPrompt,
+} from 'shared/components/entity-page';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
@@ -174,7 +181,7 @@ const QuestDetailPage: React.FC = () => {
 
   // Closing an editor hands focus back to what opened it (A11Y-007).
   const { editing, setEditing, closeEditor, triggerRef } = useInlineEditing<
-    'title' | 'description' | 'background' | 'levelRange' | 'place' | PrepField
+    'title' | 'status' | 'description' | 'background' | 'levelRange' | 'place' | PrepField
   >();
 
   /**
@@ -368,6 +375,7 @@ const QuestDetailPage: React.FC = () => {
   };
 
   const canAct = gate.canAct;
+  const progress = objectiveProgressOf(quest?.objectives);
 
   return (
     <>
@@ -385,40 +393,129 @@ const QuestDetailPage: React.FC = () => {
           breadcrumb={[{ label: 'Quests', href: '/quests' }, { label: quest.title }]}
           entityId={quest.id}
           name={quest.title}
-          meta={questMetaLine(
-            quest,
-            locationName,
-            quest.dateCompleted ? formatNoteDate(quest.dateCompleted) : undefined
-          )}
-          bandControl={
-            canAct && (
-              <StateLadder
-                label="Status"
-                tone="band"
-                options={QUEST_STATUS_OPTIONS}
-                value={quest.status}
-                ariaLabel={`Status of ${quest.title}`}
-                onChange={(status: QuestStatus) => updateQuestStatus(quest.id, status)}
+          heading={
+            editing === 'title' ? (
+              <InlineEditor
+                label="Title"
+                rows={1}
+                initialValue={quest.title}
+                submitLabel="Save title"
+                onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
+                onSaved={closeEditor}
+                onCancel={closeEditor}
               />
+            ) : canAct ? (
+              // The title itself is the target, as on the NPC page.
+              <button
+                type="button"
+                ref={triggerRef('title')}
+                aria-label={`Edit the title ${quest.title}`}
+                onClick={() => setEditing('title')}
+                className="text-left rounded-md px-1 -mx-1 selectable-item"
+              >
+                <Typography variant="h1" className="break-words">
+                  {quest.title}
+                </Typography>
+              </button>
+            ) : undefined
+          }
+          subtitle={locationName && <Typography color="secondary">At {locationName}</Typography>}
+          actions={
+            canAct && (
+              <>
+                {quest.status === 'active' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void markQuestCompleted(quest.id)}
+                  >
+                    Mark completed
+                  </Button>
+                )}
+                {/* The dialog says what else loses a link. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="delete-button"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Delete
+                </Button>
+              </>
             )
           }
-          actions={
-            canAct &&
-            quest.status === 'active' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void markQuestCompleted(quest.id)}
+          facts={
+            <>
+              <EntityFact
+                label="Status"
+                editor={
+                  editing === 'status' && (
+                    <StateLadder
+                      label="Status"
+                      options={QUEST_STATUS_OPTIONS}
+                      value={quest.status}
+                      ariaLabel={`Status of ${quest.title}`}
+                      onChange={(status: QuestStatus) =>
+                        updateQuestStatus(quest.id, status).then(closeEditor)
+                      }
+                    />
+                  )
+                }
+                onEdit={canAct ? () => setEditing('status') : undefined}
+                triggerRef={triggerRef('status')}
               >
-                Mark completed
-              </Button>
-            )
+                <Typography variant="body-sm" className="font-medium">
+                  {formatQuestStatus(quest.status)}
+                </Typography>
+              </EntityFact>
+
+              <EntityFact label="Objectives">
+                <Typography variant="body-sm">
+                  {progress.total > 0 ? `${progress.completed} of ${progress.total} done` : 'None yet'}
+                </Typography>
+              </EntityFact>
+
+              <EntityFact
+                label="Level range"
+                editor={
+                  editing === 'levelRange' && (
+                    <InlineEditor
+                      label="Level range"
+                      rows={1}
+                      initialValue={quest.levelRange ?? ''}
+                      optional
+                      submitLabel="Save level range"
+                      placeholder="7–9"
+                      onSubmit={(value) => save({ levelRange: value })}
+                      onSaved={closeEditor}
+                      onCancel={closeEditor}
+                    />
+                  )
+                }
+                onEdit={canAct ? () => setEditing('levelRange') : undefined}
+                triggerRef={triggerRef('levelRange')}
+                prompt="What levels is it pitched at?"
+              >
+                {quest.levelRange && <Typography variant="body-sm">{quest.levelRange}</Typography>}
+              </EntityFact>
+
+              <EntityFact label="Completed">
+                <Typography variant="body-sm">
+                  {quest.status === 'completed'
+                    ? quest.dateCompleted
+                      ? formatNoteDate(quest.dateCompleted)
+                      : 'Yes'
+                    : 'Not yet'}
+                </Typography>
+              </EntityFact>
+            </>
           }
           aside={
             <>
               {/* ---------------------------- who is in it --------------------------- */}
               <EntityPageSection
                 title="Who is in it"
+                muted
                 count={people.length || undefined}
                 empty={
                   !canAct ? (
@@ -530,6 +627,7 @@ const QuestDetailPage: React.FC = () => {
               {/* ---------------------------- where it happens ----------------------- */}
               <EntityPageSection
                 title="Where it happens"
+                muted
                 empty={
                   !canAct ? (
                     <Typography variant="body-sm" color="muted" className="italic">
@@ -568,6 +666,7 @@ const QuestDetailPage: React.FC = () => {
               {/* -------------------------- what points here ------------------------ */}
               <EntityPageSection
                 title="What points here"
+                muted
                 empty={
                   <Typography variant="body-sm" color="muted" className="italic">
                     Nothing points here yet
@@ -612,95 +711,41 @@ const QuestDetailPage: React.FC = () => {
               </EntityPageSection>
 
               {/* ------------------------------ the record -------------------------- */}
-              <EntityPageSection title="Written here" muted>
+              <EntityPageSection title="Record" muted>
                 {/*
                   Created and last-modified are the only two points
                   `ContentAttribution` holds. Two facts, stated -- not a
                   timeline, and never per objective (§8).
                 */}
                 <AttributionInfo item={quest} />
-
-                {canAct && (
-                  <div className="border-t divider pt-3 flex items-center gap-3 flex-wrap">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="delete-button"
-                      onClick={() => setConfirmingDelete(true)}
-                    >
-                      Delete quest
-                    </Button>
-                    {deletionLosses.length > 0 && (
-                      <Typography variant="body-sm" color="secondary" className="text-xs">
-                        — asks once, and says what else loses a link
-                      </Typography>
-                    )}
-                  </div>
-                )}
               </EntityPageSection>
             </>
           }
         >
           {/* --------------------- what the party was asked to do --------------------- */}
-          <EntityPageSection
-            title="What the party was asked to do"
-            action={
-              canAct &&
-              editing !== 'title' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  ref={triggerRef('title')}
-                  onClick={() => setEditing('title')}
-                  startIcon={<Pencil className="w-3.5 h-3.5" />}
-                >
-                  Rename
-                </Button>
+          <EntityProse
+            label="What the party was asked to do"
+            editor={
+              editing === 'description' && (
+                <InlineEditor
+                  label="Description"
+                  helperText="What the party agreed to, in a sentence or two."
+                  initialValue={quest.description ?? ''}
+                  submitLabel="Save description"
+                  onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
+                  onSaved={closeEditor}
+                  onCancel={closeEditor}
+                />
               )
             }
+            onEdit={canAct ? () => setEditing('description') : undefined}
+            triggerRef={triggerRef('description')}
+            prompt="What was the party asked to do?"
           >
-            {editing === 'title' && (
-              <InlineEditor
-                label="Title"
-                rows={1}
-                initialValue={quest.title}
-                submitLabel="Save title"
-                onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
-                onSaved={closeEditor}
-                onCancel={closeEditor}
-              />
+            {quest.description && (
+              <Typography className="text-lg leading-relaxed">{quest.description}</Typography>
             )}
-
-            {editing === 'description' ? (
-              <InlineEditor
-                label="Description"
-                helperText="What the party agreed to, in a sentence or two."
-                initialValue={quest.description ?? ''}
-                submitLabel="Save description"
-                onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
-                onSaved={closeEditor}
-                onCancel={closeEditor}
-              />
-            ) : quest.description ? (
-              <button
-                type="button"
-                disabled={!canAct}
-                ref={triggerRef('description')}
-                onClick={() => setEditing('description')}
-                className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
-              >
-                <Typography className="text-lg leading-relaxed">{quest.description}</Typography>
-              </button>
-            ) : canAct ? (
-              <FieldPrompt ref={triggerRef('description')} onClick={() => setEditing('description')}>
-                What was the party asked to do?
-              </FieldPrompt>
-            ) : (
-              <Typography color="muted" className="italic">
-                Nothing written yet
-              </Typography>
-            )}
-          </EntityPageSection>
+          </EntityProse>
 
           {/* ------------------------------- objectives ------------------------------- */}
           <QuestObjectives
@@ -721,41 +766,34 @@ const QuestDetailPage: React.FC = () => {
           />
 
           {/* ---------------------------------- prep ---------------------------------- */}
-          <EntityPageSection title="Background">
-            {editing === 'background' ? (
-              <InlineEditor
-                label="Background"
-                helperText="How this came about, and what the party already knows."
-                initialValue={quest.background ?? ''}
-                optional
-                submitLabel="Save background"
-                onSubmit={(value, openedWith) => save(editedText('background', value, openedWith))}
-                onSaved={closeEditor}
-                onCancel={closeEditor}
-              />
-            ) : quest.background ? (
-              <button
-                type="button"
-                disabled={!canAct}
-                ref={triggerRef('background')}
-                onClick={() => setEditing('background')}
-                className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
-              >
-                {/* Serif: the running prose of the page, in the campaign's voice. */}
-                <Typography className="font-serif italic text-lg leading-relaxed">
-                  {quest.background}
-                </Typography>
-              </button>
-            ) : canAct ? (
-              <FieldPrompt ref={triggerRef('background')} onClick={() => setEditing('background')}>
-                How did this come about?
-              </FieldPrompt>
-            ) : (
-              <Typography color="muted" className="italic">
-                No background written yet
+          <EntityProse
+            label="Background"
+            editor={
+              editing === 'background' && (
+                <InlineEditor
+                  label="Background"
+                  helperText="How this came about, and what the party already knows."
+                  initialValue={quest.background ?? ''}
+                  optional
+                  submitLabel="Save background"
+                  onSubmit={(value, openedWith) => save(editedText('background', value, openedWith))}
+                  onSaved={closeEditor}
+                  onCancel={closeEditor}
+                />
+              )
+            }
+            onEdit={canAct ? () => setEditing('background') : undefined}
+            triggerRef={triggerRef('background')}
+            prompt="How did this come about?"
+            empty="No background written yet"
+          >
+            {quest.background && (
+              // Serif: the running prose of the page, in the campaign's voice.
+              <Typography className="font-serif italic text-lg leading-relaxed">
+                {quest.background}
               </Typography>
             )}
-          </EntityPageSection>
+          </EntityProse>
 
           {PREP_FIELDS.map((field) => {
             const entries = quest[field.key] ?? [];
@@ -924,40 +962,6 @@ const QuestDetailPage: React.FC = () => {
             </Typography>
           </EntityPageSection>
 
-          {/* ------------------------------- level range ------------------------------ */}
-          <EntityPageSection title="Level range">
-            {editing === 'levelRange' ? (
-              <InlineEditor
-                label="Level range"
-                rows={1}
-                initialValue={quest.levelRange ?? ''}
-                optional
-                submitLabel="Save level range"
-                placeholder="7–9"
-                onSubmit={(value) => save({ levelRange: value })}
-                onSaved={closeEditor}
-                onCancel={closeEditor}
-              />
-            ) : quest.levelRange ? (
-              <button
-                type="button"
-                disabled={!canAct}
-                ref={triggerRef('levelRange')}
-                onClick={() => setEditing('levelRange')}
-                className="text-left rounded-md px-1 -mx-1 disabled:cursor-default selectable-item"
-              >
-                <Typography>Levels {quest.levelRange}</Typography>
-              </button>
-            ) : canAct ? (
-              <FieldPrompt ref={triggerRef('levelRange')} onClick={() => setEditing('levelRange')}>
-                What levels is this pitched at?
-              </FieldPrompt>
-            ) : (
-              <Typography color="muted" className="italic">
-                Not recorded
-              </Typography>
-            )}
-          </EntityPageSection>
         </EntityPageShell>
       )}
 

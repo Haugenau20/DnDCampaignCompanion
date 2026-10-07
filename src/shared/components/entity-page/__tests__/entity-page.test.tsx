@@ -1,9 +1,9 @@
 // src/shared/components/entity-page/__tests__/entity-page.test.tsx
 //
-// The shell `15-4` builds and `15-5` and `15-6` consume unchanged. What is
-// pinned here is the part those PRs depend on rather than re-derive: the band's
-// shape, the column order a phone collapses into, and the rule that an empty
-// section renders a prompt rather than an empty box.
+// The shell every entity page shares. What is pinned here is the part the
+// pages depend on rather than re-derive: the identity card's shape and its two
+// picture shapes, the column order a phone collapses into, and the rule that
+// an empty section renders a prompt rather than an empty box.
 
 import React from 'react';
 import { render, screen, within, fireEvent } from '@testing-library/react';
@@ -12,6 +12,8 @@ import EntityPageShell from '../EntityPageShell';
 import EntityPageSection from '../EntityPageSection';
 import FieldPrompt from '../FieldPrompt';
 import EntityNotes from '../EntityNotes';
+import EntityFact from '../EntityFact';
+import EntityProse from '../EntityProse';
 
 const renderShell = (props: Partial<React.ComponentProps<typeof EntityPageShell>> = {}) =>
   render(
@@ -20,7 +22,7 @@ const renderShell = (props: Partial<React.ComponentProps<typeof EntityPageShell>
         breadcrumb={[{ label: 'Locations', href: '/locations' }, { label: 'Gondolin' }]}
         entityId="gondolin"
         name="Gondolin"
-        meta="City in Beleriand · 2 places inside"
+        subtitle={<span>In Beleriand</span>}
         {...props}
       >
         <div data-testid="body">prose and structure</div>
@@ -28,15 +30,20 @@ const renderShell = (props: Partial<React.ComponentProps<typeof EntityPageShell>
     </MemoryRouter>
   );
 
+/** The identity card: the section the page's h1 sits in. */
+const identityCard = () =>
+  screen.getByRole('heading', { level: 1 }).closest('section') as HTMLElement;
+
+// T063: the shell is the NPC page's light card now, not `15-4`'s dark band.
 describe('EntityPageShell', () => {
   it('names the record as the page’s only h1', () => {
     renderShell();
     expect(screen.getByRole('heading', { level: 1, name: 'Gondolin' })).toBeInTheDocument();
   });
 
-  it('carries one metadata line under the name', () => {
+  it('carries its line under the name, in the same card', () => {
     renderShell();
-    expect(screen.getByText('City in Beleriand · 2 places inside')).toBeInTheDocument();
+    expect(within(identityCard()).getByText('In Beleriand')).toBeInTheDocument();
   });
 
   it('leads back through the trail it is given', () => {
@@ -45,14 +52,34 @@ describe('EntityPageShell', () => {
     expect(within(trail).getByText('Locations')).toHaveAttribute('href', '/locations');
   });
 
-  it('draws the band from the band surface, naming no colour of its own', () => {
-    // `colour-schema.md` §5.2 solves `accent.*` against page, card and sunken
-    // and not against the band (~1.9:1), and D125 rules that the band carries
-    // no accent, so nothing here may reach for one.
+  it('draws the name on a light card, and no band', () => {
     const { container } = renderShell();
-    const band = container.querySelector('.hero-band') as HTMLElement;
-    expect(band).toBeTruthy();
-    expect(band.className).not.toMatch(/accent/);
+    expect(identityCard()).toHaveClass('card');
+    expect(container.querySelector('.hero-band')).toBeNull();
+  });
+
+  it('lets the page draw the name itself, as a click-to-edit control', () => {
+    renderShell({
+      heading: (
+        <button type="button" aria-label="Edit the name Gondolin">
+          <h1>Gondolin</h1>
+        </button>
+      ),
+    });
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(
+      within(identityCard()).getByRole('button', { name: 'Edit the name Gondolin' })
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the actions and the standing facts in the card with the name', () => {
+    renderShell({
+      actions: <button type="button">Add a place inside</button>,
+      facts: <EntityFact label="Knowledge">Visited</EntityFact>,
+    });
+    const card = identityCard();
+    expect(within(card).getByRole('button', { name: 'Add a place inside' })).toBeInTheDocument();
+    expect(within(card).getByText('Knowledge')).toBeInTheDocument();
   });
 
   it('puts prose and structure before relations, which is the order a phone reads', () => {
@@ -72,17 +99,6 @@ describe('EntityPageShell', () => {
     expect(container.querySelector('[class*="lg:grid-cols-["]')).toBeNull();
   });
 
-  it('places the state control and the actions together on the band', () => {
-    renderShell({
-      bandControl: <button type="button">Knowledge</button>,
-      actions: <button type="button">Add a place inside</button>,
-    });
-    const band = screen
-      .getByRole('button', { name: 'Knowledge' })
-      .closest('.hero-band') as HTMLElement;
-    expect(within(band).getByRole('button', { name: 'Add a place inside' })).toBeInTheDocument();
-  });
-
   describe('the picture', () => {
     const { firebaseConfig } = jest.requireActual('core/services/firebase/config/firebaseConfig');
     const picture = {
@@ -95,41 +111,25 @@ describe('EntityPageShell', () => {
     };
     const upload = { subject: 'picture', onUpload: jest.fn(), onRemove: jest.fn() };
 
-    it('is drawn inside the band, behind the name, rather than above it', () => {
-      const { container } = renderShell({ image: picture, imageAlt: 'Gondolin' });
-      const band = container.querySelector('.hero-band') as HTMLElement;
+    it('spans the page above the card when it is wide, with nothing written on it', () => {
+      renderShell({ image: picture, imageAlt: 'Gondolin', aside: <div>relations</div> });
       const img = screen.getByRole('img', { name: 'Gondolin' });
 
-      expect(band.contains(img)).toBe(true);
       expect(img).toHaveAttribute('src', picture.url);
       // Heads the page: lazy loading would only delay it.
       expect(img).toHaveAttribute('loading', 'eager');
+      expect(identityCard()).not.toContainElement(img);
       expect(
-        img.compareDocumentPosition(screen.getByRole('heading', { level: 1 })) &
-          Node.DOCUMENT_POSITION_FOLLOWING
+        img.compareDocumentPosition(identityCard()) & Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
+      expect(screen.getByTestId('entity-page-image')).toHaveTextContent('');
     });
 
-    it('keeps the trail, the name and the controls readable, each on its own', () => {
-      // D10: each block of text on the picture is a region, which gets a
-      // silhouette around its glyphs and a faint patch measured for it alone.
-      const { container } = renderShell({
-        image: picture,
-        imageAlt: 'Gondolin',
-        bandControl: <button type="button">Explored</button>,
-        actions: <button type="button">Add a place inside</button>,
-      });
-      const band = container.querySelector('.hero-band') as HTMLElement;
-      expect(band).toHaveClass('hero-band-adaptive');
-
-      const regions = Array.from(band.querySelectorAll('.hero-dim-region'));
-      expect(regions).toHaveLength(3);
-      const regionOf = (element: HTMLElement) => regions.find(region => region.contains(element));
-      const trail = regionOf(screen.getByRole('navigation'));
-      const name = regionOf(screen.getByRole('heading', { level: 1 }));
-      const controls = regionOf(screen.getByRole('button', { name: 'Explored' }));
-      expect(new Set([trail, name, controls]).size).toBe(3);
-      expect(controls).toContainElement(screen.getByRole('button', { name: 'Add a place inside' }));
+    it('stands beside the name, inside the card, when it is tall', () => {
+      renderShell({ image: picture, imageAlt: 'Portrait of Gondolin', imageShape: 'tall' });
+      expect(identityCard()).toContainElement(
+        screen.getByRole('img', { name: 'Portrait of Gondolin' })
+      );
     });
 
     it('draws no picture from outside the app’s own bucket', () => {
@@ -143,24 +143,15 @@ describe('EntityPageShell', () => {
       expect(screen.queryByTestId('entity-page-image')).toBeNull();
     });
 
-    it('leaves the band as it is when there is no picture -- no empty slot', () => {
-      const { container } = renderShell();
+    it('draws no empty frame without a picture: the sigil stands in', () => {
+      renderShell();
       expect(screen.queryByTestId('entity-page-image')).toBeNull();
       expect(screen.queryByRole('img')).toBeNull();
-      expect(container.querySelector('.hero-band-adaptive')).toBeNull();
-      expect(container.querySelector('filter')).toBeNull();
     });
 
-    it('offers whoever may edit add, replace and remove on the band itself', () => {
-      const { container, rerender } = renderShell({ imageUpload: upload });
-      const band = container.querySelector('.hero-band') as HTMLElement;
-      const add = screen.getByRole('button', { name: 'Add picture' });
-
-      // Framed with the band, before the body: not a row under it.
-      expect(band.parentElement?.contains(add)).toBe(true);
-      expect(
-        add.compareDocumentPosition(screen.getByTestId('body')) & Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy();
+    it('offers whoever may edit to add one on the sigil, and to replace or remove it on the picture', () => {
+      const { rerender } = renderShell({ imageUpload: upload });
+      expect(within(identityCard()).getByRole('button', { name: 'Add picture' })).toBeInTheDocument();
 
       rerender(
         <MemoryRouter>
@@ -184,6 +175,84 @@ describe('EntityPageShell', () => {
       renderShell({ image: picture, imageAlt: 'Gondolin' });
       expect(screen.queryByRole('button', { name: /picture/ })).toBeNull();
     });
+  });
+});
+
+describe('EntityFact', () => {
+  it('states a label and a value, and nothing to press for a reader', () => {
+    render(<EntityFact label="Status">Active</EntityFact>);
+    expect(screen.getByText('Status')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('makes the value itself the editor’s opener, named for the fact', () => {
+    const onEdit = jest.fn();
+    render(
+      <EntityFact label="Status" onEdit={onEdit}>
+        Active
+      </EntityFact>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit status' }));
+    expect(onEdit).toHaveBeenCalled();
+  });
+
+  it('gives its place to the editor while it is open', () => {
+    render(
+      <EntityFact label="Status" onEdit={jest.fn()} editor={<label>Status ladder</label>}>
+        Active
+      </EntityFact>
+    );
+    expect(screen.getByText('Status ladder')).toBeInTheDocument();
+    expect(screen.queryByText('Active')).toBeNull();
+  });
+
+  it('asks its question when there is no value and the viewer may edit', () => {
+    render(<EntityFact label="Role" onEdit={jest.fn()} prompt="What do they do?" />);
+    expect(screen.getByRole('button', { name: /What do they do\?/ })).toBeInTheDocument();
+  });
+
+  it('says "Unrecorded" to a reader when there is no value', () => {
+    render(<EntityFact label="Role" prompt="What do they do?">{''}</EntityFact>);
+    expect(screen.getByText('Unrecorded')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+describe('EntityProse', () => {
+  it('labels the prose, with an Edit button beside the label named for it', () => {
+    const onEdit = jest.fn();
+    render(
+      <EntityProse label="Background" prompt="How did this come about?" onEdit={onEdit}>
+        A dragon came.
+      </EntityProse>
+    );
+    expect(screen.getByText('Background')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit background' }));
+    expect(onEdit).toHaveBeenCalled();
+  });
+
+  it('gives the whole card to the editor while it is open', () => {
+    render(
+      <EntityProse label="Background" prompt="?" onEdit={jest.fn()} editor={<p>editor</p>}>
+        A dragon came.
+      </EntityProse>
+    );
+    expect(screen.getByText('editor')).toBeInTheDocument();
+    expect(screen.queryByText('Background')).toBeNull();
+    expect(screen.queryByText('A dragon came.')).toBeNull();
+  });
+
+  it('asks its question, and offers no Edit button, when nothing is written', () => {
+    render(<EntityProse label="Background" prompt="How did this come about?" onEdit={jest.fn()} />);
+    expect(screen.getByRole('button', { name: /How did this come about\?/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit background' })).toBeNull();
+  });
+
+  it('tells a reader nothing is written yet, and offers nothing to press', () => {
+    render(<EntityProse label="Background" prompt="How did this come about?" />);
+    expect(screen.getByText('Nothing written yet')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 

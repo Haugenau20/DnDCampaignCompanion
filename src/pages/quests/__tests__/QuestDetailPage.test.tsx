@@ -250,7 +250,9 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 // The record, named
 // ---------------------------------------------------------------------------
-describe('the band', () => {
+// T063: the dark band became the NPC page's light identity card. What the
+// band's one meta line said is now the card's line and its facts.
+describe('the identity card', () => {
   it('names the quest as the page’s only h1', () => {
     renderPage();
     expect(
@@ -264,15 +266,17 @@ describe('the band', () => {
     expect(within(trail).getByText('Quests')).toHaveAttribute('href', '/quests');
   });
 
-  it('states progress, place and level in one line, with no id in it', () => {
+  it('states place, progress and level, with no id in it', () => {
     // Item 10: the quest card printed `bag-end` and `erebor` as though they
     // were labels. `erebor` resolves to "Erebor" or it is left out.
     renderPage();
-    const band = screen
+    const card = screen
       .getByRole('heading', { level: 1, name: 'Reclaim Erebor' })
-      .closest('.hero-band') as HTMLElement;
-    expect(within(band).getByText('1 of 3 objectives · Erebor · levels 7-9')).toBeInTheDocument();
-    expect(within(band).queryByText(/reclaim-erebor/)).not.toBeInTheDocument();
+      .closest('section') as HTMLElement;
+    expect(within(card).getByText('At Erebor')).toBeInTheDocument();
+    expect(within(card).getByRole('group', { name: 'Objectives' })).toHaveTextContent('1 of 3 done');
+    expect(within(card).getByRole('button', { name: 'Edit level range' })).toHaveTextContent('7-9');
+    expect(within(card).queryByText(/reclaim-erebor/)).not.toBeInTheDocument();
   });
 
   it('shows an unresolvable reference as broken rather than as a place name', () => {
@@ -280,13 +284,13 @@ describe('the band', () => {
     // says no id is rendered as a label. Both: it is shown, and it is marked.
     mockQuests = [{ ...QUEST, locationId: 'nowhere', location: '' }];
     renderPage();
-    expect(
-      screen.getByText('1 of 3 objectives · nowhere — no such place · levels 7-9')
-    ).toBeInTheDocument();
+    expect(screen.getByText('At nowhere — no such place')).toBeInTheDocument();
   });
 
-  it('changes the status from the band, in one click', async () => {
+  it('changes the status from its fact, on a ladder of buttons', async () => {
     renderPage();
+    expect(screen.getByRole('button', { name: 'Edit status' })).toHaveTextContent('Active');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit status' }));
     const ladder = screen.getByRole('group', { name: 'Status of Reclaim Erebor' });
     fireEvent.click(within(ladder).getByRole('button', { name: 'Failed' }));
     await waitFor(() =>
@@ -553,7 +557,7 @@ describe('the prep material', () => {
     expect(screen.getByText('The door can only be opened on Durin’s Day')).toBeInTheDocument();
     expect(screen.getByText("Thorin's growing obsession with the Arkenstone")).toBeInTheDocument();
     expect(screen.getByText('Access to Erebor')).toBeInTheDocument();
-    expect(screen.getByText('Levels 7-9')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit level range' })).toHaveTextContent('7-9');
   });
 
   it('hides none of it behind a disclosure', () => {
@@ -788,7 +792,7 @@ describe('where the quest happens', () => {
 describe('editing in place', () => {
   it('renames the quest', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Rename/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the title Reclaim Erebor' }));
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Retake Erebor' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save title' }));
 
@@ -801,23 +805,25 @@ describe('editing in place', () => {
   });
 
   // A11Y-007: closing an editor left focus on <body>.
-  it('hands focus back to Rename when the title editor is cancelled', () => {
+  it('hands focus back to the title when its editor is cancelled', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Rename/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the title Reclaim Erebor' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: /Rename/ })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Edit the title Reclaim Erebor' })).toHaveFocus();
   });
 
   it('hands focus back to the description when its editor is cancelled', () => {
     renderPage();
-    fireEvent.click(screen.getByText(QUEST.description));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit what the party was asked to do' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: QUEST.description })).toHaveFocus();
+    expect(
+      screen.getByRole('button', { name: 'Edit what the party was asked to do' })
+    ).toHaveFocus();
   });
 
   it('edits the description where it is read', async () => {
     renderPage();
-    fireEvent.click(screen.getByText(QUEST.description));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit what the party was asked to do' }));
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Take back the mountain.' },
     });
@@ -833,7 +839,7 @@ describe('editing in place', () => {
 
   it('retracts a background that proved wrong (T094)', async () => {
     renderPage();
-    fireEvent.click(screen.getByText(QUEST.background));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit background' }));
     fireEvent.change(screen.getByLabelText('Background'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save background' }));
 
@@ -847,7 +853,7 @@ describe('editing in place', () => {
 
   it('retracts a level range (T094)', async () => {
     renderPage();
-    fireEvent.click(screen.getByText(`Levels ${QUEST.levelRange}`));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit level range' }));
     fireEvent.change(screen.getByLabelText('Level range'), { target: { value: ' ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save level range' }));
 
@@ -861,7 +867,7 @@ describe('editing in place', () => {
 
   it('still refuses an empty title', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: /Rename/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the title Reclaim Erebor' }));
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Save title' })).toBeDisabled();
   });
@@ -916,7 +922,7 @@ describe('a quest that is only a title and a line', () => {
 describe('the record card', () => {
   it('states created-by and last-modified-by, and no per-objective history', () => {
     renderPage();
-    const record = section('Written here');
+    const record = section('Record');
     expect(within(record).getByTestId('attribution-info')).toBeInTheDocument();
     // `S3` draws "gandlaf ticked 'Find the secret door' · last session" under
     // the two attribution lines. There is no such data (§8), so the
@@ -928,7 +934,7 @@ describe('the record card', () => {
 
   it('names what else loses a link before deleting', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete quest' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     const losses = within(screen.getByRole('dialog')).getByRole('list');
     expect(within(losses).getByText(/Signs of Smaug's activity/)).toBeInTheDocument();
@@ -939,7 +945,7 @@ describe('the record card', () => {
 
   it('deletes and returns to the directory once confirmed', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete quest' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete Reclaim Erebor' }));
 
     await waitFor(() => expect(mockDeleteQuest).toHaveBeenCalledWith('reclaim-erebor'));
@@ -949,7 +955,7 @@ describe('the record card', () => {
   it('stays open and says why when the delete is refused', async () => {
     mockDeleteQuest.mockRejectedValueOnce(new Error('Permission denied'));
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete quest' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     fireEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete Reclaim Erebor' })
     );
