@@ -1,8 +1,9 @@
 // src/components/features/layouts/dashboard/sections/__tests__/CampaignBanner.test.tsx
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import CampaignBanner from "../CampaignBanner";
 import { MIN_DIM } from "core/utils/band-dimming";
+import { defaultBannerFor } from "../defaultPictures";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -335,13 +336,17 @@ describe("CampaignBanner", () => {
         hasCampaign: true,
       });
 
-    it("draws the band as before, with no empty slot, when there is no banner", () => {
+    // T074 changed this requirement: it used to be the plain band (D45).
+    it("draws the campaign's default picture, unnamed, when there is no banner", () => {
       withCampaign(makeCampaign("Curse of Strahd"));
       render(<CampaignBanner />);
 
-      expect(screen.queryByTestId("campaign-banner-image")).toBeNull();
-      expect(screen.queryByRole("img")).toBeNull();
-      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-pictured");
+      const picture = within(screen.getByTestId("campaign-banner-image")).getByRole("presentation");
+      expect(picture).toHaveAttribute("src", defaultBannerFor("c1").url);
+      // Decoration, so it names nothing; the campaign's own banner is named.
+      expect(picture).toHaveAttribute("alt", "");
+      expect(screen.queryByRole("img", { name: "Curse of Strahd" })).toBeNull();
+      expect(screen.getByTestId("campaign-banner")).toHaveClass("hero-band-pictured", "hero-band-banner");
     });
 
     it("draws the banner behind the band's text", () => {
@@ -358,7 +363,8 @@ describe("CampaignBanner", () => {
       expect(screen.getByText("Curse of Strahd")).toBeInTheDocument();
     });
 
-    it("gives the text block a silhouette and a faint patch when there is a banner, and nothing without one", () => {
+    // T074: "nothing without one" became "the same over the default".
+    it("gives the text block a silhouette and a faint patch over a banner, and over the default", () => {
       // D10: the halo and the patch are drawn by `.hero-dim-region` under
       // `.hero-band-adaptive`; what the component owns is marking its text.
       withCampaign({ ...makeCampaign("Curse of Strahd"), banner });
@@ -371,7 +377,7 @@ describe("CampaignBanner", () => {
 
       withCampaign(makeCampaign("Curse of Strahd"));
       rerender(<CampaignBanner />);
-      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-adaptive");
+      expect(screen.getByTestId("campaign-banner")).toHaveClass("hero-band-adaptive");
     });
 
     it("sets the dimming strength the text needs over this picture", () => {
@@ -392,7 +398,8 @@ describe("CampaignBanner", () => {
       }
     });
 
-    it("refuses a URL outside the app's bucket", () => {
+    // T074: a refused banner now falls back to the default, not the plain band.
+    it("refuses a URL outside the app's bucket, and shows the default instead", () => {
       withCampaign({
         ...makeCampaign("Curse of Strahd"),
         banner: { ...banner, url: "https://tracker.example/pixel.webp" },
@@ -400,7 +407,8 @@ describe("CampaignBanner", () => {
       render(<CampaignBanner />);
 
       expect(screen.queryByRole("img")).toBeNull();
-      expect(screen.getByTestId("campaign-banner")).not.toHaveClass("hero-band-pictured");
+      const picture = within(screen.getByTestId("campaign-banner-image")).getByRole("presentation");
+      expect(picture).toHaveAttribute("src", defaultBannerFor("c1").url);
     });
 
     it("offers a member Add, then Replace and Remove", () => {

@@ -29,6 +29,13 @@ export interface StoredImage {
 }
 
 /**
+ * What it takes to draw a picture: a `StoredImage`, or one the app ships
+ * itself (the dashboard's default banners and crests, T074), which has no
+ * bucket path or uploader because nobody uploaded it.
+ */
+export type PictureSource = Pick<StoredImage, 'url' | 'width' | 'height' | 'brightness'>;
+
+/**
  * The picture divided into `cols` x `rows` cells, row by row from the top
  * left. Each cell is three values, 0 to 1: the 95th percentile of its pixels'
  * red, green and blue, gamma-encoded as the browser blends them -- so `cells`

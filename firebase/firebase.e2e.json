@@ -1,0 +1,30 @@
+{
+  "//": "EMULATOR CONFIG FOR THE BROWSER JOURNEYS (T103), used by `npm run test:e2e` in this folder. Unlike firebase.emulators.json it enforces the PRODUCTION Firestore rules, so a write the live rules would refuse fails a journey too. Its ports are its own, so a run can share a machine with the development emulators; e2e/support/env.ts names the same ports and builds the app against them. Only Auth and Firestore: no journey yet calls a function or touches Storage.",
+  "firestore": {
+    "rules": "firestore.rules.prod",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "singleProjectMode": true,
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 19099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 18080,
+      "websocketPort": 19150
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 14400
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 14500
+    },
+    "ui": {
+      "enabled": false
+    }
+  }
+}

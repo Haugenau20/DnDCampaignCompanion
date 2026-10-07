@@ -10,6 +10,7 @@ import PicturedBand, { BandRegion } from 'shared/components/PicturedBand';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import { useCampaignInfo } from '../../../layouts/common/hooks/useCampaignInfo';
+import { useDefaultBanner } from './defaultPictures';
 
 interface CampaignBannerProps {
   /** Chapter count, shown in the meta line when the campaign has any. */
@@ -25,18 +26,16 @@ interface CampaignBannerProps {
  * the two read as layers of one frame rather than a single tall header, and the
  * warm page below lands as a change of material.
  *
- * The identity slot on the left is an image slot with a designed empty state.
- * Most slots will be empty most of the time, so the empty state is the real
- * design: the campaign's own sigil, derived from its id exactly as every entity
- * mark is. Nothing here depends on content a user may never add.
- *
  * The campaign may carry a banner picture, drawn across the whole band by
  * `PicturedBand`: the text block keeps a silhouette of the band colour around
  * each glyph and a faint patch behind it, and the rest of the picture shows
  * untouched (design D10). On a desktop the band grows taller with the text
  * centred in it (`.hero-band-banner`); on a phone a window at the top of the
  * band shows the picture above the text.
- * Without one the band is drawn as always, with no empty slot. Any member may add,
+ * Until it has one, the band draws a default instead (T074): one of a few
+ * public-domain landscapes, picked by the campaign's id so a campaign always
+ * gets the same one. It is shown, never stored, and offers no Remove: there is
+ * nothing to remove. Any member may add,
  * replace or remove it -- the same members who may edit the campaign document
  * (`firestore.rules.prod`) -- from icon buttons on the band's top-right corner.
  */
@@ -61,7 +60,10 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
     save: saveBanner,
   });
 
-  const picture = bandPicture(activeCampaign?.banner);
+  // A planted URL outside the app's bucket is refused, and the default shows.
+  const uploaded = bandPicture(activeCampaign?.banner);
+  const fallback = useDefaultBanner(campaignId);
+  const picture = uploaded ?? fallback;
 
   // Cancels the page container's padding so the band spans the full content
   // width and meets the chrome above it, rather than floating as a card.
@@ -115,7 +117,8 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
   const band = (
     <PicturedBand
       image={picture}
-      alt={activeCampaign?.name ?? ''}
+      // The default is decoration; only the campaign's own picture is named.
+      alt={uploaded ? activeCampaign?.name ?? '' : ''}
       className={clsx(bandFrame, 'hero-band-banner')}
       innerClassName={bandInner}
       testId="campaign-banner"
@@ -191,7 +194,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
       <ImageUploadControl
         variant="compact"
         subject="banner"
-        hasImage={Boolean(picture)}
+        hasImage={Boolean(uploaded)}
         onUpload={banner.upload}
         onRemove={banner.remove}
       >

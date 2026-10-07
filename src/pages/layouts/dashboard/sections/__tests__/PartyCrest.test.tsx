@@ -1,7 +1,8 @@
 // src/pages/layouts/dashboard/sections/__tests__/PartyCrest.test.tsx
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, within } from '@testing-library/react';
 import PartyCrest from '../PartyCrest';
+import { defaultCrestFor } from '../defaultPictures';
 
 /**
  * T021: the party's crest -- shown to every member, changed by admins only.
@@ -48,9 +49,18 @@ beforeEach(() => {
 });
 
 describe('PartyCrest', () => {
-  it('keeps the honest empty slot when there is no crest', () => {
+  // T074 changed this requirement: the empty slot used to be the ruled panel.
+  it("shows the group's default crest when there is none, still saying none is uploaded", () => {
     render(<PartyCrest />);
-    expect(screen.getByRole('img', { name: 'The Fellowship crest — none uploaded yet' })).toBeInTheDocument();
+    const slot = screen.getByRole('img', { name: 'The Fellowship crest — none uploaded yet' });
+    expect(within(slot).getByRole('presentation')).toHaveAttribute('src', defaultCrestFor('g1').url);
+  });
+
+  it('offers an admin Add, and no Remove, while the default shows', () => {
+    mockIsAdmin = true;
+    render(<PartyCrest />);
+    expect(screen.getByRole('button', { name: 'Add crest' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove crest' })).toBeNull();
   });
 
   it('shows the crest to every member', () => {

@@ -1,6 +1,6 @@
 // src/core/components/__tests__/ImageSlot.test.tsx
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import ImageSlot from '../ImageSlot';
 import { StoredImage } from 'core/types/storedImage';
 import { firebaseConfig } from 'core/services/firebase/config/firebaseConfig';
@@ -79,6 +79,43 @@ describe('ImageSlot', () => {
       );
       expect(screen.queryByRole('img', { name: 'Portrait of Bilbo' })).toBeNull();
       expect(screen.getByTestId('image-slot')).toHaveAccessibleName('Bilbo — no image added');
+    });
+  });
+
+  // T074: a picture the app ships, for slots whose empty state is a default.
+  describe('with a fallback', () => {
+    const fallback = { url: '/assets/crest-default.webp', width: 768, height: 240 };
+
+    it('draws the fallback when empty, under the label that says nothing was added', () => {
+      render(<ImageSlot label="Fellowship crest — none uploaded yet" fallback={fallback} />);
+      const slot = screen.getByRole('img', { name: 'Fellowship crest — none uploaded yet' });
+      const picture = within(slot).getByRole('presentation');
+      expect(picture).toHaveAttribute('src', fallback.url);
+      // Decoration: the slot names itself; the picture adds nothing to read.
+      expect(picture).toHaveAttribute('alt', '');
+      expect(slot).not.toHaveClass('image-slot');
+    });
+
+    it('prefers the uploaded image', () => {
+      render(
+        <ImageSlot label="empty" image={image()} alt="Fellowship crest" fallback={fallback} />
+      );
+      expect(screen.getByRole('img', { name: 'Fellowship crest' })).toHaveAttribute('src', ownUrl);
+      expect(screen.queryByRole('presentation')).toBeNull();
+    });
+
+    it('draws the fallback, not the refused URL, for an image outside this bucket', () => {
+      render(
+        <ImageSlot
+          label="Fellowship crest — none uploaded yet"
+          image={image('https://tracker.example.com/pixel.webp')}
+          alt="Fellowship crest"
+          fallback={fallback}
+        />
+      );
+      expect(screen.queryByRole('img', { name: 'Fellowship crest' })).toBeNull();
+      const slot = screen.getByRole('img', { name: 'Fellowship crest — none uploaded yet' });
+      expect(within(slot).getByRole('presentation')).toHaveAttribute('src', fallback.url);
     });
   });
 });

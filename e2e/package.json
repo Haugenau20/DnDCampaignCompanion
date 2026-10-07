@@ -1,0 +1,15 @@
+{
+  "//": "The browser journeys (T103): Playwright driving the production build against emulators seeded with fixtures. Its own package so Playwright and firebase-admin stay out of the app's install. Run it with `npm --prefix firebase run test:e2e`, which starts the emulators it needs (firebase.e2e.json) and stops them after; see CLAUDE.md. @playwright/test is pinned exactly: its version decides which browser build `playwright install` fetches, and CI caches that by this file's lockfile.",
+  "name": "e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.13.1",
+    "firebase-admin": "^13.10.0",
+    "typescript": "^5.8.2"
+  }
+}

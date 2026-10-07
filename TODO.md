@@ -19,16 +19,14 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T103 | Replay browser checks: Playwright in CI | L | open | Decided 2026-10-06: a few journeys first, and a defect found in the browser lands with a test |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
-| low | T117 | Pin Node and Java with mise | S | open | Decided 2026-10-06: the maintainer runs Node 23.7 against CI's 22; one `mise.toml` sets every machine and CI |
+| low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
-| low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
-| low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
+| low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
@@ -266,31 +264,6 @@ the same foundation.
 - **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the notes
   difference measured 2026-10-04; the picture's place decided 2026-10-06
 
-### T074 — Default pictures for the dashboard banner and the party crest
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-06
-
-The maintainer would like default imagery where nothing has been uploaded.
-
-**Decided (maintainer, 2026-10-06): only the dashboard banner and the party
-crest get a default.** It is **shown when nothing is uploaded and never stored**
-on the record, picked from a few bundled images by the campaign's or group's id,
-so a campaign keeps the same picture on every visit and nothing needs a
-backfill. NPCs and locations keep their sigils, which T063's cards are designed
-around.
-
-- **Where**: the banner `CampaignBanner.tsx` (no picture → plain band plus the
-  campaign's sigil) and the crest `PartyCrest.tsx` (no crest → a hatched panel).
-  Images today are uploads to Storage only; the repo ships no image assets.
-- **Catch**: both empty states are **deliberate design**, written down where
-  they live: "the empty state is the design rather than a placeholder"
-  (`PartyCrest.tsx:21-24`, `CampaignBanner.tsx:28-31`), and `colour-schema.md`
-  D45 ("a band with no picture is the plain band"). Rewrite those in the same
-  PR, and say test by test which tests changed because the requirement did.
-- **The art**: public-domain (CC0) images only, so no attribution is owed;
-  record each one's source beside it. Load them with the component, not in the
-  entry bundle (`check:bundle`), and keep each small (webp, tens of kB).
-- **Source**: todo.txt, 2026-10-02 (two inbox lines, merged); decided 2026-10-06
-
 ### T075 — Rename the site, and uncrowd the header
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06
 
@@ -373,68 +346,6 @@ important**.
 
 ## Tech debt and platform
 
-### T117 — Pin Node and Java with mise
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
-
-CI and the deployed functions run Node 22 (`node-version: 22` in every
-workflow, `"node": "22"` in `firebase/functions/package.json`); the
-maintainer's machine runs Node 23.7, which is end-of-life. Nothing in the repo
-says which version to use locally: the root `package.json` has no `engines`,
-and there is no version file. It already shows: the Functions emulator runs the
-functions on 23 ("requested node 22 doesn't match your global version"), and
-ESLint 10 warns that it wants `^22.13 || >=24`. Java 21, for the emulators, is
-a second hand install.
-
-**Decided (maintainer, 2026-10-06): mise.** One `mise.toml` in the repo pins
-Node and Java; mise installs them per machine and switches by folder, so a
-version change is a line in the repo rather than an install on each machine,
-and the desktop, a laptop and CI all read the same file.
-
-- **Not Docker, not a dev container**: they would pin the OS as well, but cost
-  file speed on Windows (the repo would move into WSL2), a rewritten
-  `start-dev.ps1`, and every gate run through the container. The project has no
-  system services -- Firebase runs in its own emulators -- so that much
-  reproducibility is not needed now (YAGNI). **Not Volta**: unmaintained; its
-  README recommends mise.
-- **Plan**: `mise.toml` with `node = "22"` and `java = "21"`. The maintainer
-  installs mise (`winget install jdx.mise`, with its shims on PATH so
-  PowerShell, Git Bash and VS Code all see the pinned versions) and runs
-  `mise install`; then the dev server, the emulators and the gates are run on
-  that machine. Only after that, CI: `jdx/mise-action` in place of
-  `actions/setup-node`. CLAUDE.md's setup notes (Java 21) point at `mise install`.
-- **Catch**: mise's Windows support is newer than on macOS and Linux, which is
-  why the machine comes before CI. The Firebase CLI stays in
-  `firebase/package.json`'s pin, not in mise. The gitignored `.env` files
-  and `firebase/emulator-data/` still move to a new machine by hand.
-- **Source**: maintainer, 2026-10-06
-
-### T103 — Replay browser checks: Playwright in CI
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-06
-
-Claude-in-Chrome checks catch what jsdom cannot (see "What phase 15 learned"),
-but each one is a one-off: nothing replays it, so a defect it found can come
-back unnoticed.
-
-**Decided (maintainer, 2026-10-06): Playwright in CI**, driving the production
-build against the emulators with seeded data, starting with a handful of
-journeys: signing in, moving between pages, creating and editing an entity, the
-location tree, and a quest's place that links to its location. From then on **a
-defect found in the browser lands with a test** that replays it.
-Claude-in-Chrome stays for exploring.
-
-- **Measured**: the repo has no browser test runner (`package.json` has no
-  Playwright, Cypress or Puppeteer). The code review's passes 4–5 did build
-  one outside the repo: Playwright Core driving the production build against
-  the emulators with seeded fixtures (`docs/reviews/2026-10-04/pass-4/evidence/probes/runtime/`,
-  `run.cjs` and `helpers.cjs`), written for Linux paths.
-- **Starting point**: CI's `functions` job already starts the emulators (Java
-  included), which an end-to-end job would also need.
-- **Catch**: size L, so its own plan first: seeding (`manage-dev-data.ps1`'s
-  generators), signing in without an inbox (the Auth emulator's `oobCodes`
-  endpoint, as CLAUDE.md describes), and a new job in `test.yml` -- which gates
-  nothing until the maintainer adds it to the ruleset on `main`.
-- **Source**: todo.txt, 2026-10-04; decided 2026-10-06
-
 ### T116 — `firebase-admin` 13 → 14 in the functions
 **Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-06
 
@@ -458,29 +369,77 @@ modular API only, so the code itself is ready for 14. Two things hold the bump.
   `firebase-admin` 13 and the modular API landed first
 
 ### T079 — Do old documents still lack `locationId`?
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-07
 
-NPCs and quests refer to a location by `locationId`. Documents written
-before that field existed carry only the free-text `location`, and still
-resolve through a legacy fallback (`resolveLocationName` and
+NPCs and quests (and rumors) refer to a location by `locationId`. Documents
+written before that field existed carry only the free-text `location`, and
+still resolve through a legacy fallback (`resolveLocationName` and
 `referencesLocation` in `locations/utils/location-display.ts`). The field
 shipped without a migration (`d6d9847`): such a document gains an id the next
 time anyone edits it.
 
-**Decided (maintainer, 2026-10-06): a read-only audit first.**
-
-- **Plan**: a script modelled on `src/utils/__dev__/normalizeChapterDateModified.ts`
-  (audit / migrate / revert), with relative imports (`ts-node` honours no
-  paths; see CLAUDE.md). The maintainer runs its audit mode against
-  **production** with their own credentials. It only counts and lists the NPCs
-  and quests that have a `location` but no `locationId`, and which of those
-  resolve to a record. The emulator cannot answer this: its imported data can
-  be arbitrarily old.
+- **Blocked on the maintainer**: run the read-only audit against production,
+  with your own Google login (it needs gcloud; the steps are at the top of
+  `firebase/functions/scripts/audit-location-ids.js`). It counts, per campaign,
+  the NPCs, quests and rumors whose place resolves only through the fallback
+  (by id, or by name), and lists them; it writes nothing.
 - **Then**: none left, and the fallback can go; some left, and either migrate
-  them (the script's migrate mode, which has a revert) or keep the fallback on
-  purpose.
+  them (a migrate mode with a revert, on the same script) or keep the fallback
+  on purpose.
+- **Catch**: the sample-data generators write the legacy shape themselves --
+  a `location` slug and no `locationId` (the dev emulator, 2026-10-07: 37
+  NPCs and 20 quests). Removing the fallback means they write `locationId` too.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
-  was deleted; decided 2026-10-06
+  was deleted; decided 2026-10-06; the audit written 2026-10-07
+### T118 — Move the site to `muninn.quest`, and hide the old project id
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+The maintainer bought `muninn.quest` (registrar Porkbun). This is the
+custom-domain item T075 said would be its own. **Decided (maintainer,
+2026-10-06): keep the Firebase project, and hide `dnd-campaign-companion`
+from everything a user sees.** The id stays in `CLAUDE.md`, the scripts and
+the workflows.
+
+- **Scope**: (1) `muninn.quest` as a Hosting custom domain; (2) the old
+  `dnd-campaign-companion.web.app` redirects to it, since it cannot be deleted
+  (a hostname check on the page, or a separate Hosting site for `muninn.quest`
+  with the old site kept only to redirect); (3) the auth domain moves to
+  `muninn.quest`, so Google's sign-in popup stops showing `…firebaseapp.com`;
+  (4) the sign-in email's sender domain and action link use `muninn.quest`
+  (console work shared with T104); (5) the GitHub repo is renamed and its
+  description changed. Remaining traces (image and function URLs, the console)
+  are seen only in developer tools.
+- **Needs no change** (read 2026-10-06): sign-in links, invite links and the
+  device code all build on `window.location.origin` (`SignInForm.tsx:103`,
+  `AdminPeoplePage.tsx:95,115`). `firebase.json` has no headers or CSP naming a
+  host. No bucket CORS is set or needed: images are measured at upload, never
+  read back.
+- **Console and DNS, not read**: Porkbun records for Hosting; Auth's authorised
+  domains (an unlisted continue URL is refused); the reCAPTCHA v3 key's domain
+  list (App Check is enforced on Auth, so missing it refuses every sign-in, see
+  `appCheck.ts`); the OAuth client's redirect URI and the consent screen's app
+  name for the moved auth domain.
+- **Repo**: `firebaseConfig.ts:8` defaults the auth domain to `…firebaseapp.com`,
+  and CI takes the `REACT_APP_AUTH_DOMAIN` secret (value **not** read). Google
+  sign-in is a popup (`AuthService.ts:354`). The live URL is written in
+  `README.md:9`, `CODE_OF_CONDUCT.md:13` and `.github/ISSUE_TEMPLATE/config.yml:7`.
+  GitHub redirects the repo's old URL, and CI deploys through service-account
+  secrets that do not name the repo.
+- **Mail**: the contact form sends via Gmail (`contact.ts:61-68`) and does not
+  depend on the site's domain. The domain also lifts T057's blocker (a sending
+  domain for Resend).
+- **Considered and set aside: a new Firebase project.** It would mean exporting
+  and importing Firestore, Storage and Auth (stored image URLs may name the old
+  bucket, **unverified**), a write freeze, everyone signing in again, and
+  setting up again everything outside the repo: Identity Platform, App Check,
+  the blocking function, Secret Manager, the Token Creator grant, the Artifact
+  Registry cleanup policy, CI's service accounts and billing. The only gain
+  over the scope above is the id in developer-only places. Reconsider only if
+  something fixed at project creation (such as the Firestore location) is
+  wanted changed anyway.
+- **Catch**: the domain does not settle T075's name. If the site is to be called
+  Muninn, the maintainer should say so there.
+- **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
 
 ---
 

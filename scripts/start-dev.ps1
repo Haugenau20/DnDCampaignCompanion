@@ -130,7 +130,7 @@ function Start-DevelopmentEnvironment {
     if ($java -lt $MinJavaVersion) {
         $found = if ($java -eq 0) { "no Java" } else { "Java $java" }
         Write-Host "   The Firebase emulators need Java $MinJavaVersion or later; found $found." -ForegroundColor Red
-        Write-Host "   Install it (winget install EclipseAdoptium.Temurin.21.JDK), put it first on PATH, and open a new terminal." -ForegroundColor Yellow
+        Write-Host "   Run 'mise install' in the repo (mise.toml pins it; see CLAUDE.md), and open a new terminal." -ForegroundColor Yellow
         return $false
     }
 

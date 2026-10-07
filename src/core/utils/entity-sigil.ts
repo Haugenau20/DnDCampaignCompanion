@@ -52,6 +52,17 @@ export const sigilIndexFor = (entityId: string): number =>
   fnv1a(entityId) % SIGIL_BUCKET_COUNT;
 
 /**
+ * A stable pick among `count` things for an id, by the same hash as the
+ * sigils: the same id gets the same index on every device, forever, as long
+ * as `count` does not change.
+ *
+ * @param id - Any document id.
+ * @param count - How many things there are to pick from; at least 1.
+ * @returns An integer in `[0, count)`.
+ */
+export const stableIndexFor = (id: string, count: number): number => fnv1a(id) % count;
+
+/**
  * The letter shown inside the mark.
  *
  * Taken from the display name rather than the id, because the id is a slug and

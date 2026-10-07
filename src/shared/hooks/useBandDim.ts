@@ -1,6 +1,6 @@
 // src/shared/hooks/useBandDim.ts
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { StoredImage } from 'core/types/storedImage';
+import { PictureSource } from 'core/types/storedImage';
 import {
   brightestIn,
   coverRegion,
@@ -37,7 +37,7 @@ type ElementRef = (element: HTMLElement | null) => void;
  * A picture with no usable brightness grid -- uploaded before grids existed,
  * or with a forged one -- is treated as pure white: the worst case.
  */
-export function useBandDim(image: StoredImage | null) {
+export function useBandDim(image: PictureSource | null) {
   const [band, setBand] = useState<HTMLElement | null>(null);
   const [regions, setRegions] = useState<ReadonlyMap<string, HTMLElement>>(new Map());
   const refs = useRef(new Map<string, ElementRef>());
@@ -111,7 +111,7 @@ function objectPosition(img: Element): { x: number; y: number } {
   return match ? { x: Number(match[1]) / 100, y: Number(match[2]) / 100 } : { x: 0.5, y: 0.5 };
 }
 
-function dimFor(band: HTMLElement, block: HTMLElement, image: StoredImage): number | null {
+function dimFor(band: HTMLElement, block: HTMLElement, image: PictureSource): number | null {
   const bandColour = parseColor(getComputedStyle(band).backgroundColor);
   const inks = [band, ...Array.from(block.querySelectorAll('.hero-muted'))].map(element =>
     parseColor(getComputedStyle(element).color)
