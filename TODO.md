@@ -19,8 +19,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T119 | Review the Firestore data model before scaling | L | needs investigation | Must come before any user scaling (maintainer, 2026-10-07); found a two-halved NPC↔quest link and unpaged reads while filing |
-| medium | T120 | Plan how a new group starts on its own | L | needs scoping | A group can't start without the maintainer, and the 20-account cap blocks wider outreach; the deliverable is a plan, the building is a later entry |
+| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); the review is written (`docs/architecture/data-model-review.md`) and waits on the maintainer's read, four questions and the production checks |
+| medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on six decisions; building is later entries |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -270,42 +270,28 @@ important**.
 - **Source**: todo.txt, 2026-10-06
 
 ### T120 — Plan how a new group starts on its own
-**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-07
+**Type** feature · **Size** L · **Status** blocked · **Verified** 2026-10-07
 
-Suppose the site were sent tomorrow to 30 groups that have never used it. Can
-they sign up, create a group and get going? **Today they cannot.** This entry's
-deliverable is a plan: what is missing, the decisions it needs, and the order to
-build it in. The building itself is a later entry. Invitations into a group that
-already exists are out of scope; they work.
+Suppose the site were sent tomorrow to 30 groups that have never used it: can
+they sign up, create a group and get going without the maintainer? **No.** The
+plan is written:
+[`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md).
+It covers where things stand (in the code, and in the dev app as a player in no
+group), six decisions with a recommendation each, and a build order of seven
+steps. Nothing is built. Invitations into a group that already exists are out of
+scope; they work.
 
-- **Measured** (read in the code; the full workaround below was not run):
-  (1) No account exists without an invitation into an existing group. The
-  sign-up gate admits only an email holding a reservation, and only
-  `reserveSignUp`, given a valid invitation token, makes one
-  (`gateAccountCreation.ts:69`, `signUpGate.ts`).
-  (2) The whole project is capped at **20 accounts** (`signUpGate.ts:23`,
-  checked at `gateAccountCreation.ts:78`). Thirty groups will not fit.
-  (3) The only "create group" form is on `/admin/group`
-  (`AdminGroupPage.tsx:62`). `AdminLayout.tsx:131,148` shows it only to an
-  admin of the group they have open. Someone in no group is told "Join a group:
-  ask whoever set up your campaign for a join link"
-  (`GatedPageState.tsx:107,122`).
-  (4) The `createGroup` callable itself accepts any signed-in caller, with no
-  limit and no throttle (`createGroup.ts:27`). When the global profile has no
-  username, the creator is named "Admin" (`:69`).
-- **The only path today**: the maintainer creates each group, invites its first
-  player, promotes them (`setMemberRole`) and leaves (`AdminGroupPage.tsx:279`).
-  That is manual, uses up the account cap, and lets the maintainer read every
-  group until they leave.
-- **The plan must decide**: who may start a group (open sign-up, or a
-  group-less "founder" invitation the maintainer hands out); the account cap and
-  cost at scale (AI extraction allows each user 10 calls a day, 30 a week, 100 a
-  month: `entityExtraction.ts:94`); throttling `createGroup`; and the first run
-  (group, first campaign, inviting the players).
-- **Related**: T119 (review the data model before scaling); T075 and T118 (the
-  name and the domain the outreach will carry); `/privacy` and the contact form
-  as they stand.
-- **Source**: `/todo`, 2026-10-07
+- **Blocked on the maintainer**: answer the plan's six questions. Who may start
+  a group (founder invitations recommended), the member and project caps, the
+  monthly AI ceiling, who may create a campaign, whether a global admin keeps
+  read access to every group, and how many groups a founder may start.
+- **Then**: file the build order's steps as their own entries. Steps 1 to 3
+  (founder invitations, a guarded `createGroup`, the first run) are the smallest
+  change that lets a table start alone. Step 0 is T119's F4 (validate what
+  members write).
+- **Related**: T119 (the data model review; its F2 and F4 are steps here);
+  T075 and T118 (the name and the domain the outreach will carry).
+- **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
 
 ---
 
@@ -409,50 +395,27 @@ the workflows.
 - **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
 
 ### T119 — Review the Firestore data model before the site scales
-**Type** debt · **Size** L · **Status** needs investigation · **Verified** 2026-10-07
+**Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-07
 
-The data model dates from the project's first weeks and has been changed one
-fix at a time since. Before anyone scales the site up, review it whole, and
-write up three things: what the model is now, what is worth changing in it (and
-how to migrate production data, which holds real campaigns), and how it would be
-designed from scratch today. The review is the deliverable; nothing gets changed
-until the maintainer has read it.
+The review is written:
+[`docs/architecture/data-model-review.md`](docs/architecture/data-model-review.md).
+It covers the model as it is now, nine findings, a ranked table of changes with
+how each one migrates production data, and the design from scratch (Firestore
+stays). Nothing in the model has been changed.
 
-- **Where to start**: `firebase/firestore.rules.prod` maps every path. Content is
-  `groups/{g}/campaigns/{c}/{npcs,locations,quests,rumors,chapters,saga}`;
-  private data is `groups/{g}/users/{uid}/{notes,story-progress}`; membership is
-  the `groups` array on the global `users/{uid}`, which every rule `get()`s
-  (`isGroupMember`, line 296). Writes go through
-  `core/services/firebase/data/DocumentService.ts`. Entity shapes are in each
-  feature's `types.ts`.
-- **Found while filing** (read in the code, not run in the app):
-  (1) The NPC↔quest link is stored twice, `NPC.connections.relatedQuests` and
-  `Quest.relatedNPCIds`. Each detail page reads and writes only its own half
-  (`NPCDetailPage.tsx:503`, `QuestDetailPage.tsx:230,611`), so a link added
-  on one page does not show on the other. Locations have the same overlap:
-  `Location.connectedNPCs` against `NPC.locationId`.
-  (2) Nothing pages or limits a read. There is no `limit`, `orderBy` or
-  `startAfter` anywhere in `src/`, and `useCampaignCollection` streams whole
-  collections, chapter text included.
-  (3) `firestore.indexes.json` has not changed since 2025-03-25 (`938667a`), and
-  the deploy leaves it out (`--only firestore:rules,storage`). Its 20 composite
-  indexes cover queries the client never makes: every query in `src/` filters on
-  one field with no `orderBy` (`DocumentService.queryFromServer` and
-  `queryDocuments`, and `NoteContext.tsx:112`), and those need no composite
-  index. What production actually has is **unverified**.
-  (4) Notes on NPCs, locations and rumors are arrays inside the record, so a
-  record grows toward Firestore's 1 MiB document limit. The race on appending
-  was already fixed (T083).
-- **Overlaps**: T079 (the legacy free-text `location` alongside `locationId`)
-  belongs in this review. So do the field renames that
-  `docs/architecture/migration/database-field-alignment.md` plans (`dateAdded` →
-  `createdAt` and others), which no one has done.
-- **Catch**: any change to a path or field touches three layers that ship in a
-  fixed order (functions, then rules, then frontend), plus a production
-  migration. The from-scratch design also has to say whether Firestore is still
-  the right store, since the Firestore location was fixed when the project was
-  created (T118).
-- **Source**: `/todo`, 2026-10-07
+- **Blocked on the maintainer**: read it and answer its four questions. Then run
+  the read-only production checks it lists: the deployed indexes, who holds
+  `isAdmin`, how big real campaigns are, and how often the two halves of a
+  relationship disagree.
+- **Then**: file the changes that are wanted as their own entries, in the
+  table's order. One owner per relationship (F1) is the one players see today:
+  an NPC↔quest link made on one page is missing from the other. Validating what
+  members write (F4) comes before T120's outreach.
+- **Overlaps**: T079 (the legacy free-text `location`) is F9 and waits on its
+  own production audit. The `dateAdded` → `createdAt` renames that
+  `docs/architecture/migration/database-field-alignment.md` plans belong in F6's
+  migration, so records are rewritten once.
+- **Source**: `/todo`, 2026-10-07; the review written 2026-10-07
 
 ---
 

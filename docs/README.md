@@ -7,7 +7,8 @@ behavioural suites find are filed in [`testing/bug-tracking/README.md`](testing/
 
 ```
 docs/
-├── architecture/migration/  # Long-term feature ideas, and the unbuilt field-rename outline
+├── architecture/            # The data-model review (T119) and the new-group plan (T120)
+│   └── migration/           # Long-term feature ideas, and the unbuilt field-rename outline
 ├── design/                  # The design language, the colour schema and the token model
 ├── images/                  # Screenshots the root README shows
 └── testing/bug-tracking/    # Where a bug found by the behavioural suites is filed
