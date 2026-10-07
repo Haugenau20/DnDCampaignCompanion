@@ -42,11 +42,11 @@
   silently resolves to `unset` -- no warning, no error. Verified in Chrome:
   a declared-empty token skipped its fallback while an undeclared one used it.
 
-  This matters for the token model's fallback rule (01-token-model.md section
+  This matters for the token model's fallback rule (docs/design/token-model.md section
   5), which is what keeps unmigrated themes rendering while new surface pairs
   are introduced. A new token declared empty here would resolve to nothing
   instead of to the token it replaces -- exactly where the rule is supposed to
-  save an unmigrated theme. See Q7 in docs/design/plan/03-drift-log.md.
+  save an unmigrated theme (Q7).
 
   When Phase 1 adds real tokens, they belong here only with real values.
 */

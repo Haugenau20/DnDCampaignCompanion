@@ -109,7 +109,7 @@ export interface LocationContextState {
 /**
  * What happens to the places inside a location when it is deleted.
  *
- * `00-entity-authoring.md` §6.2: deleting a parent must ask, and never orphan.
+ * Deleting a parent must ask, and never orphan.
  * There is no default worth having -- both outcomes are reasonable and only the
  * person deleting knows which they mean -- so the caller states one and
  * `deleteLocation` keeps today's subtree delete only for the callers that

@@ -77,8 +77,8 @@ export interface InlineEditorProps {
  * to change everything, and this is where you fix a sentence (D43).
  *
  * It lived in `pages/npcs/` until `15-4`, which is where it was written. It is
- * now shared because `00-entity-authoring.md` §7 names it **the reference
- * implementation for every field in this phase** -- the location page edits six
+ * now shared because it is **the reference implementation for every field
+ * edited in place** -- the location page edits six
  * fields with it, and the quest and NPC pages will. A page importing another
  * page's internals to get at it was the alternative.
  *

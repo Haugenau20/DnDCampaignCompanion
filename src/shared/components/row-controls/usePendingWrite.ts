@@ -13,7 +13,7 @@ export interface PendingWrite {
 }
 
 /**
- * The save contract of `00-entity-authoring.md` §7, as a hook.
+ * The save contract every in-place edit keeps, as a hook.
  *
  * 1. **Nothing claims success before the write resolves.** No optimistic tick.
  * 2. **A failed write says what happened in words**, next to the control it

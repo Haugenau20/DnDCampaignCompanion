@@ -11,8 +11,7 @@
  *
  * The same reasoning applies to the rest: a claim about retention or about what
  * leaves the product should be stated once, be greppable, and be assertable in a
- * test. See docs/superpowers/specs/2026-09-03-privacy-policy-design.md for the
- * code references behind each value.
+ * test.
  */
 
 /**

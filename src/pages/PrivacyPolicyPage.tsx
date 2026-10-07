@@ -51,9 +51,8 @@ const Section: React.FC<{
  * revision date is the page's `actions`, which is what that slot is for. The
  * policy sections stay hairline-separated rather than boxed -- see `Section`
  * below -- so the three cards keep meaning "there is a button in here". Every
- * factual claim below is traceable to code -- see
- * docs/superpowers/specs/2026-09-03-privacy-policy-design.md -- and anything
- * that could not be traced was cut rather than softened.
+ * factual claim below is traceable to code (`core/constants/privacy.ts`),
+ * and anything that could not be traced was cut rather than softened.
  */
 const PrivacyPolicyPage: React.FC = () => {
   const { navigateToPage } = useNavigation();

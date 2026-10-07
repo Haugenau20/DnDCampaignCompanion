@@ -172,8 +172,8 @@ describe('RumorContext Bug Discovery Tests', () => {
       // getActiveCharacterName utilities are fixed", with "ACTUAL: getUserName
       // returns '' and getActiveCharacterName returns null". That was never true:
       // getUserName is `userProfile?.username || ''` and returns the username
-      // whenever one is present. The claim came from cross-context-patterns.md's
-      // Pattern 1, struck 2026-07-28 as a false premise that had misdirected
+      // whenever one is present. The claim came from a cross-context patterns
+      // write-up, struck 2026-07-28 as a false premise that had misdirected
       // priority for a year. Corrected so the narrative does not outlive it.
       // EXPECTED: Proper user attribution metadata should be included
       expect(mockAddData).toHaveBeenCalledWith(

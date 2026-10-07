@@ -16,7 +16,7 @@ export interface QuickAddValues {
   line: string;
   /**
    * Pre-set only for a location launched from *Add a place inside*
-   * (`00-entity-authoring.md` §6.2). It is the phase's only pre-filled case.
+   * -- the only pre-filled case.
    */
   parentId?: string;
 }

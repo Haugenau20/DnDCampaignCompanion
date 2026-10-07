@@ -5,7 +5,7 @@ extractable. This is the document to re-read when a change feels like it needs
 a new token.
 
 This is the *how*. The *why* — colour identity, principles, look and feel —
-lives in `../design/design-language.md`.
+lives in `design-language.md`.
 
 ---
 
@@ -164,7 +164,7 @@ can, and the app's now does.
   one; a shim left behind is a second way to say what a pair already says, and
   it outlives the migration it was meant to enable. Where an existing name must
   keep working, it is a *derivation* resolved at generation time to a literal
-  value (`../design/colour-schema.md` §5.4), not an indirection in the running
+  value (`colour-schema.md` §5.4), not an indirection in the running
   app.
 - Not a colour named after one component (`--npc-card-deceased`). Name the
   role; let the component pick a surface.
@@ -191,6 +191,6 @@ rather than a review habit.
 
 A fourth, learned late: it cannot prove a value is **right**, only consistent.
 That is why concrete values live in an independently authored fixture
-(`../design/colour-schema.md`) that no implementation PR may edit. A generated
+(`colour-schema.md`) that no implementation PR may edit. A generated
 tree checked against a fixture written by the same agent passes by
 construction. See that document's §9.

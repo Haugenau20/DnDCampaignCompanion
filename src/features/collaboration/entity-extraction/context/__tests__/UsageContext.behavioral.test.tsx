@@ -24,7 +24,7 @@ import { UsageStatus } from "../../types";
  * effect fires → true → false → effect fires…). Tests that rely on
  * null-status behavior skip the waitFor(isLoadingUsage===false) pattern and
  * instead wait for the first fetch call, then assert the synchronous state.
- * See docs/testing/bug-tracking/650-usage-context-infinite-refresh-loop-on-null-status.md
+ * This is bug #650's regression suite.
  */
 
 // ---------------------------------------------------------------------------

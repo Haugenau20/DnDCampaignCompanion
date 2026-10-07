@@ -21,7 +21,7 @@ jest.mock('@/features/user-management', () => ({
 const { useFirestore, useAuth, useUser, useGroups, useCampaigns } = require('@/features/user-management');
 
 // Mock user utilities so attribution can be verified against EXPECTED values
-// (specification-based mocking — see docs/testing/methodology/testing-lessons-learned.md).
+// (specification-based mocking).
 // `core/attribution` (used by the production code) is NOT mocked: it is exercised
 // for real, using these mocked utilities as its dependency boundary.
 jest.mock('core/utils/user-utils', () => ({
@@ -332,8 +332,7 @@ describe('useSagaData', () => {
   //
   // Sagas are a singleton, upserted document: `saveSaga` is the ONLY write path
   // and must decide for itself whether this is a creation or a modification —
-  // no page or component may supply `created*` / `modified*` fields (see
-  // docs/testing/bug-tracking/1203-saga-edit-page-attribution-wrong-source-and-overwrites-creator.md).
+  // no page or component may supply `created*` / `modified*` fields (bug #1203).
   // -------------------------------------------------------------------------
   describe('saveSaga — attribution', () => {
     test('writes creation attribution (including character fields) on the first save of a new saga', async () => {

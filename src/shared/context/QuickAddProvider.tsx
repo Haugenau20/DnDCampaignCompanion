@@ -10,7 +10,7 @@ import QuickAddContext, { type QuickAddOptions } from "./QuickAddContext";
  * It lives here rather than in each launcher because two surfaces open it --
  * the floating create button and the command palette, both of which render
  * `useCreateActions` -- and a second copy would be a second thing to keep in
- * step. `00-entity-authoring.md` §4 is explicit that there is one component;
+ * step. There is meant to be one component;
  * this is what makes that true of its state as well as its markup.
  *
  * Must be mounted inside the NPC, quest, location and note providers, whose

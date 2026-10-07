@@ -58,40 +58,10 @@ closed half in place with a note attached.
 
 **Size** · `S` a sitting · `M` a session or two · `L` needs its own plan first.
 
-Drift-log references (`R16`, `Q15`, …) point back to
-`docs/design/plan/03-drift-log.md`, where the original reasoning usually explains
-why something was deferred rather than forgotten.
-
 **Two other trackers are live and unaffected by this file**:
 `docs/testing/bug-tracking/README.md` (bugs found by the behavioural suites) and
 `CLAUDE.md`'s known-issues notes. Items that belong there are cross-referenced,
 not copied.
-
-### The 2026-10 code review
-
-Five review passes by OpenAI agents (2026-10-03/04) are recorded in
-`docs/reviews/`. They are filed here **by piece of work, not by finding**: one
-entry carries every finding ID (`SEC-001`, `DATA-003`, …) that one change
-closes, and the ID is the anchor into its report for the reproduction,
-evidence and fix direction. Read the report at pickup rather than copying it
-here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
-
-- Every confirmed finding has been fixed; none is open here.
-- **Not filed**: the reviews' unverified leads, and the optional refactors.
-  They stay in the reports.
-- **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its open findings are closed; the rest of that
-  scope stays unreviewed by decision.
-- App source was byte-identical to the reviewed commit `64fe195` when these were
-  filed, and each entry's primary location was opened on 2026-10-04.
-
-Entries cite reports by number:
-
-| # | Report | # | Report |
-|---|---|---|---|
-| 01–04 | `docs/reviews/2026-10-03/` | 14–16 | `docs/reviews/2026-10-04/pass-4/` |
-| 05–08 | `docs/reviews/2026-10-03/pass-2/` | 17–21 | `docs/reviews/2026-10-04/pass-5/` |
-| 09–13 | `docs/reviews/2026-10-03/pass-3/` | | |
 
 ## What phase 15 learned
 
@@ -422,7 +392,8 @@ in the repo, so this is console work plus whatever copy is decided.
 ## Dormant — only live if `theme-contract` happens
 
 `theme-contract` (a theme system to share across projects) is **deferred
-indefinitely**; see `docs/design/plan/04-rollout.md` §3, Phase 13. These four were
+indefinitely** (the rollout plan's Phase 13, and the drift log's `D`/`Q` entries cited
+below, are in git history at `9810644` under `docs/design/plan/`). These four were
 all filed "decide before package extraction". None blocks this repository.
 
 Do not answer them speculatively. Designing a package against a consumer that

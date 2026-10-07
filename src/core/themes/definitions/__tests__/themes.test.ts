@@ -84,7 +84,7 @@ describe('theme definitions', () => {
   // -------------------------------------------------------------------------
   //
   // `scheme` is the first enum token in this model, and it is checked
-  // differently from every colour above it. `01-token-model.md` section 6 is
+  // differently from every colour above it. `docs/design/token-model.md` section 6 is
   // explicit about why: "Validating an enum means checking the **value** is
   // legal, not just that the variable exists. That is a stronger guarantee than
   // a spelling check."

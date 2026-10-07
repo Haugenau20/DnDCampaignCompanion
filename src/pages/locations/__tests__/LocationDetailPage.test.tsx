@@ -3,7 +3,7 @@
 // `/locations/:locationId` — the route a location earns because **a row cannot
 // hold a tree** (§2.2).
 //
-// The gates this suite stands for, from `handoff/15-4-location-page.md`:
+// The gates this suite stands for:
 // the hierarchy module at depth 1 and depth 4; cycle safety asserted rather
 // than eyeballed, in the tree, the breadcrumb and the descendant exclusion;
 // deleting a parent offering both outcomes and naming the count; every field

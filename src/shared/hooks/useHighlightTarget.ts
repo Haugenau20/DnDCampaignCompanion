@@ -140,7 +140,7 @@ export interface UseHighlightTargetOptions<T> extends HighlightAccessors<T> {
  * T014 measured four different readings: two matched by id *or* name and
  * auto-expanded ancestors, one was id-only with no expansion, and one set a
  * prop and did nothing else, so a highlighted quest could sit off screen. The
- * contract, from `00-entity-authoring.md` §9, is one behaviour:
+ * contract is one behaviour:
  *
  * - match by **id**;
  * - expand the target and every ancestor needed to reveal it;

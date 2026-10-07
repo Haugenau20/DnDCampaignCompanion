@@ -2,7 +2,7 @@
 //
 // `/quests/:questId` — the address a quest never had.
 //
-// The gates this suite stands for, from `handoff/15-5-quest-page.md`: the page
+// The gates this suite stands for: the page
 // renders and is linkable; **no id is rendered as a label**; **no NPC appears
 // twice**; objectives are tickable *and* authorable with one contract, and a
 // rejected write reverts visibly; **completing the last objective does not

@@ -6,12 +6,11 @@ output. Neither file is edited by hand.
 
 Ranking: `design-language.md` decides *why* and outranks this document on any
 principle. This document decides *what the numbers are* and outranks every
-theme file, plan and handoff on any value. `plan/` decides *when*.
+theme file on any value.
 
 - **Why it looks like this:** `design-language.md`
-- **How tokens are shaped:** `../plan/01-token-model.md`
+- **How tokens are shaped:** `token-model.md`
 - **Generated values:** `colour-schema.json`
-- **Rollout:** `../plan/06-colour-schema-rollout.md`
 
 ---
 
@@ -624,24 +623,19 @@ collapse toward each other. It requires no copy change and no icon.
   while light's was serif was the same class of drift as the colour.
 - **Ornament strength, corner treatment, rule weight.** Token model §6.
 - **Density and layout.** Design language §8.
-- **Which route adopts this when.** `../plan/06-colour-schema-rollout.md`.
 
 ## 7b. What is already built, and what is not
 
-`12-1` and `12-2` are **merged** on `main` (`1b3cc2d`). The code holds 109 of
-this document's 135 leaves, the full OKLCH derivation, the role map, the
-borrowed-role verification, and the `outcome` / `knowledge` / `cue` scales.
-
-The 26 leaves in §5.5 **do not exist in the code.** They land in `12-2b`,
-which exists precisely so they arrive the same way every other token did —
-additively, with no consumers, screenshot-identical — rather than being
-smuggled in alongside a destructive migration.
+All of it. The schema's rollout (`12-1` … `12-6`, including the §5.5 leaves
+`12-2b` added) is merged, and the gates in `src/core/themes/__tests__/` hold
+the code to this document.
 
 ## 8. Decisions this schema records
 
 Track any of these still to be implemented in `../../TODO.md`, the project's
-one tracker. (`../plan/03-drift-log.md`, which used to collect them, closed on
-2026-09-16; it still holds the reasoning behind each `D` number.)
+one tracker. The reasoning behind each `D` number was in the drift log, which
+closed on 2026-09-16 and was deleted with the finished phase plans (T113); it
+is in git history at `9810644`, `docs/design/plan/03-drift-log.md`.
 
 - **D23 — Torchlight Forge chosen** over three alternatives (archival
   verdigris, indigo instrument, arcane violet). Warm limestone and iron with a
@@ -799,7 +793,7 @@ implementation PR, and no agent executing one, changes either file.**
 
 Not "should avoid". Never. The reason is not ceremony:
 
-The schema outranks the plan, the handoffs and the code on every value. If the
+The schema outranks any plan and the code on every value. If the
 agent doing the implementation also authors the schema, the source of truth
 becomes downstream of the implementation, and the one guarantee the whole phase
 rests on — that the generated themes can be checked against something
@@ -832,12 +826,8 @@ nothing catches it.
 | `design/colour-schema.md` | **No.** Never. |
 | `design/colour-schema.json` | **No.** Never. |
 | `design/design-language.md` | **No.** Principles are not an implementation concern. |
-| `plan/01-token-model.md` | No — propose it in `TODO.md`. |
-| `plan/06-colour-schema-rollout.md` | No — propose it in `TODO.md`. |
-| `plan/handoff/12-*.md` | No. A handoff that is wrong is reported, not rewritten. |
-| A handoff whose PR has **merged** | Never — by anyone. It is a historical record. New work gets a new PR. |
+| `design/token-model.md` | No — propose it in `TODO.md`. |
 | `TODO.md` (repository root) | **Yes.** This is where findings go. |
-| `plan/03-drift-log.md` | **No.** Closed 2026-09-16; it is a historical record. |
 
 ## 10. Learnings worth keeping
 

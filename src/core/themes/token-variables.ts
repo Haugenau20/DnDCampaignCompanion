@@ -4,7 +4,7 @@
 // The map from token path to variable name is mechanical, so a token cannot
 // exist without its variable and a variable cannot exist without its token.
 // The set is therefore enumerable, which is what makes it checkable against a
-// manifest -- see 01-token-model.md section 4.
+// manifest -- see docs/design/token-model.md section 4.
 
 /**
  * A token tree: nested plain objects with string leaves, plus ordered
