@@ -25,6 +25,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
+| low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
 | low | T117 | Pin Node and Java with mise | S | open | Decided 2026-10-06: the maintainer runs Node 23.7 against CI's 22; one `mise.toml` sets every machine and CI |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
@@ -481,6 +482,56 @@ time anyone edits it.
   purpose.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted; decided 2026-10-06
+
+### T118 — Move the site to `muninn.quest`, and hide the old project id
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+
+The maintainer bought `muninn.quest` (registrar Porkbun). This is the
+custom-domain item T075 said would be its own. **Decided (maintainer,
+2026-10-06): keep the Firebase project, and hide `dnd-campaign-companion`
+from everything a user sees.** The id stays in `CLAUDE.md`, the scripts and
+the workflows.
+
+- **Scope**: (1) `muninn.quest` as a Hosting custom domain; (2) the old
+  `dnd-campaign-companion.web.app` redirects to it, since it cannot be deleted
+  (a hostname check on the page, or a separate Hosting site for `muninn.quest`
+  with the old site kept only to redirect); (3) the auth domain moves to
+  `muninn.quest`, so Google's sign-in popup stops showing `…firebaseapp.com`;
+  (4) the sign-in email's sender domain and action link use `muninn.quest`
+  (console work shared with T104); (5) the GitHub repo is renamed and its
+  description changed. Remaining traces (image and function URLs, the console)
+  are seen only in developer tools.
+- **Needs no change** (read 2026-10-06): sign-in links, invite links and the
+  device code all build on `window.location.origin` (`SignInForm.tsx:103`,
+  `AdminPeoplePage.tsx:95,115`). `firebase.json` has no headers or CSP naming a
+  host. No bucket CORS is set or needed: images are measured at upload, never
+  read back.
+- **Console and DNS, not read**: Porkbun records for Hosting; Auth's authorised
+  domains (an unlisted continue URL is refused); the reCAPTCHA v3 key's domain
+  list (App Check is enforced on Auth, so missing it refuses every sign-in, see
+  `appCheck.ts`); the OAuth client's redirect URI and the consent screen's app
+  name for the moved auth domain.
+- **Repo**: `firebaseConfig.ts:8` defaults the auth domain to `…firebaseapp.com`,
+  and CI takes the `REACT_APP_AUTH_DOMAIN` secret (value **not** read). Google
+  sign-in is a popup (`AuthService.ts:354`). The live URL is written in
+  `README.md:9`, `CODE_OF_CONDUCT.md:13` and `.github/ISSUE_TEMPLATE/config.yml:7`.
+  GitHub redirects the repo's old URL, and CI deploys through service-account
+  secrets that do not name the repo.
+- **Mail**: the contact form sends via Gmail (`contact.ts:61-68`) and does not
+  depend on the site's domain. The domain also lifts T057's blocker (a sending
+  domain for Resend).
+- **Considered and set aside: a new Firebase project.** It would mean exporting
+  and importing Firestore, Storage and Auth (stored image URLs may name the old
+  bucket, **unverified**), a write freeze, everyone signing in again, and
+  setting up again everything outside the repo: Identity Platform, App Check,
+  the blocking function, Secret Manager, the Token Creator grant, the Artifact
+  Registry cleanup policy, CI's service accounts and billing. The only gain
+  over the scope above is the id in developer-only places. Reconsider only if
+  something fixed at project creation (such as the Firestore location) is
+  wanted changed anyway.
+- **Catch**: the domain does not settle T075's name. If the site is to be called
+  Muninn, the maintainer should say so there.
+- **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
 
 ---
 
