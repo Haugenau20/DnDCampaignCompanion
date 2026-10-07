@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T103 | Replay browser checks: Playwright in CI | L | open | Decided 2026-10-06: a few journeys first, and a defect found in the browser lands with a test |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -372,33 +371,6 @@ important**.
 ---
 
 ## Tech debt and platform
-
-### T103 — Replay browser checks: Playwright in CI
-**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-06
-
-Claude-in-Chrome checks catch what jsdom cannot (see "What phase 15 learned"),
-but each one is a one-off: nothing replays it, so a defect it found can come
-back unnoticed.
-
-**Decided (maintainer, 2026-10-06): Playwright in CI**, driving the production
-build against the emulators with seeded data, starting with a handful of
-journeys: signing in, moving between pages, creating and editing an entity, the
-location tree, and a quest's place that links to its location. From then on **a
-defect found in the browser lands with a test** that replays it.
-Claude-in-Chrome stays for exploring.
-
-- **Measured**: the repo has no browser test runner (`package.json` has no
-  Playwright, Cypress or Puppeteer). The code review's passes 4–5 did build
-  one outside the repo: Playwright Core driving the production build against
-  the emulators with seeded fixtures (`docs/reviews/2026-10-04/pass-4/evidence/probes/runtime/`,
-  `run.cjs` and `helpers.cjs`), written for Linux paths.
-- **Starting point**: CI's `functions` job already starts the emulators (Java
-  included), which an end-to-end job would also need.
-- **Catch**: size L, so its own plan first: seeding (`manage-dev-data.ps1`'s
-  generators), signing in without an inbox (the Auth emulator's `oobCodes`
-  endpoint, as CLAUDE.md describes), and a new job in `test.yml` -- which gates
-  nothing until the maintainer adds it to the ruleset on `main`.
-- **Source**: todo.txt, 2026-10-04; decided 2026-10-06
 
 ### T116 — `firebase-admin` 13 → 14 in the functions
 **Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-06

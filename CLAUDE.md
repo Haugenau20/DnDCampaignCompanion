@@ -198,6 +198,32 @@ are the permissive emulator rulesets; the deploy job refuses it.
 `npm run lint` in `firebase/functions` reports ~2,000 pre-existing problems (mostly CRLF
 `linebreak-style`), so it is **not a pass/fail gate** — stash, capture a baseline, and diff.
 
+### Browser journeys (`e2e/`) — Playwright, its own package
+
+**`npm --prefix firebase run test:e2e`** builds the production site, starts Auth and Firestore
+emulators for the `demo-e2e` project (`firebase/firebase.e2e.json`), resets and seeds them
+(`e2e/support/seed.ts`), runs the journeys in Chromium and stops the emulators. It needs Java and,
+once per machine, `npm --prefix e2e ci` and `npx playwright install chromium` from `e2e/`. CI runs
+it as the `e2e` job. Things that differ from the dev setup on purpose:
+
+- **Production Firestore rules.** A write the live rules refuse fails the journey that makes it.
+- **Own ports** (Auth 19099, Firestore 18080, the site on 4300; `e2e/support/env.ts`), so a run
+  shares the machine with the dev server and the dev emulators and touches neither. The build goes
+  to the OS temp folder, not `build/`.
+- **Nothing leaves the machine** and **an uncaught page error fails the journey**
+  (`e2e/support/test.ts`); journeys import `test` from there, not from `@playwright/test`.
+- `sign-in.setup.ts` signs in through the Auth emulator's outbox and saves the browser (IndexedDB
+  included), which every other journey starts from. No Functions or Storage emulator yet: a journey
+  that needs one adds it to `firebase.e2e.json` and the `--only` list.
+
+**A defect found in a browser check lands with a journey that replays it** (maintainer,
+2026-10-06). Claude-in-Chrome stays for exploring. Locate by role and accessible name, as a
+player would; a selector that needs a class or `data-testid` usually means the control has no name.
+Iterating: start the emulators once (`npx firebase emulators:start --project demo-e2e --only
+auth,firestore --config firebase.e2e.json` from `firebase/`), then `npx playwright test` from `e2e/`
+as often as needed. A failure leaves a screenshot, `error-context.md` (the page's accessibility
+tree) and a trace (`npx playwright show-trace …`) under `e2e/test-results/`.
+
 ## Verifying a Change Before Proposing a Merge
 
 Merging to `main` deploys live: the Cloud Functions first, then the Firestore and Storage rules,
@@ -211,7 +237,8 @@ later PR. CI (`.github/workflows/test.yml`) runs all three steps,
 plus `npm run lint`, `npm run lint:tests`, the `firebase/functions` suite and `npm run check:bundle`, on every PR and
 before the deploy, which waits on them. A ruleset on `main` requires `test / test`, `test / functions`
 and `test / bundle`, so a red PR cannot merge; a new job in `test.yml` gates nothing until the
-maintainer adds it there. Changed a function? Run `npm --prefix firebase run test:functions` too.
+maintainer adds it there (`test / e2e`, the browser journeys, is not in it yet). Changed a function? Run
+`npm --prefix firebase run test:functions` too; changed a page or a flow, `npm --prefix firebase run test:e2e`.
 
 **A PR's preview site is signed out on purpose**: it runs unmerged code against production data, so the
 preview build sets `REACT_APP_PREVIEW` and `/signin` and `/join` say sign-in is off. Check signed-in

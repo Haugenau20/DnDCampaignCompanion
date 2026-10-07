@@ -14,8 +14,16 @@
 # `bundle` runs the production build, which no other job does: it is the only
 # resolver that ignores tsconfig `paths`, so an `@/` import passes the type-check
 # and jest and fails here. It then holds the entry bundle under its ceiling
-# (scripts/check-bundle-size.js, T030). All three jobs must pass for a caller's
-# `needs: test`.
+# (scripts/check-bundle-size.js, T030).
+#
+# `e2e` runs the browser journeys (T103, e2e/): Playwright drives the
+# production build against emulators that enforce the production Firestore
+# rules, started by `npm --prefix firebase run test:e2e`. A ruleset only
+# requires the checks it names, so this job blocks a PR's merge once
+# `test / e2e` is added there.
+#
+# Every job must pass for a caller's `needs: test`, so all four hold back the
+# deploy.
 
 name: Test
 on:
@@ -94,3 +102,57 @@ jobs:
 
       - name: Entry bundle size
         run: npm run check:bundle
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # The emulators are Java.
+      - uses: ./.github/actions/toolchain
+        with:
+          tools: node java
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('firebase/package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install the Firebase CLI
+        run: npm ci --prefix firebase
+
+      - name: Install the journeys' dependencies
+        run: npm ci --prefix e2e
+
+      # The browser build follows the pinned @playwright/test version.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
+      # `--with-deps` installs the system libraries too, which the cache does
+      # not hold, so it runs on a cache hit as well.
+      - name: Install Chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      # Playwright runs the journeys without type-checking them.
+      - name: Type-check the journeys
+        run: npm --prefix e2e run typecheck
+
+      - name: Journeys
+        run: npm --prefix firebase run test:e2e
+
+      # Screenshots, traces (`npx playwright show-trace <zip>`) and the report.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
