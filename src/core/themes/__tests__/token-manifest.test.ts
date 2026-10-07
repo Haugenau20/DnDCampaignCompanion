@@ -8,7 +8,7 @@
 // silently falls back to inherited -- no error anywhere.
 //
 // Note what this cannot prove: that the right variable *wins*. Precedence is a
-// separate mechanism. See 01-token-model.md section 8.
+// separate mechanism. See docs/design/token-model.md section 8.
 
 import * as fs from "fs";
 import * as path from "path";

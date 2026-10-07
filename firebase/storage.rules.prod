@@ -19,7 +19,7 @@
 // Pinned by functions/test/rules/storage-rules-prod.test.ts.
 //
 // ---------------------------------------------------------------------------
-// WHAT THIS ALLOWS (design: docs/superpowers/specs/2026-09-24-storage-images-design.md)
+// WHAT THIS ALLOWS
 // ---------------------------------------------------------------------------
 // - Group members read, create and delete images on their campaign's NPCs and
 //   locations. Delete matches Firestore's relaxed entity delete (#1406).

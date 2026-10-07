@@ -3,7 +3,7 @@
 // `/locations/:locationId` — the route a location earns because **a row cannot
 // hold a tree** (§2.2).
 //
-// The gates this suite stands for, from `handoff/15-4-location-page.md`:
+// The gates this suite stands for:
 // the hierarchy module at depth 1 and depth 4; cycle safety asserted rather
 // than eyeballed, in the tree, the breadcrumb and the descendant exclusion;
 // deleting a parent offering both outcomes and naming the count; every field
@@ -257,23 +257,32 @@ beforeEach(() => {
 
 // ---------------------------------------------------------------------------
 
-describe('LocationDetailPage — the band', () => {
+// T063: the dark band became the NPC page's light identity card. What the
+// band's one meta line said is now the card's line and its facts.
+describe('LocationDetailPage — the identity card', () => {
   it('names the place, in the campaign’s voice', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Gondolin' })).toBeInTheDocument();
   });
 
-  it('states what it is, where it sits and what is inside, on one line', () => {
+  it('states where it sits under the name, and what it is, what is inside and when it was visited as facts', () => {
     renderPage();
-    expect(
-      screen.getByText(/City in Beleriand · 2 places inside · last visited/)
-    ).toBeInTheDocument();
+    expect(screen.getByText('In Beleriand')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit type' })).toHaveTextContent('City');
+    expect(screen.getByRole('group', { name: 'Inside' })).toHaveTextContent('2 places');
+    expect(screen.getByRole('group', { name: 'Last visited' })).toHaveTextContent('31/05/2025');
   });
 
-  it('says only what exists: a childless root does not claim a parent or a count', () => {
+  it('says only what exists: a top-level place claims no parent', () => {
+    mockLocationId = 'beleriand';
+    renderPage();
+    expect(screen.queryByText(/^In /)).toBeNull();
+  });
+
+  it('says only what exists: an empty place claims no count', () => {
     mockLocationId = 'doriath';
     renderPage();
-    expect(screen.getByText('Region in Beleriand')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Inside' })).toHaveTextContent('Nothing yet');
   });
 
   it('leads back through every ancestor it has', () => {
@@ -286,8 +295,10 @@ describe('LocationDetailPage — the band', () => {
     expect(within(trail).getByText("King's square")).toBeInTheDocument();
   });
 
-  it('carries the knowledge ladder, as buttons rather than a dropdown', async () => {
+  it('changes knowledge from its fact, on a ladder of buttons rather than a dropdown', async () => {
     renderPage();
+    expect(screen.getByRole('group', { name: 'Knowledge' })).toHaveTextContent('Visited');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit knowledge' }));
     const ladder = screen.getByRole('group', { name: 'Knowledge of Gondolin' });
     expect(within(ladder).queryByRole('combobox')).toBeNull();
 
@@ -421,7 +432,7 @@ describe('LocationDetailPage — Move elsewhere (§6.2, item 3)', () => {
 describe('LocationDetailPage — deleting a parent (§6.2, item 6)', () => {
   const openDelete = () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete location' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     return within(screen.getByRole('dialog'));
   };
 
@@ -454,12 +465,13 @@ describe('LocationDetailPage — deleting a parent (§6.2, item 6)', () => {
       renderPage();
       expect(screen.getByText(/Deleting Gondolin stopped partway/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Finish deleting' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Delete location' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
     });
 
     it('offers no edit, since the rules refuse every one', () => {
       renderPage();
-      expect(screen.queryByRole('button', { name: /Rename/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Edit the name/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit knowledge' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Move elsewhere/ })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Add another feature/ })).not.toBeInTheDocument();
     });
@@ -504,7 +516,7 @@ describe('LocationDetailPage — deleting a parent (§6.2, item 6)', () => {
   it('asks no question when there is nothing inside to decide about', () => {
     mockLocationId = 'seven-gates';
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete location' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.queryByRole('radio')).not.toBeInTheDocument();
     expect(dialog.getByText('Seven gates is removed for everyone.')).toBeInTheDocument();
@@ -522,18 +534,12 @@ describe('LocationDetailPage — deleting a parent (§6.2, item 6)', () => {
     expect(mockNavigateToPage).not.toHaveBeenCalledWith('/locations');
   });
 
-  it('says on the page itself that deleting will ask', () => {
-    renderPage();
-    expect(
-      screen.getByText(/asks what happens to the 2 places inside/)
-    ).toBeInTheDocument();
-  });
 });
 
 describe('LocationDetailPage — edit in place (§7, item 9)', () => {
   it('opens an editor on the description and writes it', async () => {
     renderPage();
-    fireEvent.click(screen.getByText('About Gondolin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
 
     const field = screen.getByLabelText('Description');
     fireEvent.change(field, { target: { value: 'A hidden city of the Noldor.' } });
@@ -549,19 +555,19 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
   it('keeps every character typed when the write is refused', async () => {
     mockUpdateLocation.mockRejectedValueOnce(new Error('Permission denied'));
     renderPage();
-    fireEvent.click(screen.getByText('About Gondolin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
 
     const field = screen.getByLabelText('Description');
     fireEvent.change(field, { target: { value: 'Something worth keeping' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save description' }));
 
-    await waitFor(() => expect(screen.getByText('Not saved')).toBeInTheDocument());
+    expect(await screen.findByText('Not saved')).toBeInTheDocument();
     expect(screen.getByLabelText('Description')).toHaveValue('Something worth keeping');
   });
 
   it('renames the place from the page, with no link to an edit form', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the name Gondolin' }));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ondolindë' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save name' }));
 
@@ -571,31 +577,34 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
   });
 
   // A11Y-007: closing an editor left focus on <body>.
-  it('hands focus back to Rename when the name editor is cancelled', () => {
+  it('hands focus back to the name when its editor is cancelled', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the name Gondolin' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: 'Rename' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Edit the name Gondolin' })).toHaveFocus();
   });
 
-  it('hands focus back to Rename once the name is saved', async () => {
+  it('hands focus back to the name once it is saved', async () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit the name Gondolin' }));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ondolindë' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save name' }));
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename' })).toHaveFocus());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Edit the name Gondolin' })).toHaveFocus()
+    );
   });
 
   it('hands focus back to the description when its editor is cancelled', () => {
     renderPage();
-    fireEvent.click(screen.getByText('About Gondolin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: /About Gondolin/ })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Edit description' })).toHaveFocus();
   });
 
   it('changes the type in place', async () => {
     renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit type' }));
     fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'dungeon' } });
     await waitFor(() =>
       expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', { type: 'dungeon' })
@@ -690,6 +699,22 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     );
   });
 
+  // T063: the location's notes are the NPC page's card, not a section of
+  // their own with a different title, no order stated and no confirmation.
+  it('heads its notes as the NPC page does, oldest first', () => {
+    renderPage();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
+    expect(screen.getByText('2 · oldest first')).toBeInTheDocument();
+    expect(screen.queryByText('Notes from the table')).not.toBeInTheDocument();
+  });
+
+  it('says a new note was saved, in words', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Add a note'), { target: { value: 'The gates held.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+  });
+
   it('no longer tells the writer that notes can never be changed', () => {
     renderPage();
     expect(screen.getByText('Dated today and credited to you.')).toBeInTheDocument();
@@ -769,7 +794,7 @@ describe('LocationDetailPage — what the record may claim (§8)', () => {
   it('formats every date, and never prints an ISO timestamp or a stored shape', () => {
     renderPage();
     // `15-6` moved the shared helper onto the same shape the record line uses.
-    expect(screen.getByText('31/05/2025')).toBeInTheDocument();
+    expect(screen.getAllByText('31/05/2025').length).toBeGreaterThan(0);
     expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
     expect(screen.queryByText('2025-05-31')).toBeNull();
   });
@@ -793,7 +818,7 @@ describe('LocationDetailPage — what the record may claim (§8)', () => {
     // last-modified-by and nothing in between, so that line would be
     // inventing a history the data does not carry.
     renderPage();
-    const section = screen.getByText('What this place is').closest('section') as HTMLElement;
+    const section = screen.getByText('Description').closest('section') as HTMLElement;
     expect(within(section).queryByText(/DungeonMaster/)).not.toBeInTheDocument();
   });
 });
@@ -980,24 +1005,27 @@ describe('LocationDetailPage — the picture (T021)', () => {
   const withPicture = () =>
     TREE.map((loc: any) => (loc.id === 'gondolin' ? { ...loc, image: picture } : loc));
 
-  it('draws the band as usual without a picture, and offers to add one on it', () => {
-    const { container } = renderPage();
-    const band = container.querySelector('.hero-band') as HTMLElement;
+  it('starts with the card when there is no picture, and offers to add one on its sigil', () => {
+    renderPage();
     // No striped placeholder: most places never get a picture.
     expect(screen.queryByRole('img', { name: /no image added/ })).toBeNull();
+    expect(screen.queryByTestId('entity-page-image')).toBeNull();
 
     const add = screen.getByRole('button', { name: 'Add picture' });
-    expect(band.parentElement?.contains(add)).toBe(true);
+    const card = screen.getByRole('heading', { level: 1 }).closest('section') as HTMLElement;
+    expect(card).toContainElement(add);
     // Icons on the corner, named for assistive tech rather than labelled (T068).
     expect(add).toHaveTextContent(/^$/);
   });
 
-  it('draws the picture inside the band once there is one', () => {
+  it('draws the picture full-width above the card once there is one, with nothing on it', () => {
     mockLocations = withPicture();
-    const { container } = renderPage();
+    renderPage();
     const img = screen.getByRole('img', { name: 'Gondolin' });
     expect(img).toHaveAttribute('src', picture.url);
-    expect((container.querySelector('.hero-band') as HTMLElement).contains(img)).toBe(true);
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(img.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('entity-page-image')).not.toContainElement(heading);
 
     for (const name of ['Replace picture', 'Remove picture']) {
       expect(screen.getByRole('button', { name })).toHaveTextContent(/^$/);

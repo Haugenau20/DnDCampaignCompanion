@@ -32,7 +32,7 @@ describe("theme CSS custom properties", () => {
       // yields nothing, the declaration becomes invalid at computed-value
       // time, and the property resolves to `unset` with no warning. That
       // silently defeats the token model's fallback rule, which is what keeps
-      // unmigrated themes rendering. See Q7 in docs/design/plan/03-drift-log.md.
+      // unmigrated themes rendering (Q7).
       expect(offenders).toEqual([]);
     });
   });

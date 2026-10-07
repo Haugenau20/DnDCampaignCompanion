@@ -1,6 +1,6 @@
 // src/features/campaign-entities/locations/utils/location-presentation.ts
 import type { RosterStatusTone } from 'core/components/Roster';
-import { Location, LocationStatus, LocationType } from '../types';
+import { LocationStatus, LocationType } from '../types';
 
 /**
  * How a location says what it is, in one place.
@@ -70,30 +70,3 @@ export const KNOWLEDGE_OPTIONS: Array<{ value: LocationStatus; label: string }> 
 export const formatLocationStatus = (status: LocationStatus): string =>
   status.charAt(0).toUpperCase() + status.slice(1);
 
-/**
- * The one line under a location's name on its page: what it is, where it sits,
- * what is inside it, and when it was last visited.
- *
- * Only what exists. A place with no parent and nothing inside says "City" and
- * stops, rather than "City in nowhere · 0 places inside".
- */
-export function locationMetaLine(
-  location: Location,
-  parentName: string | undefined,
-  insideCount: number,
-  lastVisited?: string
-): string {
-  const what = parentName
-    ? `${formatLocationType(location.type)} in ${parentName}`
-    : formatLocationType(location.type);
-
-  return [
-    what,
-    insideCount > 0
-      ? `${insideCount} place${insideCount === 1 ? '' : 's'} inside`
-      : undefined,
-    lastVisited ? `last visited ${lastVisited}` : undefined,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}

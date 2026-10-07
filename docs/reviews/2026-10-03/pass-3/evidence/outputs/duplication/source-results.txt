@@ -1,5 +1,0 @@
-{"probe":"DUP-001-title-differential","rumorDisplay":"Traders saw a dragon near the bridge","candidateName":"","filtered":0,"noteDisplay":"Dragon under the bridge","noteResultTitle":""}
-{"probe":"DUP-002-slug-preview","preview":"combined-rumor-03-10-2026","firstPersisted":"combined-rumor-03-10-2026","secondPersisted":"combined-rumor-03-10-2026-2","punctuationPreview":"","punctuationPersistedShape":"UUID","writes":3}
-{"probe":"DUP-OPT-batch-parity","traces":[{"size":0,"calls":0,"writeCount":0,"error":null},{"size":1,"calls":1,"writeCount":1,"collection":"rumors","error":null},{"size":500,"calls":1,"writeCount":500,"collection":"rumors","error":null},{"size":501,"calls":0,"writeCount":0,"error":"One action can change at most 500 rumours at once."}]}
-{"probe":"DUP-OPT-normalization-parity","markdownCases":8,"byteColorContrastChecks":512,"contactCategories":5}
-ALL DUPLICATION SOURCE PROBES PASSED

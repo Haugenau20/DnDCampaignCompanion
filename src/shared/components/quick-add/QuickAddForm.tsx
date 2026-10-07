@@ -57,7 +57,7 @@ export interface QuickAddFormProps {
 /**
  * The two-field create surface, shared by all three mounts.
  *
- * Name and one line, and nothing else -- `00-entity-authoring.md` §1.2. The
+ * Name and one line, and nothing else. The
  * twenty optional fields that currently sit beside these two at identical
  * visual weight are added afterwards, on the record itself.
  *

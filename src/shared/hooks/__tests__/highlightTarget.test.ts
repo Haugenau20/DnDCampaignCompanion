@@ -107,7 +107,7 @@ describe("ancestorIdsOf", () => {
 });
 
 describe("resolveHighlightTarget", () => {
-  // T014's contract, from `00-entity-authoring.md` §9.
+  // T014's contract.
   it("matches by id", () => {
     const target = resolveHighlightTarget(tree, "gondolin", { idOf, parentIdOf });
     expect(target.highlightedId).toBe("gondolin");

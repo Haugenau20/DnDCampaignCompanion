@@ -37,7 +37,7 @@ interface DialogProps {
    * `"center"` is the product's default and what every dialog predating this
    * prop gets. `"sheet-on-phone"` keeps that centred panel from `sm` up and
    * drops to a bottom sheet below it, because a centred dialog on a phone puts
-   * its own fields under the keyboard (`00-entity-authoring.md` §4).
+   * its own fields under the keyboard.
    *
    * The alignment lives on the overlay, not the panel, which is why this is a
    * prop rather than something a caller can pass through `maxWidth`.

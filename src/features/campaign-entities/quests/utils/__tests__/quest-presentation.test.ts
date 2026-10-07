@@ -5,7 +5,6 @@ import {
   moveObjective,
   objectiveProgressLabel,
   objectiveProgressOf,
-  questMetaLine,
 } from '../quest-presentation';
 import { Quest, QuestObjective } from '../../types';
 
@@ -57,33 +56,6 @@ describe('objectiveProgressLabel', () => {
 
   it('says a quest has none rather than "0 of 0"', () => {
     expect(objectiveProgressLabel([])).toBe('No objectives yet');
-  });
-});
-
-describe('questMetaLine', () => {
-  it('states progress, place and level range in one line', () => {
-    expect(questMetaLine(quest(), 'Erebor')).toBe('1 of 3 objectives · Erebor');
-  });
-
-  it('adds the level range when the quest has one', () => {
-    expect(questMetaLine(quest({ levelRange: '7-9' }), 'Erebor')).toBe(
-      '1 of 3 objectives · Erebor · levels 7-9'
-    );
-  });
-
-  it('states only what exists', () => {
-    // A quest with no place and no level range says how far along it is and
-    // stops, rather than "No objectives yet · · levels".
-    expect(questMetaLine(quest({ objectives: [] }))).toBe('No objectives yet');
-  });
-
-  it('names the completion date only for a quest that concluded', () => {
-    expect(questMetaLine(quest({ status: 'completed' }), 'Erebor', '31 May 2025')).toBe(
-      '1 of 3 objectives · Erebor · completed 31 May 2025'
-    );
-    expect(questMetaLine(quest({ status: 'active' }), 'Erebor', '31 May 2025')).toBe(
-      '1 of 3 objectives · Erebor'
-    );
   });
 });
 

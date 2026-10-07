@@ -15,8 +15,8 @@
 /**
  * The entities quick add can create.
  *
- * The rumour is deliberately absent. `00-entity-authoring.md` §4 gives it a
- * composer row rather than a dialog, and `15-7` built that row: one field,
+ * The rumour is deliberately absent. It gets a composer row rather than a
+ * dialog, and `15-7` built that row: one field,
  * `RumorComposer`, at the top of the rumours list. A rumour has no page for
  * *Create & open* to land on, and asks for no second field -- a title or some
  * content is enough, and its source is optional (T041, closed 2026-09-26).

@@ -1126,6 +1126,15 @@
 }
 
 /*
+  A wide picture framed on its own, such as a location's across the top of its
+  page (T063): the same hairline frame as a portrait, cropped from the middle.
+*/
+.picture-frame {
+  border: var(--border-width-sm) solid var(--surface-card-border);
+  border-radius: var(--border-radius-lg);
+}
+
+/*
   Cropped from above the middle: a portrait's face sits in its upper part,
   and a centred crop is what cuts it (T064).
 */

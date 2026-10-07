@@ -23,13 +23,11 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
 | low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
-| nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -60,40 +58,10 @@ closed half in place with a note attached.
 
 **Size** · `S` a sitting · `M` a session or two · `L` needs its own plan first.
 
-Drift-log references (`R16`, `Q15`, …) point back to
-`docs/design/plan/03-drift-log.md`, where the original reasoning usually explains
-why something was deferred rather than forgotten.
-
 **Two other trackers are live and unaffected by this file**:
 `docs/testing/bug-tracking/README.md` (bugs found by the behavioural suites) and
 `CLAUDE.md`'s known-issues notes. Items that belong there are cross-referenced,
 not copied.
-
-### The 2026-10 code review
-
-Five review passes by OpenAI agents (2026-10-03/04) are recorded in
-`docs/reviews/`. They are filed here **by piece of work, not by finding**: one
-entry carries every finding ID (`SEC-001`, `DATA-003`, …) that one change
-closes, and the ID is the anchor into its report for the reproduction,
-evidence and fix direction. Read the report at pickup rather than copying it
-here. Test gaps (`TEST-…`) ride with the entry whose fix they must protect.
-
-- Every confirmed finding has been fixed; none is open here.
-- **Not filed**: the reviews' unverified leads, and the optional refactors.
-  They stay in the reports.
-- **The auth review was stopped partway and will not be finished**
-  (maintainer, 2026-10-04). Its open findings are closed; the rest of that
-  scope stays unreviewed by decision.
-- App source was byte-identical to the reviewed commit `64fe195` when these were
-  filed, and each entry's primary location was opened on 2026-10-04.
-
-Entries cite reports by number:
-
-| # | Report | # | Report |
-|---|---|---|---|
-| 01–04 | `docs/reviews/2026-10-03/` | 14–16 | `docs/reviews/2026-10-04/pass-4/` |
-| 05–08 | `docs/reviews/2026-10-03/pass-2/` | 17–21 | `docs/reviews/2026-10-04/pass-5/` |
-| 09–13 | `docs/reviews/2026-10-03/pass-3/` | | |
 
 ## What phase 15 learned
 
@@ -220,49 +188,6 @@ The same email can keep the magic link for signing in on the device that opens i
 - **Rollback**: the current approve-from-the-phone flow keeps working without
   any of this, so it stays the fallback.
 - **Source**: maintainer, 2026-09-24
-
-### T063 — The NPC, location and quest pages look like three products
-**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-06
-
-**Decided (maintainer, 2026-10-02): the location and quest pages move toward
-the NPC page** — its light card, its general layout and its way of editing.
-What matters most is **one design language across the three**: the content
-(person, place, quest) differs, the look and feel is recognisably built on
-the same foundation.
-
-- **Hard constraint**: a location's picture **stays wide**, as it is today.
-  People are tall and places are wide; the NPC's tall portrait beside the name
-  stays too. One foundation, two image shapes. Quests have no picture today.
-- **Measured**: locations and quests share `EntityPageShell` (a dark,
-  full-bleed band header over a two-column body), which draws the location
-  picture across the band. The NPC page does not use the shell: it opens with
-  its own light identity `card` (sigil or 3:4 portrait beside the name, then a
-  fact grid) beside a 20rem sidebar (`pages/npcs/NPCDetailPage.tsx:667`). All
-  three already edit in place with `InlineEditor`, so "way of editing" is about
-  how the NPC page arranges and reveals its editors, not a new mechanism —
-  compare them before assuming a gap.
-- **Approach**: one shared shell built from the NPC page's card, not three
-  pages each copying it — grow `EntityPageShell` into that (or replace it),
-  with the image shape as an option. The NPC page should end up on the same
-  shell as the other two, which is what Phase 15 meant it to be.
-- **Decided (maintainer, 2026-10-06): the wide picture sits full-width above
-  the card**, on the page above both columns, light and with no text on it; the
-  identity card and the sidebar start below it. A location with no picture
-  starts with the card.
-- **Catch**: this reverses Phase 15's band header on two pages. Tests that pin
-  the band (`entity-page.test.tsx`, the location and quest page suites) change
-  because the requirement changed — say so in the PR, test by test. D125 ("the
-  band carries no accent") stays true but stops mattering on these pages; a
-  light card can carry accent controls. Verify in a browser, both themes, at
-  phone width.
-- **The table notes differ too.** Both pages render `NoteHistory`, but the
-  location's (`LocationDetailPage.tsx`) sits in an `EntityPageSection` titled
-  "Notes from the table", with no "oldest first", no saved confirmation
-  (`onSaved` is a no-op) and the default row spacing. The NPC's
-  (`NPCDetailPage.tsx`) is its own card titled "Notes", with a saved notice and
-  padded rows. Quests have no table notes.
-- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the notes
-  difference measured 2026-10-04; the picture's place decided 2026-10-06
 
 ### T075 — Rename the site, and uncrowd the header
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06
@@ -443,29 +368,6 @@ the workflows.
 
 ---
 
-## Documentation
-
-### T113 — Clean up `docs/` and delete what is stale
-**Type** docs · **Size** M · **Status** open · **Verified** 2026-10-06
-
-`docs/README.md` already sets the rule: "a document nothing cites any more is
-deleted rather than archived". Nobody has applied it across the folder.
-
-- **Measured**: 475 files, 11 MB. `docs/reviews/` is 288 of them and 6.1 MB,
-  most of it evidence (246 files; pass 5's alone is 3.3 MB), which the review
-  reports cite and TODO.md's code-review entries point into. Of the 218 Markdown files outside evidence folders, 38 are
-  cited by **filename** nowhere: 36 design handoffs (`design/plan/handoff/06-*`
-  to `14-*`, four under `15-entity-authoring/handoff/`) and two superpowers
-  plans. But the handoffs are cited by **phase id** from code comments
-  (`15-6` in 15 files, `12-3a` in 10), so a filename scan undercounts.
-- **Decided (maintainer, 2026-10-06), what stale means**: a document goes when
-  nothing cites it by filename **or** by its phase id (`15-6`, `12-3a`, as code
-  comments do), and review evidence goes once every finding it backs is closed.
-  Anything still cited stays. The PR lists every deletion and why.
-- **Source**: todo.txt, 2026-10-06; stale defined 2026-10-06
-
----
-
 ## Decisions
 
 Open questions that block work until the maintainer answers them.
@@ -490,7 +392,8 @@ in the repo, so this is console work plus whatever copy is decided.
 ## Dormant — only live if `theme-contract` happens
 
 `theme-contract` (a theme system to share across projects) is **deferred
-indefinitely**; see `docs/design/plan/04-rollout.md` §3, Phase 13. These four were
+indefinitely** (the rollout plan's Phase 13, and the drift log's `D`/`Q` entries cited
+below, are in git history at `9810644` under `docs/design/plan/`). These four were
 all filed "decide before package extraction". None blocks this repository.
 
 Do not answer them speculatively. Designing a package against a consumer that

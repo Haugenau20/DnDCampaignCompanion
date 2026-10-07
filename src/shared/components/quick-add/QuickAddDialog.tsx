@@ -25,7 +25,7 @@ export interface QuickAddDialogProps {
  * same centred panel above it.
  *
  * This passes Phase 14 §1 on all three questions rather than being an
- * exception to it (`00-entity-authoring.md` §4): the page behind it is the
+ * exception to it: the page behind it is the
  * context -- you are in the NPC list, adding an NPC to it -- there is no URL
  * worth returning to, and it holds one decision.
  *

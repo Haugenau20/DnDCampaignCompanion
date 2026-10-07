@@ -80,9 +80,6 @@ Before writing, search these for the same subject:
 - existing entries in `TODO.md`
 - `docs/testing/bug-tracking/README.md` — the behavioural-test bug catalogue
 - `CLAUDE.md`'s known-issues notes
-- `docs/performance/performance-review-2026-08-30.md`, for anything that smells
-  like slowness, a duplicate fetch or a bundle. It is a dated audit, so a hit
-  there is evidence to cite, not a current fact — check it like any other claim.
 
 A hit is not a reason to discard the item. Merge it: one entry, cross-referenced,
 noting what the new report adds. Two entries for one problem is how a tracker

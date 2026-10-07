@@ -1,3 +1,0 @@
-asset bundle.js 1.87 MiB [emitted] (name: main)
-webpack compiled in 5994 ms
-Prepared actual component bundle and repository CSS; all data/provider/create boundaries are synthetic.

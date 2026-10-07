@@ -12,7 +12,7 @@
 // changing or losing an existing one fails.
 //
 // To re-baseline deliberately (e.g. after a value change is agreed and logged
-// in docs/design/plan/03-drift-log.md):
+// in TODO.md):
 //     UPDATE_TOKEN_BASELINE=1 npx jest --testPathPattern=token-values
 //
 // The baseline was re-recorded in Phase 5, when the light theme was retuned and

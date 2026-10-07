@@ -116,8 +116,8 @@ line and run `npm ci` (or `npm ci --os=win32` for one install).
   (e.g. `QuickAddForm.test.tsx`).
 - To prove "the same suites failed", run the suspects alone; piping a full run through `tail`
   discards earlier failures' names.
-- Two catalogued defects (#1414, #1415) are pinned by tests asserting the **defective** behaviour,
-  so they are green. Check the tracker before dismissing any red as "expected".
+- No test pins a defect any more: #1414 and #1415, which were pinned by tests asserting the
+  defective behaviour, are fixed. Treat any red as a regression; the tracker lists what is open.
 
 ### Testing philosophy
 Tests define expected behaviour and reveal bugs — **never modify a test to make it pass.** Write

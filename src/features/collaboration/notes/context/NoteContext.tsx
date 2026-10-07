@@ -397,8 +397,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
    * Three of the four navigate to a create page with the extracted fields in
    * router state, and the form there writes the record.
    *
-   * **The rumour does not, because a rumour has no page**
-   * (`00-entity-authoring` §2.1). `/rumors/create` existed only to receive
+   * **The rumour does not, because a rumour has no page**.
+   * `/rumors/create` existed only to receive
    * this navigation -- the campaign-entities barrel said so in as many words
    * -- and what it offered was a form for reviewing five fields that were
    * already complete before it opened. The rumour is written here instead,

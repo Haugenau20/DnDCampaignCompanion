@@ -1,14 +1,13 @@
 # Design language
 
 The source of truth for how the Campaign Companion looks and why. It sits
-above any implementation plan: `plan/` describes a project and changes often,
+above any implementation plan: a plan describes a project and changes often,
 this describes the product and should change rarely.
 
 When the two disagree, this wins. When implementation hits a bump, the
 principles here are what decide the trade — not the phase checklist.
 
-- **How tokens express this:** `plan/01-token-model.md`
-- **The current transition:** `plan/00-transition-plan.md`
+- **How tokens express this:** `token-model.md`
 
 ---
 

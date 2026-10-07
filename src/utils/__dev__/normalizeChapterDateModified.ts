@@ -3,8 +3,8 @@
 // ============================================================================
 // OPERATOR TOOLING — NOT PART OF THE APPLICATION RUNTIME
 // ============================================================================
-// This is a one-off data-repair script for bug #1202
-// (docs/testing/bug-tracking/1202-story-reorder-datemodified-date-object-not-iso-string.md).
+// This is a one-off data-repair script for bug #1202 (chapter reorder wrote
+// `dateModified` as a Date, which Firestore stores as a Timestamp).
 //
 // It is meant to be run DELIBERATELY BY A HUMAN OPERATOR against production
 // Firestore, and ONLY after taking a Firestore export/backup

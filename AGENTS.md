@@ -93,7 +93,6 @@ belt-and-braces rather than load-bearing.
 
 **Key Documents** (note: `docs/backlog/` no longer exists — these moved):
 - `TODO.md` — **start here**; the backlog, its priorities and what is blocked on whom
-- `docs/architecture/migration/attribution-consolidation-findings.md` — a worked example of an audit whose predictions were wrong, and why
 - `docs/testing/bug-tracking/README.md` — live bug tracker
 - `docs/architecture/migration/deep-dive-feature-enhancements.md` - Advanced feature roadmap
 
@@ -126,10 +125,9 @@ build type-checks; `npx tsc --noEmit` does.
 **The suite is expected to be fully green — any red is a regression.** This reverses long-standing
 advice in this file, which said a non-zero failure count was normal because the behavioural suites
 carried failing bug markers. That stopped being true on 2026-07-28, when the ID-collision cluster
-(#002/#004/#009/#012) was fixed; see the Phase 4 fourth pass in `docs/testing/bug-tracking/README.md`.
-Two catalogued defects are currently pinned by tests that assert the **defective** behaviour
-(#1414, #1415), so they are green too. Never "fix" a red test by editing it — but equally, don't
-dismiss one as an expected marker without checking the tracker first.
+(#002/#004/#009/#012) was fixed. No test pins a defect any more (#1414 and #1415, once pinned
+that way, are fixed). Never "fix" a red test by editing it — but equally, don't dismiss one as an
+expected marker without checking the tracker first.
 
 ### Verifying a change before proposing a merge
 - `npx tsc --noEmit` — type errors block the deploy (CI's `Type-check` step; Vite does not type-check)

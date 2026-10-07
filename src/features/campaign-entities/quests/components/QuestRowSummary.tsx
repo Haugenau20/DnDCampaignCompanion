@@ -43,7 +43,7 @@ const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  *
  * The row used to render nine sections and two actions -- a detail page inside
  * an accordion, about 1,100px tall, which pushed the next quest off screen.
- * `00-entity-authoring.md` §3 divides the record by one test: *can this be read
+ * The record is divided by one test: *can this be read
  * while scanning five of them?* Description, objectives, who is in it and the
  * status control pass it. Background, leads, complications, rewards, level
  * range and the rest are read once while prepping, which is what a page is for.

@@ -1,5 +1,5 @@
 // src/features/campaign-entities/quests/utils/quest-presentation.ts
-import { Quest, QuestObjective, QuestStatus } from '../types';
+import { QuestObjective, QuestStatus } from '../types';
 
 /**
  * How a quest says what it is, in one place.
@@ -49,30 +49,6 @@ export const objectiveProgressLabel = (objectives: QuestObjective[] = []): strin
   const { completed, total } = objectiveProgressOf(objectives);
   return total > 0 ? `${completed} of ${total} objectives` : 'No objectives yet';
 };
-
-/**
- * The one line under a quest's title on its page: how far along, where it
- * happens, and what level it is pitched at.
- *
- * Only what exists, and **never an id**. The quest card printed `bag-end` and
- * `erebor` as though they were labels (#1412, item 10); `locationName` is
- * resolved by the caller through `resolveLocationName`, and an unresolvable
- * reference is left out of the line rather than shown raw.
- */
-export function questMetaLine(
-  quest: Quest,
-  locationName?: string,
-  dateCompleted?: string
-): string {
-  return [
-    objectiveProgressLabel(quest.objectives),
-    locationName || undefined,
-    quest.levelRange ? `levels ${quest.levelRange}` : undefined,
-    quest.status === 'completed' && dateCompleted ? `completed ${dateCompleted}` : undefined,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
 
 /**
  * Move one objective one place up or down, returning a new array.
