@@ -325,7 +325,7 @@ time anyone edits it.
   was deleted; decided 2026-10-06; the audit written 2026-10-07
 
 ### T118 — Move the site to `muninn.quest`, and hide the old project id
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-07
 
 The maintainer bought `muninn.quest` (registrar Porkbun); the site is called
 Muninn. **Decided (maintainer,
@@ -334,14 +334,18 @@ from everything a user sees.** The id stays in `CLAUDE.md`, the scripts and
 the workflows.
 
 - **Scope**: (1) `muninn.quest` as a Hosting custom domain; (2) the old
-  `dnd-campaign-companion.web.app` redirects to it, since it cannot be deleted
-  (a hostname check on the page, or a separate Hosting site for `muninn.quest`
-  with the old site kept only to redirect); (3) the auth domain moves to
+  `dnd-campaign-companion.web.app` redirects to it, since it cannot be deleted;
+  (3) the auth domain moves to
   `muninn.quest`, so Google's sign-in popup stops showing `…firebaseapp.com`;
   (4) the sign-in email's sender domain and action link use `muninn.quest`
   (console work shared with T104); (5) the GitHub repo is renamed and its
   description changed. Remaining traces (image and function URLs, the console)
   are seen only in developer tools.
+- **Two Hosting sites** (2026-10-07): the maintainer created `muninn-quest`,
+  which carries the custom domain. `firebase/firebase.json` lists it and the
+  default `dnd-campaign-companion`, both serving the app; a live deploy updates
+  both, and PR previews go to `muninn-quest` only. The default site becomes the
+  redirect in step 4, so it is a server 301 rather than a script in the page.
 - **Needs no change** (read 2026-10-06): sign-in links, invite links and the
   device code all build on `window.location.origin` (`SignInForm.tsx:103`,
   `AdminPeoplePage.tsx:95,115`). `firebase.json` has no headers or CSP naming a
@@ -371,8 +375,8 @@ the workflows.
   something fixed at project creation (such as the Firestore location) is
   wanted changed anyway.
 - **Order** (planned 2026-10-07). Each step needs the one before it:
-  1. Console and DNS, nothing user-visible: the Hosting custom domain and its
-     Porkbun records (the certificate can take a day); `muninn.quest` in Auth's
+  1. Console and DNS, nothing user-visible: the custom domain on the
+     `muninn-quest` site (not the default one) and its Porkbun records (the certificate can take a day); `muninn.quest` in Auth's
      authorised domains, **in the reCAPTCHA v3 key's domain list**, and as the
      OAuth client's redirect URI (`https://muninn.quest/__/auth/handler`); the
      consent screen's app name. Then `muninn.quest` serves the same site as
@@ -383,9 +387,13 @@ the workflows.
      domain, with T104's wording.
   4. The redirect, last, since it moves every user: path and query must survive,
      because invite links (`/join?…`) and magic links (`/auth/link?…`) already in
-     inboxes name `web.app`. A separate Hosting site for `muninn.quest`, with the
-     old one kept only to redirect, gives a real 301 that needs no script; it
-     changes `firebase.json` and the deploy.
+     inboxes name `web.app`. The `dnd-campaign-companion` entry in `firebase.json`
+     becomes a redirect (`/:path*` to `https://muninn.quest/:path`, 301). The
+     Hosting emulator applied no redirect at all when tried (2026-10-07), so it
+     cannot test this. Superstatic's redirect code appends the query, but whether
+     production does is **unverified**: check on a preview channel of the default
+     site first (`npx firebase hosting:channel:deploy redirect-check --only
+     dnd-campaign-companion`, then `curl -I` a `/join?invite=x` address on it).
   5. Rename the GitHub repo and change its description; the live URL in
      `README.md`, `CODE_OF_CONDUCT.md` and the issue template. Renaming the local
      checkout's folder too strands Claude's memory for the project, which is

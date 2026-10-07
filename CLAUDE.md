@@ -233,7 +233,8 @@ tree) and a trace (`npx playwright show-trace …`) under `e2e/test-results/`.
 ## Verifying a Change Before Proposing a Merge
 
 Merging to `main` deploys live: the Cloud Functions first, then the Firestore and Storage rules,
-then Hosting (`firebase-hosting-merge.yml`; functions and rules deploy under the
+then Hosting, to both sites in `firebase/firebase.json` (`muninn-quest`, which carries
+`muninn.quest`, and the default `dnd-campaign-companion`; T118) (`firebase-hosting-merge.yml`; functions and rules deploy under the
 `FIREBASE_FUNCTIONS_DEPLOY_SA` secret, and either failing holds Hosting back). That deploy is
 non-interactive, so it fails when production still has a function the source no longer exports —
 delete it by hand — or when `europe-west1` loses its Artifact Registry cleanup policy. **Deploy

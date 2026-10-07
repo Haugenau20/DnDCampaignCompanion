@@ -54,23 +54,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Channel ids, from full resource names. `live` never matches below.
-          ids=$(npx firebase hosting:channel:list --project "$PROJECT" --json \
-            | jq -r '.result.channels[].name | split("/") | last')
+          # Previews were made on the default site until 2026-10 and on
+          # `muninn-quest` since (T118), so look on both.
+          for site in dnd-campaign-companion muninn-quest; do
+            # Channel ids, from full resource names. `live` never matches below.
+            ids=$(npx firebase hosting:channel:list --project "$PROJECT" --site "$site" --json \
+              | jq -r '.result.channels[].name | split("/") | last')
 
-          for id in $ids; do
-            number=$(sed -nE 's/^pr([0-9]+)-.*/\1/p' <<<"$id")
-            [ -n "$number" ] || continue
+            for id in $ids; do
+              number=$(sed -nE 's/^pr([0-9]+)-.*/\1/p' <<<"$id")
+              [ -n "$number" ] || continue
 
-            if [ "$EVENT" = "pull_request" ]; then
-              [ "$number" = "$PR_NUMBER" ] || continue
-            else
-              state=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
-              if [ "$state" = "OPEN" ]; then
-                echo "Keeping $id: PR #$number is open."
-                continue
+              if [ "$EVENT" = "pull_request" ]; then
+                [ "$number" = "$PR_NUMBER" ] || continue
+              else
+                state=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
+                if [ "$state" = "OPEN" ]; then
+                  echo "Keeping $id on $site: PR #$number is open."
+                  continue
+                fi
               fi
-            fi
 
-            npx firebase hosting:channel:delete "$id" --project "$PROJECT" --force
+              npx firebase hosting:channel:delete "$id" --project "$PROJECT" --site "$site" --force
+            done
           done
