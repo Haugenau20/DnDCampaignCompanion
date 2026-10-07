@@ -29,13 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            firebase/package-lock.json
-            firebase/functions/package-lock.json
+      - uses: ./.github/actions/toolchain
 
       - name: Install the Firebase CLI
         run: npm ci --prefix firebase
@@ -76,11 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: firebase/package-lock.json
+      - uses: ./.github/actions/toolchain
 
       - name: Install the Firebase CLI
         run: npm ci --prefix firebase
@@ -115,10 +105,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: ./.github/actions/toolchain
 
       # The install the `test` job checked: exactly the lockfile (T107). The
       # site used to be built inside a Docker image with `npm install`, which

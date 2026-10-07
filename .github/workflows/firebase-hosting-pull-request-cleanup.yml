@@ -32,11 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: firebase/package-lock.json
+      - uses: ./.github/actions/toolchain
 
       # The repo's pinned CLI, as the functions deploy uses.
       - name: Install the Firebase CLI

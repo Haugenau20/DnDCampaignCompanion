@@ -28,10 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: ./.github/actions/toolchain
 
       - name: Install dependencies
         run: npm ci
@@ -57,19 +54,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            firebase/package-lock.json
-            firebase/functions/package-lock.json
-
       # The Firestore and Storage-rules emulators are Java.
-      - uses: actions/setup-java@v4
+      - uses: ./.github/actions/toolchain
         with:
-          distribution: temurin
-          java-version: 21
+          tools: node java
 
       # The emulator jars are downloaded on first start; they change only with the CLI.
       - uses: actions/cache@v4
@@ -96,10 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: ./.github/actions/toolchain
 
       - name: Install dependencies
         run: npm ci

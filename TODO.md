@@ -26,7 +26,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
 | low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
-| low | T117 | CI reads Node and Java from `mise.toml` | S | open | The machines read `mise.toml` since 2026-10-07; CI still states Node 22 and Java 21 in each workflow |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
 | low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
@@ -373,25 +372,6 @@ important**.
 ---
 
 ## Tech debt and platform
-
-### T117 — CI reads Node and Java from `mise.toml`
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-07
-
-`mise.toml` pins Node 22 and Java 21 (Temurin) for every machine, and the
-maintainer's runs on it (2026-10-07). CI still states the versions itself:
-`node-version: 22` in every `actions/setup-node` step of the four workflows,
-and `actions/setup-java` with `java-version: 21` in `test.yml`'s `functions`
-job. A version bump is therefore three edits that can drift.
-
-- **Plan**: `jdx/mise-action` in place of `actions/setup-node` (and
-  `setup-java`), so CI reads `mise.toml`. Keep npm's cache, which
-  `setup-node`'s `cache: npm` gives today. Then drop CLAUDE.md's "plus CI's
-  `node-version`" from the toolchain note.
-- **Catch**: it changes every job, the deploy included, so it ships alone: if
-  CI misbehaves it rolls back without touching the machines' pin.
-  `engines.node` in `firebase/functions/package.json` stays: it is what Cloud
-  Functions deploys on, not a tool version.
-- **Source**: maintainer, 2026-10-06; the machines' half landed 2026-10-07
 
 ### T103 — Replay browser checks: Playwright in CI
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-10-06

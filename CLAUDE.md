@@ -21,8 +21,9 @@ large, fully deployed website with many users: concurrency, abuse, data volume a
   functions run. Install [mise](https://mise.jdx.dev) (`winget install jdx.mise`), then `mise trust`
   and `mise install` in the repo. On Windows its shims (`%LOCALAPPDATA%\mise\shims`) must come
   first on the **machine** PATH: Windows reads it before the user PATH, so an installed Node or JDK
-  listed there wins otherwise. Check with `node -v` in the repo. A version bump is one line there,
-  plus CI's `node-version` and `engines.node` in `firebase/functions/package.json`.
+  listed there wins otherwise. Check with `node -v` in the repo. CI reads the same file (every job
+  sets up through `.github/actions/toolchain`), so a version bump is one line there, plus
+  `engines.node` in `firebase/functions/package.json` for a Node major (the deployed runtime).
 - Start: **`.\scripts\start-dev.ps1 -Action start`** — compiles `firebase/functions`, then the
   Firebase emulators, then `npm start`, all directly on the host. **No Docker.** The emulators run
   the compiled `lib/`: after editing a function, `npm --prefix firebase/functions run build`.
