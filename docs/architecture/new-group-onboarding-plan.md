@@ -160,14 +160,18 @@ What the founder sees, in order, as one guided flow rather than three admin page
 
 ### D6. The maintainer's own access
 
-The rules give a global admin (`users/{uid}.isAdmin`) read access to every group
-(`firestore.rules.prod:290`). Who holds it in production is **unknown** (T119, "What production has
-to answer"). With strangers' campaigns on the site, the maintainer should decide whether that
-access exists at all. If it does, `/privacy` should say who can read a group's campaigns and why.
-Today the page says access is decided by the database rules and nothing more.
+**Answered (maintainer, 2026-10-07):** the global admin (`users/{uid}.isAdmin`,
+`firestore.rules.prod:290`) is the maintainer alone and will never be given to a user. As project
+owner, the maintainer reaches all data through the console and the Admin SDK anyway, so the flag
+grants nothing new.
 
-**Recommendation:** remove the read grant once strangers arrive. Keep support work going through
-functions that act on one named group when the maintainer is asked to.
+**Recommendation:**
+
+- Remove the `isGlobalAdmin()` grants from the rules. Nothing in the app or the functions uses
+  them, and they make the maintainer's everyday sign-in a master key for every group.
+- Issue founder invitations (step 1) with an Admin-SDK script, not a callable behind the flag.
+- `/privacy` says plainly that the operator can technically reach the data. That is true with or
+  without the flag, and strangers should be told.
 
 ---
 
@@ -180,7 +184,7 @@ links.
 | Step | What | Depends on | Size |
 |---|---|---|---|
 | 0 | **T119 F4**: allow-list and validate what members write; close `groups` create | nothing | M |
-| 1 | **Founder invitations**: the collection, a maintainer-only way to issue them (a callable behind the global admin, or a script like `audit-location-ids.js`), `reserveSignUp` and the gate accepting them | 0 | M |
+| 1 | **Founder invitations**: the collection, a maintainer-only way to issue them (an Admin-SDK script like `audit-location-ids.js`), `reserveSignUp` and the gate accepting them | 0 | M |
 | 2 | **`createGroup` guarded**: spends a founder invitation or an allowance; takes the founder's name; App Check on the three callables | 1 | M |
 | 3 | **The first run**: the group-less home offers "I have a founder link"; the guided flow of D5; the empty-campaign call to action | 2 | M |
 | 4 | **Caps and budgets**: a per-group member cap, the account counter, the project cap raised, the project-wide AI budget | 2 | M |
@@ -210,5 +214,5 @@ throughout. Turning the feature off means issuing no more founder links.
 2. **D2**: what member cap per group, and what project cap?
 3. **D3**: what monthly AI spend is the ceiling?
 4. **D5**: may every member create a campaign, or admins only?
-5. **D6**: should a global admin who can read every group exist once strangers use the site?
+5. ~~**D6**~~: answered 2026-10-07 (the maintainer alone); the recommendation is in D6.
 6. **Allowance**: may a founder start more than one group, and how many?

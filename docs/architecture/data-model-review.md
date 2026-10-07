@@ -262,13 +262,17 @@ which holds `role`). Only Cloud Functions write either, so they agree as long as
 correct. T080 was a case where they did not. Every rule evaluation that needs membership also
 reads the whole global profile.
 
-The global `isAdmin` flag (`:290`) lets its holder read every group's content. Who holds it in
-production is **not known** (see below). The privacy page does not mention it.
+The global `isAdmin` flag (`:290`) lets its holder read and change every group's content through
+the client API. The maintainer holds it, and it will never be given to anyone else (maintainer,
+2026-10-07). As project owner they can already reach all the data through the console and the
+Admin SDK, so the flag adds no access. It does add risk: nothing in `src/` or the functions reads
+it, so its only effect is that whoever holds the maintainer's app session can use those powers.
 
 **Recommendation.** Not urgent; it is correct today. From scratch, membership is one document,
-`groups/{g}/members/{uid}` with the role, checked with `exists()`. Find out who holds `isAdmin`
-in production now, and decide whether that access should exist and be stated on `/privacy`. This
-bears on T120: strangers' groups.
+`groups/{g}/members/{uid}` with the role, checked with `exists()`. Separately, remove the
+`isGlobalAdmin()` grants from the rules and do admin work through the console or Admin-SDK
+scripts. `/privacy` should say that the operator can technically reach the data, which is true
+with or without the flag.
 
 ### F8. The index file is stale and not deployed
 
@@ -383,15 +387,14 @@ worth a migration on its own.
 2. **Names in attribution**: should a record show the name its author had *then*, or has *now*?
 3. **Which owner wins in F1**: is the proposal above (the quest owns its people, the NPC owns its
    place) the right way round for how your table plays?
-4. **Global admin**: should a global admin who can read every group exist at all once strangers
-   use the site? If yes, `/privacy` should say so. (This is also a T120 question.)
+4. ~~**Global admin**~~: answered 2026-10-07. Only the maintainer holds it, and only ever will.
+   The recommendation is in F7.
 
 ## What production has to answer
 
 These are read-only. Nothing here can be measured from the repo:
 
 - **Indexes**: `npx firebase firestore:indexes --project dnd-campaign-companion` from `firebase/`.
-- **Who holds `isAdmin`**: one query on `users` where `isAdmin == true`.
 - **How big real campaigns are**: documents per collection, the largest documents, the longest
   `notes` arrays and the longest saga. An extension of `audit-location-ids.js` can report all of
   it without printing any content.

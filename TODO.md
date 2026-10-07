@@ -19,8 +19,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); the review is written (`docs/architecture/data-model-review.md`) and waits on the maintainer's read, four questions and the production checks |
-| medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on six decisions; building is later entries |
+| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); waits on the maintainer's choice of route, then a spike |
+| medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
 | low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
@@ -281,10 +281,10 @@ group), six decisions with a recommendation each, and a build order of seven
 steps. Nothing is built. Invitations into a group that already exists are out of
 scope; they work.
 
-- **Blocked on the maintainer**: answer the plan's six questions. Who may start
-  a group (founder invitations recommended), the member and project caps, the
-  monthly AI ceiling, who may create a campaign, whether a global admin keeps
-  read access to every group, and how many groups a founder may start.
+- **Blocked on the maintainer**: answer the plan's five open questions. Who may
+  start a group (founder invitations recommended), the member and project caps,
+  the monthly AI ceiling, who may create a campaign, and how many groups a
+  founder may start. D6 is answered: the global admin is the maintainer alone.
 - **Then**: file the build order's steps as their own entries. Steps 1 to 3
   (founder invitations, a guarded `createGroup`, the first run) are the smallest
   change that lets a table start alone. Step 0 is T119's F4 (validate what
@@ -397,25 +397,31 @@ the workflows.
 ### T119 — Review the Firestore data model before the site scales
 **Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-07
 
-The review is written:
-[`docs/architecture/data-model-review.md`](docs/architecture/data-model-review.md).
-It covers the model as it is now, nine findings, a ranked table of changes with
-how each one migrates production data, and the design from scratch (Firestore
-stays). Nothing in the model has been changed.
+Two documents, both written 2026-10-07. Nothing has been changed.
 
-- **Blocked on the maintainer**: read it and answer its four questions. Then run
-  the read-only production checks it lists: the deployed indexes, who holds
-  `isAdmin`, how big real campaigns are, and how often the two halves of a
-  relationship disagree.
-- **Then**: file the changes that are wanted as their own entries, in the
-  table's order. One owner per relationship (F1) is the one players see today:
-  an NPC↔quest link made on one page is missing from the other. Validating what
-  members write (F4) comes before T120's outreach.
-- **Overlaps**: T079 (the legacy free-text `location`) is F9 and waits on its
-  own production audit. The `dateAdded` → `createdAt` renames that
-  `docs/architecture/migration/database-field-alignment.md` plans belong in F6's
-  migration, so records are rewritten once.
-- **Source**: `/todo`, 2026-10-07; the review written 2026-10-07
+- [`docs/architecture/backend-structure-options.md`](docs/architecture/backend-structure-options.md)
+  is the structural question: was the backend any good, and would another
+  structure be better, whatever the effort? It gives a verdict on today's
+  structure, six routes (three on Firestore, SQL Connect, Supabase, Convex), a
+  decision matrix and a recommendation: **move to Postgres**. That means
+  Supabase if Docker for local development is acceptable again, SQL Connect if
+  not, either way after a spike that the document specifies.
+- [`docs/architecture/data-model-review.md`](docs/architecture/data-model-review.md)
+  is how the code uses the data today: nine findings and their fixes within
+  Firestore. A move to Postgres makes most of them moot.
+
+- **Blocked on the maintainer**: choose a route (the Docker question decides
+  between the two Postgres routes), then answer the review's three remaining
+  questions. The production checks in the review (indexes, campaign sizes, how
+  often links disagree) inform the migration but do not block the choice.
+- **Then**: the spike, as its own entry; then the migration or the Firestore
+  restructure, as entries of their own. Removing the unused global-admin grants
+  from the rules (review F7) can be filed now, whatever the route.
+- **Overlaps**: T079 (the legacy free-text `location`) is the review's F9; a
+  move to Postgres would settle it in the copy script. The `dateAdded` →
+  `createdAt` renames in `docs/architecture/migration/database-field-alignment.md`
+  are subsumed by either a migration or the review's F6.
+- **Source**: `/todo`, 2026-10-07; both documents written 2026-10-07
 
 ---
 
