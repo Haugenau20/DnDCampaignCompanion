@@ -351,13 +351,17 @@ time anyone edits it.
 - **Then**: none left, and the fallback can go; some left, and either migrate
   them (a migrate mode with a revert, on the same script) or keep the fallback
   on purpose.
-- **Catch**: the sample-data generators write the legacy shape themselves --
-  a `location` slug and no `locationId` (the dev emulator, 2026-10-07: 37
-  NPCs and 20 quests). Removing the fallback means they write `locationId` too.
+- **The dev emulator is no guide**: the sample-data generators have written
+  `locationId` since `d6d9847`, and data generated before that holds the legacy
+  shape. One such dataset, audited on 2026-10-07, had 37 NPCs and 20 quests with
+  a `location` slug and no `locationId`; regenerated, it had none. Two NPCs
+  keep the edge cases on purpose: Galadriel's `locationId` names no record
+  (#1412), and Bard has only the free-text `location` "Lake-town".
 - **See also**: T119, the full review of the data model, should take in
   whatever this audit finds.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted; decided 2026-10-06; the audit written 2026-10-07
+
 ### T118 — Move the site to `muninn.quest`, and hide the old project id
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
 
