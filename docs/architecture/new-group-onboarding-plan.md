@@ -191,8 +191,7 @@ founder links. Step 2's App Check enforcement deploys only after a frontend that
 tokens to those callables. The SDK attaches them once App Check is initialised (`appCheck.ts`),
 so the live frontend should already; check it, and the emulator, before merging.
 
-**Not needed before outreach, but before it is wide:** T118 (the domain) is what the links
-carry. It blocks none of steps 1 to 6.
+The links outreach carries name `muninn.quest`, where the site has lived since 2026-10-07.
 
 **Rollback.** Founder invitations add a path and remove none, so the manual path keeps working
 throughout. Turning the feature off means issuing no more founder links.

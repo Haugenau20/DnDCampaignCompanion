@@ -23,12 +23,11 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
-| low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
+| low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; the order is in the entry; also unblocks T057's sending domain |
+| low | T118 | Finish the move to `muninn.quest` | S | open | The site, sign-in and mail run on `muninn.quest`; left: the repo's name and URLs, and Google's branding check |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
-| low | T104 | Update the Firebase email templates | S | needs scoping | The name is Muninn; do it with T118's email step, in the same console visit |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -151,10 +150,10 @@ Let a user who wants it add a second step to sign-in.
 ### T057 — Sign in with a code from the email, instead of approving from the phone
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-09-24
 
-**On hold by the maintainer (2026-09-24): it needs a sending domain, which is
-not wanted yet.** Reverse today's cross-device flow: the email carries a
-6-digit code, and the reader types it on the device that wants to be signed
-in. The phone then only reads the email and never signs in or runs site code.
+**On hold by the maintainer (2026-09-24).** Its blocker was a sending domain;
+`muninn.quest` is one since 2026-10-07 (T118). Reverse today's cross-device
+flow: the email carries a 6-digit code, and the reader types it on the device
+that wants to be signed in. The phone then only reads the email and never signs in or runs site code.
 The same email can keep the magic link for signing in on the device that opens it.
 
 - **Where**: since 2026-09-29 the flow already runs in this direction, without
@@ -169,8 +168,13 @@ The same email can keep the magic link for signing in on the device that opens i
   the inbox).
 - **Blocker**: Firebase's own sign-in email cannot carry a custom code, so the
   function must send the mail itself. The plan is **Resend** (free tier 3,000/month,
-  100/day), which needs a domain you own. `dnd-campaign-companion.web.app`
-  cannot be verified. Setup: a sending subdomain with SPF/DKIM/DMARC, region
+  100/day), which needs a domain you own. `muninn.quest` already carries
+  Firebase's mail records (SPF `v=spf1 include:_spf.firebasemail.com ~all` and
+  two DKIM CNAMEs) and a DMARC record may follow; a domain has only one SPF
+  record, so either Resend's include joins that one or Resend sends from its
+  own subdomain. Firebase's sign-in mail cannot be reworded: the console's
+  Templates list has no sign-in template (2026-10-07), so its own text comes
+  with this item. Setup: a sending subdomain with SPF/DKIM/DMARC, region
   `eu-west-1`, **open and click tracking off** (click tracking rewrites the magic
   link), a sending-only API key in Secret Manager as `RESEND_API_KEY`. The email
   can carry the link too, built with the Admin SDK's `generateSignInWithEmailLink`.
@@ -265,8 +269,7 @@ scope; they work.
 - **Then**: file the build order's steps as their own entries. Steps 1 to 3
   (founder invitations, a guarded `createGroup`, the first run) are the smallest
   change that lets a table start alone.
-- **Related**: T119 (the data model review; its F2 is a step here);
-  T118 (the domain the outreach will carry).
+- **Related**: T119 (the data model review; its F2 is a step here).
 - **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
 
 ---
@@ -324,84 +327,50 @@ time anyone edits it.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
   was deleted; decided 2026-10-06; the audit written 2026-10-07
 
-### T118 — Move the site to `muninn.quest`, and hide the old project id
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-07
+### T118 — Finish the move to `muninn.quest`
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-07
 
-The maintainer bought `muninn.quest` (registrar Porkbun); the site is called
-Muninn. **Decided (maintainer,
-2026-10-06): keep the Firebase project, and hide `dnd-campaign-companion`
-from everything a user sees.** The id stays in `CLAUDE.md`, the scripts and
-the workflows.
+The site lives on `muninn.quest` (Hosting site `muninn-quest`). The project's
+default site, `dnd-campaign-companion` (`web.app`, `firebaseapp.com`), answers
+every address with a 301 to the same path there; `firebase/firebase.json`
+records how that was checked. Sign-in runs on `muninn.quest`
+(`REACT_APP_AUTH_DOMAIN`), and Firebase's mail comes from `noreply@muninn.quest`
+as "Muninn". **Decided (maintainer, 2026-10-06): keep the Firebase project**;
+its id stays in `CLAUDE.md`, the scripts and the workflows. A new project would
+have meant moving Firestore, Storage and Auth and setting up again everything
+outside the repo, to hide the id only in developer tools; reconsider only if
+something fixed at creation, such as the Firestore location, is wanted changed
+anyway. What is left:
 
-- **Scope**: (1) `muninn.quest` as a Hosting custom domain; (2) the old
-  `dnd-campaign-companion.web.app` redirects to it, since it cannot be deleted;
-  (3) the auth domain moves to
-  `muninn.quest`, so Google's sign-in popup stops showing `…firebaseapp.com`;
-  (4) the sign-in email's sender domain and action link use `muninn.quest`
-  (console work shared with T104); (5) the GitHub repo is renamed and its
-  description changed. Remaining traces (image and function URLs, the console)
-  are seen only in developer tools.
-- **Two Hosting sites** (2026-10-07): the maintainer created `muninn-quest`,
-  which carries the custom domain. `firebase/firebase.json` lists it and the
-  default `dnd-campaign-companion`, both serving the app; a live deploy updates
-  both, and PR previews go to `muninn-quest` only. The default site becomes the
-  redirect in step 4, so it is a server 301 rather than a script in the page.
-- **Needs no change** (read 2026-10-06): sign-in links, invite links and the
-  device code all build on `window.location.origin` (`SignInForm.tsx:103`,
-  `AdminPeoplePage.tsx:95,115`). `firebase.json` has no headers or CSP naming a
-  host. No bucket CORS is set or needed: images are measured at upload, never
-  read back.
-- **Console and DNS, not read**: Porkbun records for Hosting; Auth's authorised
-  domains (an unlisted continue URL is refused); the reCAPTCHA v3 key's domain
-  list (App Check is enforced on Auth, so missing it refuses every sign-in, see
-  `appCheck.ts`); the OAuth client's redirect URI and the consent screen's app
-  name for the moved auth domain.
-- **Repo**: `firebaseConfig.ts:8` defaults the auth domain to `…firebaseapp.com`,
-  and CI takes the `REACT_APP_AUTH_DOMAIN` secret (value **not** read). Google
-  sign-in is a popup (`AuthService.ts:354`). The live URL is written in
-  `README.md:9`, `CODE_OF_CONDUCT.md:13` and `.github/ISSUE_TEMPLATE/config.yml:7`.
-  GitHub redirects the repo's old URL, and CI deploys through service-account
-  secrets that do not name the repo.
-- **Mail**: the contact form sends via Gmail (`contact.ts:61-68`) and does not
-  depend on the site's domain. The domain also lifts T057's blocker (a sending
-  domain for Resend).
-- **Considered and set aside: a new Firebase project.** It would mean exporting
-  and importing Firestore, Storage and Auth (stored image URLs may name the old
-  bucket, **unverified**), a write freeze, everyone signing in again, and
-  setting up again everything outside the repo: Identity Platform, App Check,
-  the blocking function, Secret Manager, the Token Creator grant, the Artifact
-  Registry cleanup policy, CI's service accounts and billing. The only gain
-  over the scope above is the id in developer-only places. Reconsider only if
-  something fixed at project creation (such as the Firestore location) is
-  wanted changed anyway.
-- **Order** (planned 2026-10-07). Each step needs the one before it:
-  1. Console and DNS, nothing user-visible: the custom domain on the
-     `muninn-quest` site (not the default one) and its Porkbun records (the certificate can take a day); `muninn.quest` in Auth's
-     authorised domains, **in the reCAPTCHA v3 key's domain list**, and as the
-     OAuth client's redirect URI (`https://muninn.quest/__/auth/handler`); the
-     consent screen's app name. Then `muninn.quest` serves the same site as
-     `web.app`, and both can be tried side by side.
-  2. Move the auth domain: the `REACT_APP_AUTH_DOMAIN` secret becomes
-     `muninn.quest`, then a deploy. Try Google sign-in and a magic link there.
-  3. The sign-in email: sender domain (more DNS records), sender name and link
-     domain, with T104's wording.
-  4. The redirect, last, since it moves every user: path and query must survive,
-     because invite links (`/join?…`) and magic links (`/auth/link?…`) already in
-     inboxes name `web.app`. The `dnd-campaign-companion` entry in `firebase.json`
-     becomes a redirect (`/:path*` to `https://muninn.quest/:path`, 301). The
-     Hosting emulator applied no redirect at all when tried (2026-10-07), so it
-     cannot test this. Superstatic's redirect code appends the query, but whether
-     production does is **unverified**: check on a preview channel of the default
-     site first (`npx firebase hosting:channel:deploy redirect-check --only
-     dnd-campaign-companion`, then `curl -I` a `/join?invite=x` address on it).
-  5. Rename the GitHub repo and change its description; the live URL in
-     `README.md`, `CODE_OF_CONDUCT.md` and the issue template. Renaming the local
-     checkout's folder too strands Claude's memory for the project, which is
-     filed under the folder's path.
-- **What users notice at the redirect**: everyone is signed out once (a session
-  belongs to its origin), preferences kept in the browser reset, and a home-screen
-  install has to be added again. Tell the groups beforehand.
-- **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
+- **The repo** (maintainer): rename `DnDCampaignCompanion` on GitHub and change
+  its description ("Dungeons and Dragons Campain Companion for the Players.").
+  GitHub redirects the old URL, and CI's deploy secrets do not name the repo.
+  Renaming the local checkout's folder too strands Claude's memory for the
+  project, which is filed under the folder's path.
+- **The live URL in the repo**: `README.md:9`, `CODE_OF_CONDUCT.md:13` and
+  `.github/ISSUE_TEMPLATE/config.yml:7` still name `web.app`, which now works
+  only through the redirect.
+- **Google's branding check** (maintainer): Google's sign-in window shows the
+  name "Muninn" only once Google verifies the consent screen's branding. Search
+  Console verified `muninn.quest` on 2026-10-07; retry no earlier than 24 hours
+  later. A first check, run while `muninn.quest` served nothing, listed nine
+  issues. Besides the unreachable pages, several fit a checker that does not run
+  JavaScript, since every path serves the same `index.html`: the privacy page
+  "the same as the home page", "insufficient content", "home page behind a
+  login", "does not explain the purpose". If they recur with the site live,
+  serve real HTML for `/` and `/privacy`. The consent screen's support address,
+  `dndcampaigncompanion@gmail.com`, is shown to users once verified.
+- **Cosmetic**: the email templates' action URL is still
+  `https://dnd-campaign-companion.firebaseapp.com/__/auth/action`
+  (Authentication → Templates). It keeps working, because the reserved
+  `/__/auth/` paths are not redirected. Moving it to
+  `https://muninn.quest/__/auth/action` is untested: try it on a preview channel
+  first. Google Cloud also holds two OAuth web clients, one left over from
+  switching the Google provider off and on; the one Firebase does not name
+  (Authentication → Sign-in method → Google) can go, with a Google sign-in
+  tried straight after.
+- **Source**: todo.txt, 2026-10-06; the site, sign-in, mail and redirect moved
+  2026-10-07
 
 ### T119 — Review the Firestore data model before the site scales
 **Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-07
@@ -438,21 +407,7 @@ Two documents, both written 2026-10-07. Nothing has been changed.
 
 Open questions that block work until the maintainer answers them.
 
-### T104 — Update the Firebase email templates
-**Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-04
-
-The only mail Firebase sends for the app is the sign-in link
-(`sendSignInLinkToEmail`, `src/core/services/firebase/auth/AuthService.ts:230`).
-Its template lives in the Firebase console (Authentication → Templates), not
-in the repo, so this is console work plus whatever copy is decided.
-
-- **To decide**: what should change (wording, sender name, branding). The site
-  is called Muninn; the sender name and the link's domain are T118's email
-  step, so do both in one console visit. A custom sending domain for mail the
-  functions send is T057's blocker, not this item's.
-- **Unverified**: how much of the email-link template the console lets you
-  edit.
-- **Source**: todo.txt, 2026-10-04
+None open.
 
 ---
 
