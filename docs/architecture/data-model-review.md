@@ -1,7 +1,7 @@
 # Firestore data model review (T119)
 
 Written 2026-10-07 against `main` at `b78d72f`, for the maintainer to read before anything changes.
-Since then the rules part of F4 (which collections, and a name on every record) and all of F7's
+Since then F4 (which collections, a name on every record, a limit on every text field) and F7's
 global admin have been done; those two sections describe what is left.
 
 **How this was measured.** Everything below was read in the code unless it says otherwise.
@@ -24,13 +24,11 @@ In the order worth doing:
 1. **Store each relationship once** ([F1](#f1-relationships-are-stored-twice-or-one-way-only)).
    A link added on an NPC's page does not show on the quest's page. This is the one finding players
    can see today.
-2. **Bound what members write** ([F4](#f4-nothing-bounds-what-a-member-writes)): the forms cap
-   names and text; the rules still have to. At scale this is the abuse and cost vector.
-3. **Turn on the client cache, then page the reads** ([F2](#f2-every-read-is-a-whole-collection)).
+2. **Turn on the client cache, then page the reads** ([F2](#f2-every-read-is-a-whole-collection)).
    Today every page load re-reads every collection it listens to, in full.
-4. **Move growing lists out of their parent document** ([F3](#f3-some-documents-grow-without-bound)):
+3. **Move growing lists out of their parent document** ([F3](#f3-some-documents-grow-without-bound)):
    notes on NPCs, locations and rumors, and the saga.
-5. **Stamp attribution and time on the server side of the trust line**
+4. **Stamp attribution and time on the server side of the trust line**
    ([F5](#f5-attribution-is-written-and-believed-from-the-client),
    [F6](#f6-time-is-stored-three-ways)).
 
@@ -194,27 +192,22 @@ transactions on the same record contend when several players annotate it at once
 **Recommendation.** Notes become a subcollection (`npcs/{id}/notes/{noteId}`), read when the record
 is opened. The saga becomes sections, as chapters already are. Chapter text moves out (F2).
 
-### F4. Nothing bounds what a member writes
+### F4. Lists and counts are what is left unbounded
 
-The rules name the six kinds of record a campaign holds (`namingField`, `firestore.rules.prod:395`)
-and refuse any other collection. A new record must carry its `name` or `title` as text, and no
-client creates a group document. What no rule checks is **size**: a member can write a name, a
-description or a chapter of any length, up to Firestore's 1 MiB per document, into any number of
-records. The app caps them (`TEXT_LIMITS` in `src/core/constants/textLimits.ts`: the forms stop
-typing, and `DocumentService` refuses a longer write), but a client that skips the app is not
-stopped.
+The rules name the six kinds of record a campaign holds (`namingField`) and refuse any other
+collection. A new record must carry its `name` or `title` as text, no client creates a group
+document, and every text field has a limit (`textFits`; the app's `TEXT_LIMITS` in
+`src/core/constants/textLimits.ts`, which the forms and `DocumentService` enforce first): a line
+200 characters, a text 10,000, a chapter 200,000, the saga 500,000.
 
-Among friends, none of this matters. At scale, one bad actor with one invitation can fill a
-campaign with large records that every member downloads (F2) and that the group pays to store.
+Two things no rule can bound. **What is inside a list** -- a record's notes, a quest's objectives,
+a location's features -- since rules cannot look into one; the app caps each entry it writes, but a
+client that skips the app is stopped only by Firestore's 1 MiB per document. And **how many
+records** a member writes, since rules cannot count.
 
-**Recommendation.** The same caps in the rules with `.size()`, field by field as
-`RECORD_TEXT_LIMITS` lists them, checked only on the fields a write changes, so a record stored
-before the caps can still be edited. Pinned by the rules suite with the usual control, and merged
-only once the frontend that caps the forms is live. `.size()` counts as `String.length` does
-(measured 2026-10-07), so text the app lets through is never refused.
-
-Rules cannot count records. Paging (F2) bounds what each member downloads, and any member can
-delete junk.
+**Recommendation.** Nothing more in the rules. F3 (notes as subcollections) turns each note into a
+document whose text is capped on its own; paging (F2) bounds what each member downloads, however
+many records there are; and any member can delete junk.
 
 ### F5. Attribution is written and believed from the client
 
@@ -289,13 +282,12 @@ deploy includes it.
 | # | Change | Layers | Production migration | Size |
 |---|---|---|---|---|
 | 1 | One owner per relationship (F1) | frontend | merge halves with a script (dry run, revert) | M |
-| 2 | Cap the size of names and text (F4) | frontend, then rules | none, but check nothing live is refused | M |
-| 3 | `persistentLocalCache` (F2) | frontend | none | S |
-| 4 | Server-stamped attribution and times, `createdAt` rename (F5, F6) | frontend, then rules | rewrite every record once | M |
-| 5 | Chapter text and saga split (F2, F3) | frontend, rules | move text to the new documents | M |
-| 6 | Notes as subcollections (F3) | frontend, rules, `deleteCampaign` | move array entries out | M |
-| 7 | Index file matches reality (F8) | config | none | S |
-| 8 | One membership document (F7) | functions, rules, frontend | copy, then switch the rules | L |
+| 2 | `persistentLocalCache` (F2) | frontend | none | S |
+| 3 | Server-stamped attribution and times, `createdAt` rename (F5, F6) | frontend, then rules | rewrite every record once | M |
+| 4 | Chapter text and saga split (F2, F3) | frontend, rules | move text to the new documents | M |
+| 5 | Notes as subcollections (F3) | frontend, rules, `deleteCampaign` | move array entries out | M |
+| 6 | Index file matches reality (F8) | config | none | S |
+| 7 | One membership document (F7) | functions, rules, frontend | copy, then switch the rules | L |
 
 **How a migration runs here.** Production holds real campaigns, so every data change is a script
 in `firebase/functions/scripts/`, in the shape of `audit-location-ids.js`: read-only by default,
@@ -305,8 +297,8 @@ renames or moves a field ships in three steps: the frontend reads both shapes; t
 rewrites; a later frontend drops the old shape. A rule that refuses the old shape comes after
 that, in its own merge.
 
-1 and 3 are independent and are the cheapest visible wins. 2 is the one to do before inviting
-strangers (T120). 4 and 6 are best done together, so records are rewritten once.
+1 and 2 are independent and are the cheapest visible wins. 3 and 5 are best done together, so
+records are rewritten once.
 
 ---
 

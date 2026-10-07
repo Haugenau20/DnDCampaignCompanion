@@ -299,6 +299,25 @@
 // record its name as text, and offers nothing that relies on the flag.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-07b -- T119 F4, the size caps -- READ BEFORE MERGING
+// ---------------------------------------------------------------------------
+// Pinned by the "a record's text has a limit" tests, each measured failing
+// against the previous revision first.
+//
+// 16. NEW -- each text field of a record has a limit (`textFits`), and a
+//     campaign's and a group's name and description too (`namedTextFits`):
+//     a line 200, a text 10,000, a chapter 200,000, the saga 500,000. A
+//     field over its limit, or not text, is refused when a write sets it; a
+//     record stored over a limit can still be edited elsewhere. `size()`
+//     counts UTF-16 code units, as `String.length` does (measured: two emoji
+//     are 4), so text the app lets through is never refused here.
+//
+// ⚠️ DEPLOY ORDER MATTERS: the frontend that caps the forms (T119's app
+// half, `src/core/constants/textLimits.ts`) must be live first. Before it,
+// nothing stopped typing at these limits, and a longer text would be
+// refused here with "permission denied".
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // Change the production rules here, in the same PR as whatever motivated the
 // change, never in the console. Every merge to `main` redeploys this file, so a
@@ -414,6 +433,57 @@ service cloud.firestore {
               !request.resource.data.diff(resource.data).affectedKeys().hasAny([field]));
     }
 
+    // The fields this write sets or changes: all of them for a new document.
+    function changedKeys() {
+      return resource == null ? request.resource.data.keys()
+                              : request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // Whether `field` holds at most `limit` characters of text after this
+    // write, or is cleared, or is left as it was (T119). `size()` counts as
+    // `String.length` does, so the app's limits and these agree exactly.
+    function fits(changed, field, limit) {
+      let value = request.resource.data.get(field, null);
+      return !changed.hasAny([field]) || value == null ||
+             (value is string && value.size() <= limit);
+    }
+
+    // The text limits of each kind of record (T119): a line 200, a text
+    // 10,000, a chapter 200,000, the saga 500,000. The app's
+    // `RECORD_TEXT_LIMITS` (src/core/constants/textLimits.ts) holds the same
+    // table; change both together. Lists are not checked: no rule can look
+    // inside one.
+    function textFits(entityCollection) {
+      let changed = changedKeys();
+      return (entityCollection != 'npcs' || (
+               fits(changed, 'name', 200) && fits(changed, 'title', 200) &&
+               fits(changed, 'race', 200) && fits(changed, 'occupation', 200) &&
+               fits(changed, 'location', 200) && fits(changed, 'description', 10000) &&
+               fits(changed, 'appearance', 10000) && fits(changed, 'personality', 10000) &&
+               fits(changed, 'background', 10000))) &&
+             (entityCollection != 'locations' || (
+               fits(changed, 'name', 200) && fits(changed, 'description', 10000))) &&
+             (entityCollection != 'quests' || (
+               fits(changed, 'title', 200) && fits(changed, 'location', 200) &&
+               fits(changed, 'levelRange', 200) && fits(changed, 'description', 10000) &&
+               fits(changed, 'background', 10000))) &&
+             (entityCollection != 'rumors' || (
+               fits(changed, 'title', 200) && fits(changed, 'sourceName', 200) &&
+               fits(changed, 'location', 200) && fits(changed, 'content', 10000))) &&
+             (entityCollection != 'chapters' || (
+               fits(changed, 'title', 200) && fits(changed, 'summary', 10000) &&
+               fits(changed, 'content', 200000))) &&
+             (entityCollection != 'saga' || (
+               fits(changed, 'title', 200) && fits(changed, 'content', 500000)));
+    }
+
+    // A campaign's or a group's name and description (T119), as `createGroup`
+    // checks them for a new group.
+    function namedTextFits() {
+      let changed = changedKeys();
+      return fits(changed, 'name', 200) && fits(changed, 'description', 10000);
+    }
+
     // Global user profiles - strict email protection
     match /users/{userId} {
       // Users can ONLY read their own complete profile (including email)
@@ -455,7 +525,7 @@ service cloud.firestore {
 
       // Group admins can update -- not once its deletion has started, and
       // never the `deleting` mark (T037).
-      allow update: if isGroupAdmin(groupId) &&
+      allow update: if isGroupAdmin(groupId) && namedTextFits() &&
                      imageLeased(groupId, 'crest') &&
                      resource.data.get('deleting', false) != true &&
                      !request.resource.data.keys().hasAny(['deleting']);
@@ -617,12 +687,13 @@ service cloud.firestore {
       // to the final deny rule instead of inheriting content permissions.
       match /campaigns/{campaignId} {
         allow read: if isGroupMember(groupId);
-        allow create: if isGroupMember(groupId) && imageLeased(groupId, 'banner') &&
+        allow create: if isGroupMember(groupId) && namedTextFits() &&
+                       imageLeased(groupId, 'banner') &&
                        !request.resource.data.keys().hasAny(['deleting']);
 
         // RELAXED: any group member may edit campaign metadata -- not once
         // its deletion has started, and never the `deleting` mark (T037).
-        allow update: if isGroupMember(groupId) &&
+        allow update: if isGroupMember(groupId) && namedTextFits() &&
                        imageLeased(groupId, 'banner') &&
                        resource.data.get('deleting', false) != true &&
                        !request.resource.data.keys().hasAny(['deleting']);
@@ -643,6 +714,7 @@ service cloud.firestore {
           // entity carries one, so the check passes for them.
           // Only into a campaign that takes writes (T037, DATA-010).
           allow create: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
+                         textFits(entityCollection) &&
                          isGroupMember(groupId) && imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
                          locationFenceHolds(groupId, campaignId, entityCollection);
@@ -651,6 +723,7 @@ service cloud.firestore {
           // UI never enforced, so members hit permission-denied on any entity
           // they had not personally created (bug #1406).
           allow update: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
+                         textFits(entityCollection) &&
                          isGroupMember(groupId) &&
                          imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&

@@ -893,3 +893,92 @@ describe("a campaign holds the app's records, each with its name (T119)", () => 
     await assertSucceeds(as("frodo").doc(`${C}/npcs/legacy`).update({description: "Older"}));
   });
 });
+
+// T119 (F4): every text field of a record has a limit, the app's
+// `RECORD_TEXT_LIMITS` (src/core/constants/textLimits.ts). The app stops
+// there; the rules refuse a client that does not.
+describe("a record's text has a limit (T119)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+  const NAMED_BY: Record<string, string> = {
+    npcs: "name", locations: "name", quests: "title", rumors: "title", chapters: "title", saga: "title",
+  };
+  /** A record of `collection` whose `field` holds `length` characters. */
+  const record = (collection: string, field: string, length: number) =>
+    ({[NAMED_BY[collection]]: "N", [field]: "x".repeat(length)});
+  const id = (collection: string) => (collection === "saga" ? "sagaData" : "r1");
+
+  it.each([
+    ["npcs", "name", 200],
+    ["npcs", "title", 200],
+    ["npcs", "race", 200],
+    ["npcs", "occupation", 200],
+    ["npcs", "location", 200],
+    ["npcs", "description", 10_000],
+    ["npcs", "appearance", 10_000],
+    ["npcs", "personality", 10_000],
+    ["npcs", "background", 10_000],
+    ["locations", "name", 200],
+    ["locations", "description", 10_000],
+    ["quests", "title", 200],
+    ["quests", "location", 200],
+    ["quests", "levelRange", 200],
+    ["quests", "description", 10_000],
+    ["quests", "background", 10_000],
+    ["rumors", "title", 200],
+    ["rumors", "sourceName", 200],
+    ["rumors", "location", 200],
+    ["rumors", "content", 10_000],
+    ["chapters", "title", 200],
+    ["chapters", "summary", 10_000],
+    ["chapters", "content", 200_000],
+    ["saga", "title", 200],
+    ["saga", "content", 500_000],
+  ])("%s.%s takes %d characters and refuses one more", async (collection, field, limit) => {
+    const path = `${C}/${collection}/${id(collection)}`;
+    await assertFails(as("frodo").doc(path).set(record(collection, field, limit + 1)));
+    await assertSucceeds(as("frodo").doc(path).set(record(collection, field, limit)));
+    await assertFails(as("frodo").doc(path).update({[field]: "x".repeat(limit + 1)}));
+  });
+
+  it("counts as the app does: an emoji is two", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n2`).set({name: "😀".repeat(100)}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n3`).set({name: "😀".repeat(100) + "x"}));
+  });
+
+  it("refuses text that is not text", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: {page: "x".repeat(20_000)}}));
+    await assertFails(as("frodo").doc(`${C}/rumors/r1`).set({title: "Smoke", content: ["x".repeat(20_000)]}));
+  });
+
+  it("lets a field be cleared or removed", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({description: null}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: firebase.firestore.FieldValue.delete()}));
+  });
+
+  it("still lets a record stored over a limit be edited, as long as the edit leaves that field", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`${C}/npcs/n1`).update({description: "x".repeat(20_000)})
+    );
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: "Hobbit"}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: "x".repeat(20_001)}));
+  });
+
+  it("caps a campaign's name and description, created or edited", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc(`groups/${G}/campaigns/c2`).set({name: "x".repeat(201)}));
+    await assertFails(db.doc(`groups/${G}/campaigns/c2`).set({name: "Rohan", description: "x".repeat(10_001)}));
+    await assertSucceeds(db.doc(`groups/${G}/campaigns/c2`).set({name: "x".repeat(200), description: "x".repeat(10_000)}));
+    await assertFails(db.doc(`groups/${G}/campaigns/c1`).update({name: "x".repeat(201)}));
+  });
+
+  it("caps a group's name and description when its admin edits them", async () => {
+    const db = as("gandalf");
+    await assertFails(db.doc(`groups/${G}`).update({name: "x".repeat(201)}));
+    await assertFails(db.doc(`groups/${G}`).update({description: "x".repeat(10_001)}));
+    await assertSucceeds(db.doc(`groups/${G}`).update({name: "x".repeat(200), description: "x".repeat(10_000)}));
+  });
+
+  it("leaves the lists inside a record alone, which no rule can look into", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({notes: [{id: "n", text: "x".repeat(20_000)}]}));
+  });
+});

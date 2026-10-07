@@ -287,9 +287,8 @@ scope; they work.
   founder may start. D6 is answered: the global admin is the maintainer alone.
 - **Then**: file the build order's steps as their own entries. Steps 1 to 3
   (founder invitations, a guarded `createGroup`, the first run) are the smallest
-  change that lets a table start alone. Step 0 is what is left of T119's F4
-  (the size caps in the rules; the forms have them).
-- **Related**: T119 (the data model review; its F2 and F4 are steps here);
+  change that lets a table start alone.
+- **Related**: T119 (the data model review; its F2 is a step here);
   T075 and T118 (the name and the domain the outreach will carry).
 - **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
 
