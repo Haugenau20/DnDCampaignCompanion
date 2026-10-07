@@ -287,8 +287,8 @@ scope; they work.
   founder may start. D6 is answered: the global admin is the maintainer alone.
 - **Then**: file the build order's steps as their own entries. Steps 1 to 3
   (founder invitations, a guarded `createGroup`, the first run) are the smallest
-  change that lets a table start alone. Step 0 is T119's F4 (validate what
-  members write).
+  change that lets a table start alone. Step 0 is what is left of T119's F4
+  (cap the size of what members write).
 - **Related**: T119 (the data model review; its F2 and F4 are steps here);
   T075 and T118 (the name and the domain the outreach will carry).
 - **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
@@ -420,8 +420,7 @@ Two documents, both written 2026-10-07. Nothing has been changed.
   review's three remaining questions. The production checks in the review (indexes, campaign sizes, how
   often links disagree) inform the migration but do not block the choice.
 - **Then**: the spike, as its own entry; then the migration or the Firestore
-  restructure, as entries of their own. Removing the unused global-admin grants
-  from the rules (review F7) can be filed now, whatever the route.
+  restructure, as entries of their own.
 - **Overlaps**: T079 (the legacy free-text `location`) is the review's F9; a
   move to Postgres would settle it in the copy script. The `dateAdded` →
   `createdAt` renames in `docs/architecture/migration/database-field-alignment.md`

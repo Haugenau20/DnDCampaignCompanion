@@ -1,7 +1,8 @@
 # Firestore data model review (T119)
 
 Written 2026-10-07 against `main` at `b78d72f`, for the maintainer to read before anything changes.
-Nothing in the model has been changed by this review.
+Since then the rules part of F4 (which collections, and a name on every record) and all of F7's
+global admin have been done; those two sections describe what is left.
 
 **How this was measured.** Everything below was read in the code unless it says otherwise.
 "Run" means it was run: against the dev emulator after a fresh `manage-dev-data.ps1 -Action
@@ -23,9 +24,8 @@ In the order worth doing:
 1. **Store each relationship once** ([F1](#f1-relationships-are-stored-twice-or-one-way-only)).
    A link added on an NPC's page does not show on the quest's page. This is the one finding players
    can see today.
-2. **Validate what members write** ([F4](#f4-the-rules-check-who-writes-not-what-is-written)):
-   allow-list the entity collections, bound field sizes and close the dead `groups` create rule.
-   At scale this is the abuse and cost vector, and it is rules-only work.
+2. **Bound what members write** ([F4](#f4-nothing-bounds-what-a-member-writes)): cap the size of
+   names and text, in the forms and then in the rules. At scale this is the abuse and cost vector.
 3. **Turn on the client cache, then page the reads** ([F2](#f2-every-read-is-a-whole-collection)).
    Today every page load re-reads every collection it listens to, in full.
 4. **Move growing lists out of their parent document** ([F3](#f3-some-documents-grow-without-bound)):
@@ -44,7 +44,7 @@ Firestore is still the right store. See [From scratch](#from-scratch).
 
 ```
 users/{uid}                              global profile: email, groups[], activeGroupId,
-                                         preferences, isAdmin, entityExtractionUsage
+                                         preferences, entityExtractionUsage
 groups/{g}                               name, description, createdBy, crest, deleting
 ├── users/{uid}                          group profile: username, role, characters[],
 │   │                                    activeCampaignId, activeCharacterId
@@ -65,15 +65,14 @@ groups/{g}                               name, description, createdBy, crest, de
 ```
 
 Server-only top-level collections (no client rule, so the final deny covers them):
-`signUpReservations`, `deviceSignIns`, `contactThrottle`, `groupDeletions`. The rules also grant a
-global admin `admin/{document=**}`, which nothing in `src/` or `firebase/functions/src/` uses.
+`signUpReservations`, `deviceSignIns`, `contactThrottle`, `groupDeletions`.
 
 ### Who writes what
 
 - **Cloud Functions** write membership and administration: `createGroup`, `redeemInvitation`,
   `setMemberRole`, `removeUserFromGroup`, `deleteGroup`, `deleteCampaign`, `deleteUser`, and the
   AI usage counters in `entityExtraction`. The rules refuse those fields to clients
-  (`firestore.rules.prod:396`, `:448`).
+  (`firestore.rules.prod:437`, `:487`).
 - **The client** writes all campaign content, through `DocumentService`
   (`core/services/firebase/data/DocumentService.ts`). `createDocument` (`:185`) spreads
   attribution built in `core/attribution/attribution.ts` over the caller's data. Updates go
@@ -195,31 +194,26 @@ transactions on the same record contend when several players annotate it at once
 **Recommendation.** Notes become a subcollection (`npcs/{id}/notes/{noteId}`), read when the record
 is opened. The saga becomes sections, as chapters already are. Chapter text moves out (F2).
 
-### F4. The rules check who writes, not what is written
+### F4. Nothing bounds what a member writes
 
-- `match /{entityCollection}/{entityId}` under a campaign (`firestore.rules.prod:605`) accepts
-  **any collection name**. A member can create `campaigns/{c}/anything/{id}`.
-- No rule checks a field's type, size or presence on campaign content. A member can write any
-  field of any size, up to Firestore's limits, into any record, in any number.
-- `match /groups/{groupId}` still allows **any signed-in user to create a group document**
-  (`:414`). Since 2026-07-29 the client never does: groups are created by the `createGroup`
-  function (`GroupService.ts:61`). The rule is dead, and it lets any account create unlimited
-  group documents that nobody is a member of.
+The rules name the six kinds of record a campaign holds (`namingField`, `firestore.rules.prod:395`)
+and refuse any other collection. A new record must carry its `name` or `title` as text, and no
+client creates a group document. What no rule checks is **size**: a member can write a name, a
+description or a chapter of any length, up to Firestore's 1 MiB per document, into any number of
+records. Nor does any form cap a field's length today.
 
 Among friends, none of this matters. At scale, one bad actor with one invitation can fill a
-campaign with junk that every member downloads (F2) and that the group pays to store. They can
-also create unlimited group documents with no invitation at all.
+campaign with large records that every member downloads (F2) and that the group pays to store.
 
-**Recommendation.** Rules-only work, pinned by the rules suite with the usual control:
+**Recommendation.** Caps on `name`/`title` and on the large text fields (`description`, `content`,
+a chapter's text, the saga), in two merges:
 
-- Allow-list the entity collections: `npcs`, `locations`, `quests`, `rumors`, `chapters`, `saga`.
-- Per collection, require the identifying field (`name` or `title`) as a bounded string, and cap
-  the large text fields (`description`, `content`) with `.size()`.
-- Set `allow create: if false` on `groups/{groupId}`.
+1. The forms enforce the caps (a `maxLength`, and a check before the write).
+2. A later merge adds the same caps to the rules with `.size()`, pinned by the rules suite with the
+   usual control. A rule that refuses what the live frontend still sends must follow it.
 
-Deploy order: the rules ship after a frontend that writes only conforming documents. Check that
-nothing the live frontend writes is refused, with a measured battery as in the 2026-07-29
-revision.
+Rules cannot count records. Paging (F2) bounds what each member downloads, and any member can
+delete junk.
 
 ### F5. Attribution is written and believed from the client
 
@@ -257,22 +251,13 @@ meant (a note's in-game date). The planned rename of `dateAdded` to `createdAt`
 ### F7. Membership is stored twice
 
 A user is in a group when `users/{uid}.groups` lists it (what every rule reads,
-`isGroupMember`, `firestore.rules.prod:296`) and when `groups/{g}/users/{uid}` exists (the roster,
+`isGroupMember`, `firestore.rules.prod:318`) and when `groups/{g}/users/{uid}` exists (the roster,
 which holds `role`). Only Cloud Functions write either, so they agree as long as every function is
 correct. T080 was a case where they did not. Every rule evaluation that needs membership also
 reads the whole global profile.
 
-The global `isAdmin` flag (`:290`) lets its holder read and change every group's content through
-the client API. The maintainer holds it, and it will never be given to anyone else (maintainer,
-2026-10-07). As project owner they can already reach all the data through the console and the
-Admin SDK, so the flag adds no access. It does add risk: nothing in `src/` or the functions reads
-it, so its only effect is that whoever holds the maintainer's app session can use those powers.
-
 **Recommendation.** Not urgent; it is correct today. From scratch, membership is one document,
-`groups/{g}/members/{uid}` with the role, checked with `exists()`. Separately, remove the
-`isGlobalAdmin()` grants from the rules and do admin work through the console or Admin-SDK
-scripts. `/privacy` should say that the operator can technically reach the data, which is true
-with or without the flag.
+`groups/{g}/members/{uid}` with the role, checked with `exists()`.
 
 ### F8. The index file is stale and not deployed
 
@@ -303,7 +288,7 @@ deploy includes it.
 | # | Change | Layers | Production migration | Size |
 |---|---|---|---|---|
 | 1 | One owner per relationship (F1) | frontend | merge halves with a script (dry run, revert) | M |
-| 2 | Validate writes; close `groups` create (F4) | rules | none, but check nothing live is refused | M |
+| 2 | Cap the size of names and text (F4) | frontend, then rules | none, but check nothing live is refused | M |
 | 3 | `persistentLocalCache` (F2) | frontend | none | S |
 | 4 | Server-stamped attribution and times, `createdAt` rename (F5, F6) | frontend, then rules | rewrite every record once | M |
 | 5 | Chapter text and saga split (F2, F3) | frontend, rules | move text to the new documents | M |
@@ -387,8 +372,6 @@ worth a migration on its own.
 2. **Names in attribution**: should a record show the name its author had *then*, or has *now*?
 3. **Which owner wins in F1**: is the proposal above (the quest owns its people, the NPC owns its
    place) the right way round for how your table plays?
-4. ~~**Global admin**~~: answered 2026-10-07. Only the maintainer holds it, and only ever will.
-   The recommendation is in F7.
 
 ## What production has to answer
 

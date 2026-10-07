@@ -37,7 +37,7 @@ signed in as the seeded `player9@example.com`, who is in no group.
 5. **A new group has no campaign, and its admin is not told how to make one.** The empty state
    says "Your first campaign will appear here as soon as it's created" (`GatedPageState.tsx:126`)
    and links nowhere. Campaigns are created on `/admin/campaigns`, which the UI shows to admins
-   only, although the rules let any member create one (`firestore.rules.prod:587`).
+   only, although the rules let any member create one (`firestore.rules.prod:620`).
 6. **Inviting the players works** (`/admin/people`, a 14-day single-use link per person,
    `registration-token.ts:15`).
 
@@ -142,8 +142,6 @@ console after a month of real use.
   `redeemInvitation`. App Check already guards Auth (`appCheck.ts`), but the callables accept
   calls without it. Check first that the e2e journeys and the emulator still pass App Check, or
   bypass it in the emulator the way the sign-up gate exempts seed accounts.
-- **Close the `groups/{groupId}` create rule** (T119 F4). No client uses it, and it lets any
-  account create group documents that nobody is a member of.
 
 ### D5. The first run
 
@@ -160,16 +158,13 @@ What the founder sees, in order, as one guided flow rather than three admin page
 
 ### D6. The maintainer's own access
 
-**Answered (maintainer, 2026-10-07):** the global admin (`users/{uid}.isAdmin`,
-`firestore.rules.prod:290`) is the maintainer alone and will never be given to a user. As project
-owner, the maintainer reaches all data through the console and the Admin SDK anyway, so the flag
-grants nothing new.
+**Answered (maintainer, 2026-10-07):** access to every group is the maintainer's alone, as project
+owner, through the console and the Admin SDK. The app grants it to nobody: the global-admin flag
+(`users/{uid}.isAdmin`) no longer opens anything in the rules or the functions.
 
 **Recommendation:**
 
-- Remove the `isGlobalAdmin()` grants from the rules. Nothing in the app or the functions uses
-  them, and they make the maintainer's everyday sign-in a master key for every group.
-- Issue founder invitations (step 1) with an Admin-SDK script, not a callable behind the flag.
+- Issue founder invitations (step 1) with an Admin-SDK script, not a callable behind a flag.
 - `/privacy` says plainly that the operator can technically reach the data. That is true with or
   without the flag, and strangers should be told.
 
@@ -183,7 +178,7 @@ links.
 
 | Step | What | Depends on | Size |
 |---|---|---|---|
-| 0 | **T119 F4**: allow-list and validate what members write; close `groups` create | nothing | M |
+| 0 | **T119 F4**: cap the size of what members write | nothing | M |
 | 1 | **Founder invitations**: the collection, a maintainer-only way to issue them (an Admin-SDK script like `audit-location-ids.js`), `reserveSignUp` and the gate accepting them | 0 | M |
 | 2 | **`createGroup` guarded**: spends a founder invitation or an allowance; takes the founder's name; App Check on the three callables | 1 | M |
 | 3 | **The first run**: the group-less home offers "I have a founder link"; the guided flow of D5; the empty-campaign call to action | 2 | M |
