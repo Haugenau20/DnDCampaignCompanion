@@ -37,7 +37,7 @@ signed in as the seeded `player9@example.com`, who is in no group.
 5. **A new group has no campaign, and its admin is not told how to make one.** The empty state
    says "Your first campaign will appear here as soon as it's created" (`GatedPageState.tsx:126`)
    and links nowhere. Campaigns are created on `/admin/campaigns`, which the UI shows to admins
-   only, although the rules let any member create one (`firestore.rules.prod:587`).
+   only, although the rules let any member create one (`firestore.rules.prod:620`).
 6. **Inviting the players works** (`/admin/people`, a 14-day single-use link per person,
    `registration-token.ts:15`).
 
@@ -81,7 +81,7 @@ can be changed on its own.
 |---|---|---|---|
 | **A. Founder invitations** | The maintainer issues a *founder link*. It admits one account that may create one group. | Keeps "accounts are created from an invitation" true (`/privacy`, Security). Growth stays at the maintainer's pace. Every group's cost is bounded by its founder link. | The maintainer hands out each link, which is minutes, not a sitting. |
 | B. Request and approve | A visitor asks through a form, and the maintainer approves it to issue a founder link. | Strangers can find their own way in. | It is A plus a queue to build and watch. |
-| C. Open sign-up | Anyone can create an account and a group. | No gatekeeper. | Needs every abuse control first (D3, D4, T119 F4). Cost is unbounded until those land. `/privacy` changes. |
+| C. Open sign-up | Anyone can create an account and a group. | No gatekeeper. | Needs every abuse control first (D3, D4). Cost is unbounded until those land. `/privacy` changes. |
 
 **Recommendation: A now.** C becomes possible later, once D3 and D4 are proven in practice. B can
 be added on top of A if the maintainer finds the handing-out tedious.
@@ -118,7 +118,7 @@ console after a month of real use.
 |---|---|---|---|
 | AI extraction | `gpt-4.1-mini`: a cached schema of about 1,500 tokens plus a note of up to 10,000 characters (`entityExtraction.ts:32`), so roughly 4,000 tokens in; output assumed at up to 1,000 tokens | 10 calls/day, 30/week, 100/month per user (`entityExtraction.ts:94`) | at most about **$0.30 per user per month**, so **about $54/month** if everyone spends their full quota (an estimate: about $0.003 a call) |
 | Firestore reads | whole-collection listeners and no persistent cache (T119 F2) | none | grows with campaign size times page loads. Fixing T119 F2 first is the real control. |
-| Storage | pictures, at most 2 MiB each after resizing (`prepare-image.ts:10`) | none per group | small per group; an unbounded count is a T119 F4-style gap for Storage |
+| Storage | pictures, at most 2 MiB each after resizing (`prepare-image.ts:10`) | none per group | small per group; nothing bounds how many |
 | Auth | Identity Platform | free up to 50,000 monthly active users (T057's note) | free |
 | Sign-in email | Firebase's own sender | per-project daily limits, **not checked** | check before outreach |
 
@@ -142,8 +142,6 @@ console after a month of real use.
   `redeemInvitation`. App Check already guards Auth (`appCheck.ts`), but the callables accept
   calls without it. Check first that the e2e journeys and the emulator still pass App Check, or
   bypass it in the emulator the way the sign-up gate exempts seed accounts.
-- **Close the `groups/{groupId}` create rule** (T119 F4). No client uses it, and it lets any
-  account create group documents that nobody is a member of.
 
 ### D5. The first run
 
@@ -160,18 +158,12 @@ What the founder sees, in order, as one guided flow rather than three admin page
 
 ### D6. The maintainer's own access
 
-**Answered (maintainer, 2026-10-07):** the global admin (`users/{uid}.isAdmin`,
-`firestore.rules.prod:290`) is the maintainer alone and will never be given to a user. As project
-owner, the maintainer reaches all data through the console and the Admin SDK anyway, so the flag
-grants nothing new.
+**Answered (maintainer, 2026-10-07):** access to every group is the maintainer's alone, as project
+owner, through the console and the Admin SDK. The app grants it to nobody: the global-admin flag
+(`users/{uid}.isAdmin`) no longer opens anything in the rules or the functions.
 
-**Recommendation:**
-
-- Remove the `isGlobalAdmin()` grants from the rules. Nothing in the app or the functions uses
-  them, and they make the maintainer's everyday sign-in a master key for every group.
-- Issue founder invitations (step 1) with an Admin-SDK script, not a callable behind the flag.
-- `/privacy` says plainly that the operator can technically reach the data. That is true with or
-  without the flag, and strangers should be told.
+**Recommendation:** issue founder invitations (step 1) with an Admin-SDK script, not a callable
+behind a flag.
 
 ---
 
@@ -183,13 +175,12 @@ links.
 
 | Step | What | Depends on | Size |
 |---|---|---|---|
-| 0 | **T119 F4**: allow-list and validate what members write; close `groups` create | nothing | M |
-| 1 | **Founder invitations**: the collection, a maintainer-only way to issue them (an Admin-SDK script like `audit-location-ids.js`), `reserveSignUp` and the gate accepting them | 0 | M |
+| 1 | **Founder invitations**: the collection, a maintainer-only way to issue them (an Admin-SDK script like `audit-location-ids.js`), `reserveSignUp` and the gate accepting them | nothing | M |
 | 2 | **`createGroup` guarded**: spends a founder invitation or an allowance; takes the founder's name; App Check on the three callables | 1 | M |
 | 3 | **The first run**: the group-less home offers "I have a founder link"; the guided flow of D5; the empty-campaign call to action | 2 | M |
 | 4 | **Caps and budgets**: a per-group member cap, the account counter, the project cap raised, the project-wide AI budget | 2 | M |
 | 5 | **T119 F2's cache** (`persistentLocalCache`) | nothing | S |
-| 6 | **`/privacy`** updated for D1 and D6 | 1, D6 decided | S |
+| 6 | **`/privacy`** updated for D1 | 1 | S |
 
 Every step that changes a flow lands with its e2e journey (`e2e/`). Step 3's journey runs the whole
 path: founder link → group → campaign → invitation → second player joins. Functions changes get
@@ -201,7 +192,7 @@ tokens to those callables. The SDK attaches them once App Check is initialised (
 so the live frontend should already; check it, and the emulator, before merging.
 
 **Not needed before outreach, but before it is wide:** T075 (the name) and T118 (the domain)
-are what the links carry. Neither blocks building steps 0 to 6.
+are what the links carry. Neither blocks building steps 1 to 6.
 
 **Rollback.** Founder invitations add a path and remove none, so the manual path keeps working
 throughout. Turning the feature off means issuing no more founder links.

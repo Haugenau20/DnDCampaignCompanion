@@ -97,14 +97,17 @@ describe("deleting an account", () => {
     expect(await noteCount(G1, "frodo")).toBe(3);
   });
 
-  it("lets an admin delete another user, notes included", async () => {
-    // Admin deletion is gated on the global `isAdmin` flag, not on group role.
+  it("deletes no other account, even for the global-admin flag (T119)", async () => {
+    // The flag used to let its holder delete anyone. Only the maintainer
+    // holds it, and the console and the Admin SDK already reach every
+    // account, so in the app it only made their session able to.
     await db.doc("users/gandalf").update({isAdmin: true});
 
-    await call(deleteUser, {userId: "frodo"}, "gandalf");
+    await expectHttpsError(call(deleteUser, {userId: "frodo"}, "gandalf"), "permission-denied");
 
-    expect(await noteCount(G1, "frodo")).toBe(0);
-    expect(await noteCount(G1, "sam")).toBe(3);
+    expect(await noteCount(G1, "frodo")).toBe(3);
+    expect((await db.doc("users/frodo").get()).exists).toBe(true);
+    await expect(getAuth().getUser("frodo")).resolves.toBeDefined();
   });
 
   it("is retryable: if the notes cannot be deleted, nothing else is", async () => {
@@ -232,7 +235,7 @@ describe("a removal that fails after the notes are gone", () => {
     await expectHttpsError(deleteAccount("frodo"), "not-found");
   });
 
-  it("deleting another account: a missing profile still needs a global admin", async () => {
+  it("deleting another account: still refused once the profile is gone", async () => {
     jest.spyOn(getAuth(), "deleteUser")
       .mockRejectedValueOnce(new Error("auth backend unavailable"));
     await expectHttpsError(deleteAccount("frodo"), "internal");

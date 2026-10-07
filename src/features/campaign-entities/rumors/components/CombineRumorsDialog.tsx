@@ -1,5 +1,6 @@
 // src/features/campaign-entities/rumors/components/CombineRumorsDialog.tsx
 import React, { useState, useEffect } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { Rumor, RumorStatus } from '../types';
 import Dialog from '../../../../core/components/Dialog';
 import Typography from '../../../../core/components/Typography';
@@ -153,6 +154,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
           <Input
             label="Title *"
             value={title}
+            maxLength={TEXT_LIMITS.line}
             onChange={(e) => setTitle(e.target.value)}
             required
             disabled={isSubmitting}
@@ -161,6 +163,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
           <Input
             label="Content *"
             value={content}
+            maxLength={TEXT_LIMITS.text}
             onChange={(e) => setContent(e.target.value)}
             isTextArea
             required

@@ -9,6 +9,15 @@ interface CreateGroupData {
 }
 
 /**
+ * The longest name and description a group may have (T119). The same as the
+ * app's `TEXT_LIMITS.line` and `.text` (`src/core/constants/textLimits.ts`)
+ * and the production rules, which check them on every edit; a group is
+ * created here, past the rules, so they are checked here.
+ */
+const MAX_NAME_LENGTH = 200;
+const MAX_DESCRIPTION_LENGTH = 10_000;
+
+/**
  * Creates a new group and the group creator's admin profile.
  *
  * This has to run server-side with the Admin SDK because it writes the
@@ -38,6 +47,24 @@ export const createGroup = functions.onCall(
       throw new functions.HttpsError(
         "invalid-argument",
         "Group name is required."
+      );
+    }
+    if (trimmedName.length > MAX_NAME_LENGTH) {
+      throw new functions.HttpsError(
+        "invalid-argument",
+        `A group's name can hold ${MAX_NAME_LENGTH} characters.`
+      );
+    }
+    if (description !== undefined && typeof description !== "string") {
+      throw new functions.HttpsError(
+        "invalid-argument",
+        "A group's description must be text."
+      );
+    }
+    if ((description ?? "").length > MAX_DESCRIPTION_LENGTH) {
+      throw new functions.HttpsError(
+        "invalid-argument",
+        `A group's description can hold ${MAX_DESCRIPTION_LENGTH.toLocaleString("en-US")} characters.`
       );
     }
 

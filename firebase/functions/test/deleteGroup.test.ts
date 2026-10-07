@@ -125,10 +125,12 @@ describe("deleting a group", () => {
     expect(await isThere("signUpReservations/g2_tok2")).toBe(true);
   });
 
-  it("is open to a global admin who is not a member", async () => {
-    await remove("saruman");
+  it("refuses the global-admin flag to a caller who is not the group's admin (T119)", async () => {
+    await expectHttpsError(remove("saruman"), "permission-denied");
 
-    expect(await isThere(group.path)).toBe(false);
+    expect(await isThere(group.path)).toBe(true);
+    expect((await group.get()).data()?.deleting).toBeUndefined();
+    expect(await isThere(record.path)).toBe(false);
   });
 
   it("refuses a plain member, and deletes nothing", async () => {
@@ -150,16 +152,22 @@ describe("deleting a group", () => {
     expect(await fileExists(FILES.lookalikeGroup)).toBe(true);
   });
 
-  it("answers not-found once a finished deletion is asked for again", async () => {
+  it("a finished deletion asked for again by its starter starts nothing new", async () => {
     await remove("gandalf");
-    // The caller's admin profile went with the group; a global admin asks.
-    await expectHttpsError(remove("saruman"), "not-found");
+    // Their admin profile went with the group, and so did the deletion's
+    // record, which is what let them finish it.
+    await expectHttpsError(remove("gandalf"), "permission-denied");
+
+    expect(await isThere(group.path)).toBe(false);
+    expect(await isThere(record.path)).toBe(false);
   });
 });
 
 describe("a deletion that fails partway", () => {
   // Every stage can fail, and calling again must finish the job. A failure
-  // must never leave live documents whose pictures are gone.
+  // must never leave live documents whose pictures are gone. The retry comes
+  // from whoever started the deletion, as in the app: their admin profile may
+  // already have gone with the group, and the deletion's record lets them in.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bulkWriterProto = BulkWriter.prototype as any;
 
@@ -196,7 +204,7 @@ describe("a deletion that fails partway", () => {
     expect(await isThere(`groups/${GROUP}/users/frodo/notes/note1`)).toBe(true);
     expect(await fileExists(FILES.crest)).toBe(true);
 
-    await remove("saruman");
+    await remove("gandalf");
     expect((await db.doc("users/frodo").get()).data()?.groups).toEqual(["g2"]);
     expect(await isThere(group.path)).toBe(false);
     expect(await isThere(record.path)).toBe(false);
@@ -211,7 +219,7 @@ describe("a deletion that fails partway", () => {
     expect(await fileExists(FILES.npcImage)).toBe(true);
     expect(await isThere(record.path)).toBe(true);
 
-    await remove("saruman");
+    await remove("gandalf");
     expect(await isThere(`groups/${GROUP}/campaigns/c1/npcs/n1`)).toBe(false);
     expect(await fileExists(FILES.crest)).toBe(false);
   });
@@ -226,7 +234,7 @@ describe("a deletion that fails partway", () => {
     expect(await fileExists(FILES.crest)).toBe(true);
     expect(await isThere(record.path)).toBe(true);
 
-    await remove("saruman");
+    await remove("gandalf");
     expect(await fileExists(FILES.crest)).toBe(false);
     expect(await fileExists(FILES.otherGroup)).toBe(true);
     expect(await isThere(record.path)).toBe(false);
@@ -239,7 +247,7 @@ describe("a deletion that fails partway", () => {
     // backstop for a write that slipped in anyway.
     await db.doc("users/sam").set({id: "sam", groups: [GROUP], activeGroupId: GROUP});
 
-    await remove("saruman");
+    await remove("gandalf");
     const sam = (await db.doc("users/sam").get()).data();
     expect(sam?.groups).toEqual([]);
     expect(sam?.activeGroupId).toBeNull();

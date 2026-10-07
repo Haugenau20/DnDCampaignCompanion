@@ -52,6 +52,20 @@ describe("quickAddSpecs", () => {
       expect(errors.name).toBeUndefined();
       expect(errors.line).toBeTruthy();
     });
+
+    // T119: a name the note conversion proposed can be longer than the field
+    // may hold; it is caught here, under the field, rather than by the rules.
+    it.each(quickAddEntities)("refuses a %s name over 200 characters, and takes 200", (entity) => {
+      expect(validateQuickAdd(entity, { name: "x".repeat(201), line: "A dwarf king" }).name)
+        .toBe("Too long: 201 characters, and this can hold 200.");
+      expect(validateQuickAdd(entity, { name: "x".repeat(200), line: "A dwarf king" })).toEqual({});
+    });
+
+    it("refuses a line over 10,000 characters, and takes 10,000", () => {
+      expect(validateQuickAdd("npc", { name: "Thorin", line: "x".repeat(10_001) }).line)
+        .toBe("Too long: 10,001 characters, and this can hold 10,000.");
+      expect(validateQuickAdd("npc", { name: "Thorin", line: "x".repeat(10_000) })).toEqual({});
+    });
   });
 
   describe("buildDocument", () => {

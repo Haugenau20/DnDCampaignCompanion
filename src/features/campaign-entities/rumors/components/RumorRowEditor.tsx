@@ -1,5 +1,6 @@
 // src/features/campaign-entities/rumors/components/RumorRowEditor.tsx
 import React, { useEffect, useRef, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import Button from 'core/components/Button';
 import Input from 'core/components/Input';
 import Typography from 'core/components/Typography';
@@ -229,6 +230,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
             label="What was heard"
             placeholder="Traders coming down from Rivendell say the goblin road is busy again after dark."
             value={current.content}
+            maxLength={TEXT_LIMITS.text}
             onChange={(event) => onDraftChange({ content: event.target.value })}
             disabled={saveState === 'saving'}
           />
@@ -242,6 +244,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
             // show if this is left empty, which is a perfectly good outcome.
             placeholder={derivedTitle}
             value={current.title}
+            maxLength={TEXT_LIMITS.line}
             onChange={(event) => onDraftChange({ title: event.target.value })}
             disabled={saveState === 'saving'}
           />
@@ -317,6 +320,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                   aria-label="Who exactly"
                   placeholder="Trader on the East Road"
                   value={current.sourceName}
+                  maxLength={TEXT_LIMITS.line}
                   onChange={(event) => onDraftChange({ sourceName: event.target.value })}
                   disabled={saveState === 'saving'}
                 />

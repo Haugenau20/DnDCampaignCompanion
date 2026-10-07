@@ -1161,6 +1161,140 @@ describe('DocumentService', () => {
       expect(mockDoc).not.toHaveBeenCalledWith(expect.anything(), 'groups', 'g2', 'users', 'user-doc-test');
     });
   });
+
+  // ─── text limits (T119) ─────────────────────────────────────────────────────
+
+  // The production rules refuse a campaign record's field holding more text
+  // than its limit. The app refuses it first, with a sentence saying which
+  // field and by how much, rather than letting the write come back as
+  // "permission denied".
+  describe('text limits (T119)', () => {
+    const PROFILE = { username: 'Sam', activeCharacterId: null, characters: [] };
+
+    /** The service, writing into campaign c1 of group g1. */
+    const inCampaign = () => {
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('c1');
+      return svc;
+    };
+
+    beforeEach(() => {
+      mockGetDoc.mockResolvedValue(makeDocSnapshot(true, PROFILE));
+      mockSetDoc.mockResolvedValue(undefined);
+      mockUpdateDoc.mockResolvedValue(undefined);
+    });
+
+    it.each([
+      ['npcs', 'name', 200],
+      ['npcs', 'title', 200],
+      ['npcs', 'race', 200],
+      ['npcs', 'occupation', 200],
+      ['npcs', 'location', 200],
+      ['npcs', 'description', 10_000],
+      ['npcs', 'appearance', 10_000],
+      ['npcs', 'personality', 10_000],
+      ['npcs', 'background', 10_000],
+      ['locations', 'name', 200],
+      ['locations', 'description', 10_000],
+      ['quests', 'title', 200],
+      ['quests', 'location', 200],
+      ['quests', 'levelRange', 200],
+      ['quests', 'description', 10_000],
+      ['quests', 'background', 10_000],
+      ['rumors', 'title', 200],
+      ['rumors', 'sourceName', 200],
+      ['rumors', 'location', 200],
+      ['rumors', 'content', 10_000],
+      ['chapters', 'title', 200],
+      ['chapters', 'summary', 10_000],
+      ['chapters', 'content', 200_000],
+      ['saga', 'title', 200],
+      ['saga', 'content', 500_000],
+    ])('%s.%s takes %d characters and refuses one more', async (collection, field, limit) => {
+      const svc = inCampaign();
+
+      await svc.updateDocument(collection, 'r1', { [field]: 'x'.repeat(limit) });
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+
+      await expect(svc.updateDocument(collection, 'r1', { [field]: 'x'.repeat(limit + 1) }))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field, length: limit + 1, limit });
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+    });
+
+    it('says which field is too long, and by how much', async () => {
+      await expect(inCampaign().updateDocument('quests', 'q1', { levelRange: 'x'.repeat(201) }))
+        .rejects.toThrow('The level range is too long to save: 201 characters, and it can hold 200.');
+      await expect(inCampaign().updateDocument('npcs', 'n1', { description: 'x'.repeat(10_001) }))
+        .rejects.toThrow('The description is too long to save: 10,001 characters, and it can hold 10,000.');
+    });
+
+    it('refuses a create, writing nothing', async () => {
+      await expect(inCampaign().createDocument('npcs', { name: 'x'.repeat(201) }))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      await expect(inCampaign().createDocument('npcs', { name: 'x'.repeat(201) }, 'long'))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      expect(mockSetDoc).not.toHaveBeenCalled();
+      expect(mockFirestoreStore.read('long')).toBeUndefined();
+    });
+
+    it('refuses a set and an attributed update', async () => {
+      await expect(inCampaign().setDocument('saga', 'sagaData', { title: 'x'.repeat(201), content: '' }))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      await expect(inCampaign().updateDocumentWithAttribution('npcs', 'n1', { name: 'x'.repeat(201) }))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      expect(mockSetDoc).not.toHaveBeenCalled();
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+
+    it('refuses what a decision returns inside a transaction, writing nothing', async () => {
+      mockFirestoreStore.seed('n1', { name: 'Bilbo' });
+      const svc = inCampaign();
+
+      await expect(svc.updateDocumentAfterReading<any>('npcs', 'n1', async () => ({ name: 'x'.repeat(201) })))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      await expect(svc.updateDocumentsAfterReading<any>('npcs', async () => [{ id: 'n1', data: { name: 'x'.repeat(201) } }]))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      expect(mockFirestoreStore.read('n1')).toEqual({ name: 'Bilbo' });
+    });
+
+    it('refuses a conversion whose new record or whose updates are too long, writing nothing', async () => {
+      mockFirestoreStore.seed('smoke', { title: 'Smoke', notes: [] });
+      const svc = inCampaign();
+
+      await expect(svc.createDocumentWithUpdates<any, any>('quests', 'q1', 'rumors', async () => ({
+        create: { title: 'x'.repeat(201) },
+        updates: [],
+      }))).rejects.toMatchObject({ name: 'TextTooLongError' });
+      await expect(svc.createDocumentWithUpdates<any, any>('quests', 'q1', 'rumors', async () => ({
+        create: { title: 'Find the fire' },
+        updates: [{ id: 'smoke', data: { content: 'x'.repeat(10_001) } }],
+      }))).rejects.toMatchObject({ name: 'TextTooLongError' });
+
+      expect(mockFirestoreStore.read('q1')).toBeUndefined();
+      expect(mockFirestoreStore.read('smoke')).toEqual({ title: 'Smoke', notes: [] });
+    });
+
+    it('refuses a whole batch when one write in it is too long', async () => {
+      await expect(inCampaign().batchOperations([
+        { type: 'update', collection: 'chapters', id: 'c1', data: { order: 2 } },
+        { type: 'set', collection: 'chapters', id: 'c2', data: { title: 'x'.repeat(201), order: 1 } },
+      ])).rejects.toMatchObject({ name: 'TextTooLongError' });
+      expect(mockBatchCommit).not.toHaveBeenCalled();
+    });
+
+    it('leaves lists, uncapped fields and everything outside campaign records alone', async () => {
+      const svc = inCampaign();
+      const long = 'x'.repeat(20_000);
+
+      await svc.updateDocument('npcs', 'n1', { notes: [{ id: 'n', text: long }], tags: [long] });
+      await svc.setDocument(`groups/g1/users/user-doc-test/notes`, 'note1', { content: long });
+      await svc.setDocument(`groups/g1/users/user-doc-test/story-progress`, 'c1', { currentChapter: long });
+
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
+      expect(mockSetDoc).toHaveBeenCalledTimes(2);
+    });
+  });
 });
 
 export {};

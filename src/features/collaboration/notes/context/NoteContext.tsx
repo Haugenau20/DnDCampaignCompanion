@@ -1,5 +1,6 @@
 // src/features/collaboration/notes/context/NoteContext.tsx - Complete Fixed Version
 import React, { createContext, useContext, useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { TEXT_LIMITS } from "core/constants/textLimits";
 import { Note, NoteContextValue, EntityType, UnsavedNoteEdit } from "../types";
 import DocumentService from "core/services/firebase/data/DocumentService";
 import { useAuth, useGroups, useCampaigns, useUser } from "features/user-management";
@@ -523,7 +524,8 @@ export const NoteProvider: React.FC<{ children: React.ReactNode }> = ({
           : 'unconfirmed';
 
         const rumor = {
-          title: extraData.title || entity.text,
+          // A passage can be longer than a title may be (T119); the content keeps all of it.
+          title: (extraData.title || entity.text).slice(0, TEXT_LIMITS.line),
           content: extraData.content || '',
           status,
           ...(sourceType ? { sourceType } : {}),

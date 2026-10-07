@@ -52,8 +52,8 @@ or Auth. Each of those gaps was paid for by building the missing piece by hand:
 | a transaction that includes a query (delete a subtree) | a `deleting` fence on locations, walked level by level from the client (T088) | rules `locationFenceHolds`, 12 references in `locations/` |
 | row-level lists (a note is a row) | read-modify-write transactions on arrays inside records (T083) | 7 client modules use transactions |
 | `JOIN` | whole-collection listeners, joined in the browser | every detail page's "inbound" list |
-| one membership row | membership stored twice: `users/{uid}.groups` (what the rules read) and the group profile (T052, T080) | `firestore.rules.prod:296` |
-| column types and `CHECK` | none: the rules check who writes, never what (T119 F4) | `firestore.rules.prod:605` |
+| one membership row | membership stored twice: `users/{uid}.groups` (what the rules read) and the group profile (T052, T080) | `firestore.rules.prod:318` |
+| column types and `CHECK` | the rules name the record types, require a name as text and cap each text field (T119 F4); what is inside a list stays unchecked | rules `namingField`, `keepsItsName`, `textFits` |
 | defaults set by the server | attribution and times written by the browser and believed (T119 F5, F6) | `attribution.ts` |
 
 Measured in git history: 30 of the 931 commits on `main` belong to these seven items (T037, T052,

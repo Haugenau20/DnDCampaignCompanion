@@ -2,6 +2,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { tooLongMessage } from '../constants/textLimits';
 
 /**
  * Base props shared between input and textarea
@@ -93,10 +94,23 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
     const generatedId = React.useId();
     const inputId = label ? (id ?? generatedId) : id;
 
+    // A `maxLength` stops typing without a word, so the field says how close
+    // the text is once it is within a tenth of the limit, and calls text that
+    // is already over it (a stored record, a suggestion) an error (T119).
+    const limit = typeof props.maxLength === 'number' ? props.maxLength : undefined;
+    const length = typeof props.value === 'string' ? props.value.length : undefined;
+    const count = (n: number) => n.toLocaleString('en-US');
+    const overLimit = limit !== undefined && length !== undefined && length > limit;
+    const lengthError = overLimit ? tooLongMessage(length, limit) : undefined;
+    const lengthNote = limit !== undefined && length !== undefined && !overLimit && length >= limit * 0.9
+      ? `${count(length)} of ${count(limit)} characters`
+      : undefined;
+    const shownError = error || lengthError;
+
     // The message under the field describes the field itself, so a screen
     // reader on it hears why it is invalid, not only that it is (A11Y-005).
     // A description the caller passed is kept, ahead of this one.
-    const message = error || successMessage || helperText;
+    const message = shownError || successMessage || lengthNote || helperText;
     const messageId = `${inputId ?? generatedId}-message`;
     const describedBy =
       [props['aria-describedby'], message ? messageId : undefined].filter(Boolean).join(' ') ||
@@ -113,7 +127,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
         
         // Theme-specific classes
         `input`,
-        error && `input-error`,
+        shownError && `input-error`,
         successMessage && `input-success`,
         className
       )
@@ -157,6 +171,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
               rows={rows}
               {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
               aria-describedby={describedBy}
+              aria-invalid={overLimit || props['aria-invalid']}
             />
           ) : (
             <input
@@ -165,6 +180,7 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
               className={inputStyles}
               {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
               aria-describedby={describedBy}
+              aria-invalid={overLimit || props['aria-invalid']}
             />
           )}
           {endIcon && (
@@ -179,9 +195,9 @@ export const Input = React.forwardRef<HTMLInputElement | HTMLTextAreaElement, In
         {message && (
           <p id={messageId} className={clsx(
             'mt-1.5 text-sm',
-            error && `form-error`,
+            shownError && `form-error`,
             successMessage && `form-success`,
-            !error && !successMessage && `form-helper`
+            !shownError && !successMessage && `form-helper`
           )}>
             {message}
           </p>

@@ -248,6 +248,16 @@ describe('CampaignService', () => {
       }
     });
 
+    test('refuses a name over 200 characters or a description over 10,000, creating nothing (T119)', async () => {
+      mockGetGroupUserProfile.mockResolvedValue({ userId: 'campaign-user', role: 'member' });
+      const svc = CampaignService.getInstance();
+      await expect(svc.createCampaign('g1', 'x'.repeat(201)))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'name' });
+      await expect(svc.createCampaign('g1', 'Rohan', 'x'.repeat(10_001)))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'description' });
+      expect(mockFirestoreStore.paths()).toEqual([]);
+    });
+
     test('should set the active campaign after creation', async () => {
       mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'member' });
       mockUpdateGroupUserProfile.mockResolvedValueOnce(undefined);
@@ -457,6 +467,25 @@ describe('CampaignService', () => {
       mockUpdateDoc.mockRejectedValueOnce(new Error('update failed'));
       const svc = CampaignService.getInstance();
       await expect(svc.updateCampaign('g1', 'c1', { name: 'x' })).rejects.toThrow('update failed');
+    });
+
+    // T119: the rules cap a campaign's name and description; the service
+    // refuses first, saying which and by how much.
+    test('refuses a name over 200 characters or a description over 10,000, writing nothing', async () => {
+      mockGetGroupUserProfile.mockResolvedValue({ userId: 'campaign-user', role: 'admin' });
+      const svc = CampaignService.getInstance();
+      await expect(svc.updateCampaign('g1', 'c1', { name: 'x'.repeat(201) }))
+        .rejects.toThrow('The name is too long to save: 201 characters, and it can hold 200.');
+      await expect(svc.updateCampaign('g1', 'c1', { description: 'x'.repeat(10_001) }))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'description' });
+      expect(mockUpdateDoc).not.toHaveBeenCalled();
+    });
+
+    test('takes a name of exactly 200 characters', async () => {
+      mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'admin' });
+      mockUpdateDoc.mockResolvedValueOnce(undefined);
+      await CampaignService.getInstance().updateCampaign('g1', 'c1', { name: 'x'.repeat(200) });
+      expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
     });
   });
 

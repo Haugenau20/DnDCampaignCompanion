@@ -1,5 +1,6 @@
 // src/pages/locations/LocationDetailPage.tsx
 import React, { useMemo, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { useLocation as useRouterLocation, useParams } from 'react-router-dom';
 import { ArrowUpRight, X } from 'lucide-react';
 import Typography from 'core/components/Typography';
@@ -374,6 +375,7 @@ const LocationDetailPage: React.FC = () => {
                 rows={1}
                 initialValue={location.name}
                 submitLabel="Save name"
+                maxLength={TEXT_LIMITS.line}
                 onSubmit={(value, openedWith) => save(editedText('name', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
@@ -679,6 +681,7 @@ const LocationDetailPage: React.FC = () => {
                       label="Add a tag"
                       rows={1}
                       submitLabel="Add tag"
+                      maxLength={TEXT_LIMITS.line}
                       placeholder="hidden"
                       clearOnSave
                       onSubmit={(value) =>
@@ -720,6 +723,7 @@ const LocationDetailPage: React.FC = () => {
                   helperText="A sentence or two about the place itself."
                   initialValue={location.description ?? ''}
                   submitLabel="Save description"
+                  maxLength={TEXT_LIMITS.text}
                   onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
                   onSaved={closeEditor}
                   onCancel={closeEditor}
@@ -804,6 +808,7 @@ const LocationDetailPage: React.FC = () => {
                   helperText="Free text. A feature becomes a place of its own only when you promote it."
                   rows={1}
                   submitLabel="Add feature"
+                  maxLength={TEXT_LIMITS.line}
                   placeholder="Seven gates"
                   clearOnSave
                   onSubmit={(value) =>

@@ -1,5 +1,6 @@
 // src/features/user-management/admin/components/CampaignFormDialog.tsx
 import React, { useEffect, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import Dialog from 'core/components/Dialog';
 import Input from 'core/components/Input';
 import Button from 'core/components/Button';
@@ -77,6 +78,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
         <Input
           label="Name"
           value={name}
+          maxLength={TEXT_LIMITS.line}
           onChange={(event) => setName(event.target.value)}
           required
           disabled={saving}
@@ -86,6 +88,7 @@ const CampaignFormDialog: React.FC<CampaignFormDialogProps> = ({
         <Input
           label="Description (optional)"
           value={description}
+          maxLength={TEXT_LIMITS.text}
           onChange={(event) => setDescription(event.target.value)}
           disabled={saving}
           placeholder="One line about what this campaign is"

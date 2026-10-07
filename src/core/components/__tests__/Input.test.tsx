@@ -305,4 +305,55 @@ describe("Input", () => {
       expect(Input.displayName).toBe("Input");
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Length limit (T119): the browser stops typing at `maxLength` without a
+  // word, so the field says how close the text is, and says so loudly when
+  // text that arrived some other way is already over.
+  // -------------------------------------------------------------------------
+  describe("maxLength", () => {
+    const Field = (props: { value: string; error?: string; helperText?: string }) => (
+      <Input label="Name" maxLength={10} onChange={() => undefined} {...props} />
+    );
+
+    test("passes the limit to the control, which stops typing at it", async () => {
+      const Typing = () => {
+        const [value, setValue] = React.useState("");
+        return <Input label="Name" maxLength={5} value={value} onChange={(e) => setValue(e.target.value)} />;
+      };
+      render(<Typing />);
+      await userEvent.type(screen.getByLabelText("Name"), "Gandalf");
+      expect(screen.getByLabelText("Name")).toHaveValue("Ganda");
+    });
+
+    test("says nothing about length while the text is well inside the limit", () => {
+      render(<Field value="Bilbo" helperText="What the party calls them" />);
+      expect(screen.queryByText(/characters/)).not.toBeInTheDocument();
+      expect(screen.getByText("What the party calls them")).toBeInTheDocument();
+    });
+
+    test("counts the characters once the text is within a tenth of the limit, on the field's description", () => {
+      render(<Field value="Bilbo Bag" helperText="What the party calls them" />);
+      expect(screen.getByLabelText("Name")).toHaveAccessibleDescription("9 of 10 characters");
+    });
+
+    test("calls text already over the limit an error, with both numbers", () => {
+      render(<Field value="Bilbo Baggins" />);
+      const field = screen.getByLabelText("Name");
+      expect(field).toHaveAccessibleDescription("Too long: 13 characters, and this can hold 10.");
+      expect(field).toHaveAttribute("aria-invalid", "true");
+    });
+
+    test("leaves a caller's own error in charge", () => {
+      render(<Field value="Bilbo Baggins" error="Somebody already has that name" />);
+      expect(screen.getByLabelText("Name")).toHaveAccessibleDescription("Somebody already has that name");
+    });
+
+    test("counts in thousands with separators", () => {
+      render(<Input label="Text" isTextArea maxLength={10_000} value={"x".repeat(10_001)} onChange={() => undefined} />);
+      expect(screen.getByLabelText("Text")).toHaveAccessibleDescription(
+        "Too long: 10,001 characters, and this can hold 10,000."
+      );
+    });
+  });
 });

@@ -1,5 +1,6 @@
 // src/features/storytelling/chapters/components/ChapterForm.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { Chapter } from '../types';
 import { DomainData } from 'core/types/common';
 import Card from 'core/components/Card';
@@ -187,6 +188,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
                   <Input
                     label="Chapter Title"
                     value={title}
+                    maxLength={TEXT_LIMITS.line}
                     onChange={(e) => setTitle(e.target.value)}
                     fullWidth
                     required
@@ -209,6 +211,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
               <Input
                 label="Chapter Summary (optional)"
                 value={summary}
+                maxLength={TEXT_LIMITS.text}
                 onChange={(e) => setSummary(e.target.value)}
                 fullWidth
                 helperText="A brief summary that will be shown in chapter listings. If left empty, it will be automatically generated from content."
@@ -226,6 +229,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
                   ref={contentRef}
                   label="Chapter Content"
                   value={content}
+                  maxLength={TEXT_LIMITS.chapter}
                   onChange={(e) => setContent(e.target.value)}
                   fullWidth
                   isTextArea

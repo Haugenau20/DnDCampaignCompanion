@@ -1,5 +1,6 @@
 // src/shared/components/inline-edit/NoteHistory.tsx
 import React, { useEffect, useId, useRef, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { Pencil, Trash2 } from 'lucide-react';
 import Button from 'core/components/Button';
 import Typography from 'core/components/Typography';
@@ -85,6 +86,7 @@ export function NoteHistory<T extends EntityNote>({
                   label={`Note from ${when}`}
                   initialValue={note.text}
                   submitLabel="Save note"
+                  maxLength={TEXT_LIMITS.text}
                   rows={2}
                   // The note as this editor last knew it: after a conflict
                   // the user may build on the other player's text (T083).

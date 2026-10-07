@@ -115,6 +115,61 @@ describe("global admin", () => {
   });
 });
 
+// T119 (F7): `users/{uid}.isAdmin` used to open every group to its holder
+// through the client. Only the maintainer holds it, and they reach the data
+// through the console and the Admin SDK anyway, so in the app it did nothing
+// but make their session a key to every group. It now grants nothing: its
+// holder, who is in no group here, is a stranger.
+describe("the global-admin flag grants nothing (T119)", () => {
+  type Db = ReturnType<typeof as>;
+
+  beforeEach(() => env.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc("users/saruman").set({id: "saruman", groups: [], isAdmin: true});
+    await context.firestore().doc("admin/settings").set({maintenance: false});
+  }));
+
+  it.each<[string, (db: Db) => Promise<unknown>]>([
+    ["the group", (db) => db.doc(`groups/${G}`).get()],
+    ["a member's group profile", (db) => db.doc(`groups/${G}/users/frodo`).get()],
+    ["the name reservations", (db) => db.collection(`groups/${G}/usernames`).get()],
+    ["the invitations", (db) => db.collection(`groups/${G}/registrationTokens`).get()],
+    ["a campaign", (db) => db.doc(`groups/${G}/campaigns/c1`).get()],
+    ["a campaign's record", (db) => db.doc(`groups/${G}/campaigns/c1/npcs/n1`).get()],
+    ["the admin collection", (db) => db.doc("admin/settings").get()],
+  ])("reads not %s", async (_what, read) => {
+    await assertFails(read(as("saruman")));
+  });
+
+  it.each<[string, (db: Db) => Promise<unknown>]>([
+    ["rename the group", (db) => db.doc(`groups/${G}`).update({name: "Isengard"})],
+    ["edit a member's group profile", (db) => db.doc(`groups/${G}/users/frodo`).update({characters: []})],
+    ["take over a name reservation", (db) => db.doc(`groups/${G}/usernames/frodo`).update({userId: "saruman"})],
+    ["release a member's name", (db) => db.doc(`groups/${G}/usernames/frodo`).delete()],
+    ["create an invitation", (db) => db.doc(`groups/${G}/registrationTokens/tok2`).set({token: "tok2", used: false})],
+    ["edit an invitation", (db) => db.doc(`groups/${G}/registrationTokens/tok`).update({notes: "For Wormtongue"})],
+    ["revoke an invitation", (db) => db.doc(`groups/${G}/registrationTokens/tok`).delete()],
+    ["edit a campaign", (db) => db.doc(`groups/${G}/campaigns/c1`).update({name: "Orthanc"})],
+    ["delete a campaign", (db) => db.doc(`groups/${G}/campaigns/c1`).delete()],
+    ["edit a record", (db) => db.doc(`groups/${G}/campaigns/c1/npcs/n1`).update({name: "Grima"})],
+    ["delete a record", (db) => db.doc(`groups/${G}/campaigns/c1/npcs/n1`).delete()],
+    ["change another account", (db) => db.doc("users/frodo").update({groups: [G, "isengard"]})],
+    ["delete another account", (db) => db.doc("users/frodo").delete()],
+    ["write the admin collection", (db) => db.doc("admin/settings").set({maintenance: true})],
+  ])("cannot %s", async (_what, write) => {
+    await assertFails(write(as("saruman")));
+  });
+});
+
+// T119 (F4): `createGroup` writes a group with the Admin SDK (2026-07-29), and
+// no client has created one since. The rule still let any signed-in account
+// create group documents nobody is a member of, as many as it liked.
+describe("no client creates a group (T119)", () => {
+  it("refuses a member and a stranger alike", async () => {
+    await assertFails(as("frodo").doc("groups/rivendell").set({name: "Rivendell"}));
+    await assertFails(as("sauron").doc("groups/mordor").set({name: "Mordor"}));
+  });
+});
+
 describe("server-owned profile fields (T080)", () => {
   const usage = {isUnlimited: false, daily: {count: 10}, weekly: {count: 30}, monthly: {count: 100}};
 
@@ -771,5 +826,159 @@ describe("a location being deleted takes no new places (T088)", () => {
       await assertSucceeds(as("frodo").doc(`${LOC}/fountain`).set(place("Fountain", "doriath")));
       await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n1`).update({name: "Bilbo Baggins"}));
     });
+  });
+});
+
+// T119 (F4): a member could write into any collection under a campaign, and a
+// record with no name at all. A campaign holds six kinds of record, each named
+// by one field; anything else is junk that no page shows and nobody can tidy.
+describe("a campaign holds the app's records, each with its name (T119)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+
+  it("control: each kind of record is created the way the app creates it", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.doc(`${C}/npcs/sam`).set({name: "Sam"}));
+    await assertSucceeds(db.doc(`${C}/locations/bree`).set({name: "Bree", parentId: ""}));
+    await assertSucceeds(db.doc(`${C}/quests/the-ring`).set({title: "Destroy the ring"}));
+    // The header's "New rumour" starts a blank one (`useCreateRumor`).
+    await assertSucceeds(db.doc(`${C}/rumors/r1`).set({title: "", content: ""}));
+    await assertSucceeds(db.doc(`${C}/chapters/chapter-1`).set({title: "A long-expected party", order: 1}));
+    await assertSucceeds(db.doc(`${C}/saga/sagaData`).set({title: "The Campaign Saga", content: ""}));
+  });
+
+  it("refuses a record of a kind the app does not have", async () => {
+    await assertFails(as("frodo").doc(`${C}/anything/x`).set({name: "Junk"}));
+  });
+
+  it("including the campaign-wide reading progress T073 moved to each player", async () => {
+    await assertFails(as("frodo").doc(`${C}/story-progress/current-progress`).set({currentChapter: "chapter-1"}));
+  });
+
+  it("and shows nobody one written before", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`${C}/anything/x`).set({name: "Junk"})
+    );
+    await assertFails(as("frodo").doc(`${C}/anything/x`).get());
+    await assertFails(as("frodo").collection(`${C}/anything`).get());
+  });
+
+  it.each([
+    ["an NPC with no name", "npcs/sam", {description: "A gardener"}],
+    ["an NPC whose name is not text", "npcs/sam", {name: 7}],
+    ["a location with no name", "locations/bree", {parentId: ""}],
+    ["a quest named in the wrong field", "quests/the-ring", {name: "Destroy the ring"}],
+    ["a rumour with no title", "rumors/r1", {content: "Black riders on the road"}],
+    ["a chapter with no title", "chapters/chapter-1", {order: 1}],
+    ["a saga with no title", "saga/sagaData", {content: "Once"}],
+  ])("refuses %s", async (_what, path, data) => {
+    await assertFails(as("frodo").doc(`${C}/${path}`).set(data));
+  });
+
+  it("refuses an edit that removes a record's name", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({name: firebase.firestore.FieldValue.delete()}));
+  });
+
+  it("or turns it into something other than text", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({name: {first: "Bilbo"}}));
+  });
+
+  it("or replaces the whole record without it", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).set({description: "A hobbit"}));
+  });
+
+  it("still lets a record written before, with no name, be edited", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`${C}/npcs/legacy`).set({description: "Old"})
+    );
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/legacy`).update({description: "Older"}));
+  });
+});
+
+// T119 (F4): every text field of a record has a limit, the app's
+// `RECORD_TEXT_LIMITS` (src/core/constants/textLimits.ts). The app stops
+// there; the rules refuse a client that does not.
+describe("a record's text has a limit (T119)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+  const NAMED_BY: Record<string, string> = {
+    npcs: "name", locations: "name", quests: "title", rumors: "title", chapters: "title", saga: "title",
+  };
+  /** A record of `collection` whose `field` holds `length` characters. */
+  const record = (collection: string, field: string, length: number) =>
+    ({[NAMED_BY[collection]]: "N", [field]: "x".repeat(length)});
+  const id = (collection: string) => (collection === "saga" ? "sagaData" : "r1");
+
+  it.each([
+    ["npcs", "name", 200],
+    ["npcs", "title", 200],
+    ["npcs", "race", 200],
+    ["npcs", "occupation", 200],
+    ["npcs", "location", 200],
+    ["npcs", "description", 10_000],
+    ["npcs", "appearance", 10_000],
+    ["npcs", "personality", 10_000],
+    ["npcs", "background", 10_000],
+    ["locations", "name", 200],
+    ["locations", "description", 10_000],
+    ["quests", "title", 200],
+    ["quests", "location", 200],
+    ["quests", "levelRange", 200],
+    ["quests", "description", 10_000],
+    ["quests", "background", 10_000],
+    ["rumors", "title", 200],
+    ["rumors", "sourceName", 200],
+    ["rumors", "location", 200],
+    ["rumors", "content", 10_000],
+    ["chapters", "title", 200],
+    ["chapters", "summary", 10_000],
+    ["chapters", "content", 200_000],
+    ["saga", "title", 200],
+    ["saga", "content", 500_000],
+  ])("%s.%s takes %d characters and refuses one more", async (collection, field, limit) => {
+    const path = `${C}/${collection}/${id(collection)}`;
+    await assertFails(as("frodo").doc(path).set(record(collection, field, limit + 1)));
+    await assertSucceeds(as("frodo").doc(path).set(record(collection, field, limit)));
+    await assertFails(as("frodo").doc(path).update({[field]: "x".repeat(limit + 1)}));
+  });
+
+  it("counts as the app does: an emoji is two", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n2`).set({name: "😀".repeat(100)}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n3`).set({name: "😀".repeat(100) + "x"}));
+  });
+
+  it("refuses text that is not text", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: {page: "x".repeat(20_000)}}));
+    await assertFails(as("frodo").doc(`${C}/rumors/r1`).set({title: "Smoke", content: ["x".repeat(20_000)]}));
+  });
+
+  it("lets a field be cleared or removed", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({description: null}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: firebase.firestore.FieldValue.delete()}));
+  });
+
+  it("still lets a record stored over a limit be edited, as long as the edit leaves that field", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`${C}/npcs/n1`).update({description: "x".repeat(20_000)})
+    );
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: "Hobbit"}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: "x".repeat(20_001)}));
+  });
+
+  it("caps a campaign's name and description, created or edited", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc(`groups/${G}/campaigns/c2`).set({name: "x".repeat(201)}));
+    await assertFails(db.doc(`groups/${G}/campaigns/c2`).set({name: "Rohan", description: "x".repeat(10_001)}));
+    await assertSucceeds(db.doc(`groups/${G}/campaigns/c2`).set({name: "x".repeat(200), description: "x".repeat(10_000)}));
+    await assertFails(db.doc(`groups/${G}/campaigns/c1`).update({name: "x".repeat(201)}));
+  });
+
+  it("caps a group's name and description when its admin edits them", async () => {
+    const db = as("gandalf");
+    await assertFails(db.doc(`groups/${G}`).update({name: "x".repeat(201)}));
+    await assertFails(db.doc(`groups/${G}`).update({description: "x".repeat(10_001)}));
+    await assertSucceeds(db.doc(`groups/${G}`).update({name: "x".repeat(200), description: "x".repeat(10_000)}));
+  });
+
+  it("leaves the lists inside a record alone, which no rule can look into", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({notes: [{id: "n", text: "x".repeat(20_000)}]}));
   });
 });

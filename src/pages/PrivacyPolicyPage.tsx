@@ -211,6 +211,12 @@ const PrivacyPolicyPage: React.FC = () => {
               can see.
             </Typography>
             <Typography>
+              The person who runs this site can reach everything stored here,
+              private notes included, through the tools Google provides for
+              running it, as whoever runs a web service can. Nothing in the app
+              shows anyone else&apos;s private notes, to us or to anyone.
+            </Typography>
+            <Typography>
               If you leave a group, or delete your account, the chapters,
               quests, NPCs and locations you wrote stay with the group for the
               rest of the table; your name, your characters, your private notes
@@ -296,6 +302,10 @@ const PrivacyPolicyPage: React.FC = () => {
               group you belong to, your usernames, your private notes and your
               place in every story, and it cannot be undone. You do not need to email anyone to make that
               happen.
+            </Typography>
+            <Typography>
+              If you can no longer sign in to press it, ask us through the
+              contact form and we will delete it for you, the same way.
             </Typography>
             <Typography>
               The campaign content you wrote stays with the group, so you don't

@@ -1,5 +1,6 @@
 // src/pages/quests/QuestDetailPage.tsx
 import React, { useMemo, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { useLocation as useRouterLocation, useParams } from 'react-router-dom';
 import { ArrowUpRight, X } from 'lucide-react';
 import Typography from 'core/components/Typography';
@@ -400,6 +401,7 @@ const QuestDetailPage: React.FC = () => {
                 rows={1}
                 initialValue={quest.title}
                 submitLabel="Save title"
+                maxLength={TEXT_LIMITS.line}
                 onSubmit={(value, openedWith) => save(editedText('title', value, openedWith))}
                 onSaved={closeEditor}
                 onCancel={closeEditor}
@@ -485,6 +487,7 @@ const QuestDetailPage: React.FC = () => {
                       initialValue={quest.levelRange ?? ''}
                       optional
                       submitLabel="Save level range"
+                      maxLength={TEXT_LIMITS.line}
                       placeholder="7–9"
                       onSubmit={(value) => save({ levelRange: value })}
                       onSaved={closeEditor}
@@ -732,6 +735,7 @@ const QuestDetailPage: React.FC = () => {
                   helperText="What the party agreed to, in a sentence or two."
                   initialValue={quest.description ?? ''}
                   submitLabel="Save description"
+                  maxLength={TEXT_LIMITS.text}
                   onSubmit={(value, openedWith) => save(editedText('description', value, openedWith))}
                   onSaved={closeEditor}
                   onCancel={closeEditor}
@@ -776,6 +780,7 @@ const QuestDetailPage: React.FC = () => {
                   initialValue={quest.background ?? ''}
                   optional
                   submitLabel="Save background"
+                  maxLength={TEXT_LIMITS.text}
                   onSubmit={(value, openedWith) => save(editedText('background', value, openedWith))}
                   onSaved={closeEditor}
                   onCancel={closeEditor}
@@ -832,6 +837,7 @@ const QuestDetailPage: React.FC = () => {
                       label={field.title}
                       rows={1}
                       submitLabel={`Add to ${field.title.toLowerCase()}`}
+                      maxLength={TEXT_LIMITS.text}
                       placeholder={field.placeholder}
                       clearOnSave
                       onSubmit={addTo(field.key)}
@@ -929,6 +935,7 @@ const QuestDetailPage: React.FC = () => {
                   helperText="Free text. A place becomes a location of its own only when you promote it."
                   rows={1}
                   submitLabel="Add place"
+                  maxLength={TEXT_LIMITS.line}
                   placeholder="Secret door"
                   clearOnSave
                   onSubmit={(value) => {

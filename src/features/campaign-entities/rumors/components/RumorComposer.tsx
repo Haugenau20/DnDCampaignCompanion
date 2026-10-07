@@ -1,5 +1,6 @@
 // src/features/campaign-entities/rumors/components/RumorComposer.tsx
 import React, { useId, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import { Plus } from 'lucide-react';
 import Button from 'core/components/Button';
 import Input from 'core/components/Input';
@@ -94,6 +95,7 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
             aria-label="Heard something? Write it down here"
             placeholder="Heard something? Write it down here…"
             value={text}
+            maxLength={TEXT_LIMITS.text}
             disabled={state === 'adding'}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {

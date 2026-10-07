@@ -50,25 +50,19 @@ export const deleteCampaign = functions.onCall(
     try {
       const callerUid = request.auth.uid;
 
-      // Caller must be a group admin or a global admin. Mirrors the
-      // isGroupAdmin() / isGlobalAdmin() helpers in
+      // Caller must be a group admin. Mirrors the isGroupAdmin() helper in
       // firebase/firestore.rules.prod.
-      const [groupUserDoc, globalUserDoc] = await Promise.all([
-        getFirestore()
-          .collection("groups")
-          .doc(groupId)
-          .collection("users")
-          .doc(callerUid)
-          .get(),
-        getFirestore().collection("users").doc(callerUid).get(),
-      ]);
+      const groupUserDoc = await getFirestore()
+        .collection("groups")
+        .doc(groupId)
+        .collection("users")
+        .doc(callerUid)
+        .get();
 
       const isGroupAdmin =
         groupUserDoc.exists && groupUserDoc.data()?.role === "admin";
-      const isGlobalAdmin =
-        globalUserDoc.exists && globalUserDoc.data()?.isAdmin === true;
 
-      if (!isGroupAdmin && !isGlobalAdmin) {
+      if (!isGroupAdmin) {
         throw new functions.HttpsError(
           "permission-denied",
           "Only group admins can delete a campaign."

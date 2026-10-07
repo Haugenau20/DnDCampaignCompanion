@@ -1,5 +1,6 @@
 // src/shared/components/entity-page/EntityNotes.tsx
 import React, { useEffect, useId, useMemo, useState } from 'react';
+import { TEXT_LIMITS } from 'core/constants/textLimits';
 import Typography from 'core/components/Typography';
 import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
 import type { EntityNote } from 'shared/utils/entity-notes';
@@ -97,6 +98,7 @@ export function EntityNotes<T extends EntityNote>({
             label="Add a note"
             helperText="Dated today and credited to you."
             submitLabel="Add note"
+            maxLength={TEXT_LIMITS.text}
             placeholder={placeholder}
             rows={2}
             autoFocus={false}
