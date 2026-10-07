@@ -26,7 +26,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T063 | Entity pages look like three products | L | open | Decided: the NPC page's light card for locations and quests, a location's picture full-width above it (2026-10-06) |
 | low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
-| low | T117 | Pin Node and Java with mise | S | open | Decided 2026-10-06: the maintainer runs Node 23.7 against CI's 22; one `mise.toml` sets every machine and CI |
+| low | T117 | CI reads Node and Java from `mise.toml` | S | open | The machines read `mise.toml` since 2026-10-07; CI still states Node 22 and Java 21 in each workflow |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | open | Decided 2026-10-06: a read-only audit script first, run by the maintainer against production |
 | low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
@@ -374,40 +374,24 @@ important**.
 
 ## Tech debt and platform
 
-### T117 — Pin Node and Java with mise
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-06
+### T117 — CI reads Node and Java from `mise.toml`
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-07
 
-CI and the deployed functions run Node 22 (`node-version: 22` in every
-workflow, `"node": "22"` in `firebase/functions/package.json`); the
-maintainer's machine runs Node 23.7, which is end-of-life. Nothing in the repo
-says which version to use locally: the root `package.json` has no `engines`,
-and there is no version file. It already shows: the Functions emulator runs the
-functions on 23 ("requested node 22 doesn't match your global version"), and
-ESLint 10 warns that it wants `^22.13 || >=24`. Java 21, for the emulators, is
-a second hand install.
+`mise.toml` pins Node 22 and Java 21 (Temurin) for every machine, and the
+maintainer's runs on it (2026-10-07). CI still states the versions itself:
+`node-version: 22` in every `actions/setup-node` step of the four workflows,
+and `actions/setup-java` with `java-version: 21` in `test.yml`'s `functions`
+job. A version bump is therefore three edits that can drift.
 
-**Decided (maintainer, 2026-10-06): mise.** One `mise.toml` in the repo pins
-Node and Java; mise installs them per machine and switches by folder, so a
-version change is a line in the repo rather than an install on each machine,
-and the desktop, a laptop and CI all read the same file.
-
-- **Not Docker, not a dev container**: they would pin the OS as well, but cost
-  file speed on Windows (the repo would move into WSL2), a rewritten
-  `start-dev.ps1`, and every gate run through the container. The project has no
-  system services -- Firebase runs in its own emulators -- so that much
-  reproducibility is not needed now (YAGNI). **Not Volta**: unmaintained; its
-  README recommends mise.
-- **Plan**: `mise.toml` with `node = "22"` and `java = "21"`. The maintainer
-  installs mise (`winget install jdx.mise`, with its shims on PATH so
-  PowerShell, Git Bash and VS Code all see the pinned versions) and runs
-  `mise install`; then the dev server, the emulators and the gates are run on
-  that machine. Only after that, CI: `jdx/mise-action` in place of
-  `actions/setup-node`. CLAUDE.md's setup notes (Java 21) point at `mise install`.
-- **Catch**: mise's Windows support is newer than on macOS and Linux, which is
-  why the machine comes before CI. The Firebase CLI stays in
-  `firebase/package.json`'s pin, not in mise. The gitignored `.env` files
-  and `firebase/emulator-data/` still move to a new machine by hand.
-- **Source**: maintainer, 2026-10-06
+- **Plan**: `jdx/mise-action` in place of `actions/setup-node` (and
+  `setup-java`), so CI reads `mise.toml`. Keep npm's cache, which
+  `setup-node`'s `cache: npm` gives today. Then drop CLAUDE.md's "plus CI's
+  `node-version`" from the toolchain note.
+- **Catch**: it changes every job, the deploy included, so it ships alone: if
+  CI misbehaves it rolls back without touching the machines' pin.
+  `engines.node` in `firebase/functions/package.json` stays: it is what Cloud
+  Functions deploys on, not a tool version.
+- **Source**: maintainer, 2026-10-06; the machines' half landed 2026-10-07
 
 ### T103 — Replay browser checks: Playwright in CI
 **Type** debt · **Size** L · **Status** open · **Verified** 2026-10-06

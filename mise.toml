@@ -1,0 +1,13 @@
+# The toolchain for this repo, for every machine (T117). Install mise
+# (https://mise.jdx.dev), then run `mise trust` and `mise install` in the repo:
+# mise switches to these versions in this folder. Changing a version here
+# changes it everywhere; keep it in step with CI's workflows and with
+# `engines.node` in firebase/functions/package.json (the deployed runtime).
+#
+# The Firebase CLI is not pinned here: firebase/package.json pins it.
+
+[tools]
+# Node 22, as CI builds and the functions deploy.
+node = "22"
+# The emulators need Java 21+ (firebase-tools 15); Temurin is CI's JDK.
+java = "temurin-21"
