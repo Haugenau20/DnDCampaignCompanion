@@ -27,7 +27,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
-| low | T074 | Default pictures for the banner and the crest | M | open | Decided 2026-10-06: those two only, shown when nothing is uploaded, never stored |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 | nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
@@ -264,31 +263,6 @@ the same foundation.
   padded rows. Quests have no table notes.
 - **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the notes
   difference measured 2026-10-04; the picture's place decided 2026-10-06
-
-### T074 — Default pictures for the dashboard banner and the party crest
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-06
-
-The maintainer would like default imagery where nothing has been uploaded.
-
-**Decided (maintainer, 2026-10-06): only the dashboard banner and the party
-crest get a default.** It is **shown when nothing is uploaded and never stored**
-on the record, picked from a few bundled images by the campaign's or group's id,
-so a campaign keeps the same picture on every visit and nothing needs a
-backfill. NPCs and locations keep their sigils, which T063's cards are designed
-around.
-
-- **Where**: the banner `CampaignBanner.tsx` (no picture → plain band plus the
-  campaign's sigil) and the crest `PartyCrest.tsx` (no crest → a hatched panel).
-  Images today are uploads to Storage only; the repo ships no image assets.
-- **Catch**: both empty states are **deliberate design**, written down where
-  they live: "the empty state is the design rather than a placeholder"
-  (`PartyCrest.tsx:21-24`, `CampaignBanner.tsx:28-31`), and `colour-schema.md`
-  D45 ("a band with no picture is the plain band"). Rewrite those in the same
-  PR, and say test by test which tests changed because the requirement did.
-- **The art**: public-domain (CC0) images only, so no attribution is owed;
-  record each one's source beside it. Load them with the component, not in the
-  entry bundle (`check:bundle`), and keep each small (webp, tens of kB).
-- **Source**: todo.txt, 2026-10-02 (two inbox lines, merged); decided 2026-10-06
 
 ### T075 — Rename the site, and uncrowd the header
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06

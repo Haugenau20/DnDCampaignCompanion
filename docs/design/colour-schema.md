@@ -773,6 +773,13 @@ one tracker. (`../plan/03-drift-log.md`, which used to collect them, closed on
   both themes, and like every pair it resolves to a different value in each.
   Recorded from practice: `PicturedBand` adds its picture classes only when
   there is a picture, so a band without one is exactly `.hero-band`.
+  **Amended 2026-10-07 (T074):** the dashboard's campaign banner no longer
+  reaches this state while it has a campaign. Without an uploaded banner it
+  draws a bundled default picture, and the party crest likewise shows a
+  default print instead of the sunken fill. Both are shown, never stored.
+  The rest stands: any band without a picture (a page band, the banner
+  before there is a campaign) is the plain band, and the text on a default
+  picture is dimmed against the same ground as on an uploaded one.
 - **D125 — The band carries no accent.** §5.2 solves `accent.*` against page,
   card and sunken; light `accent.ink` `#8D4F00` on band `#26211C` measures
   ~1.9:1. No accent pair is authored for the band, and none will be: a band

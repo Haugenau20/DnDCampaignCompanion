@@ -1,6 +1,6 @@
 // src/shared/components/BandPicture.tsx
 import React from 'react';
-import { StoredImage } from 'core/types/storedImage';
+import { PictureSource, StoredImage } from 'core/types/storedImage';
 import { isOwnBucketUrl } from 'core/services/firebase/storage/ImageStorageService';
 
 /**
@@ -14,8 +14,8 @@ export function bandPicture(image: StoredImage | null | undefined): StoredImage 
 }
 
 interface BandPictureProps {
-  /** An image `bandPicture` let through. */
-  image: StoredImage;
+  /** An image `bandPicture` let through, or one the app ships. */
+  image: PictureSource;
   alt: string;
   testId?: string;
 }

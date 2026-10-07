@@ -7,6 +7,7 @@ import { useGroups } from 'features/user-management';
 import ImageUploadControl from 'shared/components/ImageUploadControl';
 import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import { useCampaignInfo } from '../../common/hooks/useCampaignInfo';
+import { defaultCrestFor } from './defaultPictures';
 
 interface PartyCrestProps {
   /** Player count, shown in the summary line when the group has members. */
@@ -19,9 +20,10 @@ interface PartyCrestProps {
  * The party's own card, at the foot of the aside.
  *
  * It carries the group's crest. Most groups will have none for most of their
- * life, so the empty state is the design rather than a placeholder: a hatched
- * panel drawn from the page's own tokens, which reads as a reserved space
- * rather than a missing image.
+ * life, so until one is uploaded the slot shows an old print of a coat of arms
+ * instead (T074), picked by the group's id so a group always gets the same
+ * one. It is shown, never stored, and the slot's accessible name still says
+ * that no crest has been uploaded.
  *
  * Every member sees the crest; only group admins may change it, matching who
  * may edit the group document (and `storage.rules.prod`).
@@ -56,6 +58,7 @@ const PartyCrest: React.FC<PartyCrestProps> = ({ memberCount, chapterCount }) =>
       label={`${activeGroup.name} crest — none uploaded yet`}
       image={activeGroup.crest}
       alt={`${activeGroup.name} crest`}
+      fallback={defaultCrestFor(activeGroup.id)}
     />
   );
 

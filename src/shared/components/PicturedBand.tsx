@@ -1,7 +1,7 @@
 // src/shared/components/PicturedBand.tsx
 import React, { createContext, useContext, useId } from 'react';
 import clsx from 'clsx';
-import { StoredImage } from 'core/types/storedImage';
+import { PictureSource } from 'core/types/storedImage';
 import BandPicture from './BandPicture';
 import { useBandDim } from 'shared/hooks/useBandDim';
 
@@ -57,7 +57,7 @@ const BandSilhouette: React.FC<{ id: string }> = ({ id }) => (
 
 export interface PicturedBandProps {
   /** The picture, already through `bandPicture`; null draws the band as always. */
-  image: StoredImage | null;
+  image: PictureSource | null;
   /** Alt text for the picture. */
   alt: string;
   /** The band's own classes: `hero-band`, its padding, any layout of its own. */

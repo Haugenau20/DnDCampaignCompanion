@@ -1,7 +1,7 @@
 // src/core/components/ImageSlot.tsx
 import React from 'react';
 import clsx from 'clsx';
-import { StoredImage } from '../types/storedImage';
+import { PictureSource, StoredImage } from '../types/storedImage';
 import { isOwnBucketUrl } from '../services/firebase/storage/ImageStorageService';
 
 export interface ImageSlotProps {
@@ -18,6 +18,13 @@ export interface ImageSlotProps {
   /** Alt text for `image`, e.g. "Portrait of Bilbo". */
   alt?: string;
   /**
+   * A picture the app ships, drawn while there is no `image` (or it was
+   * refused) instead of the ruled empty slot. It is decoration, not the
+   * subject's picture, so the slot keeps `label` as its name -- which still
+   * says that nothing has been added.
+   */
+  fallback?: PictureSource | null;
+  /**
    * "eager" for a picture at the top of its page, where lazy loading only
    * delays what is already in view. Defaults to "lazy".
    */
@@ -32,7 +39,9 @@ export interface ImageSlotProps {
  * will be empty for most entities for the life of a campaign, and a slot that
  * only looks right once someone uploads something looks wrong almost always.
  * Diagonal ruling in the page's own sunken tone reads as reserved space with a
- * design. A stock illustration would read as a wrong picture.
+ * design. A stock illustration would read as a wrong picture -- which is why
+ * `fallback` is opt-in: only the party crest uses it (T074), with old prints
+ * of coats of arms, which read as "a crest" rather than as somebody's.
  *
  * Filled, the picture covers the frame the caller sized. The stored image is
  * uncropped and carries its own size, so any frame shape just crops it, and
@@ -50,6 +59,7 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
   caption,
   image,
   alt,
+  fallback,
   loading = 'lazy',
   className,
 }) => {
@@ -64,6 +74,28 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
           alt={alt ?? ''}
           width={image.width}
           height={image.height}
+          loading={loading}
+          decoding="async"
+          className="block w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  if (fallback) {
+    return (
+      <div
+        className={clsx('image-slot-filled overflow-hidden', className)}
+        role="img"
+        aria-label={label}
+        data-testid="image-slot"
+        data-fallback="true"
+      >
+        <img
+          src={fallback.url}
+          alt=""
+          width={fallback.width}
+          height={fallback.height}
           loading={loading}
           decoding="async"
           className="block w-full h-full object-cover"
