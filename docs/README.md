@@ -37,3 +37,6 @@ in a PR stacked on the fourth pass.
 - Most of these are records of a decision or a phase, cited by name from code comments. Status
   banners reflect the state when written and may be stale; the code is the source of truth.
 - A document nothing cites any more is deleted rather than archived; git history keeps it.
+  "Cites" means by filename, or for a phase handoff by its phase id (`15-6`, `12-3a`) as code
+  comments do. Review evidence goes once every finding it backs is closed: the five review
+  passes' `evidence/` folders were deleted on that rule (T113) and are at `9810644`.

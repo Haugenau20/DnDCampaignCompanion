@@ -28,7 +28,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
 | low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
-| nit | T113 | Clean up `docs/` and delete what is stale | M | open | Decided 2026-10-06 what stale means: uncited by filename and by phase id, plus evidence for closed findings |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -396,29 +395,6 @@ the workflows.
 - **Catch**: the domain does not settle T075's name. If the site is to be called
   Muninn, the maintainer should say so there.
 - **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
-
----
-
-## Documentation
-
-### T113 — Clean up `docs/` and delete what is stale
-**Type** docs · **Size** M · **Status** open · **Verified** 2026-10-06
-
-`docs/README.md` already sets the rule: "a document nothing cites any more is
-deleted rather than archived". Nobody has applied it across the folder.
-
-- **Measured**: 475 files, 11 MB. `docs/reviews/` is 288 of them and 6.1 MB,
-  most of it evidence (246 files; pass 5's alone is 3.3 MB), which the review
-  reports cite and TODO.md's code-review entries point into. Of the 218 Markdown files outside evidence folders, 38 are
-  cited by **filename** nowhere: 36 design handoffs (`design/plan/handoff/06-*`
-  to `14-*`, four under `15-entity-authoring/handoff/`) and two superpowers
-  plans. But the handoffs are cited by **phase id** from code comments
-  (`15-6` in 15 files, `12-3a` in 10), so a filename scan undercounts.
-- **Decided (maintainer, 2026-10-06), what stale means**: a document goes when
-  nothing cites it by filename **or** by its phase id (`15-6`, `12-3a`, as code
-  comments do), and review evidence goes once every finding it backs is closed.
-  Anything still cited stays. The PR lists every deletion and why.
-- **Source**: todo.txt, 2026-10-06; stale defined 2026-10-06
 
 ---
 

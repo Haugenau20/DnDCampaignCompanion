@@ -1,5 +1,9 @@
 # Second-pass review records
 
+> **Evidence removed (T113, 2026-10-07).** Every finding this evidence backed is closed, so the
+> `evidence/` folder was deleted; links to it below no longer resolve. It is in git history:
+> `git show 9810644:docs/reviews/2026-10-03/pass-2/evidence/<file>`, or browse the tree at `9810644`.
+
 Status: second-pass assessment delivered. Source baseline and stack base:
 `8c03720020c7772b0bb8b256c4569c8b50c1e495` (PR #196 head; source unchanged
 from the first pass).
