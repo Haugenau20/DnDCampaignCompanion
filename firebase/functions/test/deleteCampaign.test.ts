@@ -81,6 +81,16 @@ describe("deleting a campaign", () => {
     expect((await db.doc(`groups/${GROUP}/campaigns/c1`).get()).exists).toBe(true);
   });
 
+  it("deletes nothing when the global-admin flag's holder asks, not being the group's admin (T119)", async () => {
+    await db.doc("users/saruman").set({id: "saruman", groups: [], isAdmin: true});
+
+    await expectHttpsError(remove("saruman"), "permission-denied");
+
+    expect(await exists(FILES.npcImage)).toBe(true);
+    expect((await db.doc(`groups/${GROUP}/campaigns/c1`).get()).exists).toBe(true);
+    expect((await db.doc(`groups/${GROUP}/campaigns/c1`).get()).data()?.deleting).toBeUndefined();
+  });
+
   it("deletes nothing when the campaign does not exist", async () => {
     await expectHttpsError(remove("gandalf", "c10"), "not-found");
 

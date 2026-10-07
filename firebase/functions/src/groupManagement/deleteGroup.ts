@@ -46,16 +46,11 @@ export const deleteGroup = functions.onCall(
       const db = getFirestore();
       const groupRef = db.collection("groups").doc(groupId);
 
-      // A group admin or a global admin. Mirrors the isGroupAdmin() /
-      // isGlobalAdmin() helpers in firebase/firestore.rules.prod.
-      const [groupUserDoc, globalUserDoc] = await Promise.all([
-        groupRef.collection("users").doc(callerUid).get(),
-        db.collection("users").doc(callerUid).get(),
-      ]);
+      // A group admin. Mirrors the isGroupAdmin() helper in
+      // firebase/firestore.rules.prod.
+      const groupUserDoc = await groupRef.collection("users").doc(callerUid).get();
       const isGroupAdmin =
         groupUserDoc.exists && groupUserDoc.data()?.role === "admin";
-      const isGlobalAdmin =
-        globalUserDoc.exists && globalUserDoc.data()?.isAdmin === true;
 
       const deletionRef = groupDeletionRef(groupId);
 
@@ -67,7 +62,7 @@ export const deleteGroup = functions.onCall(
         // A deletion under way may be finished by whoever started it, even
         // once their admin profile has gone with the group.
         const startedBy = deletionDoc.get("requestedBy");
-        if (!isGroupAdmin && !isGlobalAdmin && startedBy !== callerUid) {
+        if (!isGroupAdmin && startedBy !== callerUid) {
           throw new functions.HttpsError(
             "permission-denied",
             "Only group admins can delete a group."

@@ -45,26 +45,18 @@ export const deleteUser = functions.onCall(
     
     try {
       const userIdToDelete = data.userId;
-      const callerUid = request.auth.uid;
-      
-      // Determine if self-deletion or admin deletion
-      const isSelfDeletion = userIdToDelete === callerUid;
-      
-      // For admin deletion, verify admin status
-      if (!isSelfDeletion) {
-        const callerDoc = await getFirestore()
-          .collection("users")
-          .doc(callerUid)
-          .get();
-          
-        if (!callerDoc.exists || !callerDoc.data()?.isAdmin) {
-          throw new functions.HttpsError(
-            "permission-denied",
-            "Only administrators can delete other users."
-          );
-        }
+
+      // An account is deleted only by its holder. The global-admin flag
+      // (`users/{uid}.isAdmin`) used to let its holder delete anyone; the
+      // maintainer, who holds it, reaches every account through the console
+      // and the Admin SDK anyway (T119).
+      if (userIdToDelete !== request.auth.uid) {
+        throw new functions.HttpsError(
+          "permission-denied",
+          "You can only delete your own account."
+        );
       }
-      
+
       // Get user's global profile to find group memberships
       const userDoc = await getFirestore()
         .collection("users")
@@ -92,13 +84,7 @@ export const deleteUser = functions.onCall(
       // admins deleting their accounts at once cannot both count the other
       // (AUTH-001).
       if (await stepDownAsAdmin(groups, userIdToDelete)) {
-        throw new functions.HttpsError(
-          "failed-precondition",
-          isSelfDeletion ?
-            LAST_ADMIN_MESSAGE :
-            "This user is the only admin of one of their groups. Make " +
-              "another member of that group an admin first."
-        );
+        throw new functions.HttpsError("failed-precondition", LAST_ADMIN_MESSAGE);
       }
 
       // Create a batch for Firestore operations

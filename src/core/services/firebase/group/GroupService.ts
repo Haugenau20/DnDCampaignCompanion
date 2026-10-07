@@ -156,8 +156,8 @@ import { httpsCallable } from 'firebase/functions';
      *
      * A plain client write, not a Cloud Function: the production rules already
      * let a group admin update the group document
-     * (`firestore.rules.prod`, `allow update: if isGroupAdmin(groupId) ||
-     * isGlobalAdmin()`). Those rules do not restrict *which* fields change, so
+     * (`firestore.rules.prod`, `allow update: if isGroupAdmin(groupId)`).
+     * Those rules do not restrict *which* fields change, so
      * restricting the payload to `name` and `description` is this method's own
      * discipline -- an edit here can never touch `createdBy` or `createdAt`.
      *

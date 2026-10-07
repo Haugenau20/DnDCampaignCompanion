@@ -271,6 +271,34 @@
 // on a location, and never writes into a marked one, since none exists.
 //
 // ---------------------------------------------------------------------------
+// REVISION 2026-10-07 -- T119, the data model review's F4 and F7
+// ---------------------------------------------------------------------------
+// Pinned by the "no client creates a group", "a campaign holds the app's
+// records" and "the global-admin flag grants nothing" tests. Each was
+// measured failing against the previous revision first.
+//
+// 13. CLOSED -- any signed-in account could create a group document. No
+//     client has since 2026-07-29 (`createGroup` does, change 5), so the rule
+//     served only to create groups nobody was a member of, without limit.
+// 14. NEW -- a campaign holds six kinds of record (`namingField`). A member
+//     could write any collection under a campaign; anything else is now
+//     refused, reads included. A new record must carry its name (`name` or
+//     `title`) as text, and an edit may not remove it or make it something
+//     else. A record stored without one can still be edited.
+// 15. REMOVED -- the global admin. `users/{uid}.isAdmin` opened every group's
+//     content, profiles, names and invitations, and every account's profile,
+//     to its holder through the client. Only the maintainer holds it, and
+//     they reach the data through the console and the Admin SDK anyway, so
+//     it only made their session a key to everything. The `admin`
+//     collection, which nothing used, goes with it. `deleteGroup`,
+//     `deleteCampaign` and `deleteUser` stop honouring the flag in the same
+//     change.
+//
+// Deploy order does not matter: the live frontend creates no group
+// document, writes no other collection under a campaign, gives every new
+// record its name as text, and offers nothing that relies on the flag.
+//
+// ---------------------------------------------------------------------------
 // KEEPING IT HONEST
 // Change the production rules here, in the same PR as whatever motivated the
 // change, never in the console. Every merge to `main` redeploys this file, so a
@@ -285,12 +313,6 @@ service cloud.firestore {
     // Basic helper functions
     function isSignedIn() {
       return request.auth != null;
-    }
-
-    function isGlobalAdmin() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
     function isGroupMember(groupId) {
@@ -367,10 +389,29 @@ service cloud.firestore {
       );
     }
 
-    // Admin collection for system-wide settings
-    // Only the global admin can access this
-    match /admin/{document=**} {
-      allow read, write: if isGlobalAdmin();
+    // The field that names each kind of record a campaign holds, or null for
+    // a collection that is not one (T119). Nothing else under a campaign is
+    // read or written.
+    function namingField(entityCollection) {
+      return {
+        'npcs': 'name', 'locations': 'name', 'quests': 'title',
+        'rumors': 'title', 'chapters': 'title', 'saga': 'title'
+      }.get(entityCollection, null);
+    }
+
+    function isRecordType(entityCollection) {
+      return namingField(entityCollection) != null;
+    }
+
+    // Whether a write leaves the record named (T119): its naming field is
+    // text, or the write leaves that field as it was, so a record stored
+    // before this check without one can still be edited. The text may be
+    // empty: a rumour started from the header is blank.
+    function keepsItsName(entityCollection) {
+      let field = namingField(entityCollection);
+      return request.resource.data.get(field, null) is string ||
+             (resource != null &&
+              !request.resource.data.diff(resource.data).affectedKeys().hasAny([field]));
     }
 
     // Global user profiles - strict email protection
@@ -378,7 +419,7 @@ service cloud.firestore {
       // Users can ONLY read their own complete profile (including email)
       allow read: if isSignedIn() && request.auth.uid == userId;
 
-      // EVERYONE ELSE (including global admin) cannot see emails
+      // Everyone else cannot see emails
       allow read: if isSignedIn() && request.auth.uid != userId &&
                    !("email" in resource.data);
 
@@ -397,26 +438,24 @@ service cloud.firestore {
                      request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['activeGroupId', 'lastLogin', 'preferences']);
 
-      // Only global admin can assign admin privileges, but cannot modify emails
-      allow update: if isGlobalAdmin() &&
-                     !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']);
-
-      // Only global admin can delete users (but not themselves)
-      allow delete: if isGlobalAdmin() && request.auth.uid != userId;
+      // No client deletes a profile: the `deleteUser` Cloud Function does,
+      // for the account's own holder, with everything beneath it.
     }
 
     // Group-level access
     match /groups/{groupId} {
-      // Group data is readable by its members and global admin
-      allow read: if isGroupMember(groupId) || isGlobalAdmin();
+      // Group data is readable by its members
+      allow read: if isGroupMember(groupId);
 
-      // Anyone signed in can create a group (they become the admin)
-      allow create: if isSignedIn() && imageLeased(groupId, 'crest') &&
-                     !request.resource.data.keys().hasAny(['deleting']);
+      // No client creates a group: the `createGroup` Cloud Function does,
+      // with the creator's admin profile (2026-07-29, change 5). Until T119
+      // any signed-in account could still create group documents here that
+      // nobody was a member of.
+      allow create: if false;
 
-      // Group admins can update, global admin can do anything -- not once its
-      // deletion has started, and never the `deleting` mark (T037).
-      allow update: if (isGroupAdmin(groupId) || isGlobalAdmin()) &&
+      // Group admins can update -- not once its deletion has started, and
+      // never the `deleting` mark (T037).
+      allow update: if isGroupAdmin(groupId) &&
                      imageLeased(groupId, 'crest') &&
                      resource.data.get('deleting', false) != true &&
                      !request.resource.data.keys().hasAny(['deleting']);
@@ -428,7 +467,7 @@ service cloud.firestore {
       // Group user profiles
       match /users/{userId} {
         // Group members can see other group members' profiles
-        allow read: if isGroupMember(groupId) || isGlobalAdmin();
+        allow read: if isGroupMember(groupId);
 
         // No client create. Every group profile is written by a Cloud
         // Function: `createGroup` for the creator (as admin), and
@@ -451,13 +490,9 @@ service cloud.firestore {
                        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['username']) ||
                         getAfter(/databases/$(database)/documents/groups/$(groupId)/usernames/$(reservationKey(request.resource.data.username))).data.userId == request.auth.uid);
 
-        // The global admin can update other profiles, but not their role (the
-        // `setMemberRole` Cloud Function, which refuses to leave a group with
-        // no admin -- T034, T035), identity or name. Group admins edit no
-        // other member's profile from the client; nothing in the app does.
-        allow update: if isGlobalAdmin() &&
-                       !request.resource.data.diff(resource.data).affectedKeys()
-                         .hasAny(['role', 'userId', 'id', 'username']);
+        // Nobody edits another member's profile from the client; nothing in
+        // the app does. A role changes through the `setMemberRole` Cloud
+        // Function, which refuses to leave a group with no admin (T034, T035).
 
         // No client delete. Leaving and removal both run in the
         // `removeUserFromGroup` Cloud Function, which also takes the group off
@@ -471,7 +506,7 @@ service cloud.firestore {
         // notes as personal (the client only ever reads its own uid's path);
         // this makes the rules agree with that design.
         //
-        // Deliberately not readable by group admins or the global admin either:
+        // Deliberately not readable by group admins either:
         // "private" that an admin can read is not private. If a future feature
         // lets a user SHARE a note, it should copy or publish it into a
         // campaign-scoped collection rather than widening this rule.
@@ -509,16 +544,14 @@ service cloud.firestore {
         allow create: if isGroupMember(groupId) &&
                        request.resource.data.userId == request.auth.uid;
 
-        // Group members and global admin can list all usernames
-        allow list: if isGroupMember(groupId) || isGlobalAdmin();
+        // Group members can list all usernames
+        allow list: if isGroupMember(groupId);
 
         // A member may release their own reservation -- the other half of a
         // rename. Before 2026-09-23 only the global admin could, so every
-        // rename by anyone else was denied (change 5).
+        // rename by anyone else was denied (change 5). Nobody changes a
+        // reservation, or releases someone else's, from the client.
         allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-
-        // Only global admin can update, or delete someone else's, username
-        allow update, delete: if isGlobalAdmin();
       }
 
       // Group registration tokens
@@ -526,18 +559,18 @@ service cloud.firestore {
         // Allow token validation for everyone (needed for registration)
         allow get: if true;
 
-        // Only group admins or global admin can list or create tokens
-        allow list, create: if isGroupAdmin(groupId) || isGlobalAdmin();
+        // Only group admins can list or create tokens
+        allow list, create: if isGroupAdmin(groupId);
 
         // No client may mark a token used any more: `redeemInvitation` spends
         // it in the same transaction that grants membership. The rule this
         // replaces never required the token to be unused or unexpired.
 
-        // Group admins and global admin can also update tokens
-        allow update: if isGroupAdmin(groupId) || isGlobalAdmin();
+        // Group admins can also update tokens
+        allow update: if isGroupAdmin(groupId);
 
-        // Only group admins or global admin can delete tokens
-        allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+        // Only group admins can delete tokens
+        allow delete: if isGroupAdmin(groupId);
       }
 
       // Uploads whose document write may still be on its way (T084). The
@@ -583,13 +616,13 @@ service cloud.firestore {
       // `campaigns` explicitly means anything else under a group falls through
       // to the final deny rule instead of inheriting content permissions.
       match /campaigns/{campaignId} {
-        allow read: if isGroupMember(groupId) || isGlobalAdmin();
+        allow read: if isGroupMember(groupId);
         allow create: if isGroupMember(groupId) && imageLeased(groupId, 'banner') &&
                        !request.resource.data.keys().hasAny(['deleting']);
 
         // RELAXED: any group member may edit campaign metadata -- not once
         // its deletion has started, and never the `deleting` mark (T037).
-        allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
+        allow update: if isGroupMember(groupId) &&
                        imageLeased(groupId, 'banner') &&
                        resource.data.get('deleting', false) != true &&
                        !request.resource.data.keys().hasAny(['deleting']);
@@ -598,23 +631,27 @@ service cloud.firestore {
         // entity and every member's notes for that campaign. See bug #1403 and
         // the deleteCampaign Cloud Function, which enforces the same check
         // server-side.
-        allow delete: if isGroupAdmin(groupId) || isGlobalAdmin();
+        allow delete: if isGroupAdmin(groupId);
 
-        // Campaign entities: npcs, locations, quests, rumors, chapters,
-        // story-progress, saga -- and anything added later.
+        // Campaign records: npcs, locations, quests, rumors, chapters and the
+        // saga, each named by its own field (`namingField`). Any other
+        // collection is refused, read included (T119); a kind of record added
+        // later needs its line there.
         match /{entityCollection}/{entityId} {
-          allow read: if isGroupMember(groupId) || isGlobalAdmin();
+          allow read: if isRecordType(entityCollection) && isGroupMember(groupId);
           // `image` is an NPC's or a location's picture (T084); no other
           // entity carries one, so the check passes for them.
           // Only into a campaign that takes writes (T037, DATA-010).
-          allow create: if isGroupMember(groupId) && imageLeased(groupId, 'image') &&
+          allow create: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
+                         isGroupMember(groupId) && imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
                          locationFenceHolds(groupId, campaignId, entityCollection);
 
           // RELAXED: previously `createdBy == uid || isGroupAdmin`, which the
           // UI never enforced, so members hit permission-denied on any entity
           // they had not personally created (bug #1406).
-          allow update: if (isGroupMember(groupId) || isGlobalAdmin()) &&
+          allow update: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
+                         isGroupMember(groupId) &&
                          imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
                          locationFenceHolds(groupId, campaignId, entityCollection);
@@ -622,7 +659,7 @@ service cloud.firestore {
           // RELAXED: previously admin-only, which meant a member could not
           // delete even their OWN entity while the UI showed them a Delete
           // button.
-          allow delete: if isGroupMember(groupId) || isGlobalAdmin();
+          allow delete: if isRecordType(entityCollection) && isGroupMember(groupId);
         }
       }
     }

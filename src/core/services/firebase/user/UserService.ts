@@ -279,8 +279,8 @@ import {
      * and reaches nothing -- and in development it also misses the emulator, which
      * `BaseFirebaseService` wires to the regioned instance only.
      *
-     * @param userId UID to delete; the function permits self-deletion, and
-     *   deletion of others only for a global admin
+     * @param userId UID to delete; the function deletes only the caller's
+     *   own account
      */
     public async deleteAccount(userId: string): Promise<void> {
       try {
