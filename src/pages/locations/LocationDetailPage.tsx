@@ -30,13 +30,13 @@ import { useImageAttachment } from 'shared/hooks/useImageAttachment';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import { attachRefs } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
-import { EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
+import { EntityNotes, EntityPageShell, EntityPageSection, FieldPrompt } from 'shared/components/entity-page';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useQuickAdd } from 'shared/context/QuickAddContext';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
-import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
+import { InlineEditor } from 'shared/components/inline-edit';
 import { editedText } from 'shared/utils/edit-conflict';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
@@ -245,12 +245,6 @@ const LocationDetailPage: React.FC = () => {
 
     return out;
   }, [location, quests, rumors, npcs]);
-
-  /** Oldest first, so the history reads as one. */
-  const notes = useMemo(
-    () => [...(location?.notes ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
-    [location]
-  );
 
   // Nothing is patched locally after a write: the page shows the listener's
   // copy, which carries both this write and any other player's (T032). That
@@ -801,44 +795,15 @@ const LocationDetailPage: React.FC = () => {
               ))}
           </EntityPageSection>
 
-          {/* --------------------------- notes from the table ------------------------- */}
-          <EntityPageSection
-            title="Notes from the table"
-            count={notes.length || undefined}
-          >
-            {notes.length ? (
-              <NoteHistory
-                notes={notes}
-                canEdit={canAct}
-                onEdit={editNote}
-                onDelete={deleteNote}
-              />
-            ) : (
-              <Typography color="muted" className="italic">
-                Nothing written from the table yet
-              </Typography>
-            )}
-
-            {canAct && (
-              <div className="bg-secondary rounded-md p-3">
-                {/*
-                  Always on screen rather than behind a button: writing down what
-                  happened here is why someone opens this page.
-                */}
-                <InlineEditor
-                  label="Add a note"
-                  helperText="Dated today and credited to you."
-                  submitLabel="Add note"
-                  placeholder="What happened here, and when"
-                  rows={2}
-                  autoFocus={false}
-                  clearOnSave
-                  onSubmit={addNote}
-                  onSaved={() => undefined}
-                />
-              </div>
-            )}
-          </EntityPageSection>
+          {/* --------------------------------- notes -------------------------------- */}
+          <EntityNotes
+            notes={location.notes}
+            canEdit={canAct}
+            onAdd={addNote}
+            onEdit={editNote}
+            onDelete={deleteNote}
+            placeholder="What happened here, and when"
+          />
         </EntityPageShell>
       )}
 

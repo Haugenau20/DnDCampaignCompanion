@@ -8,3 +8,5 @@ export { default as EntityPageSection } from './EntityPageSection';
 export type { EntityPageSectionProps } from './EntityPageSection';
 export { default as FieldPrompt } from './FieldPrompt';
 export type { FieldPromptProps } from './FieldPrompt';
+export { default as EntityNotes } from './EntityNotes';
+export type { EntityNotesProps } from './EntityNotes';

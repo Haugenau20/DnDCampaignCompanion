@@ -555,7 +555,7 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     fireEvent.change(field, { target: { value: 'Something worth keeping' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save description' }));
 
-    await waitFor(() => expect(screen.getByText('Not saved')).toBeInTheDocument());
+    expect(await screen.findByText('Not saved')).toBeInTheDocument();
     expect(screen.getByLabelText('Description')).toHaveValue('Something worth keeping');
   });
 
@@ -688,6 +688,22 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
         ],
       })
     );
+  });
+
+  // T063: the location's notes are the NPC page's card, not a section of
+  // their own with a different title, no order stated and no confirmation.
+  it('heads its notes as the NPC page does, oldest first', () => {
+    renderPage();
+    expect(screen.getByText('Notes')).toBeInTheDocument();
+    expect(screen.getByText('2 · oldest first')).toBeInTheDocument();
+    expect(screen.queryByText('Notes from the table')).not.toBeInTheDocument();
+  });
+
+  it('says a new note was saved, in words', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Add a note'), { target: { value: 'The gates held.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 
   it('no longer tells the writer that notes can never be changed', () => {

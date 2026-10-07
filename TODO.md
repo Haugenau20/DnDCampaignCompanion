@@ -255,14 +255,13 @@ the same foundation.
   band carries no accent") stays true but stops mattering on these pages; a
   light card can carry accent controls. Verify in a browser, both themes, at
   phone width.
-- **The table notes differ too.** Both pages render `NoteHistory`, but the
-  location's (`LocationDetailPage.tsx`) sits in an `EntityPageSection` titled
-  "Notes from the table", with no "oldest first", no saved confirmation
-  (`onSaved` is a no-op) and the default row spacing. The NPC's
-  (`NPCDetailPage.tsx`) is its own card titled "Notes", with a saved notice and
-  padded rows. Quests have no table notes.
-- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the notes
-  difference measured 2026-10-04; the picture's place decided 2026-10-06
+- **Decided (maintainer, 2026-10-07)**: quests get **no new fields** (no
+  table notes, no tags); they take the shared look only. Where the pages name
+  the same thing differently, the NPC page's word wins ("Record", not
+  "Written here"). Both pages' table notes are already one card
+  (`shared/components/entity-page/EntityNotes.tsx`).
+- **Source**: todo.txt, 2026-09-24; direction decided 2026-10-02; the
+  picture's place decided 2026-10-06; quests' fields and naming decided 2026-10-07
 
 ### T075 — Rename the site, and uncrowd the header
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06

@@ -29,10 +29,10 @@ import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
-import { InlineEditor, NoteHistory } from 'shared/components/inline-edit';
+import { InlineEditor } from 'shared/components/inline-edit';
 import { editedText } from 'shared/utils/edit-conflict';
 import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
-import { FieldPrompt } from 'shared/components/entity-page';
+import { EntityNotes, FieldPrompt } from 'shared/components/entity-page';
 import AttachTray from 'shared/components/attach-tray/AttachTray';
 import { attachRefs, type AttachKind } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
@@ -314,7 +314,7 @@ const NPCDetailPage: React.FC = () => {
   const [editing, setEditing] = useState<ReadonlySet<EditableField>>(new Set());
   const [editingTag, setEditingTag] = useState(false);
   const [editingAffiliation, setEditingAffiliation] = useState(false);
-  const [savedField, setSavedField] = useState<EditableField | 'note' | null>(
+  const [savedField, setSavedField] = useState<EditableField | null>(
     null
   );
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -477,12 +477,6 @@ const NPCDetailPage: React.FC = () => {
     ];
   }, [npc, rumors]);
 
-  /** Oldest first, so the history reads as one. Said in the heading, not assumed. */
-  const notes = useMemo(
-    () => [...(npc?.notes ?? [])].sort((a, b) => a.date.localeCompare(b.date)),
-    [npc]
-  );
-
   /**
    * Nothing is patched locally after a write: the page shows the listener's
    * copy (T032), so it shows what was *written* rather than what was typed,
@@ -636,7 +630,7 @@ const NPCDetailPage: React.FC = () => {
     navigateToPage('/npcs');
   };
 
-  const savedNotice = (field: EditableField | 'note') => (
+  const savedNotice = (field: EditableField) => (
     <span role="status" aria-live="polite">
       {savedField === field && (
         <Typography variant="body-sm" color="secondary">
@@ -1164,53 +1158,13 @@ const NPCDetailPage: React.FC = () => {
               )}
 
               {/* ---- Notes: the history, then somewhere to add to it ---- */}
-              <section className="card rounded-lg overflow-hidden">
-                <div className="px-6 pt-5 pb-3 flex items-center gap-3">
-                  <FieldLabel>Notes</FieldLabel>
-                  <Typography variant="body-sm" color="muted" className="text-xs">
-                    {notes.length}
-                    {notes.length > 1 ? ' · oldest first' : ''}
-                  </Typography>
-                  {savedNotice('note')}
-                </div>
-
-                {notes.length > 0 ? (
-                  <NoteHistory
-                    notes={notes}
-                    canEdit={gate.canAct}
-                    onEdit={editNote}
-                    onDelete={deleteNote}
-                    onSaved={() => setSavedField('note')}
-                    className="px-6"
-                    rowClassName="py-3.5"
-                  />
-                ) : (
-                  <div className="px-6 pb-4">
-                    <Typography color="muted" className="italic">
-                      No notes yet
-                    </Typography>
-                  </div>
-                )}
-
-                {gate.canAct && (
-                  <div className="bg-secondary border-t divider px-6 py-4">
-                    {/* Always on screen rather than behind a button: writing a
-                        note is why someone opens this page, and a composer you
-                        have to summon is a composer you forget exists. */}
-                    <InlineEditor
-                      label="Add a note"
-                      helperText="Dated today and credited to you."
-                      submitLabel="Add note"
-                      placeholder="What happened, and when"
-                      rows={2}
-                      autoFocus={false}
-                      clearOnSave
-                      onSubmit={addNote}
-                      onSaved={() => setSavedField('note')}
-                    />
-                  </div>
-                )}
-              </section>
+              <EntityNotes
+                notes={npc.notes}
+                canEdit={gate.canAct}
+                onAdd={addNote}
+                onEdit={editNote}
+                onDelete={deleteNote}
+              />
             </div>
 
             {/* --------------------------- sidebar --------------------------- */}

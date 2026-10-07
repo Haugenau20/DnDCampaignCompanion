@@ -6,11 +6,12 @@
 // section renders a prompt rather than an empty box.
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import EntityPageShell from '../EntityPageShell';
 import EntityPageSection from '../EntityPageSection';
 import FieldPrompt from '../FieldPrompt';
+import EntityNotes from '../EntityNotes';
 
 const renderShell = (props: Partial<React.ComponentProps<typeof EntityPageShell>> = {}) =>
   render(
@@ -237,5 +238,65 @@ describe('FieldPrompt', () => {
   it('is at least 44px tall on a phone, because it is the section’s only target', () => {
     render(<FieldPrompt onClick={jest.fn()}>What is this place?</FieldPrompt>);
     expect(screen.getByRole('button').className).toContain('min-h-[44px]');
+  });
+});
+
+// T063: one notes card for every entity page, so the NPC's and the location's
+// cannot drift apart again.
+describe('EntityNotes', () => {
+  const NOTES = [
+    { date: '2025-06-14', text: 'Turgon will not open the gates.' },
+    { date: '2025-05-31', text: 'The last of the great kingdoms.', author: 'Zendikarr' },
+  ];
+
+  const renderNotes = (props: Partial<React.ComponentProps<typeof EntityNotes>> = {}) =>
+    render(
+      <EntityNotes
+        notes={NOTES}
+        canEdit
+        onAdd={jest.fn().mockResolvedValue(undefined)}
+        onEdit={jest.fn().mockResolvedValue(undefined)}
+        onDelete={jest.fn().mockResolvedValue(undefined)}
+        {...props}
+      />
+    );
+
+  it('shows the notes oldest first, whatever order they are stored in, and says so', () => {
+    renderNotes();
+    const first = screen.getByText('The last of the great kingdoms.');
+    const second = screen.getByText('Turgon will not open the gates.');
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText('2 · oldest first')).toBeInTheDocument();
+  });
+
+  it('does not claim an order for a single note', () => {
+    renderNotes({ notes: [NOTES[0]] });
+    expect(screen.queryByText(/oldest first/)).not.toBeInTheDocument();
+  });
+
+  it('says there are none yet, rather than showing an empty box', () => {
+    renderNotes({ notes: undefined });
+    expect(screen.getByText('No notes yet')).toBeInTheDocument();
+  });
+
+  it('says a new note was saved, in words', async () => {
+    renderNotes();
+    fireEvent.change(screen.getByLabelText('Add a note'), { target: { value: 'The gates held.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+  });
+
+  it('never claims a note was saved when the write was refused', async () => {
+    renderNotes({ onAdd: jest.fn().mockRejectedValue(new Error('nope')) });
+    fireEvent.change(screen.getByLabelText('Add a note'), { target: { value: 'The gates held.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(await screen.findByText('Not saved')).toBeInTheDocument();
+    expect(screen.queryByText('Saved')).not.toBeInTheDocument();
+  });
+
+  it('offers no composer and no note actions to someone who cannot edit', () => {
+    renderNotes({ canEdit: false });
+    expect(screen.queryByLabelText('Add a note')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Edit the note/ })).not.toBeInTheDocument();
   });
 });
