@@ -35,7 +35,7 @@ const Footer: React.FC = () => {
         }
       >
         <p className="typography">
-          &copy; {new Date().getFullYear()} D&D Campaign Companion
+          &copy; {new Date().getFullYear()} Muninn
         </p>
 
         <div className="flex items-center gap-4">

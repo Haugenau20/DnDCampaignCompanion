@@ -329,7 +329,7 @@ export const sendContactEmail = functions.onCall(
       const reference = generateReference();
       const subjectLabel = composeSubjectLabel(category, sanitizedSubject);
       const emailSubject =
-        `[${reference}] D&D Campaign Companion: ${subjectLabel}`;
+        `[${reference}] Muninn: ${subjectLabel}`;
       const contextLines = formatContextLines(context);
       // Read after the rate limit, so a flood of calls can't each cost a
       // Storage download.
@@ -357,7 +357,7 @@ ${sanitizedReason ? `\nWhy they need more:\n${sanitizedReason}\n` : ""}
 ${contextLines.length ? `\nAttached context:\n${contextLines.join("\n")}\n` : ""}
 ${attachment ? `\nScreenshot: attached (${attachment.filename})\n` : ""}
 ---
-Sent via D&D Campaign Companion Contact Form
+Sent via Muninn Contact Form
 User ID: ${userId}
 Timestamp: ${new Date().toISOString()}
         `,
@@ -402,7 +402,7 @@ Timestamp: ${new Date().toISOString()}
 
   <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
   <p style="color: #6b7280; font-size: 12px;">
-    Sent via D&D Campaign Companion Contact Form<br>
+    Sent via Muninn Contact Form<br>
     User ID: ${userId}<br>
     Timestamp: ${new Date().toISOString()}
   </p>

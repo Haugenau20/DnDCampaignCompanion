@@ -39,7 +39,7 @@ const initEmulatorConnection = () => {
 
 // Main function to generate sample data
 export const generateSampleData = async () => {
-  console.log('Starting sample data generation for D&D Campaign Companion...');
+  console.log('Starting sample data generation for Muninn...');
   
   try {
     const { db, auth } = initEmulatorConnection();

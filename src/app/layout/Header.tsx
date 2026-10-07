@@ -85,8 +85,7 @@ const Header: React.FC = () => {
           {/* One bar carries branding, campaign context, navigation, search and
               account. This was three stacked layers — a header, a full-height
               navigation row, and a page-level view toggle — before any content. */}
-          {/* Shrink order on a phone: the title shortens by breakpoint (three
-              steps, below), and then only the campaign chip yields -- it
+          {/* Shrink order on a phone: only the campaign chip yields -- it
               truncates (`min-w-0` on its wrapper). The title, search and the
               account are `shrink-0`: until 2026-10 the title and the account
               both sat at `min-width: auto`, crushing the chip to its chevron
@@ -99,12 +98,10 @@ const Header: React.FC = () => {
               e.preventDefault();
               navigate('/');
               }}
-              aria-label="D&D Campaign Companion, home"
+              aria-label="Muninn, home"
               className="shrink-0 whitespace-nowrap text-xl font-bold header-title"
             >
-              <span className="title:inline hidden">D&D Campaign Companion</span>
-              <span className="hidden sm:inline title:hidden">D&D Companion</span>
-              <span className="sm:hidden">D&D</span>
+              Muninn
             </Link>
 
             {/* Campaign context, and the door onto changing it. Previously a

@@ -173,7 +173,7 @@ there, and verify by actually running the script; no gate will tell you.
 - **Testing Requirements**: All business logic requires tests before implementation
 
 ## Project Purpose
-This is a tool for D&D players (not DMs) to collect and organize their shared campaign data including stories, rumors, NPCs, locations, and quests.
+This is a tool for tabletop RPG players (not DMs) to collect and organize their shared campaign data including stories, rumors, NPCs, locations, and quests.
 
 ## Development Principles
 - Follow KISS (Keep It Simple, Stupid): Write straightforward, uncomplicated solutions
@@ -311,7 +311,7 @@ real defect.
 
 #### Rich Content & Editing
 - **TipTap Editor**: Replace basic textareas with collaborative rich text editing
-- **D&D Extensions**: Entity mentions (@NPC_NAME), dice rolling (/roll 1d20+5), stat blocks
+- **Tabletop Extensions**: Entity mentions (@NPC_NAME), dice rolling (/roll 1d20+5), stat blocks
 - **Real-time Collaboration**: Yjs + WebSocket for live collaborative editing
 
 #### Data Visualization & Analytics  
@@ -326,7 +326,7 @@ real defect.
 - **Advanced Filtering**: Cross-entity search with relevance ranking
 
 #### Third-Party Integrations
-- **D&D 5e SRD API**: Official spells, monsters, equipment integration
+- **5e SRD API**: Official spells, monsters, equipment integration
 - **Discord API**: Campaign coordination via webhooks and bot commands  
 - **Enhanced AI Services**: Multiple AI models for diverse content generation
 - **Analytics**: Sentry (error tracking), Mixpanel (user behavior), GA4 (journeys)

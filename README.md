@@ -1,8 +1,8 @@
-# D&D Campaign Companion
+# Muninn
 
 **Everything your table agreed happened, in one place.**
 
-A shared campaign journal for Dungeons & Dragons **players**: the story so far, the quests you've
+A shared campaign journal for tabletop roleplaying **players**: the story so far, the quests you've
 sworn, the rumors you've heard, and every NPC and location you've met, written by whoever was at the
 table and credited to the character who played it.
 

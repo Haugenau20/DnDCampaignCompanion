@@ -61,7 +61,7 @@ describe("Footer", () => {
     test("should display the application name in the copyright", () => {
       render(<Footer />);
       expect(
-        screen.getByText(/D&D Campaign Companion/i)
+        screen.getByText(/Muninn/i)
       ).toBeInTheDocument();
     });
 
