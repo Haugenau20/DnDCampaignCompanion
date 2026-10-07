@@ -97,7 +97,7 @@ const CampaignBanner: React.FC<CampaignBannerProps> = ({ chapterCount }) => {
       <div className={clsx(bandBleed, bandFrame)} data-testid="campaign-banner">
        <div className={bandInner}><div className={bandColumn}><div className={clsx(bandGutter, 'text-center')}>
         <Typography variant="h2" className="mb-2">
-          Welcome to D&D Campaign Companion
+          Welcome to Muninn
         </Typography>
         <Typography color="secondary">
           {!hasGroup

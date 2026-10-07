@@ -1,6 +1,6 @@
 # Design language
 
-The source of truth for how the Campaign Companion looks and why. It sits
+The source of truth for how Muninn looks and why. It sits
 above any implementation plan: a plan describes a project and changes often,
 this describes the product and should change rarely.
 

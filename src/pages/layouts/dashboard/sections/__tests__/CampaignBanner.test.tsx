@@ -115,7 +115,7 @@ describe("CampaignBanner", () => {
     it("shows the generic welcome heading", () => {
       render(<CampaignBanner />);
       expect(
-        screen.getByText("Welcome to D&D Campaign Companion")
+        screen.getByText("Welcome to Muninn")
       ).toBeInTheDocument();
     });
 
@@ -147,7 +147,7 @@ describe("CampaignBanner", () => {
     it("shows the generic welcome heading", () => {
       render(<CampaignBanner />);
       expect(
-        screen.getByText("Welcome to D&D Campaign Companion")
+        screen.getByText("Welcome to Muninn")
       ).toBeInTheDocument();
     });
 
@@ -196,7 +196,7 @@ describe("CampaignBanner", () => {
     it("does not show the generic welcome heading", () => {
       render(<CampaignBanner />);
       expect(
-        screen.queryByText("Welcome to D&D Campaign Companion")
+        screen.queryByText("Welcome to Muninn")
       ).not.toBeInTheDocument();
     });
 
@@ -307,7 +307,7 @@ describe("CampaignBanner", () => {
       });
       render(<CampaignBanner />);
       expect(
-        screen.getByText("Welcome to D&D Campaign Companion")
+        screen.getByText("Welcome to Muninn")
       ).toBeInTheDocument();
     });
 
@@ -320,7 +320,7 @@ describe("CampaignBanner", () => {
       });
       render(<CampaignBanner />);
       expect(
-        screen.getByText("Welcome to D&D Campaign Companion")
+        screen.getByText("Welcome to Muninn")
       ).toBeInTheDocument();
     });
   });

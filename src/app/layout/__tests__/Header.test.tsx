@@ -215,17 +215,15 @@ describe("Header", () => {
 
     test("should render the app title link", () => {
       render(<Header />);
-      // Title uses responsive text — either "D&D Campaign Companion" or "D&D Companion"
-      const titleLink = screen.getByRole("link", { name: /D&D/i });
+      const titleLink = screen.getByRole("link", { name: /Muninn/i });
       expect(titleLink).toBeInTheDocument();
     });
 
-    // Below `sm` the visible title is just "D&D"; a screen reader still hears
-    // the whole name, whichever label the breakpoint shows.
-    test("names the whole site to a screen reader at every width", () => {
+    // The link says where it goes, not only the site's name.
+    test("names the site and its destination to a screen reader", () => {
       render(<Header />);
       expect(
-        screen.getByRole("link", { name: "D&D Campaign Companion, home" })
+        screen.getByRole("link", { name: "Muninn, home" })
       ).toBeInTheDocument();
     });
 
@@ -240,7 +238,7 @@ describe("Header", () => {
       });
       render(<Header />);
 
-      expect(screen.getByRole("link", { name: /D&D/ })).toHaveClass("shrink-0");
+      expect(screen.getByRole("link", { name: /Muninn/ })).toHaveClass("shrink-0");
     });
 
     // Successor to "should render the menu toggle button": the hamburger this

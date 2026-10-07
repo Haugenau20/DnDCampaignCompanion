@@ -81,7 +81,7 @@ const SignInPage: React.FC = () => {
         <div className="hero-signin-scrim" aria-hidden="true" />
 
         <Typography variant="body-sm" className="font-heading text-lg">
-          D&amp;D Campaign Companion
+          Muninn
         </Typography>
 
         <div className="max-w-md">

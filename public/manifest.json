@@ -1,6 +1,6 @@
 {
-    "short_name": "D&D Companion",
-    "name": "D&D Campaign Companion",
+    "short_name": "Muninn",
+    "name": "Muninn",
     "start_url": ".",
     "display": "standalone",
     "theme_color": "#000000",

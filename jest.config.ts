@@ -116,7 +116,7 @@ const config: Config.InitialOptions = {
     [
       'jest-html-reporter',
       {
-        pageTitle: 'D&D Campaign Companion Test Report',
+        pageTitle: 'Muninn Test Report',
         outputPath: './test-reports/jest-html-report.html',
         includeFailureMsg: true,
         includeSuiteFailure: true,

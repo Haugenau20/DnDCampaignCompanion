@@ -2,7 +2,7 @@
 
 import { generateSampleData } from "./dndSampleDataGenerator";
 
-console.log('=== DnD Campaign Companion Sample Data Generator ===');
+console.log('=== Muninn Sample Data Generator ===');
 console.log('This will populate your Firebase emulator with interconnected sample data');
 console.log('including 2 groups, 4 campaigns, users, NPCs, locations, quests, rumors, etc.');
 console.log('Make sure your emulators are running first!');

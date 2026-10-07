@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Purpose
-A tool for D&D **players** (not DMs) to collect and organize their shared campaign data: stories,
+A tool for tabletop RPG **players** (not DMs) to collect and organize their shared campaign data: stories,
 rumors, NPCs, locations, and quests. Components should focus on player-facing features.
 
 **Design for scale.** The site has fewer than 20 users today, but design everything as if it were a

@@ -27,7 +27,7 @@ function Test-FirebaseCLI {
 
 # Function to display help information
 function Show-Help {
-    Write-Host "DnD Campaign Companion Development Data Manager" -ForegroundColor Cyan
+    Write-Host "Muninn Development Data Manager" -ForegroundColor Cyan
     Write-Host "---------------------------------------------" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Available commands:" -ForegroundColor Green
@@ -76,7 +76,7 @@ function Generate-SampleData {
         return
     }
 
-    Write-Host "Generating comprehensive D&D campaign sample data..." -ForegroundColor Cyan
+    Write-Host "Generating comprehensive campaign sample data..." -ForegroundColor Cyan
     
     try {
         # Copy .env file for the script to use

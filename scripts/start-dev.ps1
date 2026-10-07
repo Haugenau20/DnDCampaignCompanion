@@ -354,7 +354,7 @@ function Export-EmulatorData {
 }
 
 function Show-Help {
-    Write-Host "D&D Campaign Companion - Development Environment" -ForegroundColor Cyan
+    Write-Host "Muninn - Development Environment" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Usage: .\start-dev.ps1 [options]" -ForegroundColor Green

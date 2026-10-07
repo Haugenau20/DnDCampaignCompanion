@@ -21,14 +21,14 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
 | medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
-| low | T075 | Rename the site; header crowded | M | blocked | The name is parked until the maintainer has one (2026-10-06) |
+| low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold: needs a sending domain; the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
-| low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; also unblocks T057's sending domain |
+| low | T118 | Move the site to `muninn.quest`, hide the old id | M | open | Decided 2026-10-06: keep the Firebase project, redirect `web.app`, rename the repo; the order is in the entry; also unblocks T057's sending domain |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
-| low | T104 | Update the Firebase email templates | S | needs scoping | Waits on the new name (T075) |
+| low | T104 | Update the Firebase email templates | S | needs scoping | The name is Muninn; do it with T118's email step, in the same console visit |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -191,59 +191,36 @@ The same email can keep the magic link for signing in on the device that opens i
   any of this, so it stays the fallback.
 - **Source**: maintainer, 2026-09-24
 
-### T075 — Rename the site, and uncrowd the header
-**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-06
+### T075 — A logo for the header, and uncrowd it
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-07
 
-**Decided (maintainer, 2026-10-03): the name drops "D&D", and the site
-mentions D&D nowhere**, not even in a tagline or a disclaimer. The maintainer
-picks the new name; this item ships it, together with a logo or shorter wording
-for the crowded header the maintainer reported (busy, some text cut off).
+The site is called **Muninn** (maintainer, 2026-10-07) and mentions D&D nowhere
+(decided 2026-10-03: "Dungeons & Dragons" and "D&D" are Wizards of the Coast
+trademarks, and the Fan Content Policy grants none). What is left is the
+crowded header the maintainer reported (busy, some text cut off), and whether
+a logo carries the name.
 
-- **Why** (WotC's own terms, read 2026-10-03; not legal advice): "Dungeons &
-  Dragons" and "D&D" are Wizards of the Coast trademarks. The Fan Content Policy
-  (updated 2017-11-15) grants none: "You may not incorporate any Wizards of the
-  Coast logos and trademarks in your Fan Content without our prior, written
-  consent." Its required notice covers WotC *content*, not the name. Nor could
-  the site qualify: it "can't require … email registration to access", and this
-  one is invite-only behind sign-in. SRD 5.2 (CC-BY-4.0) permits only "compatible
-  with fifth edition" / "5E compatible" and licenses no trademark. The product
-  uses no WotC content otherwise (the shipped code has no setting names or rules
-  terms; Faerûn, Waterdeep and Neverwinter appear only in test fixtures), so once
-  the name goes, no notice is needed.
-- **Name to replace** (measured 2026-10-03): the title link in `Header.tsx` (its
-  `aria-label` and three breakpoint labels, the shortest just "D&D"), `Footer.tsx:38`
-  (as "© {year} D&D Campaign Companion"), `SignInPage.tsx:82`, `JoinPage.tsx:98`,
-  `CampaignBanner.tsx:98`, `public/index.html:9,12`, `public/manifest.json:2-3`,
-  the contact mail's subject and body (`firebase/functions/src/contact.ts:364,392,437`,
-  seen only by the maintainer) and the tests that pin those strings
-  (`Header`, `Footer`, `CampaignBanner`; the requirement changed, so say so in
-  the PR). `README.md` (the name, and "for Dungeons & Dragons players"),
-  `AGENTS.md` and `CLAUDE.md`'s opening line say D&D too: the repo is public.
-- **Can stay**: `entityExtraction.ts:454,499` say D&D only in the prompt sent
-  to OpenAI, which nobody sees. The "Dungeons" location filter
-  (`LocationDirectory.tsx:54`) is the plain word, not the mark.
-- **Outside the repo**: the public GitHub repo is `DnDCampaignCompanion`, described as
-  "Dungeons and Dragons Campain Companion for the Players." Changing the
-  description is free; renaming the repo changes its URL (GitHub redirects the old one). The
-  Firebase console's public-facing app name (in sign-in emails and on Google's
-  consent screen) was **not** read.
-- **Stays for now**: the project id and live URL `dnd-campaign-companion(.web.app)`.
-  A project id cannot be renamed. A new Hosting site or a custom domain can be added
-  later, but that means the auth authorised domains, the magic link's `continueUrl`
-  and existing bookmarks, and `CLAUDE.md`, docs and scripts, which name the
-  project id throughout. That would be its own item.
 - **Where**: `src/app/layout/Header.tsx` — one row carries the name, the
-  context switcher, the inline nav (from `lg`), search and the account menu. The
-  full name shows from the `title` breakpoint (1200px, `tailwind.config`) up, "D&D
-  Companion" from `sm`, "D&D" below it. The campaign/group name in the context switcher
-  truncates by design at `max-w-[9rem] md:max-w-[14rem]`
-  (`ContextTrigger.tsx:51`). Which truncation the maintainer means was **not**
+  context switcher, the inline nav (from `lg`), search and the account menu.
+  The name is one word at every width. The campaign/group name in the context
+  switcher truncates by design at `max-w-[9rem] md:max-w-[14rem]`
+  (`ContextTrigger.tsx:51`). Which truncation the maintainer meant was **not**
   confirmed — that needs the running app.
-- **Decided (maintainer, 2026-10-06): the name is parked** until the maintainer
-  has one; it then decides whether a logo carries it and how much room the
-  header gets back, and the "which truncation" question is settled then.
+- **To decide** (maintainer): whether a logo carries the name, and how much
+  room the header gets back.
+- **The name was checked** (maintainer, TMview, 2026-10-07): Muninn ApS, a
+  Danish company, holds MUNINN in Denmark (`VA 2017 00834`, classes 9, 37, 42,
+  45; `VA 2022 01645`, 9, 37, 42) and the EU (`018770043`, 9, 37, 42) for
+  security, video and similar software. Judged no overlap with a tabletop tool.
+  Their marks do name software (class 9), so look again before the site charges
+  money: EU trademark rights apply to use in the course of trade. A US
+  application for MUNIN (serial `99778474`, filed 2026-04-21, software and
+  cloud services) was **not** read.
+- **Says D&D on purpose**: `entityExtraction.ts:454,499`, only in the prompt
+  sent to OpenAI, which nobody sees. The "Dungeons" location filter
+  (`LocationDirectory.tsx:54`) is the plain word, not the mark.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
-  decided 2026-10-03
+  decided 2026-10-03; the name chosen 2026-10-07
 
 ### T111 — Is it worth expanding the notes feature?
 **Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-06
@@ -289,7 +266,7 @@ scope; they work.
   (founder invitations, a guarded `createGroup`, the first run) are the smallest
   change that lets a table start alone.
 - **Related**: T119 (the data model review; its F2 is a step here);
-  T075 and T118 (the name and the domain the outreach will carry).
+  T118 (the domain the outreach will carry).
 - **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
 
 ---
@@ -350,8 +327,8 @@ time anyone edits it.
 ### T118 — Move the site to `muninn.quest`, and hide the old project id
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-06
 
-The maintainer bought `muninn.quest` (registrar Porkbun). This is the
-custom-domain item T075 said would be its own. **Decided (maintainer,
+The maintainer bought `muninn.quest` (registrar Porkbun); the site is called
+Muninn. **Decided (maintainer,
 2026-10-06): keep the Firebase project, and hide `dnd-campaign-companion`
 from everything a user sees.** The id stays in `CLAUDE.md`, the scripts and
 the workflows.
@@ -393,8 +370,29 @@ the workflows.
   over the scope above is the id in developer-only places. Reconsider only if
   something fixed at project creation (such as the Firestore location) is
   wanted changed anyway.
-- **Catch**: the domain does not settle T075's name. If the site is to be called
-  Muninn, the maintainer should say so there.
+- **Order** (planned 2026-10-07). Each step needs the one before it:
+  1. Console and DNS, nothing user-visible: the Hosting custom domain and its
+     Porkbun records (the certificate can take a day); `muninn.quest` in Auth's
+     authorised domains, **in the reCAPTCHA v3 key's domain list**, and as the
+     OAuth client's redirect URI (`https://muninn.quest/__/auth/handler`); the
+     consent screen's app name. Then `muninn.quest` serves the same site as
+     `web.app`, and both can be tried side by side.
+  2. Move the auth domain: the `REACT_APP_AUTH_DOMAIN` secret becomes
+     `muninn.quest`, then a deploy. Try Google sign-in and a magic link there.
+  3. The sign-in email: sender domain (more DNS records), sender name and link
+     domain, with T104's wording.
+  4. The redirect, last, since it moves every user: path and query must survive,
+     because invite links (`/join?…`) and magic links (`/auth/link?…`) already in
+     inboxes name `web.app`. A separate Hosting site for `muninn.quest`, with the
+     old one kept only to redirect, gives a real 301 that needs no script; it
+     changes `firebase.json` and the deploy.
+  5. Rename the GitHub repo and change its description; the live URL in
+     `README.md`, `CODE_OF_CONDUCT.md` and the issue template. Renaming the local
+     checkout's folder too strands Claude's memory for the project, which is
+     filed under the folder's path.
+- **What users notice at the redirect**: everyone is signed out once (a session
+  belongs to its origin), preferences kept in the browser reset, and a home-screen
+  install has to be added again. Tell the groups beforehand.
 - **Source**: todo.txt, 2026-10-06; scope decided 2026-10-06
 
 ### T119 — Review the Firestore data model before the site scales
@@ -441,8 +439,9 @@ Its template lives in the Firebase console (Authentication → Templates), not
 in the repo, so this is console work plus whatever copy is decided.
 
 - **To decide**: what should change (wording, sender name, branding). The site
-  is being renamed (T075), so do this after the name is chosen. A custom
-  sending domain is T057's blocker, not this item's.
+  is called Muninn; the sender name and the link's domain are T118's email
+  step, so do both in one console visit. A custom sending domain for mail the
+  functions send is T057's blocker, not this item's.
 - **Unverified**: how much of the email-link template the console lets you
   edit.
 - **Source**: todo.txt, 2026-10-04

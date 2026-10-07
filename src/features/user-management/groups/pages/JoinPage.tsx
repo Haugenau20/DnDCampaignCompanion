@@ -97,7 +97,7 @@ const JoinPage: React.FC = () => {
               invitation is confirmed instead, which is the fact that actually
               matters to the reader. */}
           <Typography variant="h1" className="mt-2 text-3xl sm:text-4xl">
-            A campaign in D&amp;D Campaign Companion
+            A campaign in Muninn
           </Typography>
         </div>
       </div>
