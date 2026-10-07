@@ -158,6 +158,12 @@ The reason is recorded in that file.
   top-level `groupDeletions`.
   `sweepContactThrottleDaily` too: `sweepContactThrottle(now)` deletes the contact form's expired
   budgets (`contactThrottle`), which the privacy page promises are gone within a day.
+- **Operator scripts** (`scripts/`, run by the maintainer with their own gcloud login; each one's
+  header has the steps): `audit-location-ids.js` (read-only, T079) and `delete-account.js`, which
+  deletes an account on request -- for someone who cannot sign in to press the button -- with the
+  same `deleteAccount` the `deleteUser` callable runs. It only reads unless given `--apply`.
+  Tested through what they export (`auditLocationIds.test.ts`, `accountDeletion.test.ts`,
+  `deleteAccountScript.test.ts`); run one against the dev emulators with `--emulator` after a change.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.
