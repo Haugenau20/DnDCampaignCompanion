@@ -1,7 +1,8 @@
 # Plan: how a new group starts on its own (T120)
 
-Written 2026-10-07 against `main` at `b78d72f`. This is a plan for the maintainer to decide on.
-Nothing in it is built, and the building is split into later TODO entries ([Build order](#build-order)).
+Written 2026-10-07 against `main` at `b78d72f`. The maintainer decided on it on 2026-10-08
+([Answers](#answers-maintainer-2026-10-08)). Nothing in it is built; the building is TODO entries
+T125 to T130 ([Build order](#build-order)).
 
 **The question.** Suppose the site were sent tomorrow to 30 groups that have never used it. Can they
 sign up, create a group and start playing without the maintainer? **No.** This plan covers what is
@@ -198,11 +199,24 @@ throughout. Turning the feature off means issuing no more founder links.
 
 ---
 
-## Questions for the maintainer
+## Answers (maintainer, 2026-10-08)
 
-1. **D1**: founder invitations (recommended), request and approve, or open sign-up?
-2. **D2**: what member cap per group, and what project cap?
-3. **D3**: what monthly AI spend is the ceiling?
-4. **D5**: may every member create a campaign, or admins only?
-5. ~~**D6**~~: answered 2026-10-07 (the maintainer alone); the recommendation is in D6.
-6. **Allowance**: may a founder start more than one group, and how many?
+Where an answer departs from a recommendation above, the answer wins.
+
+1. **D1**: founder invitations.
+2. **D2**: at most **10 members** and **5 campaigns** per group. Membership belongs to the group,
+   so every member reads every campaign in it; a second table with other players is a second group
+   (see 5), not a larger one. The project cap is raised to **300 accounts**, counted with a counter
+   document. 300 is the plan's figure; the maintainer did not object to it, and it can change.
+   The campaign cap is new: campaigns are created from the browser under the rules, so it needs a
+   per-group counter the rules check, or creation through a callable.
+3. **D3**: **no project-wide AI counter.** Instead, the per-user limits drop from 10 / 30 / 100
+   (day / week / month, `entityExtraction.ts:94`) to **3 / 5 / 10**, about $0.03 per user per month
+   at full use. The ceiling is the OpenAI account itself: prepaid, $5, no automatic top-up. When it
+   runs out, OpenAI refuses the call; players see a generic "Failed to extract entities" today and
+   should see that extraction is paused. Billing alerts in the Google Cloud console still cover
+   Firestore and Storage.
+4. **D5**: every member may create a campaign, as the rules already allow.
+5. **D6**: answered 2026-10-07 (the maintainer alone); the recommendation is in D6.
+6. **Allowance**: a founder may start **up to 3 groups**: the first from the founder link, two
+   more without asking.

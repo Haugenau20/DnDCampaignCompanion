@@ -19,8 +19,13 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
-| medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
+| medium | T119 | Restructure Firestore before scaling (R2) | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); R2 chosen 2026-10-08; three questions in `data-model-review.md` decide two of its changes, then each change is filed |
+| medium | T130 | Turn on Firestore's persistent cache | S | open | Reads are the one cost with no bound; T119's cheapest change, and wanted before founder links go out |
+| medium | T129 | Lower the AI limits to 3 / 5 / 10 | S | open | The OpenAI balance ($5, prepaid) is the ceiling; when it runs out players see a generic failure |
+| medium | T125 | Founder invitations | M | open | First step of letting a group start without the maintainer (the onboarding plan) |
+| medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
+| medium | T126 | `createGroup` guarded | M | blocked | After T125; today any signed-in caller can create unlimited groups, all named "Admin" |
+| medium | T127 | A founder's first run | M | blocked | After T126; a founder has no path from link to first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
@@ -255,27 +260,106 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
-### T120 — Plan how a new group starts on its own
-**Type** feature · **Size** L · **Status** blocked · **Verified** 2026-10-07
+### Letting a new group start on its own (T125 to T129)
 
-Suppose the site were sent tomorrow to 30 groups that have never used it: can
-they sign up, create a group and get going without the maintainer? **No.** The
-plan is written:
-[`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md).
-It covers where things stand (in the code, and in the dev app as a player in no
-group), six decisions with a recommendation each, and a build order of seven
-steps. Nothing is built. Invitations into a group that already exists are out of
-scope; they work.
+A group cannot start today without the maintainer, who creates it, invites its
+first player, promotes them and leaves. The plan,
+[`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md),
+says where things stand and what was decided (maintainer, 2026-10-08): founder
+invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
+3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
+create a campaign, and up to 3 groups per founder. T125 to T127 are the smallest
+change that lets a table start alone; T128 and T129 make it safe to hand out more
+than a few links; T130 (under T119) should land before outreach too. Every step
+that changes a flow lands with its e2e journey; the last one runs founder link →
+group → campaign → invitation → a second player joins.
 
-- **Blocked on the maintainer**: answer the plan's five open questions. Who may
-  start a group (founder invitations recommended), the member and project caps,
-  the monthly AI ceiling, who may create a campaign, and how many groups a
-  founder may start. D6 is answered: the global admin is the maintainer alone.
-- **Then**: file the build order's steps as their own entries. Steps 1 to 3
-  (founder invitations, a guarded `createGroup`, the first run) are the smallest
-  change that lets a table start alone.
-- **Related**: T119 (the data model review; its F2 is a step here).
-- **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
+### T125 — Founder invitations
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
+
+A founder invitation admits one account that may create one group. It is how a
+new table gets in without the maintainer setting it up (plan, D1).
+
+- **Where**: a server-only collection, e.g. `founderInvitations/{token}`, issued
+  by an Admin-SDK script in `firebase/functions/scripts/` (the shape of
+  `audit-location-ids.js`; D6: never a callable behind a flag).
+  `signUp/reserveSignUp.ts` accepts either kind of token and the reservation
+  records which; `signUp/gateAccountCreation.ts` admits it. A founder who
+  already has an account skips the sign-up and only redeems.
+- **Also**: `/privacy` (`pages/PrivacyPolicyPage.tsx`) says accounts come from
+  an invitation; add that a founder invitation is one.
+- **Source**: the onboarding plan, step 1 and step 6; decided 2026-10-08
+
+### T126 — `createGroup` guarded
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
+
+`groupManagement/createGroup.ts` accepts any signed-in caller, with no limit, no
+throttle and no App Check, and names every creator "Admin" (it reads a
+`username` on the global profile that no flow writes).
+
+- **Change**: it spends an unspent founder invitation in the same transaction
+  as the group it creates, as `redeemInvitation.ts` spends a group invitation;
+  or uses the account's allowance (up to **3 groups** per founder in all). It
+  takes the founder's name in the group as an argument. `enforceAppCheck: true`
+  on `createGroup`, `reserveSignUp` and `redeemInvitation`; check first that the
+  emulator and the e2e journeys still pass App Check, or exempt the emulator.
+- **Deploy order**: enforcement merges only after a live frontend sends App
+  Check tokens to those callables.
+- **Blocked on**: T125
+- **Source**: the onboarding plan, step 2; decided 2026-10-08
+
+### T127 — A founder's first run
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
+
+From founder link to first campaign as one guided flow, not three admin pages
+(plan, D5).
+
+- **Where**: the group-less home (`shared/components/gated/GatedPageState.tsx`)
+  offers "I have a founder link" beside "I have an invite link"; the founder
+  names the group and themselves; then creates the first campaign; then lands on
+  `/admin/people` with the invite button in front.
+- **Every member may create a campaign** (decided 2026-10-08), as the rules
+  already allow (`firestore.rules.prod`, `match /campaigns/{campaignId}`); today
+  only the admin UI offers it. The empty campaign state ("Your first campaign
+  will appear here as soon as it's created") gets a button for every member.
+- **Blocked on**: T126
+- **Source**: the onboarding plan, step 3; decided 2026-10-08
+
+### T128 — Caps on members, campaigns and accounts
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
+
+Decided 2026-10-08 (plan, D2): at most **10 members** and **5 campaigns** per
+group, and **300 accounts** in the project.
+
+- **Members**: enforced in `groupManagement/redeemInvitation.ts`.
+- **Campaigns**: created from the browser under the rules, which cannot count;
+  a per-group counter the rules keep with `getAfter`, or creation through a
+  callable. `deleteCampaign` must give the slot back.
+- **Accounts**: `MAX_ACCOUNTS` (`signUp/signUpGate.ts:23`) is 20, checked by
+  `getAuth().listUsers(20)` on every sign-up, which also counts accounts the gate
+  never admitted. A counter document, kept by the gate and by
+  `userManagement/deleteUser.ts`, replaces it. 300 is the plan's figure, not
+  objected to; change it freely.
+- **Source**: the onboarding plan, step 4; decided 2026-10-08
+
+### T129 — Lower the AI limits to 3 / 5 / 10
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-08
+
+Decided 2026-10-08 (plan, D3): no project-wide AI counter. Each person's limits
+drop from 10 / 30 / 100 (day / week / month) to **3 / 5 / 10**, about $0.03 a
+month at full use. The ceiling is the OpenAI account: $5 prepaid, no automatic
+top-up.
+
+- **Where**: `DEFAULT_USAGE_LIMITS` in `firebase/functions/src/entityExtraction.ts:94`.
+  Usage is kept on `users/{uid}`, so the limits are per person across all their
+  groups. The frontend keeps its own copy of the numbers
+  (`features/collaboration/entity-extraction/types.ts:59`); change both, or
+  have the frontend read the server's.
+- **When the balance runs out** OpenAI refuses the call, and the function
+  rethrows it as `internal`, "Failed to extract entities". Tell players that
+  extraction is paused instead (OpenAI's `insufficient_quota`), and test it with
+  OpenAI stubbed, as the functions suite already does.
+- **Source**: the onboarding plan, D3; decided 2026-10-08
 
 ### T122 — An "about" page
 **Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
@@ -358,10 +442,17 @@ anyway. What is left:
 - **Source**: todo.txt, 2026-10-06; the site, sign-in, mail, redirect and repo
   moved 2026-10-07
 
-### T119 — Review the Firestore data model before the site scales
-**Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-07
+### T119 — Restructure Firestore before the site scales (R2)
+**Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-08
 
-Two documents, both written 2026-10-07. Nothing has been changed.
+**Decided (maintainer, 2026-10-08): R2.** The site stays on Firebase and
+Firestore is restructured; the Convex and Cloudflare spikes will not run. The
+work is the seven changes in `data-model-review.md` ("What is worth changing,
+and how"). Change 2, the persistent cache, is T130. Changes 4 to 7 need no
+further answers and can be filed now; changes 1 and 3 wait on the review's
+questions.
+
+Two documents, both written 2026-10-07; nothing in the data has changed.
 
 - [`docs/architecture/backend-structure-options.md`](docs/architecture/backend-structure-options.md)
   is the structural question: was the backend any good, and would another
@@ -376,15 +467,37 @@ Two documents, both written 2026-10-07. Nothing has been changed.
   is how the code uses the data today: nine findings and their fixes within
   Firestore. A move to Postgres makes most of them moot.
 
-- **Blocked on the maintainer**: agree the spike order, then answer the
-  review's three remaining questions. The production checks in the review (indexes, campaign sizes, how
-  often links disagree) inform the migration but do not block the choice.
-- **Then**: the spike, as its own entry; then the migration or the Firestore
-  restructure, as entries of their own.
+- **Blocked on the maintainer**: the review's three questions. Whether an NPC
+  link runs both ways and which record owns each relationship decide change 1
+  (F1); whether attribution shows the author's name then or now decides change 3
+  (F5, F6). The production checks in the review (indexes, campaign sizes, how
+  often links disagree) inform the scripts but block nothing.
+- **Then**: each change as its own entry. Every data change is a script in
+  `firebase/functions/scripts/` (read-only by default, `--apply`, `--revert`),
+  shipped as the review describes: the frontend reads both shapes, the script
+  rewrites, a later frontend drops the old shape, and only then a rule refuses it.
 - **Overlaps**: the `dateAdded` →
   `createdAt` renames in `docs/architecture/migration/database-field-alignment.md`
-  are subsumed by either a migration or the review's F6.
-- **Source**: `/todo`, 2026-10-07; both documents written 2026-10-07
+  are subsumed by change 3 (F6).
+- **Source**: `/todo`, 2026-10-07; both documents written 2026-10-07; R2 chosen
+  2026-10-08
+
+### T130 — Turn on Firestore's persistent cache
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-08
+
+Every page reads whole collections and the client keeps no cache between visits
+(`data-model-review.md`, F2), so reads grow with campaign size times page loads,
+and nothing bounds them. The cache is T119's cheapest change and needs no data
+migration; the onboarding plan wants it before founder links go out.
+
+- **Where**: `core/services/firebase/core/BaseFirebaseService.ts:63` builds
+  Firestore with `getFirestore(app)`. `initializeFirestore` with
+  `persistentLocalCache` (multi-tab) replaces it, and the emulator connection
+  must still follow.
+- **Catch**: the cache keeps a member's data in their browser after sign-out.
+  Clear it on sign-out (`clearIndexedDbPersistence`, which needs Firestore
+  terminated first), and check what `/privacy` says about local storage.
+- **Source**: `data-model-review.md` change 2; the onboarding plan, step 5
 
 ---
 
