@@ -22,7 +22,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
 | medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
-| low | T121 | The site has no favicon | S | open | Polish; a placeholder can ship before the logo (T075) |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -226,7 +225,9 @@ a logo carries the name.
   sent to OpenAI, which nobody sees. The "Dungeons" location filter
   (`LocationDirectory.tsx:54`) is the plain word, not the mark.
 - **Raised again** (todo.txt, 2026-10-08: "Create Logo for Muninn"). The
-  favicon (T121) needs the same mark, so the logo decision unblocks both.
+  site's icon is a placeholder "M" until then (`public/favicon.svg`); the logo
+  replaces that SVG, and `scripts/build-icons.js` renders the PNGs and
+  `favicon.ico` from it.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03; the name chosen 2026-10-07
 
@@ -275,21 +276,6 @@ scope; they work.
   change that lets a table start alone.
 - **Related**: T119 (the data model review; its F2 is a step here).
 - **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
-
-### T121 — The site has no favicon
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-08
-
-Browser tabs, bookmarks and a phone's home screen show a generic icon for Muninn.
-
-- **Measured**: `index.html` links no icon, and `public/` holds only
-  `manifest.json`, which lists no `icons`. `https://muninn.quest/favicon.ico`
-  answers `200 text/html`: the `**` → `/index.html` rewrite in
-  `firebase/firebase.json` serves the app's page as the icon.
-- **Touches**: `index.html` (an SVG icon, an `apple-touch-icon`), the
-  manifest's `icons` (192 and 512 px), and maybe `theme-color` (`#000000` in both).
-- **Catch**: it needs a mark, and the logo is undecided (T075). A plain "M" in
-  the theme's colours could ship first and be swapped later.
-- **Source**: todo.txt, 2026-10-08
 
 ### T122 — An "about" page
 **Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
