@@ -1,11 +1,21 @@
 // functions/src/entityExtraction.ts
 import * as functions from "firebase-functions/v2/https";
 import { HttpsError } from "firebase-functions/v2/https";
-import {DocumentSnapshot, getFirestore} from "firebase-admin/firestore";
+import {getFirestore} from "firebase-admin/firestore";
 import OpenAI from "openai";
 import {rethrowHttpsError} from "./shared/httpsErrors";
 import {dropPartyCharacters, partyPrompt, readPartyNames} from "./partyCharacters";
-import {USAGE_PERIODS, UsagePeriod, effectiveLimits} from "./extractionAllowance";
+import {USAGE_PERIODS} from "./extractionAllowance";
+import {
+  EntityExtractionUsage,
+  UsageStatus,
+  exhaustedPeriod,
+  nextResets,
+  readUsage,
+  resetElapsedPeriods,
+  storedCounters,
+  usageStatusOf,
+} from "./extractionUsage";
 
 // Types matching your existing OpenAI types
 interface ExtractEntitiesRequest {
@@ -64,205 +74,6 @@ function isFraction(value: unknown): boolean {
     value >= 0 && value <= 1;
 }
 
-// Usage tracking types
-interface PeriodUsage {
-  count: number;
-  lastReset: string;
-  limit: number;
-}
-
-/**
- * A person's usage as the client sees it: the counters, each period's `limit`
- * set to the limit in force, and whether there are limits at all.
- *
- * `customLimit` used to be sent too, and raised the daily limit only; the
- * client still reads `customLimit ?? daily.limit`, so `daily.limit` carries
- * it now (T137).
- */
-interface EntityExtractionUsage {
-  daily: PeriodUsage;
-  weekly: PeriodUsage;
-  monthly: PeriodUsage;
-  isUnlimited: boolean;
-  /** When a raised allowance runs out, if it does (ISO 8601). */
-  raisedUntil?: string;
-  lastExtraction?: string;
-}
-
-/** `entityExtractionUsage` as stored: any part of it may be missing. */
-type StoredUsage = Partial<Record<UsagePeriod, Partial<PeriodUsage>>> &
-  {lastExtraction?: string};
-
-interface UsageStatus {
-  usage: EntityExtractionUsage;
-  limitExceeded: boolean;
-  exceededPeriod?: UsagePeriod;
-  nextReset: {
-    daily: string;
-    weekly: string;
-    monthly: string;
-  };
-}
-
-/**
- * Calculate next reset time for a given period
- */
-function getNextReset(period: 'daily' | 'weekly' | 'monthly'): Date {
-  const now = new Date();
-  const resetTime = new Date(now);
-  
-  switch (period) {
-    case 'daily':
-      resetTime.setUTCHours(0, 0, 0, 0);
-      resetTime.setUTCDate(resetTime.getUTCDate() + 1);
-      break;
-    case 'weekly':
-      // Reset on Monday at midnight UTC
-      const daysUntilMonday = (8 - resetTime.getUTCDay()) % 7 || 7;
-      resetTime.setUTCHours(0, 0, 0, 0);
-      resetTime.setUTCDate(resetTime.getUTCDate() + daysUntilMonday);
-      break;
-    case 'monthly':
-      resetTime.setUTCHours(0, 0, 0, 0);
-      resetTime.setUTCDate(1);
-      resetTime.setUTCMonth(resetTime.getUTCMonth() + 1);
-      break;
-  }
-  
-  return resetTime;
-}
-
-/**
- * Check if a period needs to be reset
- */
-function shouldResetPeriod(lastReset: string, period: 'daily' | 'weekly' | 'monthly'): boolean {
-  const lastResetDate = new Date(lastReset);
-  const now = new Date();
-  
-  switch (period) {
-    case 'daily':
-      return lastResetDate.getUTCDate() !== now.getUTCDate() || 
-             lastResetDate.getUTCMonth() !== now.getUTCMonth() ||
-             lastResetDate.getUTCFullYear() !== now.getUTCFullYear();
-    case 'weekly':
-      const lastWeek = getWeekNumber(lastResetDate);
-      const currentWeek = getWeekNumber(now);
-      return lastWeek !== currentWeek;
-    case 'monthly':
-      return lastResetDate.getUTCMonth() !== now.getUTCMonth() ||
-             lastResetDate.getUTCFullYear() !== now.getUTCFullYear();
-    default:
-      return false;
-  }
-}
-
-/**
- * Get ISO week number
- */
-function getWeekNumber(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-}
-
-
-/** When each period next resets, as the client shows it. */
-function nextResets(): UsageStatus["nextReset"] {
-  return {
-    daily: getNextReset('daily').toISOString(),
-    weekly: getNextReset('weekly').toISOString(),
-    monthly: getNextReset('monthly').toISOString()
-  };
-}
-
-/**
- * Zero every period whose window has passed, in place.
- *
- * @return Whether anything was reset
- */
-function resetElapsedPeriods(
-  usageData: EntityExtractionUsage,
-  now: string
-): boolean {
-  let changed = false;
-  for (const period of USAGE_PERIODS) {
-    if (shouldResetPeriod(usageData[period].lastReset, period)) {
-      usageData[period].count = 0;
-      usageData[period].lastReset = now;
-      changed = true;
-    }
-  }
-  return changed;
-}
-
-/**
- * Which period, if any, has no calls left.
- *
- * @param {EntityExtractionUsage} usageData The usage, held to its limits
- * @return {UsagePeriod | undefined} The first period spent, if one is
- */
-function exhaustedPeriod(
-  usageData: EntityExtractionUsage
-): UsagePeriod | undefined {
-  return USAGE_PERIODS.find(
-    (period) => usageData[period].count >= usageData[period].limit
-  );
-}
-
-/**
- * The user's counters, or fresh ones for a user who has none, held to the
- * limits in force (`effectiveLimits`). A stored `limit` is only a copy:
- * records written before 10 / 30 / 100 became 3 / 5 / 10 still carry the
- * old numbers.
- *
- * @param {DocumentSnapshot} userDoc `users/{uid}`
- * @param {Date} now The moment to decide the limits for
- * @return {EntityExtractionUsage} The usage, as the client sees it
- */
-function readUsage(
-  userDoc: DocumentSnapshot,
-  now: Date
-): EntityExtractionUsage {
-  const profile = userDoc.exists ? userDoc.data() : undefined;
-  const stored = profile?.entityExtractionUsage as
-    StoredUsage | undefined;
-  const effective = effectiveLimits(profile, now);
-
-  const period = (name: UsagePeriod): PeriodUsage => ({
-    count: stored?.[name]?.count ?? 0,
-    lastReset: stored?.[name]?.lastReset ?? now.toISOString(),
-    limit: effective.limits[name],
-  });
-  return {
-    daily: period("daily"),
-    weekly: period("weekly"),
-    monthly: period("monthly"),
-    isUnlimited: effective.unlimited,
-    ...(effective.raisedUntil &&
-      {raisedUntil: effective.raisedUntil.toISOString()}),
-    ...(stored?.lastExtraction && {lastExtraction: stored.lastExtraction}),
-  };
-}
-
-/**
- * What the extraction transaction writes back: the counters, and nothing of
- * the policy. The old `customLimit` and `isUnlimited` stay as they are stored
- * until an allowance replaces them, and `raisedUntil` is never stored.
- *
- * @param {EntityExtractionUsage} usageData The usage after the call
- * @return {object} The update, for `set` with `merge`
- */
-function storedCounters(usageData: EntityExtractionUsage) {
-  const {daily, weekly, monthly, lastExtraction} = usageData;
-  return {
-    entityExtractionUsage: {
-      daily, weekly, monthly, ...(lastExtraction && {lastExtraction}),
-    },
-  };
-}
-
 /**
  * The user's usage as it stands, for display. Writes nothing.
  *
@@ -273,21 +84,7 @@ function storedCounters(usageData: EntityExtractionUsage) {
  */
 async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
   const userDoc = await getFirestore().collection("users").doc(userId).get();
-  const now = new Date();
-  const usageData = readUsage(userDoc, now);
-
-  if (usageData.isUnlimited) {
-    return {usage: usageData, limitExceeded: false, nextReset: nextResets()};
-  }
-
-  resetElapsedPeriods(usageData, now.toISOString());
-  const exceededPeriod = exhaustedPeriod(usageData);
-  return {
-    usage: usageData,
-    limitExceeded: exceededPeriod !== undefined,
-    exceededPeriod,
-    nextReset: nextResets()
-  };
+  return usageStatusOf(userDoc.data(), new Date());
 }
 
 /**
@@ -306,7 +103,7 @@ async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
 
   return db.runTransaction(async (transaction) => {
     const at = new Date();
-    const usageData = readUsage(await transaction.get(userRef), at);
+    const usageData = readUsage((await transaction.get(userRef)).data(), at);
 
     if (usageData.isUnlimited) {
       return {usage: usageData, limitExceeded: false, nextReset: nextResets()};
@@ -351,7 +148,7 @@ async function releaseUsage(userId: string, reserved: EntityExtractionUsage): Pr
   const userRef = db.collection("users").doc(userId);
 
   await db.runTransaction(async (transaction) => {
-    const usageData = readUsage(await transaction.get(userRef), new Date());
+    const usageData = readUsage((await transaction.get(userRef)).data(), new Date());
     let changed = false;
     for (const period of USAGE_PERIODS) {
       const now = usageData[period];

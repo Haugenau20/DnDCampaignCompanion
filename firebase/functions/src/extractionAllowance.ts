@@ -81,7 +81,7 @@ function isLimit(value: unknown): value is number {
  * @param {unknown} value `extractionAllowance` as stored
  * @return {ExtractionAllowance | undefined} The allowance, or nothing
  */
-function readAllowance(value: unknown): ExtractionAllowance | undefined {
+export function readAllowance(value: unknown): ExtractionAllowance | undefined {
   if (value === undefined || value === null) return undefined;
   const allowance = value as Partial<ExtractionAllowance>;
   const expiresAt = allowance.expiresAt ?? null;

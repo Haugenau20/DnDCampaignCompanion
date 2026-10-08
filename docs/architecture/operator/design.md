@@ -81,7 +81,9 @@ All of it in `firebase/functions`, the package whose functions read what the ope
 | Path | What |
 |---|---|
 | `src/extractionAllowance.ts` | The allowance type and `effectiveLimits()`, used by `entityExtraction.ts` and by the operator |
-| `src/operator/founderLinks.ts` | Issue (with the daily budget), list, revoke |
+| `src/extractionUsage.ts` | The usage counters, apart from `entityExtraction.ts` so the operator never loads OpenAI or the callables |
+| `src/shared/refusal.ts` | `Refusal`: an action refused for a reason the operator is told, not a failure |
+| `src/operator/founderLinks.ts` | Issue, list, revoke; a link is named by its first six characters (its ref) everywhere but at issue |
 | `src/operator/accounts.ts` | Look up one account by email: profile, usage, allowance |
 | `src/operator/allowances.ts` | Validate, set and clear an allowance |
 | `src/operator/audit.ts` | The one function that writes an audit line |

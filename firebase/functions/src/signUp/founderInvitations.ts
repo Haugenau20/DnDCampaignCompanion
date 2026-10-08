@@ -3,12 +3,13 @@
 // Founder invitations (T125): how a table that has never used the site gets
 // in without the maintainer setting its group up. One admits one account,
 // which may then create one group (`createGroup` spends it, T126). They are
-// issued by the maintainer with `scripts/issue-founder-invitation.js`, through
-// the Admin SDK: the app grants nobody the power to issue them (the
-// onboarding plan, D6).
+// issued by the maintainer, on the operator page (T137) or with
+// `scripts/issue-founder-invitation.js`, through the Admin SDK: the app grants
+// nobody the power to issue them (the onboarding plan, D6).
 
 import {randomBytes} from "crypto";
 import {Firestore} from "firebase-admin/firestore";
+import {Refusal} from "../shared/refusal";
 
 /** Where founder invitations live. No client can read or write it (catch-all deny). */
 export const FOUNDER_INVITATIONS = "founderInvitations";
@@ -41,8 +42,22 @@ export function founderLink(origin: string, token: string): string {
   return url.toString();
 }
 
+/**
+ * At most this many founder invitations in any 24 hours, however they are
+ * issued (T137). Each one can become an account and a group, so a hijacked
+ * operator session, or a slip, is bounded by this.
+ */
+export const FOUNDER_LINK_DAILY_BUDGET = 10;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /** What the maintainer may say about an invitation when issuing it. */
 export interface FounderInvitationOptions {
+  /**
+   * Who issued it: the operator's email, or `"script"` for
+   * `issue-founder-invitation.js`.
+   */
+  issuedBy: string;
   /** Who it is for, for the maintainer's own records. Nobody else sees it. */
   note?: string;
   /** When it is issued; for the tests. */
@@ -50,26 +65,44 @@ export interface FounderInvitationOptions {
 }
 
 /**
- * Record a new, unused founder invitation.
+ * Record a new, unused founder invitation, unless the last 24 hours have
+ * spent the budget. Counting and issuing are one transaction, so two issues
+ * racing for the last slot cannot both have it.
  *
  * The token is the document id and the whole secret: 32 random bytes,
  * base64url, so it cannot be guessed and travels in a link unescaped.
  *
  * @param {Firestore} db Firestore
- * @param {FounderInvitationOptions} options A note, and the issuing moment
+ * @param {FounderInvitationOptions} options The issuer, a note, the moment
  * @return {Promise<{token: string, expiresAt: Date}>} The token and its expiry
+ * @throws {Refusal} `budget_spent` when the budget is spent
  */
 export async function issueFounderInvitation(
   db: Firestore,
-  {note, now = new Date()}: FounderInvitationOptions
+  {issuedBy, note, now = new Date()}: FounderInvitationOptions
 ): Promise<{token: string; expiresAt: Date}> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(now.getTime() + FOUNDER_INVITATION_LIFETIME_MS);
-  await db.collection(FOUNDER_INVITATIONS).doc(token).create({
-    used: false,
-    createdAt: now,
-    expiresAt,
-    ...(note ? {note} : {}),
+  const invitations = db.collection(FOUNDER_INVITATIONS);
+
+  await db.runTransaction(async (transaction) => {
+    const recent = await transaction.get(invitations
+      .where("createdAt", ">", new Date(now.getTime() - DAY_MS))
+      .limit(FOUNDER_LINK_DAILY_BUDGET));
+    if (recent.size >= FOUNDER_LINK_DAILY_BUDGET) {
+      throw new Refusal(
+        "budget_spent",
+        `${FOUNDER_LINK_DAILY_BUDGET} founder links have been issued in ` +
+          "the last 24 hours, the most there may be. Try again later."
+      );
+    }
+    transaction.create(invitations.doc(token), {
+      used: false,
+      createdAt: now,
+      expiresAt,
+      issuedBy,
+      ...(note ? {note} : {}),
+    });
   });
   return {token, expiresAt};
 }

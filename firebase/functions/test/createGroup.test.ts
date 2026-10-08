@@ -12,7 +12,7 @@ const create = (data: object, uid?: string) =>
     Promise<{success: boolean; groupId: string}>;
 
 /** A live founder link, as `issue-founder-invitation.js` issues one. */
-const founderLink = async () => (await issueFounderInvitation(db, {})).token;
+const founderLink = async () => (await issueFounderInvitation(db, {issuedBy: "script"})).token;
 
 /** A group `uid` started earlier. */
 const startedEarlier = (groupId: string, uid: string) =>
@@ -114,7 +114,7 @@ describe("createGroup", () => {
     });
 
     it("not with a founder link past its 14 days", async () => {
-      const founderToken = (await issueFounderInvitation(db, {now: new Date(Date.now() - 15 * DAY)})).token;
+      const founderToken = (await issueFounderInvitation(db, {issuedBy: "script", now: new Date(Date.now() - 15 * DAY)})).token;
       await expectHttpsError(create({name: "Fellowship", username: "Gandalf", founderToken}, "gandalf"), "failed-precondition");
       expect((await db.collection("groups").get()).size).toBe(0);
     });
