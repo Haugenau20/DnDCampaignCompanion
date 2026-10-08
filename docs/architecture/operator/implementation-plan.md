@@ -1,6 +1,6 @@
 # The operator page: implementation plan
 
-**Status** proposed, 2026-10-08 · **TODO** T137 · **With** [design](design.md) and
+**Status** approved by the maintainer, 2026-10-08 · **TODO** T137 · **With** [design](design.md) and
 [security architecture](security-architecture.md)
 
 A high-level plan: what lands in which order, who does it, and how each step is checked. Each code
@@ -27,11 +27,17 @@ pipeline deploys to it.
 
 ## Step 0: preparation (maintainer)
 
-- **A Google account used only for operator work.** Sign it in with a passkey or a security key,
-  register a backup key kept somewhere else, and check its recovery options.
-  [Security architecture](security-architecture.md#1-the-human-identity), layer 1.
-- **Is the project in a Google Cloud organization?** Without one, IAP needs a custom OAuth client
-  and consent screen. The answer changes what 4a's script does.
+- **An organization for the project** (decided 2026-10-08: the project had none, and without one
+  IAP needs a hand-made OAuth client). In this order:
+  1. Sign up for Cloud Identity Free with `muninn.quest`, creating its super admin. Give the super
+     admin a passkey and a backup key kept apart, and use it for nothing else.
+  2. Verify the domain with the DNS text record Google gives; the organization appears.
+  3. Move `dnd-campaign-companion` into it, following Google's guide for migrating a project into
+     an organization; the billing account stays linked to the project.
+  4. In the Admin console, create the operator account, used only for operator work. Sign it in
+     with a passkey or a security key, register a backup key kept somewhere else, and require
+     2-Step Verification for it, by security key only if Cloud Identity Free offers that.
+  [Security architecture](security-architecture.md#1-the-human-identity), layers 1 and 1a.
 - **The defaults** in the design's [decisions](design.md#decisions-with-defaults): keep or change.
 
 ## Step 1: allowances on the server (PR)
@@ -118,12 +124,15 @@ owner's login, never by CI. Its header lists the steps, as the other operator sc
    - created from Google's placeholder image, with IAP on, the invoker check on, and the IAP
      service agent as the only invoker
    - then the IAP access list (the operator account) and the re-authentication settings
-   - and, if step 0 found no organization, the OAuth client first
+   - with Google's managed OAuth client, the operator account being one of the organization's
+     own users
 7. **Audit:**
    - IAP's Data Access logs
    - the `operator-audit` bucket (400 days, unlocked) and its sink
    - the two log-based alerts, emailing the maintainer
-8. **Open questions it settles and writes down:**
+8. **Organization policies:** `iam.disableServiceAccountKeyCreation`, after confirming nothing
+   in use needs to create a key.
+9. **Open questions it settles and writes down:**
    - whether `SECURE_KEY` is offered for the account's type
    - whether `roles/run.developer` can switch IAP off (if it can, the verification in step 5
      catches it and the service's own check still refuses)

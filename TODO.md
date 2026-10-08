@@ -27,7 +27,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
 | medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
-| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; designed 2026-10-08 (`docs/architecture/operator/`), awaiting review |
+| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 and 2 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -354,19 +354,22 @@ One web page for operator work, usable from a phone: issue and revoke founder
 links, and set one person's extraction allowance (their own, since they pay for
 OpenAI, or a player's who asks). Health and traffic figures are phase 2.
 
-- **Design** (proposed 2026-10-08, awaiting the maintainer's review):
+- **Design** (approved by the maintainer 2026-10-08, with every default
+  decision kept):
   [`docs/architecture/operator/`](docs/architecture/operator/design.md): a
   design, a security architecture, and a plan in steps 0 to 8. Decided: its own
   Cloud Run service behind Google's Identity-Aware Proxy, outside the app and its
   sign-in; code in this repository; security over setup effort.
-- **Extraction limits today**: `customLimit` raises the **daily** limit only
-  (`functions/src/entityExtraction.ts:230`); `readUsage` (`:241`) resets weekly
-  and monthly to 5 and 10 on every read, so a `customLimit` of 50 still stops at
-  5 a week. `isUnlimited` works (`:266`, `:297`). Only the server writes either
-  (`firestore.rules.prod:507`). The functions suite tests neither. Plan step 1
-  replaces both with `extractionAllowance`.
-- **Next**: the plan's step 0 is the maintainer's: an operator Google account,
-  and whether the project sits in a Google Cloud organization.
+- **Done**: steps 1 and 2. `users/{uid}.extractionAllowance` sets all three
+  limits; the old `customLimit` (daily only) and `isUnlimited` still apply
+  where no allowance does, until step 7 retires them. The operator actions
+  exist in `functions/src/operator/`, exported by nothing; founder links now
+  record `issuedBy` and share a budget of 10 a day with the script.
+- **Step 0** (maintainer): the project moves into a `muninn.quest`
+  organization (Cloud Identity Free, decided 2026-10-08), so IAP uses Google's
+  own OAuth client; then the operator account, in that organization. The
+  steps are in the plan's step 0.
+- **Next**: step 3, the service run locally.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
 ---

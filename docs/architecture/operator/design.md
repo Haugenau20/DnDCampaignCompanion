@@ -1,6 +1,6 @@
 # The operator page: design
 
-**Status** proposed, 2026-10-08 · **TODO** T137 · **With** [security architecture](security-architecture.md)
+**Status** approved by the maintainer, 2026-10-08 · **TODO** T137 · **With** [security architecture](security-architecture.md)
 and [implementation plan](implementation-plan.md)
 
 ## Purpose
@@ -81,7 +81,9 @@ All of it in `firebase/functions`, the package whose functions read what the ope
 | Path | What |
 |---|---|
 | `src/extractionAllowance.ts` | The allowance type and `effectiveLimits()`, used by `entityExtraction.ts` and by the operator |
-| `src/operator/founderLinks.ts` | Issue (with the daily budget), list, revoke |
+| `src/extractionUsage.ts` | The usage counters, apart from `entityExtraction.ts` so the operator never loads OpenAI or the callables |
+| `src/shared/refusal.ts` | `Refusal`: an action refused for a reason the operator is told, not a failure |
+| `src/operator/founderLinks.ts` | Issue, list, revoke; a link is named by its first six characters (its ref) everywhere but at issue |
 | `src/operator/accounts.ts` | Look up one account by email: profile, usage, allowance |
 | `src/operator/allowances.ts` | Validate, set and clear an allowance |
 | `src/operator/audit.ts` | The one function that writes an audit line |
@@ -317,14 +319,16 @@ A sketch, to be designed when it is picked up:
 
 ## Decisions with defaults
 
-Each is the design's choice; the maintainer may overturn any of them.
+Each is the design's choice. The maintainer kept all eight (2026-10-08), the emails
+included, and may still overturn any of them.
 
 1. **Founder links:** at most 10 in any 24 hours.
 2. **Allowances:** at most 50 / 150 / 500, an expiry within a year, the form defaulting to the end
    of the month.
 3. **IAP** asks for the security key again every hour.
 4. **The audit bucket** keeps 400 days, its retention locked after a 30-day trial.
-5. **A Google account used only for operator work**, holding no role on the project.
+5. **An account in the `muninn.quest` organization used only for operator work**, holding no role
+   on the project. The project moves into that organization (maintainer, 2026-10-08).
 6. **Every operator deploy waits for the maintainer's approval** in GitHub.
 7. **The container is built from a Dockerfile** by Cloud Build.
 8. **An email to the maintainer for every action that changes something**, so a hijacked session is

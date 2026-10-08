@@ -51,7 +51,7 @@ beforeEach(() => clearProject(PROJECT));
 describe("issueFounderInvitation", () => {
   it("records an unused invitation that lasts 14 days, under a token nobody can guess", async () => {
     const now = new Date("2026-10-08T12:00:00Z");
-    const {token, expiresAt} = await issueFounderInvitation(db, {note: "Bree table", now});
+    const {token, expiresAt} = await issueFounderInvitation(db, {issuedBy: "script", note: "Bree table", now});
 
     expect(token).toMatch(/^[A-Za-z0-9_-]{32,}$/);
     expect(expiresAt.getTime()).toBe(now.getTime() + FOUNDER_INVITATION_LIFETIME_MS);
@@ -63,8 +63,8 @@ describe("issueFounderInvitation", () => {
   });
 
   it("issues a different token every time", async () => {
-    const first = await issueFounderInvitation(db, {});
-    const second = await issueFounderInvitation(db, {});
+    const first = await issueFounderInvitation(db, {issuedBy: "script"});
+    const second = await issueFounderInvitation(db, {issuedBy: "script"});
     expect(first.token).not.toBe(second.token);
   });
 
@@ -75,7 +75,7 @@ describe("issueFounderInvitation", () => {
 
 describe("reserveSignUp with a founder invitation", () => {
   it("reserves the normalised email, and spends nothing", async () => {
-    const {token} = await issueFounderInvitation(db, {});
+    const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
     await reserve({founderToken: token, email: "  Bilbo@Shire.dev "});
 
     const reserved = await reservation(token);
@@ -85,7 +85,7 @@ describe("reserveSignUp with a founder invitation", () => {
   });
 
   it("holds one email per invitation: reserving again replaces it", async () => {
-    const {token} = await issueFounderInvitation(db, {});
+    const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
     await reserve({founderToken: token, email: "bilbo@shire.dev"});
     await reserve({founderToken: token, email: "frodo@shire.dev"});
 
@@ -100,20 +100,20 @@ describe("reserveSignUp with a founder invitation", () => {
     });
 
     it("a used founder invitation", async () => {
-      const {token} = await issueFounderInvitation(db, {});
+      const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
       await invitation(token).update({used: true});
       await expectHttpsError(reserve({founderToken: token, email: "bilbo@shire.dev"}), "failed-precondition");
       expect((await reservation(token)).exists).toBe(false);
     });
 
     it("an expired founder invitation", async () => {
-      const {token} = await issueFounderInvitation(db, {now: new Date(Date.now() - 15 * DAY)});
+      const {token} = await issueFounderInvitation(db, {issuedBy: "script", now: new Date(Date.now() - 15 * DAY)});
       await expectHttpsError(reserve({founderToken: token, email: "bilbo@shire.dev"}), "failed-precondition");
       expect((await reservation(token)).exists).toBe(false);
     });
 
     it("a request carrying both kinds of invitation", async () => {
-      const {token} = await issueFounderInvitation(db, {});
+      const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
       await expectHttpsError(
         reserve({founderToken: token, groupId: "g1", token: "t1", email: "bilbo@shire.dev"}),
         "invalid-argument"
@@ -121,13 +121,13 @@ describe("reserveSignUp with a founder invitation", () => {
     });
 
     it("a founder token passed off as an invitation into a group", async () => {
-      const {token} = await issueFounderInvitation(db, {});
+      const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
       await db.doc("groups/g1").set({name: "Fellowship"});
       await expectHttpsError(reserve({groupId: "g1", token, email: "bilbo@shire.dev"}), "not-found");
     });
 
     it("anyone once the project is at the account limit", async () => {
-      const {token} = await issueFounderInvitation(db, {});
+      const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
       for (let i = 0; i < MAX_ACCOUNTS; i++) {
         await getAuth().createUser({email: `existing${i}@test.dev`});
       }
@@ -142,7 +142,7 @@ describe("reserveSignUp with a founder invitation", () => {
 
 describe("admitAccount with a founder reservation", () => {
   it("admits the reserved email, and consumes the reservation", async () => {
-    const {token} = await issueFounderInvitation(db, {});
+    const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
     await reserve({founderToken: token, email: "bilbo@shire.dev"});
 
     await creating("Bilbo@Shire.dev");
@@ -152,7 +152,7 @@ describe("admitAccount with a founder reservation", () => {
   });
 
   it("refuses once the founder invitation was used since", async () => {
-    const {token} = await issueFounderInvitation(db, {});
+    const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
     await reserve({founderToken: token, email: "bilbo@shire.dev"});
     await invitation(token).update({used: true});
 
@@ -161,7 +161,7 @@ describe("admitAccount with a founder reservation", () => {
   });
 
   it("refuses once the founder invitation was deleted since", async () => {
-    const {token} = await issueFounderInvitation(db, {});
+    const {token} = await issueFounderInvitation(db, {issuedBy: "script"});
     await reserve({founderToken: token, email: "bilbo@shire.dev"});
     await invitation(token).delete();
 

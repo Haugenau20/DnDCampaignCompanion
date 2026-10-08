@@ -17,6 +17,10 @@
  * `--note` is for your own records: it is stored with the invitation and seen
  * by nobody else. `--emulator` issues one in the dev emulators, with a link to
  * the dev server.
+ *
+ * The operator page issues them too (T137). Both are recorded with who issued
+ * them (`issuedBy`, "script" here) and share one budget: at most 10 founder
+ * links in any 24 hours.
  */
 const {initializeApp, getApps} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
@@ -89,13 +93,14 @@ async function main() {
     process.exit(1);
   }
 
-  const {token, expiresAt} = await founders.issueFounderInvitation(getFirestore(), {note});
+  const {token, expiresAt} = await founders.issueFounderInvitation(getFirestore(), {issuedBy: "script", note});
   console.log(describeIssued({link: founders.founderLink(siteFor(emulator), token), expiresAt, note}));
 }
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error(error);
+    // A refusal (the daily budget spent) is a sentence, not a crash.
+    console.error(error && error.name === "Refusal" ? error.message : error);
     process.exit(1);
   });
 }

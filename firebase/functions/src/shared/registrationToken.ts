@@ -18,7 +18,7 @@ export type TokenProblem = "used" | "expired" | null;
  * @param {unknown} value A `Date`, a `Timestamp`, a date string or epoch millis
  * @return {Date | undefined} The date, or `undefined` when nothing is stored
  */
-function toDate(value: unknown): Date | undefined {
+export function toDate(value: unknown): Date | undefined {
   if (value === undefined || value === null) return undefined;
   if (typeof (value as {toDate?: unknown}).toDate === "function") {
     return (value as {toDate: () => Date}).toDate();
