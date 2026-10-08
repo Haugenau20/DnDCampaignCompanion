@@ -27,7 +27,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
-| low | T079 | Do old documents still lack `locationId`? | S | blocked | Production has 13 (audited 2026-10-08); the script's migrate mode is written and waits on the maintainer running it; then the fallback's matching can go |
+| low | T079 | Drop the legacy `location` fallback's matching | S | open | Production's 13 old documents were migrated (2026-10-08) and none is left; the fallback's matching of `location` against places can go |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -298,41 +298,42 @@ modular API only, so the code itself is ready for 14. Two things hold the bump.
 - **Source**: todo.txt (`npm ci` warnings), 2026-10-06; `firebase-functions` 7,
   `firebase-admin` 13 and the modular API landed first
 
-### T079 — Do old documents still lack `locationId`?
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-08
+### T079 — Drop the legacy `location` fallback's matching
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-08
 
 NPCs and quests (and rumors) refer to a location by `locationId`. Documents
-written before that field existed carry only the free-text `location`, and
-still resolve through a legacy fallback (`resolveLocationName` and
-`referencesLocation` in `locations/utils/location-display.ts`). The field
-shipped without a migration (`d6d9847`): such a document gains an id the next
-time anyone edits it.
+written before that field existed carried only the free-text `location`, and
+`resolveLocation` and `referencesLocation`
+(`locations/utils/location-display.ts`) still match that text against the
+campaign's places, by id and then by name, when `locationId` is missing or
+dangling.
 
-- **Production, audited 2026-10-08**: 13 documents resolve only through the
-  fallback, all by name (10 NPCs and 3 quests, in two campaigns); none by id,
-  and no `locationId` is dangling. 11 more (10 NPCs, 1 quest) carry a free-text
-  `location` that names no place.
-- **Blocked on the maintainer**: run the migration
-  (`firebase/functions/scripts/audit-location-ids.js --migrate`; the steps are
-  at the top of the script). It gives each of the 13 the `locationId` the app
-  already shows, writes nothing else, and records a revert file. Then run the
-  audit again: the fallback column should read 0.
-- **Then**: drop the fallback's matching of `location` against places (by id
-  and by name) from `resolveLocation` and `referencesLocation`. Keep showing
-  a free-text `location` as written: that is what the 11 rely on, and hiding it
-  would hide what players wrote. Every current save path (the detail pages,
-  quick-add) writes `locationId` alongside `location`; recheck that first.
-- **The dev emulator is no guide**: the sample-data generators have written
-  `locationId` since `d6d9847`, and data generated before that holds the legacy
-  shape. One such dataset, audited on 2026-10-07, had 37 NPCs and 20 quests with
-  a `location` slug and no `locationId`; regenerated, it had none. Two NPCs
-  keep the edge cases on purpose: Galadriel's `locationId` names no record
-  (#1412), and Bard has only the free-text `location` "Lake-town".
+- **Production needs it no more** (2026-10-08): the audit found 13 documents
+  (10 NPCs, 3 quests, in two campaigns) resolving only that way, all by name;
+  `firebase/functions/scripts/audit-location-ids.js --migrate` gave each the
+  `locationId` it already showed, and the audit afterwards found none left
+  and none dangling.
+- **To do**: drop that matching from both functions. Keep showing a
+  free-text `location` as written: 11 production documents (10 NPCs, 1 quest)
+  name a place that has no record, and hiding it would hide what players
+  wrote. Every current save path (the detail pages, quick-add) writes
+  `locationId` alongside `location`; recheck that first, and run the audit
+  once more just before merging.
+- **The revert closes when this merges**: the migration's revert file is the
+  maintainer's (outside the repo); reverting after the matching is gone would
+  leave those 13 showing their text with no link.
+- **Dev data**: the sample-data generators have written `locationId` since
+  `d6d9847`, and data generated before that holds the legacy shape (one such
+  dataset, audited 2026-10-07, had 37 NPCs and 20 quests with only a
+  `location` slug), which would show as raw slugs once the matching goes:
+  regenerate it. Two NPCs keep the edge cases on purpose: Galadriel's
+  `locationId` names no record (#1412), and Bard has only the free-text
+  `location` "Lake-town".
 - **See also**: T119, the full review of the data model, should take in
   whatever this audit finds.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
-  was deleted; decided 2026-10-06; the audit written 2026-10-07; run, and
-  the migration written, 2026-10-08
+  was deleted; decided 2026-10-06; the audit written 2026-10-07; the
+  migration written and run 2026-10-08
 
 ### T118 — Finish the move to `muninn.quest`
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-07
