@@ -140,6 +140,15 @@ class EntityExtractionService extends BaseFirebaseService {
           });
         }
         
+        // The project's OpenAI balance has run out; the function gave the
+        // call back, so the player's allowance is untouched (T129).
+        if (firebaseError.code === 'functions/unavailable' &&
+            firebaseError.message === 'AI_EXTRACTION_PAUSED') {
+          throw new Error(
+            'Smart detection is paused for now. This scan was not counted against your limit.'
+          );
+        }
+
         // Handle other Firebase function errors
         throw new Error(firebaseError.message || 'Smart Detection failed');
       }

@@ -22,7 +22,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T131 | Store each link once, shown both ways | M | open | The one data-model defect players see: a link added on one page is missing on the other |
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
-| medium | T129 | Lower the AI limits to 3 / 5 / 10 | S | open | The OpenAI balance ($5, prepaid) is the ceiling; when it runs out players see a generic failure |
 | medium | T125 | Founder invitations | M | open | First step of letting a group start without the maintainer (the onboarding plan) |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
 | medium | T126 | `createGroup` guarded | M | blocked | After T125; today any signed-in caller can create unlimited groups, all named "Admin" |
@@ -264,7 +263,7 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
-### Letting a new group start on its own (T125 to T129)
+### Letting a new group start on its own (T125 to T128)
 
 A group cannot start today without the maintainer, who creates it, invites its
 first player, promotes them and leaves. The plan,
@@ -273,8 +272,8 @@ says where things stand and what was decided (maintainer, 2026-10-08): founder
 invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
 3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
 create a campaign, and up to 3 groups per founder. T125 to T127 are the smallest
-change that lets a table start alone; T128 and T129 make it safe to hand out more
-than a few links. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
+change that lets a table start alone; T128 makes it safe to hand out more than
+a few links. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
 group → campaign → invitation → a second player joins.
 
 ### T125 — Founder invitations
@@ -344,25 +343,6 @@ group, and **300 accounts** in the project.
   `userManagement/deleteUser.ts`, replaces it. 300 is the plan's figure, not
   objected to; change it freely.
 - **Source**: the onboarding plan, step 4; decided 2026-10-08
-
-### T129 — Lower the AI limits to 3 / 5 / 10
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-08
-
-Decided 2026-10-08 (plan, D3): no project-wide AI counter. Each person's limits
-drop from 10 / 30 / 100 (day / week / month) to **3 / 5 / 10**, about $0.03 a
-month at full use. The ceiling is the OpenAI account: $5 prepaid, no automatic
-top-up.
-
-- **Where**: `DEFAULT_USAGE_LIMITS` in `firebase/functions/src/entityExtraction.ts:94`.
-  Usage is kept on `users/{uid}`, so the limits are per person across all their
-  groups. The frontend keeps its own copy of the numbers
-  (`features/collaboration/entity-extraction/types.ts:59`); change both, or
-  have the frontend read the server's.
-- **When the balance runs out** OpenAI refuses the call, and the function
-  rethrows it as `internal`, "Failed to extract entities". Tell players that
-  extraction is paused instead (OpenAI's `insufficient_quota`), and test it with
-  OpenAI stubbed, as the functions suite already does.
-- **Source**: the onboarding plan, D3; decided 2026-10-08
 
 ### T122 — An "about" page
 **Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08

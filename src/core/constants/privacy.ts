@@ -26,6 +26,7 @@ export const PRIVACY_LAST_UPDATED = "2026-10-08";
 export const PRIVACY_CHANGELOG: readonly string[] = [
   "If you ask to be remembered, the campaign records you have opened are now kept in your browser until you sign out.",
   "If you don't, nothing of your campaigns stays in your browser after you close the page, and any copy an earlier remembered visit left is deleted.",
+  "Smart detection is now capped at 3 scans a day, 5 a week and 10 a month, down from 10, 30 and 100.",
 ]
 
 /**
@@ -65,7 +66,7 @@ export const OPENAI_DPA_ACCEPTED = false;
 export const EXTRACTION_FACTS = {
   provider: "OpenAI",
   product: "the OpenAI platform API",
-  caps: "10 scans a day, 30 a week and 100 a month",
+  caps: "3 scans a day, 5 a week and 10 a month",
   retention:
     "kept by OpenAI for up to 30 days for abuse monitoring and then deleted",
   transfer: "processed in the United States",

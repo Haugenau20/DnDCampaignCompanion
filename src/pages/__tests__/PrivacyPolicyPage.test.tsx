@@ -166,8 +166,8 @@ describe("PrivacyPolicyPage — content that must be there", () => {
   it("states the three extraction caps, not just a monthly one", () => {
     const { container } = render(<PrivacyPolicyPage />);
     const section = container.querySelector("#entity-extraction");
-    expect(section!.textContent).toMatch(/10 scans a day/);
-    expect(section!.textContent).toMatch(/100 a month/);
+    // T129 (maintainer, 2026-10-08): 3 a day, 5 a week, 10 a month.
+    expect(section!.textContent).toMatch(/3 scans a day, 5 a week and 10 a month/);
   });
 
   it("describes deletion as a button, and links to the profile page", () => {

@@ -361,6 +361,26 @@ describe('EntityExtractionService', () => {
       await expect(svc.extractEntities('Content')).rejects.toThrow('Internal server error');
     });
 
+    // T129: the OpenAI account ran dry, so the function says extraction is paused.
+    test('says smart detection is paused, and that nothing was counted, when the function does', async () => {
+      const firebaseError = {
+        code: 'functions/unavailable',
+        message: 'AI_EXTRACTION_PAUSED',
+        details: undefined,
+      };
+      const mockFn = jest.fn().mockRejectedValueOnce(firebaseError);
+      mockHttpsCallable.mockReturnValueOnce(mockFn);
+
+      const svc = EntityExtractionService.getInstance();
+      const message = await svc.extractEntities('Content').then(
+        () => 'resolved',
+        (e: Error) => e.message
+      );
+      expect(message).toMatch(/smart detection is paused/i);
+      expect(message).toMatch(/not counted against your limit/i);
+      expect(message).not.toMatch(/AI_EXTRACTION_PAUSED/);
+    });
+
     test('should re-throw non-Firebase errors as-is', async () => {
       const mockFn = jest.fn().mockRejectedValueOnce(new Error('network failure'));
       mockHttpsCallable.mockReturnValueOnce(mockFn);

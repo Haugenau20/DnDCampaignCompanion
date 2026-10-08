@@ -23,7 +23,7 @@ interface ExtractEntitiesRequest {
  * This used to be `request.data.model`, defaulting to `gpt-3.5-turbo` -- a
  * value chosen in the browser and passed to OpenAI unchecked. A modified
  * client could name any model on the price list against this project's key,
- * bounded only by the ten-a-day counter below, so the ceiling on a compromised
+ * bounded only by the daily counter below, so the ceiling on a compromised
  * account was roughly an order of magnitude above what the limits implied.
  * The model is not a caller's decision: it is a cost and quality decision that
  * belongs to the deployment, so it is pinned here and the request field is
@@ -90,11 +90,19 @@ interface UsageStatus {
   };
 }
 
-// Default usage limits
+/**
+ * Each person's extraction allowance, across all their groups (T129,
+ * maintainer 2026-10-08). The project-wide ceiling is the OpenAI account
+ * itself: prepaid, with no automatic top-up.
+ *
+ * These are the limits, whatever a usage record says: every record copies
+ * them when it is created, and records written before 10 / 30 / 100 became
+ * 3 / 5 / 10 still carry the old numbers (`readUsage`).
+ */
 const DEFAULT_USAGE_LIMITS = {
-  daily: 10,
-  weekly: 30,
-  monthly: 100
+  daily: 3,
+  weekly: 5,
+  monthly: 10
 };
 
 /**
@@ -226,14 +234,21 @@ function exhaustedPeriod(
   return undefined;
 }
 
-/** The stored usage, or a fresh record for a user who has none. */
+/**
+ * The stored usage, or a fresh record for a user who has none, held to the
+ * current limits: a stored `limit` is a copy, and an old one is replaced.
+ */
 function readUsage(
   userDoc: DocumentSnapshot
 ): EntityExtractionUsage {
   const stored = userDoc.exists ?
-    userDoc.data()?.entityExtractionUsage :
+    userDoc.data()?.entityExtractionUsage as EntityExtractionUsage | undefined :
     undefined;
-  return stored ? (stored as EntityExtractionUsage) : initializeUsageData();
+  if (!stored) return initializeUsageData();
+  for (const period of ['daily', 'weekly', 'monthly'] as const) {
+    stored[period].limit = DEFAULT_USAGE_LIMITS[period];
+  }
+  return stored;
 }
 
 /**
@@ -306,6 +321,44 @@ async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
       nextReset: nextResets()
     };
   });
+}
+
+/**
+ * Give back a call `checkAndUpdateUsage` counted, for a call the model never
+ * served. A period that has reset since the reservation is left alone: the
+ * call was counted in a window that is gone.
+ *
+ * @param userId The caller
+ * @param reserved The usage as the reservation left it
+ */
+async function releaseUsage(userId: string, reserved: EntityExtractionUsage): Promise<void> {
+  if (reserved.isUnlimited) return;
+  const db = getFirestore();
+  const userRef = db.collection("users").doc(userId);
+
+  await db.runTransaction(async (transaction) => {
+    const usageData = readUsage(await transaction.get(userRef));
+    let changed = false;
+    for (const period of ['daily', 'weekly', 'monthly'] as const) {
+      const now = usageData[period];
+      if (now.lastReset === reserved[period].lastReset && now.count > 0) {
+        now.count--;
+        changed = true;
+      }
+    }
+    if (changed) {
+      transaction.set(userRef, {entityExtractionUsage: usageData}, {merge: true});
+    }
+  });
+}
+
+/**
+ * Whether OpenAI refused the call because the account has no credit left.
+ * A rate limit is also a 429, but carries another code and passes.
+ */
+function isOutOfCredit(error: unknown): boolean {
+  return typeof error === "object" && error !== null &&
+    (error as {code?: unknown}).code === "insufficient_quota";
 }
 
 /**
@@ -644,6 +697,14 @@ Do not output any text yourself—*only* invoke the function with correct JSON.
         // did the same thing under the deprecated spelling.
         tool_choice: { type: "function", function: { name: "extract_entities" } },
         temperature: 0
+      }).catch(async (error: unknown) => {
+        // The account is prepaid with no top-up: when it runs dry every call
+        // fails here until it is topped up. Say so, and do not charge the
+        // caller for a call that was never served (T129).
+        if (!isOutOfCredit(error)) throw error;
+        console.error("OpenAI has no credit left; extraction is paused.");
+        await releaseUsage(userId, usageStatus.usage);
+        throw new HttpsError("unavailable", "AI_EXTRACTION_PAUSED");
       });
 
       const choice = response.choices?.[0];
