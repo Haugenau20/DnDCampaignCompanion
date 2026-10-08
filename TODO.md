@@ -19,8 +19,15 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
-| medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
+| medium | T131 | Store each link once, shown both ways | M | open | The one data-model defect players see: a link added on one page is missing on the other |
+| medium | T130 | Turn on Firestore's persistent cache | S | open | Reads are the one cost with no bound; the restructure's cheapest change, and wanted before founder links go out |
+| medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
+| medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
+| medium | T129 | Lower the AI limits to 3 / 5 / 10 | S | open | The OpenAI balance ($5, prepaid) is the ceiling; when it runs out players see a generic failure |
+| medium | T125 | Founder invitations | M | open | First step of letting a group start without the maintainer (the onboarding plan) |
+| medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
+| medium | T126 | `createGroup` guarded | M | blocked | After T125; today any signed-in caller can create unlimited groups, all named "Admin" |
+| medium | T127 | A founder's first run | M | blocked | After T126; a founder has no path from link to first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
@@ -28,6 +35,9 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
+| low | T134 | Chapter text and the saga out of their documents | M | open | Search downloads the whole story; the saga is one document that will hit 1 MiB |
+| low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
+| low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 
@@ -255,27 +265,107 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
-### T120 — Plan how a new group starts on its own
-**Type** feature · **Size** L · **Status** blocked · **Verified** 2026-10-07
+### Letting a new group start on its own (T125 to T129)
 
-Suppose the site were sent tomorrow to 30 groups that have never used it: can
-they sign up, create a group and get going without the maintainer? **No.** The
-plan is written:
-[`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md).
-It covers where things stand (in the code, and in the dev app as a player in no
-group), six decisions with a recommendation each, and a build order of seven
-steps. Nothing is built. Invitations into a group that already exists are out of
-scope; they work.
+A group cannot start today without the maintainer, who creates it, invites its
+first player, promotes them and leaves. The plan,
+[`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md),
+says where things stand and what was decided (maintainer, 2026-10-08): founder
+invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
+3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
+create a campaign, and up to 3 groups per founder. T125 to T127 are the smallest
+change that lets a table start alone; T128 and T129 make it safe to hand out more
+than a few links; T130 (the Firestore restructure's cache) should land before
+outreach too. Every step
+that changes a flow lands with its e2e journey; the last one runs founder link →
+group → campaign → invitation → a second player joins.
 
-- **Blocked on the maintainer**: answer the plan's five open questions. Who may
-  start a group (founder invitations recommended), the member and project caps,
-  the monthly AI ceiling, who may create a campaign, and how many groups a
-  founder may start. D6 is answered: the global admin is the maintainer alone.
-- **Then**: file the build order's steps as their own entries. Steps 1 to 3
-  (founder invitations, a guarded `createGroup`, the first run) are the smallest
-  change that lets a table start alone.
-- **Related**: T119 (the data model review; its F2 is a step here).
-- **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
+### T125 — Founder invitations
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
+
+A founder invitation admits one account that may create one group. It is how a
+new table gets in without the maintainer setting it up (plan, D1).
+
+- **Where**: a server-only collection, e.g. `founderInvitations/{token}`, issued
+  by an Admin-SDK script in `firebase/functions/scripts/` (the shape of
+  `audit-location-ids.js`; D6: never a callable behind a flag).
+  `signUp/reserveSignUp.ts` accepts either kind of token and the reservation
+  records which; `signUp/gateAccountCreation.ts` admits it. A founder who
+  already has an account skips the sign-up and only redeems.
+- **Also**: `/privacy` (`pages/PrivacyPolicyPage.tsx`) says accounts come from
+  an invitation; add that a founder invitation is one.
+- **Source**: the onboarding plan, step 1 and step 6; decided 2026-10-08
+
+### T126 — `createGroup` guarded
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
+
+`groupManagement/createGroup.ts` accepts any signed-in caller, with no limit, no
+throttle and no App Check, and names every creator "Admin" (it reads a
+`username` on the global profile that no flow writes).
+
+- **Change**: it spends an unspent founder invitation in the same transaction
+  as the group it creates, as `redeemInvitation.ts` spends a group invitation;
+  or uses the account's allowance (up to **3 groups** per founder in all). It
+  takes the founder's name in the group as an argument. `enforceAppCheck: true`
+  on `createGroup`, `reserveSignUp` and `redeemInvitation`; check first that the
+  emulator and the e2e journeys still pass App Check, or exempt the emulator.
+- **Deploy order**: enforcement merges only after a live frontend sends App
+  Check tokens to those callables.
+- **Blocked on**: T125
+- **Source**: the onboarding plan, step 2; decided 2026-10-08
+
+### T127 — A founder's first run
+**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
+
+From founder link to first campaign as one guided flow, not three admin pages
+(plan, D5).
+
+- **Where**: the group-less home (`shared/components/gated/GatedPageState.tsx`)
+  offers "I have a founder link" beside "I have an invite link"; the founder
+  names the group and themselves; then creates the first campaign; then lands on
+  `/admin/people` with the invite button in front.
+- **Every member may create a campaign** (decided 2026-10-08), as the rules
+  already allow (`firestore.rules.prod`, `match /campaigns/{campaignId}`); today
+  only the admin UI offers it. The empty campaign state ("Your first campaign
+  will appear here as soon as it's created") gets a button for every member.
+- **Blocked on**: T126
+- **Source**: the onboarding plan, step 3; decided 2026-10-08
+
+### T128 — Caps on members, campaigns and accounts
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
+
+Decided 2026-10-08 (plan, D2): at most **10 members** and **5 campaigns** per
+group, and **300 accounts** in the project.
+
+- **Members**: enforced in `groupManagement/redeemInvitation.ts`.
+- **Campaigns**: created from the browser under the rules, which cannot count;
+  a per-group counter the rules keep with `getAfter`, or creation through a
+  callable. `deleteCampaign` must give the slot back.
+- **Accounts**: `MAX_ACCOUNTS` (`signUp/signUpGate.ts:23`) is 20, checked by
+  `getAuth().listUsers(20)` on every sign-up, which also counts accounts the gate
+  never admitted. A counter document, kept by the gate and by
+  `userManagement/deleteUser.ts`, replaces it. 300 is the plan's figure, not
+  objected to; change it freely.
+- **Source**: the onboarding plan, step 4; decided 2026-10-08
+
+### T129 — Lower the AI limits to 3 / 5 / 10
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-08
+
+Decided 2026-10-08 (plan, D3): no project-wide AI counter. Each person's limits
+drop from 10 / 30 / 100 (day / week / month) to **3 / 5 / 10**, about $0.03 a
+month at full use. The ceiling is the OpenAI account: $5 prepaid, no automatic
+top-up.
+
+- **Where**: `DEFAULT_USAGE_LIMITS` in `firebase/functions/src/entityExtraction.ts:94`.
+  Usage is kept on `users/{uid}`, so the limits are per person across all their
+  groups. The frontend keeps its own copy of the numbers
+  (`features/collaboration/entity-extraction/types.ts:59`); change both, or
+  have the frontend read the server's.
+- **When the balance runs out** OpenAI refuses the call, and the function
+  rethrows it as `internal`, "Failed to extract entities". Tell players that
+  extraction is paused instead (OpenAI's `insufficient_quota`), and test it with
+  OpenAI stubbed, as the functions suite already does.
+- **Source**: the onboarding plan, D3; decided 2026-10-08
 
 ### T122 — An "about" page
 **Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
@@ -358,33 +448,151 @@ anyway. What is left:
 - **Source**: todo.txt, 2026-10-06; the site, sign-in, mail, redirect and repo
   moved 2026-10-07
 
-### T119 — Review the Firestore data model before the site scales
-**Type** debt · **Size** L · **Status** blocked · **Verified** 2026-10-07
+### Restructuring Firestore before the site scales (T130 to T136)
 
-Two documents, both written 2026-10-07. Nothing has been changed.
+Decided by the maintainer on 2026-10-08: **R2**, Firestore restructured; the
+site stays on Firebase. Why, and the routes set aside, are in
+[`docs/architecture/backend-structure-options.md`](docs/architecture/backend-structure-options.md);
+the findings (F1 to F9), the seven changes and the answers to the review's
+questions are in
+[`docs/architecture/data-model-review.md`](docs/architecture/data-model-review.md).
+Both must land before any user scaling (maintainer, 2026-10-07).
 
-- [`docs/architecture/backend-structure-options.md`](docs/architecture/backend-structure-options.md)
-  is the structural question: was the backend any good, and would another
-  structure be better, whatever the effort? It gives a verdict on today's
-  structure, seven routes (three on Firestore, SQL Connect, Supabase, Convex,
-  Cloudflare), a decision matrix with fixed and usage cost scored separately,
-  and a recommendation: **spike Convex first** (no fixed fee, live updates and
-  transactions built in), Cloudflare D1 second ($5/month, real SQL integrity),
-  and restructure Firestore as the fallback. Supabase is the best end state,
-  but at $25/month it does not fit a site with no income.
-- [`docs/architecture/data-model-review.md`](docs/architecture/data-model-review.md)
-  is how the code uses the data today: nine findings and their fixes within
-  Firestore. A move to Postgres makes most of them moot.
+**How every data change ships.** Production holds real campaigns, so each data
+change is a script in `firebase/functions/scripts/` in the shape of
+`audit-location-ids.js`: read-only by default, `--apply` to write, `--revert`
+from a saved manifest, run by the maintainer with their own gcloud login. A
+field that moves or is renamed ships in steps: the frontend reads both shapes;
+the script rewrites; a later frontend drops the old shape; only then, in its own
+merge, a rule refuses it. The review's read-only production checks (campaign
+sizes, how often a link's two halves disagree) go into each change's audit.
 
-- **Blocked on the maintainer**: agree the spike order, then answer the
-  review's three remaining questions. The production checks in the review (indexes, campaign sizes, how
-  often links disagree) inform the migration but do not block the choice.
-- **Then**: the spike, as its own entry; then the migration or the Firestore
-  restructure, as entries of their own.
-- **Overlaps**: the `dateAdded` →
-  `createdAt` renames in `docs/architecture/migration/database-field-alignment.md`
-  are subsumed by either a migration or the review's F6.
-- **Source**: `/todo`, 2026-10-07; both documents written 2026-10-07
+### T130 — Turn on Firestore's persistent cache
+**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-08
+
+Every page reads whole collections and the client keeps no cache between visits
+(`data-model-review.md`, F2), so reads grow with campaign size times page loads,
+and nothing bounds them. The cache is the restructure's cheapest change and
+needs no data migration; the onboarding plan wants it before founder links go
+out.
+
+- **Where**: `core/services/firebase/core/BaseFirebaseService.ts:63` builds
+  Firestore with `getFirestore(app)`. `initializeFirestore` with
+  `persistentLocalCache` (multi-tab) replaces it, and the emulator connection
+  must still follow.
+- **Catch**: the cache keeps a member's data in their browser after sign-out.
+  Clear it on sign-out (`clearIndexedDbPersistence`, which needs Firestore
+  terminated first), and check what `/privacy` says about local storage.
+- **Source**: `data-model-review.md` change 2; the onboarding plan, step 5
+
+### T131 — Store each link once, and show it both ways
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+
+Several links are stored on both records, and each page edits only its own
+half, so a link added on a quest's page is missing on the NPC's (F1):
+`NPC.connections.relatedQuests` and `Quest.relatedNPCIds`; `NPC.locationId` and
+`Location.connectedNPCs`; `Quest.locationId` / `keyLocations` and
+`Location.relatedQuests`; `Rumor.locationId` and `Rumor.relatedLocations`. An
+NPC → NPC link is stored on one side only, and the other NPC's page does not
+show it. Deleting a record leaves its id in every list that named it.
+
+- **Decided (maintainer, 2026-10-08)**: every link is stored once and shown,
+  and editable, on both pages; adding it from either side has the same outcome.
+  NPC → NPC links are two-way. **An NPC may be linked to several places**: the
+  single `NPC.locationId` becomes part of a list (`Location.connectedNPCs`
+  already is one, so merging into it is the smaller migration).
+- **Linking before the other record exists** (the maintainer's reason for links
+  by name) stays covered by the attach tray's "add one" hatch, which creates
+  the record in quick add and links it without leaving the form
+  (`shared/components/attach-tray/AttachTray.tsx`). Quest places added before
+  #1421 still carry only a name (`resolveKeyPlace`); the script gives them ids
+  where one place matches.
+- **Pattern to copy**: rumor → NPC, stored on the rumor and derived on the NPC's
+  page (`NPCDetailPage.tsx`). Deleting a record removes its id from the owner's
+  lists.
+- **Migration**: an audit counting the pairs whose halves disagree, then a
+  script that merges each dropped half into the kept one. No rule changes.
+- **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
+
+### T132 — Attribution and times stamped where the rules can check them
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+
+Who created or changed a record, and when, is built in the browser
+(`core/attribution/attribution.ts`) and no rule checks it: any member can
+credit a record to someone else, or rewrite who made it (F5). Times are stored
+three ways, two of them from the client's clock (F6).
+
+- **Rules**: on create, `createdBy` and `modifiedBy` equal `request.auth.uid`;
+  on update, `createdBy` and the creation time are unchanged and `modifiedBy`
+  is the caller. Times become server timestamps checked as `request.time`;
+  `YYYY-MM-DD` stays only where a calendar day is meant. `dateAdded` becomes
+  `createdAt` in the same rewrite
+  (`docs/architecture/migration/database-field-alignment.md`).
+- **Decided (maintainer, 2026-10-08): names are the author's current ones.**
+  Shown names are looked up from `createdBy` and `createdByCharacterId` (already
+  written), so renames carry through; the stored name stays only as the fallback
+  for an author who has left the group. One read of the group's profiles serves
+  every name on a page (at most 10 members, T128). `useCreatorName` and
+  `AttributionInfo` change with it.
+- **With T133**: both rewrite every record; one script, one pass.
+- **Deploy order**: the frontend that writes server timestamps ships before the
+  rule that requires them.
+- **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
+
+### T133 — Notes on records as their own documents
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+
+`NPC.notes`, `Location.notes` and `Rumor.notes` are arrays inside the record;
+each note rewrites the whole record in a transaction and is sent again to every
+listener. Firestore refuses a document over 1 MiB, and then every write to that
+record fails, including edits that do not touch the notes (F3). Rules cannot
+look inside an array, so a note's size is bounded only by the app (F4).
+
+- **Change**: `npcs/{id}/notes/{noteId}` and the like, read when the record is
+  opened, each note capped by the rules on its own. `deleteCampaign` must delete
+  them.
+- **With T132**: one script, one pass.
+- **Not these**: a player's private notes (`groups/{g}/users/{u}/notes`) are a
+  different feature (T111).
+- **Source**: `data-model-review.md` change 5 (F3)
+
+### T134 — Chapter text and the saga out of their documents
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+
+A chapter holds its full text, so search downloads the whole story; the saga is
+a single document (`saga/sagaData`) that will reach 1 MiB (F2, F3).
+
+- **Change**: `chapters/{id}` keeps title, order and summary, and the body moves
+  to its own document, read when the chapter is opened; search then needs the
+  summary, not the book. The saga becomes sections, as chapters already are.
+- **Source**: `data-model-review.md` change 4
+
+### T135 — The index file matches production
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-08
+
+`firebase/firestore.indexes.json` declares 20 composite indexes for queries the
+client never makes, and the deploy leaves it out (`--only
+firestore:rules,storage`, `firebase-hosting-merge.yml`). What production has is
+unknown; unused indexes cost storage and write time (F8).
+
+- **Blocked on the maintainer**: `npx firebase firestore:indexes --project
+  dnd-campaign-companion` from `firebase/`, output pasted. Then the file says
+  exactly what is needed (probably nothing until paging brings `orderBy`), and
+  whether the deploy includes it is decided.
+- **Source**: `data-model-review.md` change 6 (F8)
+
+### T136 — One membership document
+**Type** debt · **Size** L · **Status** open · **Verified** 2026-10-08
+
+Membership is stored twice: `users/{uid}.groups` (what every rule reads, so each
+check reads the whole global profile) and `groups/{g}/users/{uid}` (the roster,
+with the role). Only functions write either, so they agree while every function
+is correct, and once they did not (F7).
+
+- **Change**: `groups/{g}/members/{uid}` with the role, checked with
+  `exists()`; copy first, then switch the rules, in separate merges.
+- **Not urgent**: correct today.
+- **Source**: `data-model-review.md` change 7 (F7)
 
 ---
 

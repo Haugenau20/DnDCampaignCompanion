@@ -358,13 +358,24 @@ worth a migration on its own.
 
 ---
 
-## Questions for the maintainer
+## Answers (maintainer, 2026-10-08)
 
-1. **NPC → NPC links**: is "Aragorn knows Arwen" also "Arwen knows Aragorn"? This decides whether
-   F1 stores it once and shows it on both pages.
-2. **Names in attribution**: should a record show the name its author had *then*, or has *now*?
-3. **Which owner wins in F1**: is the proposal above (the quest owns its people, the NPC owns its
-   place) the right way round for how your table plays?
+The structure itself was decided in `backend-structure-options.md`: R2, Firestore restructured.
+
+1. **NPC → NPC links run both ways.** "Aragorn knows Arwen" is stored once and shown on both pages.
+2. **Names in attribution are the author's name now.** A record stores who wrote it
+   (`createdBy`, and `createdByCharacterId`, which it already writes) and the names are looked up
+   when it is shown, so a renamed character is renamed everywhere. The name stored at writing time
+   stays only as the fallback for an author who has left the group and has no profile to look up.
+   Only the id is something the rules can check (F5); a group of at most 10 members makes the
+   lookup one read of its profiles.
+3. **Every link is two-way and editable from either page.** The owner only decides where a link
+   is stored: adding the quest on the NPC's page and adding the NPC on the quest's page have the
+   same outcome. The maintainer's original reason for links by name (naming an NPC in a quest
+   before creating them) is already met by the attach tray's "add one" hatch, which creates the
+   record through quick add and links it without leaving the form (`AttachTray.tsx`). **An NPC
+   may be linked to several places**, not one: F1's proposal kept the single `NPC.locationId`,
+   which this replaces with a list (confirmed by the maintainer).
 
 ## What production has to answer
 

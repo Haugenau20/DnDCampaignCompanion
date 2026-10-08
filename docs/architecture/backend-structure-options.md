@@ -5,6 +5,10 @@ Written 2026-10-07. This is a companion to
 *code* uses the data. This one asks whether the backend's *structure* would be better built
 differently, whatever the effort. Nothing has been changed.
 
+**Decided (maintainer, 2026-10-08): R2, Firestore restructured.** The site stays on Firebase; the
+Convex and Cloudflare spikes recommended below will not run. The work is the changes listed in
+`data-model-review.md` ("What is worth changing, and how"), filed as TODO entries.
+
 **The brief** (maintainer, 2026-10-07):
 
 - The backend was designed when nothing about it was known. Now that much is, is what we have
