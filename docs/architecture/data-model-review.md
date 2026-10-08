@@ -375,7 +375,7 @@ The structure itself was decided in `backend-structure-options.md`: R2, Firestor
    before creating them) is already met by the attach tray's "add one" hatch, which creates the
    record through quick add and links it without leaving the form (`AttachTray.tsx`). **An NPC
    may be linked to several places**, not one: F1's proposal kept the single `NPC.locationId`,
-   which this replaces with a list (recommended, not objected to).
+   which this replaces with a list (confirmed by the maintainer).
 
 ## What production has to answer
 
