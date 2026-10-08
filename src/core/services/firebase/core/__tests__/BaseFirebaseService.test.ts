@@ -29,6 +29,11 @@ jest.mock('firebase/auth', () => ({
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => mockDb),
+  initializeFirestore: jest.fn(() => mockDb),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
 }));
 
@@ -67,9 +72,15 @@ describe('BaseFirebaseService', () => {
     jest.doMock('firebase/auth', () => ({
       getAuth: jest.fn(() => mockAuth),
       connectAuthEmulator: jest.fn(),
+      onAuthStateChanged: jest.fn(() => jest.fn()),
     }));
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => mockDb),
+      initializeFirestore: jest.fn(() => mockDb),
+      memoryLocalCache: jest.fn(() => 'memory cache'),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(() => 'persistent cache'),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
     }));
     jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => mockAnalytics) }));
@@ -257,6 +268,46 @@ describe('BaseFirebaseService', () => {
 
   // ─── emulator connection (when useEmulators=true) ─────────────────────────
 
+  // ─── Firestore's local cache (T130) ─────────────────────────────────────────
+
+  describe('local cache', () => {
+    const remembered = (rememberMe: boolean) =>
+      JSON.stringify({ createdAt: Date.now(), expiresAt: Date.now() + 60_000, rememberMe });
+
+    afterEach(() => localStorage.clear());
+
+    test('keeps a persistent cache for a remembered session, cleared on sign-out', () => {
+      localStorage.setItem('sessionInfo', remembered(true));
+      class Concrete extends (BaseFirebaseService as any) {}
+      new Concrete();
+
+      const { initializeFirestore } = require('firebase/firestore');
+      const { onAuthStateChanged } = require('firebase/auth');
+      expect(initializeFirestore).toHaveBeenCalledWith(mockApp, { localCache: 'persistent cache' });
+      expect(onAuthStateChanged).toHaveBeenCalledWith(mockAuth, expect.any(Function));
+    });
+
+    test('keeps only a memory cache for a session that ends with the browser', () => {
+      localStorage.setItem('sessionInfo', remembered(false));
+      class Concrete extends (BaseFirebaseService as any) {}
+      new Concrete();
+
+      const { initializeFirestore, clearIndexedDbPersistence } = require('firebase/firestore');
+      const { onAuthStateChanged } = require('firebase/auth');
+      expect(initializeFirestore).toHaveBeenCalledWith(mockApp, { localCache: 'memory cache' });
+      expect(clearIndexedDbPersistence).toHaveBeenCalledWith(mockDb);
+      expect(onAuthStateChanged).not.toHaveBeenCalled();
+    });
+
+    test('keeps only a memory cache when nobody has signed in', () => {
+      class Concrete extends (BaseFirebaseService as any) {}
+      new Concrete();
+
+      const { initializeFirestore } = require('firebase/firestore');
+      expect(initializeFirestore).toHaveBeenCalledWith(mockApp, { localCache: 'memory cache' });
+    });
+  });
+
   describe('emulator connections', () => {
     test('should connect to emulators when useEmulators is true', () => {
       jest.resetModules();
@@ -267,6 +318,11 @@ describe('BaseFirebaseService', () => {
       }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => mockDb),
+        initializeFirestore: jest.fn(() => mockDb),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
       }));
       jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => mockAnalytics) }));
@@ -310,6 +366,11 @@ describe('BaseFirebaseService', () => {
       }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => mockDb),
+        initializeFirestore: jest.fn(() => mockDb),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
       }));
       jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => mockAnalytics) }));

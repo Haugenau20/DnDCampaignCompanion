@@ -29,6 +29,11 @@ jest.mock('firebase/auth', () => ({
 jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  initializeFirestore: jest.fn(() => ({})),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
 }));
 
@@ -127,6 +132,11 @@ describe('EntityExtractionService', () => {
     jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => ({})),
+      initializeFirestore: jest.fn(() => ({})),
+      memoryLocalCache: jest.fn(),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
     }));
     jest.doMock('core/services/firebase/config/firebaseConfig', () => ({
@@ -263,6 +273,11 @@ describe('EntityExtractionService', () => {
       jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => ({})),
+        initializeFirestore: jest.fn(() => ({})),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
       }));
       jest.doMock('core/services/firebase/config/firebaseConfig', () => ({
@@ -344,6 +359,26 @@ describe('EntityExtractionService', () => {
 
       const svc = EntityExtractionService.getInstance();
       await expect(svc.extractEntities('Content')).rejects.toThrow('Internal server error');
+    });
+
+    // T129: the OpenAI account ran dry, so the function says extraction is paused.
+    test('says smart detection is paused, and that nothing was counted, when the function does', async () => {
+      const firebaseError = {
+        code: 'functions/unavailable',
+        message: 'AI_EXTRACTION_PAUSED',
+        details: undefined,
+      };
+      const mockFn = jest.fn().mockRejectedValueOnce(firebaseError);
+      mockHttpsCallable.mockReturnValueOnce(mockFn);
+
+      const svc = EntityExtractionService.getInstance();
+      const message = await svc.extractEntities('Content').then(
+        () => 'resolved',
+        (e: Error) => e.message
+      );
+      expect(message).toMatch(/smart detection is paused/i);
+      expect(message).toMatch(/not counted against your limit/i);
+      expect(message).not.toMatch(/AI_EXTRACTION_PAUSED/);
     });
 
     test('should re-throw non-Firebase errors as-is', async () => {
@@ -445,6 +480,11 @@ describe('EntityExtractionService', () => {
       jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => ({})),
+        initializeFirestore: jest.fn(() => ({})),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
       }));
       jest.doMock('core/services/firebase/config/firebaseConfig', () => ({

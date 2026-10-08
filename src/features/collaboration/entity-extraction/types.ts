@@ -54,15 +54,6 @@ export interface UsageStatus {
 }
 
 /**
- * Default usage limits configuration
- */
-export const DEFAULT_USAGE_LIMITS = {
-  daily: 10,
-  weekly: 30,
-  monthly: 100
-} as const;
-
-/**
  * Usage limit error response
  */
 export interface UsageLimitError {

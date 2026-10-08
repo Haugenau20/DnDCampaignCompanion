@@ -50,6 +50,11 @@ const mockPathOf = (parent: { path?: string } | undefined, segments: string[]) =
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  initializeFirestore: jest.fn(() => ({})),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
   collection: (parent: { path?: string }, ...segments: string[]) => ({ path: mockPathOf(parent, segments) }),
   doc: (parent: { path?: string }, ...segments: string[]) => ({ path: mockPathOf(parent, segments) }),

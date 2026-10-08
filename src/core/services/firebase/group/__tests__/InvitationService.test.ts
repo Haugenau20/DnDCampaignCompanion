@@ -34,6 +34,11 @@ const mockUserServiceInstance = {
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  initializeFirestore: jest.fn(() => ({})),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
   collection: function() { return (mockCollection as Function).apply(null, arguments); },
   doc: function() { return (mockDoc as Function).apply(null, arguments); },
@@ -125,6 +130,11 @@ describe('InvitationService', () => {
     }));
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => ({})),
+      initializeFirestore: jest.fn(() => ({})),
+      memoryLocalCache: jest.fn(),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
       collection: function() { return (mockCollection as Function).apply(null, arguments); },
       doc: function() { return (mockDoc as Function).apply(null, arguments); },
@@ -214,6 +224,11 @@ describe('InvitationService', () => {
       }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => ({})),
+        initializeFirestore: jest.fn(() => ({})),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
         collection: function() { return (mockCollection as Function).apply(null, arguments); },
         doc: function() { return (mockDoc as Function).apply(null, arguments); },

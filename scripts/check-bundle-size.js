@@ -24,8 +24,15 @@ const zlib = require("zlib");
  * Measured 2026-10-06: 260.81 kB in one file on Vite 7, 262.96 kB in 24 files on
  * Vite 8, whose Rolldown splits shared code out of the entry (CRA's main.js was
  * 264.23 kB). ~3% headroom.
+ *
+ * Raised 2026-10-08 (T130): 270.90 kB on main, 291.72 kB with Firestore's
+ * persistent cache. The ~21 kB is the SDK's IndexedDB layer. It cannot be a
+ * lazy chunk: `@firebase/firestore` is one module, so the cache code is either
+ * in the bundle or tree-shaken out, and the cache must be chosen before
+ * Firestore's first read. It buys a reload that is billed for what changed
+ * rather than for every document again. ~3% headroom.
  */
-const MAIN_CEILING_KB = 272;
+const MAIN_CEILING_KB = 300;
 
 const buildDir = path.resolve(__dirname, "..", "build");
 

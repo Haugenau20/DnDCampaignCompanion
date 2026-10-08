@@ -166,8 +166,8 @@ describe("PrivacyPolicyPage — content that must be there", () => {
   it("states the three extraction caps, not just a monthly one", () => {
     const { container } = render(<PrivacyPolicyPage />);
     const section = container.querySelector("#entity-extraction");
-    expect(section!.textContent).toMatch(/10 scans a day/);
-    expect(section!.textContent).toMatch(/100 a month/);
+    // T129 (maintainer, 2026-10-08): 3 a day, 5 a week, 10 a month.
+    expect(section!.textContent).toMatch(/3 scans a day, 5 a week and 10 a month/);
   });
 
   it("describes deletion as a button, and links to the profile page", () => {
@@ -325,10 +325,27 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     expect(section!.textContent).toMatch(/legitimate interest|contract|consent/i);
   });
 
+  // T125: a founder invitation is the other kind of invitation an account comes from.
+  it("says accounts come from an invitation into a group or to start one", () => {
+    render(<PrivacyPolicyPage />);
+    expect(screen.getByText(
+      /accounts can only be created from an\s+invitation, into a group or to start one/i
+    )).toBeInTheDocument();
+  });
+
   it("discloses browser-side storage", () => {
     const { container } = render(<PrivacyPolicyPage />);
     const section = container.querySelector("#device-storage");
     expect(section!.textContent).toMatch(/your own device|your browser/i);
+  });
+
+  // T130: a remembered session keeps a copy of the campaign data it has read.
+  it("says a remembered session keeps campaign data in the browser until sign-out", () => {
+    render(<PrivacyPolicyPage />);
+    const paragraph = screen.getByText(/if you asked to be remembered, the campaign records/i);
+    expect(paragraph).toHaveTextContent(/kept in your browser/i);
+    expect(paragraph).toHaveTextContent(/signing out deletes it/i);
+    expect(paragraph).toHaveTextContent(/otherwise nothing of your campaigns stays/i);
   });
 
   it("no longer ends with a Contact Us card", () => {

@@ -141,13 +141,16 @@ from 15.23.0 the CLI ignores `NO_PROXY`, so behind a proxy the Storage rules sui
 The reason is recorded in that file.
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
-  `createGroup`, `redeemInvitation`, `setMemberRole`, `deleteGroup`, `deleteCampaign`, the sign-up gate (`reserveSignUp`, and `gateAccountCreation`
+  `createGroup`, `redeemInvitation`, `setMemberRole`, `deleteGroup`, `deleteCampaign`, the sign-up gate (`reserveSignUp`, with
+  founder invitations too, and `gateAccountCreation`
   whose handler is exported as `admitAccount`), the last-admin guard in `removeUserFromGroup` /
   `deleteUser`, device sign-in (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`),
   and `extractEntities`'s party exclusion — with OpenAI stubbed by `jest.mock("openai")`, the way to
   test any callable that calls out. A callable with no suite can be broken in production with every
   gate green -- `createGroup` failed every call until 2026-10-06 -- so give a new one a suite;
-  `test/emulator.ts` is the harness to copy.
+  `test/emulator.ts` is the harness to copy. `fn.run` skips the SDK's request checks, App Check
+  among them: `reserveSignUp`, `redeemInvitation` and `createGroup` enforce it outside the emulator
+  (`src/shared/appCheck.ts`), and `appCheck.test.ts` calls their HTTP handlers to test that.
 - **Scheduled** — `sweepOrphanedImagesDaily` never fires in the emulator; its two bodies are
   tested directly: `sweepReleasedImages(now)`, the daily run over the `releasedImages` and
   `pendingUploads` ledgers, and `sweepOrphanedImages(now)`, the full read it adds on the 1st of
@@ -163,9 +166,11 @@ The reason is recorded in that file.
   `locationId` and, with `--migrate`, gives them one and records a revert file; and
   `delete-account.js`, which deletes an account on request -- for someone who cannot sign in to
   press the button -- with the same `deleteAccount` the `deleteUser` callable runs. Both only read
-  unless given `--apply`. Tested through what they export (`auditLocationIds.test.ts`,
-  `migrateLocationIds.test.ts`, `accountDeletion.test.ts`, `deleteAccountScript.test.ts`); run one
-  against the dev emulators with `--emulator` after a change.
+  unless given `--apply`. `issue-founder-invitation.js` (T125) issues a founder link -- one account,
+  to start one group -- and prints it; it only adds. Tested through what they export
+  (`auditLocationIds.test.ts`, `migrateLocationIds.test.ts`, `accountDeletion.test.ts`,
+  `deleteAccountScript.test.ts`, `founderInvitations.test.ts`, `issueFounderInvitationScript.test.ts`);
+  run one against the dev emulators with `--emulator` after a change.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.

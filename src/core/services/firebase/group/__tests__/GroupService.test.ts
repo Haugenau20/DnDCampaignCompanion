@@ -38,6 +38,11 @@ const mockUserServiceInstance = {
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  initializeFirestore: jest.fn(() => ({})),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
   collection: function() { return (mockCollection as Function).apply(null, arguments); },
   doc: function() { return (mockDoc as Function).apply(null, arguments); },
@@ -123,6 +128,11 @@ describe('GroupService', () => {
 
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => ({})),
+      initializeFirestore: jest.fn(() => ({})),
+      memoryLocalCache: jest.fn(),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
       collection: function() { return (mockCollection as Function).apply(null, arguments); },
       doc: function() { return (mockDoc as Function).apply(null, arguments); },
@@ -182,6 +192,11 @@ describe('GroupService', () => {
       }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => ({})),
+        initializeFirestore: jest.fn(() => ({})),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
         collection: function() { return (mockCollection as Function).apply(null, arguments); },
         doc: function() { return (mockDoc as Function).apply(null, arguments); },
@@ -216,7 +231,7 @@ describe('GroupService', () => {
         },
       }));
       const GS = require('../GroupService').default;
-      await expect(GS.getInstance().createGroup('My Group')).rejects.toThrow('Not authenticated');
+      await expect(GS.getInstance().createGroup({ name: 'My Group', username: 'Gandalf' })).rejects.toThrow('Not authenticated');
     });
 
     // These two tests were written against the client-side `runTransaction`
@@ -246,7 +261,7 @@ describe('GroupService', () => {
       mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
-      const groupId = await svc.createGroup('My Group', 'A test group');
+      const groupId = await svc.createGroup({ name: 'My Group', description: 'A test group', username: 'Gandalf' });
       expect(typeof groupId).toBe('string');
       expect(mockCallable).toHaveBeenCalledTimes(1);
     });
@@ -258,7 +273,7 @@ describe('GroupService', () => {
       mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
-      await svc.createGroup('My Group');
+      await svc.createGroup({ name: 'My Group', username: 'Gandalf' });
       expect(svc.getActiveGroupId()).not.toBeNull();
     });
 
@@ -280,24 +295,36 @@ describe('GroupService', () => {
         jest.fn().mockResolvedValueOnce({ data: { success: true, groupId: 'new-group-id' } })
       );
 
-      await svc.createGroup('My Group');
+      await svc.createGroup({ name: 'My Group', username: 'Gandalf' });
 
       expect(mockGetFunctions).not.toHaveBeenCalled();
       expect(mockHttpsCallable).toHaveBeenCalledWith(REGIONED_FUNCTIONS_INSTANCE, 'createGroup');
     });
 
-    test('should call the createGroup Cloud Function with name and description', async () => {
+    test('should call the createGroup Cloud Function with the name, description and founder name', async () => {
       const mockCallable = jest.fn().mockResolvedValueOnce({
         data: { success: true, groupId: 'new-group-id' },
       });
       mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
-      const groupId = await svc.createGroup('My Group', 'A test group');
+      const groupId = await svc.createGroup({ name: 'My Group', description: 'A test group', username: 'Gandalf' });
 
       expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'createGroup');
-      expect(mockCallable).toHaveBeenCalledWith({ name: 'My Group', description: 'A test group' });
+      expect(mockCallable).toHaveBeenCalledWith({ name: 'My Group', description: 'A test group', username: 'Gandalf' });
       expect(groupId).toBe('new-group-id');
+    });
+
+    // T126: a founder link is spent by the function, so it travels with the call.
+    test('passes a founder link through to the Cloud Function', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({
+        data: { success: true, groupId: 'new-group-id' },
+      });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      await GroupService.getInstance().createGroup({ name: 'My Group', username: 'Gandalf', founderToken: 'tok' });
+
+      expect(mockCallable).toHaveBeenCalledWith({ name: 'My Group', username: 'Gandalf', founderToken: 'tok' });
     });
 
     test('should set the active group to the ID returned by the Cloud Function', async () => {
@@ -307,7 +334,7 @@ describe('GroupService', () => {
       mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
-      await svc.createGroup('My Group');
+      await svc.createGroup({ name: 'My Group', username: 'Gandalf' });
 
       expect(svc.getActiveGroupId()).toBe('returned-group-id');
     });
@@ -317,7 +344,7 @@ describe('GroupService', () => {
       mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = GroupService.getInstance();
-      await expect(svc.createGroup('')).rejects.toThrow('invalid-argument');
+      await expect(svc.createGroup({ name: '', username: 'Gandalf' })).rejects.toThrow('invalid-argument');
     });
   });
 
@@ -333,6 +360,11 @@ describe('GroupService', () => {
       }));
       jest.doMock('firebase/firestore', () => ({
         getFirestore: jest.fn(() => ({})),
+        initializeFirestore: jest.fn(() => ({})),
+        memoryLocalCache: jest.fn(),
+        clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
         connectFirestoreEmulator: jest.fn(),
         collection: function() { return (mockCollection as Function).apply(null, arguments); },
         doc: function() { return (mockDoc as Function).apply(null, arguments); },

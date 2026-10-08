@@ -9,7 +9,7 @@ import {
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
 import type UserService from '../user/UserService';
-import { Group } from '../../../types/user';
+import { CreateGroupInput, Group } from '../../../types/user';
 import { StoredImage } from '../../../types/storedImage';
 import { assertTextFits } from '../data/TextTooLongError';
 import { NAMED_DOCUMENT_TEXT_LIMITS } from '../../../constants/textLimits';
@@ -45,11 +45,13 @@ import { httpsCallable } from 'firebase/functions';
      * deny clients that write entirely (bug #1409 -- a member could otherwise
      * delete their own group profile, permitted as "leave group", and
      * recreate it with an escalated role).
-     * @param name Name of the group
-     * @param description Optional description of the group
+     * Who may is the function's to decide (T126): someone spending a founder
+     * link, or someone who has started a group and fewer than three.
+     * @param input The group's name and description, the founder's name in it,
+     *   and the founder link to spend, if any
      * @returns The ID of the newly created group
      */
-    public async createGroup(name: string, description?: string): Promise<string> {
+    public async createGroup(input: CreateGroupInput): Promise<string> {
       const userId = this.getCurrentUser()?.uid;
       if (!userId) {
         throw new Error('Not authenticated');
@@ -62,7 +64,7 @@ import { httpsCallable } from 'firebase/functions';
         // deployed, and bypasses the emulator in development.
         const createGroupFn = httpsCallable(this.functions, 'createGroup');
 
-        const result = await createGroupFn({ name, description });
+        const result = await createGroupFn(input);
         const { groupId } = result.data as { success: boolean; groupId: string };
 
         // Set the active group context

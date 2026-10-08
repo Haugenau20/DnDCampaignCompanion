@@ -25,7 +25,7 @@ import DeleteGroupDialog from '../components/DeleteGroupDialog';
  * rests on.
  */
 const AdminGroupPage: React.FC = () => {
-  const { groups, activeGroupId, activeGroup, createGroup, updateGroup } = useGroups();
+  const { groups, activeGroupId, activeGroup, activeGroupUserProfile, createGroup, updateGroup } = useGroups();
   const { members } = useAdminOutlet();
 
   const [copied, setCopied] = useState(false);
@@ -34,6 +34,8 @@ const AdminGroupPage: React.FC = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  // The founder's name in the new group, starting from their name in this one.
+  const [founderName, setFounderName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -62,11 +64,15 @@ const AdminGroupPage: React.FC = () => {
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!name.trim() || creating) return;
+    if (!name.trim() || !founderName.trim() || creating) return;
     setCreating(true);
     setCreateError(null);
     try {
-      await createGroup(name.trim(), description.trim());
+      await createGroup({
+        name: name.trim(),
+        description: description.trim(),
+        username: founderName.trim(),
+      });
       setName('');
       setDescription('');
       setCreateOpen(false);
@@ -230,7 +236,10 @@ const AdminGroupPage: React.FC = () => {
       <div className="px-1">
         <Button
           variant="ghost"
-          onClick={() => setCreateOpen(true)}
+          onClick={() => {
+            setFounderName(activeGroupUserProfile?.username ?? '');
+            setCreateOpen(true);
+          }}
           startIcon={<Plus className="w-4 h-4" />}
           className="min-h-[2.75rem]"
         >
@@ -404,6 +413,17 @@ const AdminGroupPage: React.FC = () => {
             disabled={creating}
             isTextArea={true}
             rows={3}
+          />
+
+          <Input
+            label="Your name in the new group"
+            value={founderName}
+            minLength={3}
+            maxLength={20}
+            onChange={(event) => setFounderName(event.target.value)}
+            required
+            disabled={creating}
+            helperText="3–20 characters. The other members will see it on everything you write there."
           />
 
           {createError && (

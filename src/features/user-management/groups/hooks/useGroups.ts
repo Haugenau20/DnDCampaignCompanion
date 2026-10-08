@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useFirebaseContext } from 'features/user-management/auth/context/FirebaseContext';
 import firebaseServices from 'core/services/firebase';
 import { StoredImage } from 'core/types/storedImage';
+import type { CreateGroupInput } from 'core/types/user';
 
 export function useGroups() {
   const {
@@ -47,13 +48,10 @@ export function useGroups() {
   }, [user, groups, activeGroupUserProfile]);
 
   // Create a new group
-  const createGroup = useCallback(async (
-    name: string, 
-    description?: string
-  ): Promise<string> => {
+  const createGroup = useCallback(async (input: CreateGroupInput): Promise<string> => {
     try {
       setError(null);
-      const groupId = await firebaseServices.group.createGroup(name, description);
+      const groupId = await firebaseServices.group.createGroup(input);
       await refreshGroups();
       return groupId;
     } catch (err) {

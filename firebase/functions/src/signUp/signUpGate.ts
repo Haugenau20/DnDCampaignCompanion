@@ -14,6 +14,7 @@
 import {getAuth} from "firebase-admin/auth";
 import {DocumentReference, Firestore} from "firebase-admin/firestore";
 import {registrationTokenProblem} from "../shared/registrationToken";
+import {FOUNDER_INVITATIONS} from "./founderInvitations";
 
 /**
  * The most Auth accounts the project will hold. A backstop, not the gate: the
@@ -84,8 +85,9 @@ export async function accountLimitReached(): Promise<boolean> {
 /**
  * The live reservation for `email`, if there is one.
  *
- * Live means unexpired, *and* its invitation is still redeemable -- a
- * reservation outlives nothing it was made from. Expired or dead ones found on
+ * Live means unexpired, *and* its invitation -- into a group, or a founder
+ * invitation -- is still redeemable: a reservation outlives nothing it was
+ * made from. Expired or dead ones found on
  * the way are deleted.
  *
  * @param {Firestore} db Firestore
@@ -104,13 +106,17 @@ export async function findLiveReservation(
     .get();
 
   for (const reservation of snapshot.docs) {
-    const {groupId, token, expiresAt} = reservation.data();
+    const {kind, groupId, token, expiresAt} = reservation.data();
     const expired =
       !expiresAt || expiresAt.toDate().getTime() <= now.getTime();
-    const tokenDoc = expired || typeof groupId !== "string" ||
-      typeof token !== "string" ?
+    // A reservation written before T125 has no `kind`: it is a group's.
+    const invitationPath = kind === "founder" ?
+      (typeof token === "string" ? `${FOUNDER_INVITATIONS}/${token}` : null) :
+      (typeof groupId === "string" && typeof token === "string" ?
+        `groups/${groupId}/registrationTokens/${token}` : null);
+    const tokenDoc = expired || invitationPath === null ?
       null :
-      await db.doc(`groups/${groupId}/registrationTokens/${token}`).get();
+      await db.doc(invitationPath).get();
 
     if (tokenDoc?.exists &&
         registrationTokenProblem(tokenDoc.data() ?? {}, now) === null) {

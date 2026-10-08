@@ -595,6 +595,24 @@ describe("the contact form's budgets (T099)", () => {
   });
 });
 
+describe("founder invitations (T125)", () => {
+  // Only the maintainer's script issues them and only the functions read
+  // them, through the Admin SDK. A client that could read one would hold a
+  // link to start a group; one that could write one would mint its own.
+  it("no client lists, reads, writes or deletes one, signed in or not", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc("founderInvitations/tok").set({used: false})
+    );
+    for (const db of [as("frodo"), env.unauthenticatedContext().firestore()]) {
+      await assertFails(db.collection("founderInvitations").get());
+      await assertFails(db.doc("founderInvitations/tok").get());
+      await assertFails(db.doc("founderInvitations/mine").set({used: false}));
+      await assertFails(db.doc("founderInvitations/tok").update({used: false}));
+      await assertFails(db.doc("founderInvitations/tok").delete());
+    }
+  });
+});
+
 describe("turning rumours into a quest is one transaction (T088)", () => {
   const C = `groups/${G}/campaigns/c1`;
 

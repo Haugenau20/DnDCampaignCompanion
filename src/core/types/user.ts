@@ -134,3 +134,18 @@ export interface UsernameValidationResult {
   /** Whether the username is available */
   isAvailable?: boolean;
 }
+/**
+ * What creating a group takes (T126). The `createGroup` function decides who
+ * may: someone spending a founder link, or someone who has started a group
+ * and fewer than three.
+ */
+export interface CreateGroupInput {
+  /** The group's name. */
+  name: string;
+  /** What the group is, optionally. */
+  description?: string;
+  /** The founder's name in the new group, 3-20 characters, as on joining one. */
+  username: string;
+  /** A founder link to spend, from `/join?founder=…`. */
+  founderToken?: string;
+}

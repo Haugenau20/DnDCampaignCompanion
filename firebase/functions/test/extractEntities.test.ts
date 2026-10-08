@@ -131,23 +131,79 @@ describe("extractEntities and the party's own characters", () => {
 });
 
 // T087: the allowance is reserved atomically, and a status read writes nothing.
+// T129: the allowance is 3 a day, 5 a week and 10 a month (maintainer, 2026-10-08).
 describe("the usage allowance", () => {
-  /** A usage record with `used` of each period spent, reset today. */
-  const usage = (used: number, lastReset = new Date().toISOString()) => ({
-    daily: {count: used, lastReset, limit: 10},
-    weekly: {count: used, lastReset, limit: 30},
-    monthly: {count: used, lastReset, limit: 100},
+  /**
+   * A usage record with the given counts spent, reset today. Its stored limits
+   * are the old, larger ones every record written before T129 carries: the
+   * server's limits must win over what a record says.
+   */
+  const usage = (
+    used: {daily?: number; weekly?: number; monthly?: number},
+    lastReset = new Date().toISOString(),
+    limits = {daily: 10, weekly: 30, monthly: 100}
+  ) => ({
+    daily: {count: used.daily ?? 0, lastReset, limit: limits.daily},
+    weekly: {count: used.weekly ?? 0, lastReset, limit: limits.weekly},
+    monthly: {count: used.monthly ?? 0, lastReset, limit: limits.monthly},
   });
   const storedUsage = async () =>
     (await db.doc("users/frodo").get()).get("entityExtractionUsage");
+  const answerEveryCall = () => mockCreate.mockResolvedValue({
+    choices: [{message: {refusal: null, tool_calls: [{type: "function", function: {
+      name: "extract_entities", arguments: JSON.stringify({entities: []}),
+    }}]}}],
+  });
+
+  it("admits a third call in a day, and refuses a fourth", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: usage({daily: 2, weekly: 2, monthly: 2})});
+    modelReturns([]);
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a sixth call in a week, however the days fell", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: usage({daily: 0, weekly: 5, monthly: 5})});
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuses an eleventh call in a month", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: usage({daily: 0, weekly: 0, monthly: 10})});
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("holds a record written under the old limits to the new ones", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: usage({daily: 3, weekly: 3, monthly: 3})});
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+    expect(mockCreate).not.toHaveBeenCalled();
+
+    const result = await call(getUsageStatus, {}, "frodo") as {
+      usage: {usage: {daily: {limit: number}; weekly: {limit: number}; monthly: {limit: number}}};
+    };
+    expect(result.usage.usage.daily.limit).toBe(3);
+    expect(result.usage.usage.weekly.limit).toBe(5);
+    expect(result.usage.usage.monthly.limit).toBe(10);
+  });
+
+  it("gives a new user the new limits", async () => {
+    modelReturns([]);
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    const stored = await storedUsage();
+    expect([stored.daily.limit, stored.weekly.limit, stored.monthly.limit]).toEqual([3, 5, 10]);
+  });
 
   it("admits exactly one of several calls racing for the last slot (SEC-003)", async () => {
-    await db.doc("users/frodo").set({entityExtractionUsage: usage(9)});
-    mockCreate.mockResolvedValue({
-      choices: [{message: {refusal: null, tool_calls: [{type: "function", function: {
-        name: "extract_entities", arguments: JSON.stringify({entities: []}),
-      }}]}}],
-    });
+    await db.doc("users/frodo").set({entityExtractionUsage: usage({daily: 2, weekly: 2, monthly: 2})});
+    answerEveryCall();
 
     const outcomes = await Promise.allSettled(
       Array.from({length: 4}, () => extract({content: CONTENT, groupId: GROUP}, "frodo"))
@@ -159,29 +215,24 @@ describe("the usage allowance", () => {
     }
     expect(mockCreate).toHaveBeenCalledTimes(1);
     const stored = await storedUsage();
-    expect(stored.daily.count).toBe(10);
-    expect(stored.weekly.count).toBe(10);
-    expect(stored.monthly.count).toBe(10);
+    expect(stored.daily.count).toBe(3);
+    expect(stored.weekly.count).toBe(3);
+    expect(stored.monthly.count).toBe(3);
   });
 
   it("counts every admitted call when several race with room to spare", async () => {
-    await db.doc("users/frodo").set({entityExtractionUsage: usage(2)});
-    mockCreate.mockResolvedValue({
-      choices: [{message: {refusal: null, tool_calls: [{type: "function", function: {
-        name: "extract_entities", arguments: JSON.stringify({entities: []}),
-      }}]}}],
-    });
+    answerEveryCall();
 
     await Promise.all(
-      Array.from({length: 4}, () => extract({content: CONTENT, groupId: GROUP}, "frodo"))
+      Array.from({length: 3}, () => extract({content: CONTENT, groupId: GROUP}, "frodo"))
     );
 
-    expect((await storedUsage()).daily.count).toBe(6);
+    expect((await storedUsage()).daily.count).toBe(3);
   });
 
   it("reports a period that has rolled over as reset, without writing it back", async () => {
     const yesterday = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
-    const before = usage(10, yesterday);
+    const before = usage({daily: 3}, yesterday);
     await db.doc("users/frodo").set({entityExtractionUsage: before});
 
     const result = await call(getUsageStatus, {}, "frodo") as {
@@ -197,12 +248,56 @@ describe("the usage allowance", () => {
 
   it("resets a rolled-over period when it reserves", async () => {
     const yesterday = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
-    await db.doc("users/frodo").set({entityExtractionUsage: usage(10, yesterday)});
+    await db.doc("users/frodo").set({entityExtractionUsage: usage({daily: 3}, yesterday)});
     modelReturns([]);
 
     await extract({content: CONTENT, groupId: GROUP}, "frodo");
 
     expect((await storedUsage()).daily.count).toBe(1);
+  });
+});
+
+// T129: the OpenAI account is prepaid with no top-up; when it runs dry the
+// model refuses every call, and players are told extraction is paused.
+describe("when the OpenAI balance has run out", () => {
+  /** What the OpenAI SDK throws when the account has no credit left. */
+  const outOfCredit = () => Object.assign(
+    new Error("429 You exceeded your current quota, please check your plan and billing details."),
+    {status: 429, code: "insufficient_quota", type: "insufficient_quota"}
+  );
+  const storedUsage = async () =>
+    (await db.doc("users/frodo").get()).get("entityExtractionUsage");
+
+  beforeEach(() => {
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  it("says extraction is paused, not that it failed", async () => {
+    mockCreate.mockRejectedValueOnce(outOfCredit());
+
+    const error = await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "unavailable");
+    expect(error.message).toBe("AI_EXTRACTION_PAUSED");
+  });
+
+  it("gives back the call it had counted", async () => {
+    const lastReset = new Date().toISOString();
+    await db.doc("users/frodo").set({entityExtractionUsage: {
+      daily: {count: 1, lastReset, limit: 3},
+      weekly: {count: 2, lastReset, limit: 5},
+      monthly: {count: 4, lastReset, limit: 10},
+    }});
+    mockCreate.mockRejectedValueOnce(outOfCredit());
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "unavailable");
+
+    const stored = await storedUsage();
+    expect([stored.daily.count, stored.weekly.count, stored.monthly.count]).toEqual([1, 2, 4]);
+  });
+
+  it("still reports any other model failure as a failure", async () => {
+    mockCreate.mockRejectedValueOnce(Object.assign(new Error("500 server error"), {status: 500}));
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "internal");
   });
 });
 

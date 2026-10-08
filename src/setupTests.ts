@@ -44,6 +44,11 @@ jest.mock('firebase/app', () => ({
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(),
+  initializeFirestore: jest.fn(),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   collection: jest.fn(),
   doc: jest.fn(),
   getDoc: jest.fn(),

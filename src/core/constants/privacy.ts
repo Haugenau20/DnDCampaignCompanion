@@ -20,12 +20,14 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-10-07";
+export const PRIVACY_LAST_UPDATED = "2026-10-08";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "We now say plainly that the person who runs the site can reach what is stored here, private notes included, though nothing in the app shows them to anyone else.",
-  "If you can no longer sign in, we will delete your account for you when you ask.",
+  "If you ask to be remembered, the campaign records you have opened are now kept in your browser until you sign out.",
+  "If you don't, nothing of your campaigns stays in your browser after you close the page, and any copy an earlier remembered visit left is deleted.",
+  "Smart detection is now capped at 3 scans a day, 5 a week and 10 a month, down from 10, 30 and 100.",
+  "Accounts still come only from an invitation, which may now be one to start a group of your own.",
 ]
 
 /**
@@ -65,7 +67,7 @@ export const OPENAI_DPA_ACCEPTED = false;
 export const EXTRACTION_FACTS = {
   provider: "OpenAI",
   product: "the OpenAI platform API",
-  caps: "10 scans a day, 30 a week and 100 a month",
+  caps: "3 scans a day, 5 a week and 10 a month",
   retention:
     "kept by OpenAI for up to 30 days for abuse monitoring and then deleted",
   transfer: "processed in the United States",

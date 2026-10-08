@@ -30,6 +30,11 @@ jest.mock('firebase/auth', () => ({
 }));
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => mockDbInstance),
+  initializeFirestore: jest.fn(() => mockDbInstance),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
   doc: function() { return (mockDoc as Function).apply(null, arguments); },
   getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },
@@ -74,6 +79,11 @@ describe('firebase/index', () => {
     }));
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => mockDbInstance),
+      initializeFirestore: jest.fn(() => mockDbInstance),
+      memoryLocalCache: jest.fn(),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
       doc: function() { return (mockDoc as Function).apply(null, arguments); },
       getDoc: function() { return (mockGetDoc as Function).apply(null, arguments); },

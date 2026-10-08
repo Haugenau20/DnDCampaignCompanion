@@ -26,6 +26,11 @@ const mockGetFunctions = jest.fn((...args: any[]) =>
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  initializeFirestore: jest.fn(() => ({})),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
   getDoc: (a: any) => mockGetDoc(a),
   updateDoc: (a: any, b: any) => mockUpdateDoc(a, b),
@@ -69,6 +74,11 @@ describe('UserService', () => {
     // Re-apply mocks after resetModules
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => ({})),
+      initializeFirestore: jest.fn(() => ({})),
+      memoryLocalCache: jest.fn(),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
       getDoc: (a: any) => mockGetDoc(a),
       updateDoc: (a: any, b: any) => mockUpdateDoc(a, b),
