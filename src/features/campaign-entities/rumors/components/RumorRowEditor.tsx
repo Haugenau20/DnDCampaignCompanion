@@ -12,6 +12,7 @@ import {
 } from 'shared/components/attach-tray/attachCandidates';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
+import useCreatorName from 'shared/hooks/useCreatorName';
 import { Rumor, RumorStatus, SourceType } from '../types';
 import {
   RUMOR_STATUS_OPTIONS,
@@ -152,6 +153,8 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  // Named as the rumour's attribution names it everywhere else (T124).
+  const recordedBy = useCreatorName(rumor);
 
   // A rumour the composer just created opens with the caret in the *title*.
   // This was the content field, back when the composer took a title and left
@@ -499,10 +502,10 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
           </div>
         )}
 
-        {rumor.createdByUsername && (
+        {recordedBy && (
           <div className="flex flex-col gap-1.5">
             <FieldLabel>Recorded by</FieldLabel>
-            <Typography variant="body-sm">{rumor.createdByUsername}</Typography>
+            <Typography variant="body-sm">{recordedBy}</Typography>
           </div>
         )}
       </div>

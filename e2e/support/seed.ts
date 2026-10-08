@@ -26,6 +26,8 @@ export const FIXTURES = {
   },
   quest: { id: "find-the-keeper", title: "Find the Lighthouse Keeper" },
   npc: { id: "maren-hollis", name: "Maren Hollis" },
+  /** Written before records stored their author's name: only the uid. */
+  legacyNpc: { id: "old-tam", name: "Old Tam" },
 } as const;
 
 const NOW = "2026-10-01T12:00:00.000Z";
@@ -59,7 +61,8 @@ async function resetEmulators(): Promise<void> {
 /**
  * Reset the emulators and write the fixtures: one player who administers one
  * group with one campaign, holding a three-level location tree, a quest set in
- * the town, and an NPC who lives there.
+ * the town, an NPC who lives there, and an older NPC that names its author by
+ * uid alone.
  *
  * Written with the Admin SDK, which the rules do not apply to; everything the
  * journeys then do goes through the app, which they do.
@@ -70,7 +73,7 @@ export async function seed(): Promise<void> {
   const app = getApps()[0] ?? initializeApp({ projectId: E2E.projectId });
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const { player, group, campaign, locations, quest, npc } = FIXTURES;
+  const { player, group, campaign, locations, quest, npc, legacyNpc } = FIXTURES;
 
   await auth.createUser({
     uid: player.uid,
@@ -169,6 +172,18 @@ export async function seed(): Promise<void> {
     occupation: "Innkeeper",
     location: locations.town.name,
     locationId: locations.town.id,
+    connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
+    notes: [],
+  });
+
+  batch.set(db.doc(`${campaignPath}/npcs/${legacyNpc.id}`), {
+    createdBy: player.uid,
+    dateAdded: NOW,
+    id: legacyNpc.id,
+    name: legacyNpc.name,
+    status: "alive",
+    relationship: "neutral",
+    description: "Mends nets on the harbour wall.",
     connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
     notes: [],
   });

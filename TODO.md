@@ -21,7 +21,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
 | medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
-| medium | T124 | NPC list says "Recorded by: Unknown" | S | open | Players see the wrong credit for their own writing; the NPC page and the list disagree |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T121 | The site has no favicon | S | open | Polish; a placeholder can ship before the logo (T075) |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
@@ -112,28 +111,7 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T124 — The NPC list says "Recorded by: Unknown" for NPCs whose page names the author
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-08
-
-The NPC list's expanded row and the NPC's own page credit the author two
-different ways, so the same record can be "Unknown" in one and named in the other.
-
-- **Where**: the row reads `npc.createdByUsername` alone
-  (`npcs/components/NPCDirectory.tsx:432`) and shows "Unknown" without it. The
-  page's `AttributionInfo` (`shared/components/AttributionInfo.tsx:74`) goes
-  through `determineAttributionActor`: character name, then username, then a
-  lookup of the `createdBy` uid. So even with the field present, the row shows the
-  username where the page shows the character.
-- **Unverified**: why so many NPCs lack `createdByUsername`. Every write today
-  stamps it (`DocumentService.ts:153` via `core/attribution/attribution.ts:39`;
-  no function writes NPCs) and every seeded NPC carries it, so it points at old
-  documents, or a profile with no `username` (`getUserName` returns `''`). The dev
-  emulator was empty on 2026-10-08; only production data can say which.
-- **Touches**: `RumorRowEditor.tsx:502` has the same username-only shape (it
-  hides the line instead of saying Unknown).
-- **Related**: T119's data-model review, F5: attribution names are copied at
-  write time and never refreshed; resolving from the uid on read is its open question.
-- **Source**: todo.txt, 2026-10-08
+None open here.
 
 ---
 

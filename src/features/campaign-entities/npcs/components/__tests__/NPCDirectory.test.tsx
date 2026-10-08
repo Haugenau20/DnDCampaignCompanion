@@ -4,6 +4,7 @@ import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import NPCDirectory from '../NPCDirectory';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
+import { fetchAttributionUsernames } from 'shared/utils/attribution-utils';
 
 // ---------------------------------------------------------------------------
 // Mock all context dependencies used by NPCDirectory and the roster rows it renders
@@ -36,8 +37,10 @@ jest.mock('@/features/user-management', () => ({
 }));
 
 // AttributionInfo dependencies
+// The row credits its author through the real resolver (T124); only the
+// profile lookup, which reads Firestore, is stubbed.
 jest.mock('shared/utils/attribution-utils', () => ({
-  determineAttributionActor: jest.fn(() => ''),
+  determineAttributionActor: jest.requireActual('shared/utils/attribution-utils').determineAttributionActor,
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('core/services/firebase', () => ({ default: {} }));
@@ -340,6 +343,33 @@ describe('NPCDirectory', () => {
       ).toHaveAttribute('aria-expanded', 'true');
       expect(screen.getByText('Description')).toBeInTheDocument();
       expect(screen.getByText('Recorded by')).toBeInTheDocument();
+    });
+
+    // T124: the row named the author by `createdByUsername` alone, so it said
+    // "Unknown" where the NPC's page named someone, and the username where the
+    // page named the character.
+    test('credits the character who recorded the NPC, as the NPC page does', () => {
+      const npc = makeNPC({ id: 'npc-c', name: 'Tobiah', createdByCharacterName: 'Ilse Varn' });
+      render(<NPCDirectory npcs={[npc]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Tobiah/ }));
+
+      expect(screen.getByText('Ilse Varn')).toBeInTheDocument();
+      expect(screen.queryByText('TestUser')).not.toBeInTheDocument();
+    });
+
+    test('credits the username when no character was active', () => {
+      render(<NPCDirectory npcs={[aldric]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Aldric/ }));
+      expect(screen.getByText('TestUser')).toBeInTheDocument();
+    });
+
+    test('looks the author up when the NPC stores no name for them', async () => {
+      (fetchAttributionUsernames as jest.Mock).mockResolvedValueOnce({ 'user-1': 'Wren' });
+      const npc = makeNPC({ id: 'npc-l', name: 'Old Tam', createdByUsername: undefined });
+      render(<NPCDirectory npcs={[npc]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Old Tam/ }));
+
+      expect(await screen.findByText('Wren')).toBeInTheDocument();
     });
 
     test('collapses again on a second activation', () => {

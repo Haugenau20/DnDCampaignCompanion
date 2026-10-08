@@ -11,6 +11,7 @@ import useHighlightTarget from 'shared/hooks/useHighlightTarget';
 import useSelection from 'shared/hooks/useSelection';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
+import useCreatorName from 'shared/hooks/useCreatorName';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
 import {
@@ -127,6 +128,19 @@ const BATCH_STATUSES: Array<BatchStatusOption<NPCStatus>> = [
   { value: 'missing', label: 'Mark Missing' },
   { value: 'deceased', label: 'Mark Deceased' },
 ];
+
+/**
+ * Who recorded the NPC, named as the NPC's own page names them. A component
+ * of its own because the rows are drawn in a loop, and a hook cannot be.
+ */
+const RecordedBy: React.FC<{ npc: NPC }> = ({ npc }) => {
+  const creator = useCreatorName(npc);
+  return (
+    <RosterField label="Recorded by" emptyText="Unknown">
+      {creator ? <Typography variant="body-sm">{creator}</Typography> : undefined}
+    </RosterField>
+  );
+};
 
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
@@ -429,13 +443,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             ) : undefined}
                           </RosterField>
 
-                          <RosterField label="Recorded by" emptyText="Unknown">
-                            {npc.createdByUsername ? (
-                              <Typography variant="body-sm">
-                                {npc.createdByUsername}
-                              </Typography>
-                            ) : undefined}
-                          </RosterField>
+                          <RecordedBy npc={npc} />
 
                           <div className="flex flex-wrap gap-2 mt-1">
                             {/* The way into the NPC's own page. It lives in the

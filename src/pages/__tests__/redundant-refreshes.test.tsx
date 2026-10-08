@@ -62,6 +62,8 @@ jest.mock("@/features/user-management", () => ({
   useUser: () => mockUserState,
   useGroups: () => mockGroupsState,
   useCampaigns: () => mockCampaignsState,
+  // The NPC row names its author through `useCreatorName` (T124).
+  useFirebase: () => mockGroupsState,
   signInPathFor: () => "/signin",
 }));
 
