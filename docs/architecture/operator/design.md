@@ -327,7 +327,8 @@ included, and may still overturn any of them.
    of the month.
 3. **IAP** asks for the security key again every hour.
 4. **The audit bucket** keeps 400 days, its retention locked after a 30-day trial.
-5. **A Google account used only for operator work**, holding no role on the project.
+5. **An account in the `muninn.quest` organization used only for operator work**, holding no role
+   on the project. The project moves into that organization (maintainer, 2026-10-08).
 6. **Every operator deploy waits for the maintainer's approval** in GitHub.
 7. **The container is built from a Dockerfile** by Cloud Build.
 8. **An email to the maintainer for every action that changes something**, so a hijacked session is

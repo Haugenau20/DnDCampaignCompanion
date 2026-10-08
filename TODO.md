@@ -365,9 +365,10 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
   where no allowance does, until step 7 retires them. The operator actions
   exist in `functions/src/operator/`, exported by nothing; founder links now
   record `issuedBy` and share a budget of 10 a day with the script.
-- **Step 0**: the project is in no Google Cloud organization (maintainer,
-  2026-10-08), so IAP needs a custom OAuth client, made in the console. Open:
-  the operator account, and whether to create an organization first.
+- **Step 0** (maintainer): the project moves into a `muninn.quest`
+  organization (Cloud Identity Free, decided 2026-10-08), so IAP uses Google's
+  own OAuth client; then the operator account, in that organization. The
+  steps are in the plan's step 0.
 - **Next**: step 3, the service run locally.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 

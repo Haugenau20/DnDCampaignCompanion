@@ -70,13 +70,31 @@ editing any document stay outside it ([design](design.md#scope)).
 
 ### 1. The human identity
 
-- **A Google account used only for operator work**, signed in with a passkey or a security key,
-  with 2-Step Verification on and its recovery options checked. Google's Advanced Protection Program
-  is the optional next step up.
+- **An account in the `muninn.quest` organization used only for operator work**, signed in with
+  a passkey or a security key. The project moves into that organization (Cloud Identity Free;
+  maintainer, 2026-10-08), so the account is the organization's own: its admin can require 2-Step
+  Verification by security key only, and recovering it goes through the organization's super
+  admin, not Google's consumer recovery. Whether Cloud Identity Free offers the security-key-only
+  enforcement is checked in step 0.
+- **The super admin is a second account, used for nothing else**: it can reset the operator's
+  sign-in, so it is guarded the same way, with a passkey and a backup key kept apart.
 - **It holds no role on the project** except IAP-secured Web App User
   (`roles/iap.httpsResourceAccessor`) on the operator service. Stealing it reaches the page and
   nothing else: not the console, not the data.
 - **The maintainer's owner account stays separate**, for setup and for break-glass.
+
+### 1a. The organization
+
+The project sits in the `muninn.quest` organization (Cloud Identity Free). Besides the operator
+account and IAP's managed client, it allows policies that hold for the whole project whatever any
+owner does later:
+
+- **`iam.disableServiceAccountKeyCreation`**: no new service-account key can be made. Keys that
+  exist keep working, so it can be set before T139 removes them.
+- **Not `iam.allowedPolicyMemberDomains`** as a blanket rule: it would refuse the `allUsers`
+  invoker the public callables need.
+
+Step 4a's setup confirms each policy against the live project before setting it.
 
 ### 2. Identity-Aware Proxy (B1; T1, T2, T3, T4)
 
@@ -88,10 +106,12 @@ editing any document stay outside it ([design](design.md#scope)).
   alone: never `allUsers`, never `allAuthenticatedUsers`.
 - **IAP's Data Access audit logs are on**, so Google records every request it allowed or refused,
   apart from anything our code writes.
-- **A project outside a Google Cloud organization** needs a custom OAuth client for IAP; setup
-  checks which the project is.
-- **Not available:** context-aware access (device policy) needs an organization with Access Context
-  Manager.
+- **Google's own OAuth client.** In an organization, IAP uses a Google-managed OAuth client for
+  the organization's own users, so there is no client secret to keep and no consent screen to
+  maintain. Outside one, a custom client is required, made by hand in the console (Google's
+  *Custom OAuth configuration for IAP*). This is why the project moves into the organization.
+- **Not available:** context-aware access (device policy) needs Access Context Manager and a paid
+  tier; an organization alone does not bring it.
 
 Why a player's session gets nowhere (T2): IAP asks Google, not Firebase Auth. No cookie, token or
 claim from the app is even read.
@@ -262,8 +282,9 @@ Accepted, and named so they are not forgotten:
    so the code is the boundary: a bug, or malicious code that got deployed, could write anywhere.
    Mitigated by the narrow code, its tests, the approval and the review. Unchanged from the
    functions, which have the same access.
-2. **One human key.** Everything rests on the operator's Google account, and its recovery is
-   Google's process. A passkey, a backup key kept apart, and recovery options checked once a year.
+2. **Two human keys.** Everything rests on the operator account and on the organization's super
+   admin, which can reset it. Each has a passkey and a backup key kept apart, and their recovery
+   options are checked once a year.
 3. **An hour.** A session taken from the device works until re-authentication. The email per action
    makes it visible; every action it can take can be undone.
 4. **Founder tokens are document ids.** Anyone who can read Firestore (the console, the runtime
