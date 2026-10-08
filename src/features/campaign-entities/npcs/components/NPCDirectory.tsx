@@ -11,6 +11,7 @@ import useHighlightTarget from 'shared/hooks/useHighlightTarget';
 import useSelection from 'shared/hooks/useSelection';
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
+import useCreatorName from 'shared/hooks/useCreatorName';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
 import {
@@ -128,6 +129,19 @@ const BATCH_STATUSES: Array<BatchStatusOption<NPCStatus>> = [
   { value: 'deceased', label: 'Mark Deceased' },
 ];
 
+/**
+ * Who recorded the NPC, named as the NPC's own page names them. A component
+ * of its own because the rows are drawn in a loop, and a hook cannot be.
+ */
+const RecordedBy: React.FC<{ npc: NPC }> = ({ npc }) => {
+  const creator = useCreatorName(npc);
+  return (
+    <RosterField label="Recorded by" emptyText="Unknown">
+      {creator ? <Typography variant="body-sm">{creator}</Typography> : undefined}
+    </RosterField>
+  );
+};
+
 const NPCDirectory: React.FC<NPCDirectoryProps> = ({
   npcs: initialNpcs,
   isLoading = false,
@@ -241,14 +255,10 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
 
   // Group NPCs by location for display.
   //
-  // `npc.location` holds the location's id, so grouping on it verbatim printed
-  // slugs as headings -- "mines-of-moria" where the Locations page says "Mines
-  // of Moria" (#1412). Resolve to the display name, which also merges entries
-  // stored under different cases of the same place into one group.
-  //
-  // `resolveLocationName` prefers `npc.locationId` (the canonical reference)
-  // and falls back to the legacy `npc.location` free text for documents
-  // written before that field existed; see the contract on `NPC.location`.
+  // Grouping on a stored id verbatim printed slugs as headings --
+  // "mines-of-moria" where the Locations page says "Mines of Moria" (#1412).
+  // `resolveLocationName` gives the place `npc.locationId` names, else the
+  // free text as written; see the contract on `NPC.location`.
   const groupedNPCs = useMemo(() => {
     return filteredNPCs.reduce((acc, npc) => {
       const location =
@@ -429,13 +439,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             ) : undefined}
                           </RosterField>
 
-                          <RosterField label="Recorded by" emptyText="Unknown">
-                            {npc.createdByUsername ? (
-                              <Typography variant="body-sm">
-                                {npc.createdByUsername}
-                              </Typography>
-                            ) : undefined}
-                          </RosterField>
+                          <RecordedBy npc={npc} />
 
                           <div className="flex flex-wrap gap-2 mt-1">
                             {/* The way into the NPC's own page. It lives in the

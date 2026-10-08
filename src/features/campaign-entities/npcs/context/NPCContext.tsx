@@ -61,17 +61,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }, [npcs]);
 
-  // Get NPCs by location. Matches the canonical `locationId` first, falling
-  // back to a case-insensitive comparison against the legacy free-text
-  // `location` -- checked against both the Location's id and its name, since
-  // an un-migrated document's `location` may hold either -- for documents
-  // written before `locationId` existed. See the contract on `NPC.location`
-  // and `referencesLocation`'s doc comment.
-  //
-  // Takes the whole `Location`, not a bare id: resolving a legacy name back
-  // to an id would need the full locations array, and this context is
-  // mounted outside `LocationProvider` (see App.tsx), so it has no access to
-  // one.
+  // Get NPCs by location: those whose `locationId` names it. Free text in
+  // `location` names no record; see the contract on `NPC.location`.
   const getNPCsByLocation = useCallback((location: Location) => {
     return npcs.filter(npc => referencesLocation(npc, location));
   }, [npcs]);

@@ -4,6 +4,8 @@ import {
   resolveLocationName,
   referencesLocation,
   indexLocationNames,
+  resolveKeyPlace,
+  keyPlaceIsLocation,
 } from '../location-display';
 import { Location } from '../../types';
 
@@ -26,28 +28,18 @@ const rivendell = makeLocation({ id: 'rivendell', name: 'Rivendell', type: 'city
 const locations = [moria, rivendell];
 
 describe('resolveLocationName', () => {
-  // NPCs and Quests store the id in `location` for un-migrated documents.
-  test('resolves an id to its display name', () => {
-    expect(resolveLocationName({ location: 'mines-of-moria' }, locations)).toBe('Mines of Moria');
+  // T079: the free text is what a player wrote, shown as written. It used to
+  // be looked up as an id and then a name, for documents written before
+  // `locationId`; production has none left.
+  test('shows free text as written, even when it reads like the id of a place', () => {
+    expect(resolveLocationName({ location: 'mines-of-moria' }, locations)).toBe('mines-of-moria');
   });
 
-  // Rumors store the name in `location` for un-migrated documents.
-  test('passes a name that already matches straight through', () => {
-    expect(resolveLocationName({ location: 'Rivendell' }, locations)).toBe('Rivendell');
-  });
-
-  test('canonicalises the case of a name match, so one place is one group', () => {
-    expect(resolveLocationName({ location: 'rivendell' }, locations)).toBe('Rivendell');
-    expect(resolveLocationName({ location: 'RIVENDELL' }, locations)).toBe('Rivendell');
-  });
-
-  test('prefers an id match over a name match, within `location` alone', () => {
-    // A record whose id collides with another's name must resolve by id.
-    const confusing = [
-      makeLocation({ id: 'Rivendell', name: 'The Last Homely House' }),
-      rivendell,
-    ];
-    expect(resolveLocationName({ location: 'Rivendell' }, confusing)).toBe('The Last Homely House');
+  test('shows free text as written, even in another case than the name of a place', () => {
+    expect(resolveLocationName({ location: 'rivendell' }, locations)).toBe('rivendell');
+    expect(resolveLocationName({ location: 'Somewhere in Mirkwood' }, locations)).toBe(
+      'Somewhere in Mirkwood'
+    );
   });
 
   // The point of #1412's "do not prettify" note: an unresolvable reference has
@@ -144,13 +136,14 @@ describe('resolveLocation', () => {
     );
   });
 
-  test('falls back to the free text, by id or by case-insensitive name', () => {
-    expect(resolveLocation({ location: 'mines-of-moria' }, locations)).toBe(moria);
-    expect(resolveLocation({ location: 'RIVENDELL' }, locations)).toBe(rivendell);
+  // T079: free text names no record, even when it reads like one.
+  test('never finds a record from the free text', () => {
+    expect(resolveLocation({ location: 'mines-of-moria' }, locations)).toBeUndefined();
+    expect(resolveLocation({ location: 'Rivendell' }, locations)).toBeUndefined();
   });
 
-  test('falls back to the free text when the locationId no longer resolves', () => {
-    expect(resolveLocation({ locationId: 'gone', location: 'Rivendell' }, locations)).toBe(rivendell);
+  test('a locationId that no longer resolves is not rescued by the free text', () => {
+    expect(resolveLocation({ locationId: 'gone', location: 'Rivendell' }, locations)).toBeUndefined();
   });
 
   test('returns nothing for a reference that names no record', () => {
@@ -183,13 +176,10 @@ describe('referencesLocation', () => {
     expect(referencesLocation({ locationId: 'rivendell', location: 'Mines of Moria' }, moria)).toBe(false);
   });
 
-  test('legacy document storing the id matches (the sample-data generator shape)', () => {
-    expect(referencesLocation({ location: 'mines-of-moria' }, moria)).toBe(true);
-  });
-
-  test('legacy document storing the display name matches (the form-created shape)', () => {
-    expect(referencesLocation({ location: 'Mines of Moria' }, moria)).toBe(true);
-    expect(referencesLocation({ location: 'MINES OF MORIA' }, moria)).toBe(true);
+  // T079: free text never places a record anywhere, whatever it reads like.
+  test('free text matching the id or name of the location does not reference it', () => {
+    expect(referencesLocation({ location: 'mines-of-moria' }, moria)).toBe(false);
+    expect(referencesLocation({ location: 'Mines of Moria' }, moria)).toBe(false);
   });
 
   test('does not match an unrelated location', () => {
@@ -200,5 +190,43 @@ describe('referencesLocation', () => {
 
   test('neither field set does not match', () => {
     expect(referencesLocation({}, moria)).toBe(false);
+  });
+});
+
+// #1421: a place inside a quest is still looked up by name. Places added
+// before then stored no id, and T079's audit did not read them.
+describe('resolveKeyPlace', () => {
+  test('finds the location its stored id names, whatever it is called', () => {
+    expect(resolveKeyPlace({ name: 'The old mine', locationId: 'mines-of-moria' }, locations)).toBe(moria);
+  });
+
+  test('finds a location by the name of the place, case-insensitively, when no id was stored', () => {
+    expect(resolveKeyPlace({ name: 'RIVENDELL' }, locations)).toBe(rivendell);
+  });
+
+  test('finds a location by id before by name', () => {
+    const confusing = [makeLocation({ id: 'Rivendell', name: 'The Last Homely House' }), rivendell];
+    expect(resolveKeyPlace({ name: 'Rivendell' }, confusing)).toBe(confusing[0]);
+  });
+
+  test('falls back to the name when the stored id names no location', () => {
+    expect(resolveKeyPlace({ name: 'Rivendell', locationId: 'gone' }, locations)).toBe(rivendell);
+  });
+
+  test('finds nothing for a place that is no location', () => {
+    expect(resolveKeyPlace({ name: 'Secret door' }, locations)).toBeUndefined();
+  });
+});
+
+describe('keyPlaceIsLocation', () => {
+  test('by the stored id, and only by it when there is one', () => {
+    expect(keyPlaceIsLocation({ name: 'Anything', locationId: 'mines-of-moria' }, moria)).toBe(true);
+    expect(keyPlaceIsLocation({ name: 'Mines of Moria', locationId: 'rivendell' }, moria)).toBe(false);
+  });
+
+  test('by name or id, case-insensitively, when no id was stored', () => {
+    expect(keyPlaceIsLocation({ name: 'MINES OF MORIA' }, moria)).toBe(true);
+    expect(keyPlaceIsLocation({ name: 'mines-of-moria' }, moria)).toBe(true);
+    expect(keyPlaceIsLocation({ name: 'Rivendell' }, moria)).toBe(false);
   });
 });

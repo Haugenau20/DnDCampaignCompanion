@@ -632,10 +632,10 @@ describe('NPCContext Behavioral Testing', () => {
     test('should filter NPCs by location correctly', async () => {
       // Mock NPC data with locations
       const mockNPCs = [
-        { id: '1', name: 'Tavern Keeper', location: 'The Prancing Pony' },
-        { id: '2', name: 'Guard Captain', location: 'City Gates' },
-        { id: '3', name: 'Merchant', location: 'The Prancing Pony' },
-        { id: '4', name: 'Wizard', location: 'Tower of Magic' },
+        { id: '1', name: 'Tavern Keeper', locationId: 'the-prancing-pony', location: 'The Prancing Pony' },
+        { id: '2', name: 'Guard Captain', locationId: 'city-gates', location: 'City Gates' },
+        { id: '3', name: 'Merchant', locationId: 'the-prancing-pony', location: 'The Prancing Pony' },
+        { id: '4', name: 'Wizard', locationId: 'tower-of-magic', location: 'Tower of Magic' },
         { id: '5', name: 'No Location NPC' }, // No location property
       ];
 
@@ -654,17 +654,15 @@ describe('NPCContext Behavioral Testing', () => {
         expect(npcContext).toBeDefined();
       });
 
-      // BEHAVIOR: Should filter by location correctly (case insensitive).
-      // `getNPCsByLocation` takes a `Location` record; these npcs are
-      // legacy documents whose `location` holds a display name, matched
-      // case-insensitively against the given Location's `name`.
+      // BEHAVIOR: Should filter by location correctly: by the Location's id,
+      // whatever it is called now.
       const tavernNPCs = npcContext.getNPCsByLocation({ id: 'the-prancing-pony', name: 'The Prancing Pony' });
-      const tavernNPCsLowercase = npcContext.getNPCsByLocation({ id: 'the-prancing-pony', name: 'the prancing pony' });
+      const tavernNPCsRenamed = npcContext.getNPCsByLocation({ id: 'the-prancing-pony', name: 'The Pony' });
       const gateNPCs = npcContext.getNPCsByLocation({ id: 'city-gates', name: 'City Gates' });
       const nonexistentNPCs = npcContext.getNPCsByLocation({ id: 'nonexistent-place', name: 'Nonexistent Place' });
 
       expect(tavernNPCs).toHaveLength(2);
-      expect(tavernNPCsLowercase).toHaveLength(2); // Case insensitive
+      expect(tavernNPCsRenamed).toHaveLength(2); // Survives a rename
       expect(tavernNPCs[0].id).toBe('1');
       expect(tavernNPCs[1].id).toBe('3');
       expect(gateNPCs).toHaveLength(1);
@@ -672,25 +670,20 @@ describe('NPCContext Behavioral Testing', () => {
       expect(nonexistentNPCs).toHaveLength(0);
     });
 
-    // `locationId` is the canonical reference introduced alongside this
-    // contract; `getNPCsByLocation` must prefer it and only fall back to the
-    // legacy `location` text comparison for documents that have none. The
-    // legacy field may hold either the location's id (sample-data generator
-    // shape) or its display name (form-created shape), so both must match.
-    // `getNPCsByLocation` takes the whole `Location` record -- not a bare id
-    // -- because NPCContext is mounted outside LocationProvider and cannot
-    // resolve a legacy name back to an id itself.
-    test('should match by locationId first, falling back to either legacy id or legacy name for un-migrated documents', async () => {
+    // `locationId` is the reference; free text in `location` is what a
+    // player wrote and places nobody, even when it reads like the place's id
+    // or name. It used to match, for documents written before `locationId`;
+    // production has none left (T079).
+    test('should match by locationId only, never by free text that reads like the place', async () => {
       const thePrancingPony = { id: 'the-prancing-pony', name: 'The Prancing Pony' };
       const cityGates = { id: 'city-gates', name: 'City Gates' };
 
       const mockNPCs = [
         // Migrated: canonical locationId set.
         { id: '1', name: 'Tavern Keeper', locationId: 'the-prancing-pony', location: 'The Prancing Pony' },
-        // Un-migrated, storing the id (sample-data generator shape).
+        // Free text that reads like the place's id.
         { id: '2', name: 'Old Timer', location: 'the-prancing-pony' },
-        // Un-migrated, storing the display name (form-created shape) -- the
-        // case that was previously missed.
+        // Free text that reads like the place's name.
         { id: '3', name: 'Regular', location: 'The Prancing Pony' },
         // Unrelated location entirely.
         { id: '4', name: 'Guard Captain', locationId: 'city-gates', location: 'City Gates' },
@@ -714,9 +707,8 @@ describe('NPCContext Behavioral Testing', () => {
       const matches = npcContext.getNPCsByLocation(thePrancingPony);
       const unrelated = npcContext.getNPCsByLocation(cityGates);
 
-      // Matches the canonical `locationId`, the legacy-id fallback and the
-      // legacy-name fallback.
-      expect(matches.map((npc: any) => npc.id).sort()).toEqual(['1', '2', '3']);
+      // Matches the `locationId` alone.
+      expect(matches.map((npc: any) => npc.id).sort()).toEqual(['1']);
       // Does not pick up an unrelated location.
       expect(unrelated.map((npc: any) => npc.id)).toEqual(['4']);
       expect(matches.some((npc: any) => npc.id === '4')).toBe(false);

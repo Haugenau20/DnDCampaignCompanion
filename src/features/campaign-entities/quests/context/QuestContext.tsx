@@ -10,7 +10,7 @@ import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-managem
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
-import { referencesLocation } from '../../locations/utils/location-display';
+import { keyPlaceIsLocation, referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { normaliseObjectives } from '../utils/quest-objectives';
 import { assertUnchanged } from 'shared/utils/edit-conflict';
@@ -57,25 +57,17 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return quests.filter(quest => quest.status === status);
   }, [quests]);
 
-  // Get quests by location. Matches the canonical `locationId` first,
-  // falling back to a case-insensitive comparison against the legacy
-  // free-text `location` -- checked against both the Location's id and its
-  // name, since an un-migrated document's `location` may hold either -- for
-  // documents written before `locationId` existed. See the contract on
-  // `NPC.location` and `referencesLocation`'s doc comment.
+  // Get quests by location: those whose `locationId` names it (free text in
+  // `location` names no record; see the contract on `NPC.location`). A place
+  // inside the quest (`keyLocations`) counts too when it is that Location: by
+  // the id it stored, else by its name (#1421, `keyPlaceIsLocation`).
   //
-  // Takes the whole `Location`, not a bare id: resolving a legacy name back
-  // to an id would need the full locations array, which not every consumer
-  // of this helper is guaranteed to have (see `referencesLocation`'s doc
-  // comment; `NPCContext`'s sibling helper is the concrete case that needs
-  // it). A place inside the quest (`keyLocations`) counts too when it is
-  // that Location: by the id it stored, else by its name (#1421).
+  // Takes the whole `Location`, not a bare id, because a place's name is
+  // matched against the Location's name as well as its id.
   const getQuestsByLocation = useCallback((location: Location) => {
     return quests.filter(quest =>
       referencesLocation(quest, location) ||
-      quest.keyLocations?.some(place =>
-        referencesLocation({ locationId: place.locationId, location: place.name }, location)
-      )
+      quest.keyLocations?.some(place => keyPlaceIsLocation(place, location))
     );
   }, [quests]);
 

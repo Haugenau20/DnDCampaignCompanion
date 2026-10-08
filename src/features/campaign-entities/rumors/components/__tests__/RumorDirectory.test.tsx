@@ -77,8 +77,10 @@ jest.mock('../../../locations/context/LocationContext', () => ({
   })),
 }));
 
+// The row credits its author through the real resolver (T124); only the
+// profile lookup, which reads Firestore, is stubbed.
 jest.mock('shared/utils/attribution-utils', () => ({
-  determineAttributionActor: jest.fn(() => ''),
+  determineAttributionActor: jest.requireActual('shared/utils/attribution-utils').determineAttributionActor,
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 
@@ -361,6 +363,17 @@ describe('RumorDirectory', () => {
       expect(screen.getByRole('group', { name: 'Heard from' })).toBeInTheDocument();
       expect(screen.getByRole('group', { name: /Status of Dragon spotted/ })).toBeInTheDocument();
       expect(screen.getByText('Recorded by')).toBeInTheDocument();
+    });
+
+    // T124: the row named the author by `createdByUsername` alone, and hid the
+    // line without it, where everywhere else names the character.
+    test('credits the character who recorded the rumour', () => {
+      const rumor = makeRumor({ id: 'rch', title: 'Bells at low tide', createdByCharacterName: 'Ilse Varn' });
+      render(<RumorDirectory rumors={[rumor]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Bells at low tide/ }));
+
+      expect(screen.getByText('Recorded by')).toBeInTheDocument();
+      expect(screen.getByText('Ilse Varn')).toBeInTheDocument();
     });
 
     test('collapses again on a second activation', () => {

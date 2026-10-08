@@ -3,11 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <!-- The header's colour in each theme (surface.chrome.bg), so a phone's
+         browser bar runs on from it. index.html cannot read the theme's CSS
+         variables; theme-assets.test.ts keeps these in step with the tokens. -->
+    <meta name="theme-color" content="#1B1611" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A0704" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="Muninn - Track your adventures, quests, and NPCs"
     />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>Muninn</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">

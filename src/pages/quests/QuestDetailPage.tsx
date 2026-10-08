@@ -13,6 +13,7 @@ import {
   useRumors,
   resolveLocation,
   resolveLocationName,
+  resolveKeyPlace,
   QuestObjectives,
   DeleteQuestDialog,
   formatQuestStatus,
@@ -192,11 +193,10 @@ const QuestDetailPage: React.FC = () => {
    * and `erebor` as though they were labels, and one of them was wrong
    * besides.
    *
-   * `resolveLocationName` prefers the canonical `locationId` and falls back to
-   * the legacy free-text `location`. When neither resolves it returns the
-   * stored value verbatim, deliberately (#1412): a reference to a place that
-   * no longer exists has to stay visible rather than be prettified into
-   * something real or quietly vanish.
+   * `resolveLocationName` names the place `locationId` points at, else
+   * returns the stored free text or id verbatim, deliberately (#1412): a
+   * reference to a place that no longer exists has to stay visible rather
+   * than be prettified into something real or quietly vanish.
    *
    * Both rules hold here at once. A reference that resolves is a name; one
    * that does not is shown *as a broken reference* -- "nowhere — no such
@@ -211,13 +211,8 @@ const QuestDetailPage: React.FC = () => {
   );
 
   const locationRecord = useMemo(
-    () =>
-      locations.find(
-        (candidate) =>
-          candidate.id === quest?.locationId ||
-          (resolvedName ? candidate.name === resolvedName : false)
-      ),
-    [locations, quest, resolvedName]
+    () => (quest ? resolveLocation(quest, locations) : undefined),
+    [locations, quest]
   );
 
   const locationName = resolvedName
@@ -325,8 +320,7 @@ const QuestDetailPage: React.FC = () => {
    * The location a place already is, if any (#1421): by the id stored when it
    * was added, else -- for places added before that -- by its name.
    */
-  const placeLocation = (place: QuestLocation) =>
-    resolveLocation({ locationId: place.locationId, location: place.name }, locations);
+  const placeLocation = (place: QuestLocation) => resolveKeyPlace(place, locations);
 
   /**
    * A place inside the quest becomes a real location -- the same promotion a
@@ -941,7 +935,7 @@ const QuestDetailPage: React.FC = () => {
                   onSubmit={(value) => {
                     // Naming a location the campaign already has stores its
                     // id, so the link survives that location being renamed.
-                    const existing = resolveLocation({ location: value }, locations);
+                    const existing = resolveKeyPlace({ name: value }, locations);
                     return save((current) => ({
                       keyLocations: [
                         ...(current.keyLocations ?? []),

@@ -52,8 +52,8 @@ export { default as DeleteLocationDialog } from './locations/components/DeleteLo
 export type { Location, LocationType, LocationStatus, LocationNote, LocationChildStrategy, LocationContextState, LocationContextValue } from './locations/types';
 // The shared answer to "what location is this entity at?" -- see #1412 for why
 // an unresolved reference is shown as itself rather than prettified.
-export { resolveLocation, resolveLocationName, referencesLocation } from './locations/utils/location-display';
-export type { LocationReference } from './locations/utils/location-display';
+export { resolveLocation, resolveLocationName, referencesLocation, resolveKeyPlace, keyPlaceIsLocation } from './locations/utils/location-display';
+export type { LocationReference, KeyPlace } from './locations/utils/location-display';
 // Every walk over the tree, guarded. `15-4` makes cycles reachable, so nothing
 // outside this module may hand-roll a parent or descendant walk.
 export {

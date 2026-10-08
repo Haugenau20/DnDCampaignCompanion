@@ -21,13 +21,14 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 |---|---|---|---|---|---|
 | medium | T119 | Review the Firestore data model before scaling | L | blocked | Must come before any user scaling (maintainer, 2026-10-07); two documents are written (`docs/architecture/backend-structure-options.md`, `data-model-review.md`); recommends a Convex spike; waits on the maintainer's go-ahead |
 | medium | T120 | Plan how a new group starts on its own | L | blocked | A group can't start without the maintainer; the plan is written (`docs/architecture/new-group-onboarding-plan.md`) and waits on five decisions; building is later entries |
+| low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
+| low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
-| low | T079 | Drop the legacy `location` fallback's matching | S | open | Production's 13 old documents were migrated (2026-10-08) and none is left; the fallback's matching of `location` against places can go |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -223,6 +224,10 @@ a logo carries the name.
 - **Says D&D on purpose**: `entityExtraction.ts:454,499`, only in the prompt
   sent to OpenAI, which nobody sees. The "Dungeons" location filter
   (`LocationDirectory.tsx:54`) is the plain word, not the mark.
+- **Raised again** (todo.txt, 2026-10-08: "Create Logo for Muninn"). The
+  site's icon is a placeholder "M" until then (`public/favicon.svg`); the logo
+  replaces that SVG, and `scripts/build-icons.js` renders the PNGs and
+  `favicon.ico` from it.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03; the name chosen 2026-10-07
 
@@ -272,6 +277,22 @@ scope; they work.
 - **Related**: T119 (the data model review; its F2 is a step here).
 - **Source**: `/todo`, 2026-10-07; the plan written 2026-10-07
 
+### T122 — An "about" page
+**Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
+
+The maintainer asks whether the site should have an "about us" page.
+
+- **Measured**: no `/about` route (`app/App.tsx:220` has `/privacy` and
+  `/contact`; the footer, `app/layout/Footer.tsx`, links only those two). The
+  purpose is stated only on the signed-out home (`pages/home/SignedOutHome.tsx:44`).
+- **Questions before sizing**: who "us" is (one maintainer, a free site with no
+  income); what goes on it (why it exists, who runs it, how AI extraction uses
+  notes, the fan-content and trademark position from T075); whether it must be
+  readable without JavaScript.
+- **Related**: T118's Google branding check flagged "does not explain the
+  purpose" and "insufficient content", from a checker that runs no JavaScript.
+- **Source**: todo.txt, 2026-10-08
+
 ---
 
 ## Tech debt and platform
@@ -297,43 +318,6 @@ modular API only, so the code itself is ready for 14. Two things hold the bump.
   through is a jest that loads real ES modules, or transpiling that whole chain.
 - **Source**: todo.txt (`npm ci` warnings), 2026-10-06; `firebase-functions` 7,
   `firebase-admin` 13 and the modular API landed first
-
-### T079 — Drop the legacy `location` fallback's matching
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-08
-
-NPCs and quests (and rumors) refer to a location by `locationId`. Documents
-written before that field existed carried only the free-text `location`, and
-`resolveLocation` and `referencesLocation`
-(`locations/utils/location-display.ts`) still match that text against the
-campaign's places, by id and then by name, when `locationId` is missing or
-dangling.
-
-- **Production needs it no more** (2026-10-08): the audit found 13 documents
-  (10 NPCs, 3 quests, in two campaigns) resolving only that way, all by name;
-  `firebase/functions/scripts/audit-location-ids.js --migrate` gave each the
-  `locationId` it already showed, and the audit afterwards found none left
-  and none dangling.
-- **To do**: drop that matching from both functions. Keep showing a
-  free-text `location` as written: 11 production documents (10 NPCs, 1 quest)
-  name a place that has no record, and hiding it would hide what players
-  wrote. Every current save path (the detail pages, quick-add) writes
-  `locationId` alongside `location`; recheck that first, and run the audit
-  once more just before merging.
-- **The revert closes when this merges**: the migration's revert file is the
-  maintainer's (outside the repo); reverting after the matching is gone would
-  leave those 13 showing their text with no link.
-- **Dev data**: the sample-data generators have written `locationId` since
-  `d6d9847`, and data generated before that holds the legacy shape (one such
-  dataset, audited 2026-10-07, had 37 NPCs and 20 quests with only a
-  `location` slug), which would show as raw slugs once the matching goes:
-  regenerate it. Two NPCs keep the edge cases on purpose: Galadriel's
-  `locationId` names no record (#1412), and Bard has only the free-text
-  `location` "Lake-town".
-- **See also**: T119, the full review of the data model, should take in
-  whatever this audit finds.
-- **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
-  was deleted; decided 2026-10-06; the audit written 2026-10-07; the
-  migration written and run 2026-10-08
 
 ### T118 — Finish the move to `muninn.quest`
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-07
@@ -397,8 +381,7 @@ Two documents, both written 2026-10-07. Nothing has been changed.
   often links disagree) inform the migration but do not block the choice.
 - **Then**: the spike, as its own entry; then the migration or the Firestore
   restructure, as entries of their own.
-- **Overlaps**: T079 (the legacy free-text `location`) is the review's F9; a
-  move to Postgres would settle it in the copy script. The `dateAdded` →
+- **Overlaps**: the `dateAdded` →
   `createdAt` renames in `docs/architecture/migration/database-field-alignment.md`
   are subsumed by either a migration or the review's F6.
 - **Source**: `/todo`, 2026-10-07; both documents written 2026-10-07
@@ -409,7 +392,25 @@ Two documents, both written 2026-10-07. Nothing has been changed.
 
 Open questions that block work until the maintainer answers them.
 
-None open.
+### T123 — Are Lord of the Rings screenshots in the README a problem?
+**Type** decision · **Size** M · **Status** open · **Verified** 2026-10-08
+
+The README's pictures show a Tolkien campaign. Is that a rights or trademark
+risk for a public repo and site? A question for the maintainer, not settled here.
+
+- **Measured**: all four images in `README.md` (`:12`, `:30`, files in
+  `docs/images/`) show the sample campaign "The Lord of the Rings" with its names
+  (Gandalf, Aragorn, Mordor, "destroy the One Ring"). They come from the dev
+  sample data, which is Tolkien throughout (`utils/__dev__/generators/`). The home
+  screenshot's banner painting and crest were uploaded images; where they came
+  from was **not** traced.
+- **Same question, on the live site**: the public signed-out home shows Wizards
+  of the Coast's published adventure *The Sunless Citadel*, with its NPC and places
+  (`pages/home/signed-out-example.ts:46`). T075's 2026-10-03 decision covered
+  only the words "D&D".
+- **If the answer is yes**: invented sample data, new screenshots, and a new
+  example on the home page. That is the M.
+- **Source**: todo.txt, 2026-10-08
 
 ---
 

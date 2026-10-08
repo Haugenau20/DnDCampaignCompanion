@@ -121,11 +121,10 @@ describe("attachCandidates", () => {
       expect(entry.name).not.toContain("thorin");
     });
 
-    it("resolves a legacy id stored in the free-text location field", () => {
-      // Found in the running app: every seeded NPC predates `locationId` and
-      // carries an id in `location`, so the tray printed "Ranger, Leader ·
-      // rivendell". The contract documented on `NPC.location` says this field
-      // "may hold either an id or a name", so it is resolved before display.
+    it("shows free-text location as written, without looking it up as a place", () => {
+      // T079: free text is what a player wrote. It used to be looked up as an
+      // id, for documents written before `locationId`; production has none
+      // left, so text that happens to match a place's id stays as written.
       const [entry] = buildCandidates(
         ["npc"],
         sources({
@@ -133,8 +132,7 @@ describe("attachCandidates", () => {
           location: [location({ id: "erebor", name: "Erebor" })],
         })
       );
-      expect(entry.line).toBe("King under the Mountain · Erebor");
-      expect(entry.line).not.toContain("erebor");
+      expect(entry.line).toBe("King under the Mountain · erebor");
     });
 
     it("falls back to the free-text location when there is no id", () => {

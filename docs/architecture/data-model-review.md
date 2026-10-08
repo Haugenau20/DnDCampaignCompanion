@@ -266,8 +266,8 @@ deploy includes it.
 
 ### F9. Leftovers from earlier shapes
 
-- The free-text `location` alongside `locationId`. Whether production still needs the fallback is
-  T079, waiting on the production audit.
+- The free-text `location` alongside `locationId`. Settled by T079 (2026-10-08): production's
+  documents without an id were given one, and `location` is now only shown, never looked up.
 - `Quest.importantNPCs`, deleted in `15-5`, still sits on older documents. Nothing reads it.
 - Slug ids lose every character outside `a-z0-9`: "Éowyn" becomes `owyn` and "Þjóðólfr"
   becomes `j-lfr`. They also keep the original name after a rename. Harmless to the data (ids are
@@ -375,4 +375,3 @@ These are read-only. Nothing here can be measured from the repo:
   `notes` arrays and the longest saga. An extension of `audit-location-ids.js` can report all of
   it without printing any content.
 - **How often F1's two halves disagree**: the same kind of audit.
-- **T079**: whether the location fallback is still needed.
