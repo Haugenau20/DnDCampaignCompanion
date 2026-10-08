@@ -286,7 +286,7 @@ const PrivacyPolicyPage: React.FC = () => {
               There are no passwords. You sign in with a one-time link sent to
               your email, or with your Google account, through Firebase
               Authentication, and accounts can only be created from an
-              invitation. Access to campaign data is decided by
+              invitation, into a group or to start one. Access to campaign data is decided by
               rules on the database itself rather than by the app asking
               politely, and everything is encrypted in transit and at rest by
               Google. Sessions time out on their own: after{" "}

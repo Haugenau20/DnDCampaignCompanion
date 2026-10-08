@@ -27,6 +27,7 @@ export const PRIVACY_CHANGELOG: readonly string[] = [
   "If you ask to be remembered, the campaign records you have opened are now kept in your browser until you sign out.",
   "If you don't, nothing of your campaigns stays in your browser after you close the page, and any copy an earlier remembered visit left is deleted.",
   "Smart detection is now capped at 3 scans a day, 5 a week and 10 a month, down from 10, 30 and 100.",
+  "Accounts still come only from an invitation, which may now be one to start a group of your own.",
 ]
 
 /**

@@ -22,9 +22,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T131 | Store each link once, shown both ways | M | open | The one data-model defect players see: a link added on one page is missing on the other |
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
-| medium | T125 | Founder invitations | M | open | First step of letting a group start without the maintainer (the onboarding plan) |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
-| medium | T126 | `createGroup` guarded | M | blocked | After T125; today any signed-in caller can create unlimited groups, all named "Admin" |
+| medium | T126 | `createGroup` guarded | M | open | Today any signed-in caller can create unlimited groups, all named "Admin"; founder links exist but nothing spends them |
 | medium | T127 | A founder's first run | M | blocked | After T126; a founder has no path from link to first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
@@ -263,7 +262,7 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
-### Letting a new group start on its own (T125 to T128)
+### Letting a new group start on its own (T126 to T128)
 
 A group cannot start today without the maintainer, who creates it, invites its
 first player, promotes them and leaves. The plan,
@@ -271,43 +270,30 @@ first player, promotes them and leaves. The plan,
 says where things stand and what was decided (maintainer, 2026-10-08): founder
 invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
 3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
-create a campaign, and up to 3 groups per founder. T125 to T127 are the smallest
-change that lets a table start alone; T128 makes it safe to hand out more than
+create a campaign, and up to 3 groups per founder. Founder invitations exist:
+`firebase/functions/scripts/issue-founder-invitation.js` issues one, and sign-up
+admits it. T126 and T127 are the rest of the smallest change that lets a table
+start alone; T128 makes it safe to hand out more than
 a few links. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
 group → campaign → invitation → a second player joins.
 
-### T125 — Founder invitations
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
-
-A founder invitation admits one account that may create one group. It is how a
-new table gets in without the maintainer setting it up (plan, D1).
-
-- **Where**: a server-only collection, e.g. `founderInvitations/{token}`, issued
-  by an Admin-SDK script in `firebase/functions/scripts/` (the shape of
-  `audit-location-ids.js`; D6: never a callable behind a flag).
-  `signUp/reserveSignUp.ts` accepts either kind of token and the reservation
-  records which; `signUp/gateAccountCreation.ts` admits it. A founder who
-  already has an account skips the sign-up and only redeems.
-- **Also**: `/privacy` (`pages/PrivacyPolicyPage.tsx`) says accounts come from
-  an invitation; add that a founder invitation is one.
-- **Source**: the onboarding plan, step 1 and step 6; decided 2026-10-08
-
 ### T126 — `createGroup` guarded
-**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
+**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
 
 `groupManagement/createGroup.ts` accepts any signed-in caller, with no limit, no
 throttle and no App Check, and names every creator "Admin" (it reads a
 `username` on the global profile that no flow writes).
 
-- **Change**: it spends an unspent founder invitation in the same transaction
-  as the group it creates, as `redeemInvitation.ts` spends a group invitation;
+- **Change**: it spends an unspent founder invitation
+  (`founderInvitations/{token}`, `signUp/founderInvitations.ts`: mark it
+  `used`) in the same transaction as the group it creates, as
+  `redeemInvitation.ts` spends a group invitation;
   or uses the account's allowance (up to **3 groups** per founder in all). It
   takes the founder's name in the group as an argument. `enforceAppCheck: true`
   on `createGroup`, `reserveSignUp` and `redeemInvitation`; check first that the
   emulator and the e2e journeys still pass App Check, or exempt the emulator.
 - **Deploy order**: enforcement merges only after a live frontend sends App
   Check tokens to those callables.
-- **Blocked on**: T125
 - **Source**: the onboarding plan, step 2; decided 2026-10-08
 
 ### T127 — A founder's first run

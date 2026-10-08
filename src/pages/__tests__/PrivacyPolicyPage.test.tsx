@@ -325,6 +325,14 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     expect(section!.textContent).toMatch(/legitimate interest|contract|consent/i);
   });
 
+  // T125: a founder invitation is the other kind of invitation an account comes from.
+  it("says accounts come from an invitation into a group or to start one", () => {
+    render(<PrivacyPolicyPage />);
+    expect(screen.getByText(
+      /accounts can only be created from an\s+invitation, into a group or to start one/i
+    )).toBeInTheDocument();
+  });
+
   it("discloses browser-side storage", () => {
     const { container } = render(<PrivacyPolicyPage />);
     const section = container.querySelector("#device-storage");
