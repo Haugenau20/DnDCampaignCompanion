@@ -167,6 +167,11 @@ owner, through the console and the Admin SDK. The app grants it to nobody: the g
 **Recommendation:** issue founder invitations (step 1) with an Admin-SDK script, not a callable
 behind a flag.
 
+**Later (T137, proposed 2026-10-08):** an operator page that issues founder links from anywhere,
+as its own Cloud Run service behind Google's Identity-Aware Proxy, outside the app and its sign-in.
+It is not a callable behind a flag, and it still opens no group:
+[`operator/design.md`](operator/design.md).
+
 ---
 
 ## Build order
