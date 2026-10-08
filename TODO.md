@@ -24,9 +24,11 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
+| medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
 | medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
+| low | T140 | Any signed-in account can read a profile that has no email | S | open | Every real sign-in gives an email, so likely no profile is exposed; unverified in production |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 and 2 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
@@ -133,6 +135,26 @@ with a real measurement id (`core/services/firebase/config/firebaseConfig.ts:13`
 - **Catch**: drop it, or keep it and say so (with consent, if it sets cookies),
   is the maintainer's call, and T137 asks for traffic metrics.
 - **Source**: found while filing T137, 2026-10-08
+
+### T140 — Any signed-in account can read a profile that has no email
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-08
+
+`users/{uid}` is readable by every signed-in account when it has no `email`
+field (`firestore.rules.prod:493`). Such a profile shows its groups, its
+extraction counters and (with T137) its `extractionAllowance` to anyone who
+knows the uid, and every group member's uid is in the group's member list.
+
+- **Where**: `redeemInvitation.ts:149` writes `email` only when the token has
+  one; `createGroup.ts:198` always writes it (a missing one fails that write).
+- **No reader needs it**: every app read of `users/{uid}` is the signed-in
+  person's own (`UserService.ts:42`, `GroupService.ts:99`, `AuthService.ts:421`).
+  Whether the rule ever had a caller is unchecked.
+- **Unverified**: whether any production profile lacks `email`. Magic link and
+  Google both give one; device sign-in's custom tokens were not checked.
+- **Catch**: none found; drop the rule and add a test in
+  `firestore-rules-prod.test.ts` (its seeded profiles have no email, so a
+  stranger's read succeeds there today).
+- **Source**: found while writing T137 step 1's rules tests, 2026-10-08
 
 ---
 
@@ -368,7 +390,9 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
 - **Step 0** (maintainer): the project moves into a `muninn.quest`
   organization (Cloud Identity Free, decided 2026-10-08), so IAP uses Google's
   own OAuth client; then the operator account, in that organization. The
-  steps are in the plan's step 0.
+  steps are in the plan's step 0. Under way: Cloud Identity Free is signed
+  up and `muninn.quest` verified (2026-10-08); the project has not moved,
+  and waits until the super admin's security keys are registered.
 - **Next**: step 3, the service run locally.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
@@ -587,6 +611,32 @@ to this repository by id and to the workflow and branch, removes them.
 - **Then**: delete both keys in the console once nothing uses them.
 - **Source**: found while designing T137's operator deploy, which uses
   Workload Identity Federation from the start, 2026-10-08
+
+### T141 — The site's contact address is a Gmail account, not `muninn.quest`
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+
+Players who write through the contact form get replies from the project's
+Gmail account, and Google's consent screen names it as the support address.
+The maintainer wants a `muninn.quest` address instead. The domain only
+receives mail (Porkbun forwards `admin@` and `operator@`, since 2026-10-08,
+for T137 step 0); it cannot send yet.
+
+- **Where**: `sendContactEmail` (`firebase/functions/src/contact.ts:67`)
+  sends through nodemailer's `gmail` service, from and to `CONTACT_EMAIL`,
+  reply-to the sender (`:342-344`); the address and its password are secrets
+  (`:270`), not in the repo. The consent screen's support address is in T118.
+- **Address unverified**: the maintainer gave `dnd-campaign-companion@gmail.com`,
+  T118 records `dndcampaigncompanion@gmail.com`; Gmail allows no hyphens, so
+  likely the latter. Other places it shows (Firebase's public-facing support
+  email, the Auth templates' reply-to) are unchecked.
+- **Catch**: a mail host must be chosen (Porkbun's mail, Google Workspace on
+  the `muninn.quest` organization, Zoho, ...), and the apex SPF record has a
+  10-lookup budget: Firebase's include takes 4, Porkbun's 6 (it sat at exactly
+  10 until removed 2026-10-08), Google Workspace's 1. Add DKIM and DMARC with
+  it; the domain has no DMARC record. T057's Resend would send from a
+  subdomain, outside this budget. The privacy page names no processor for
+  contact mail today (`PrivacyPolicyPage.tsx:318`), Gmail included.
+- **Source**: maintainer, 2026-10-08, during T137 step 0
 
 ---
 
