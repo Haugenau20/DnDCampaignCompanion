@@ -22,9 +22,11 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T131 | Store each link once, shown both ways | M | open | The one data-model defect players see: a link added on one page is missing on the other |
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
+| medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
 | medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
+| low | T137 | An operator page: founder links, extraction limits, metrics | L | needs scoping | The script and the console work meanwhile; a page reopens D6 and the risk the global admin's removal closed |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -115,7 +117,21 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-None open here.
+### T138 — The site starts Google Analytics; the privacy page says it has none
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-08
+
+The privacy page promises "No analytics" (`pages/PrivacyPolicyPage.tsx:102`)
+and "no analytics ... no third-party scripts watching you read" (`:271`), but
+every page load calls `getAnalytics(app)` (`core/services/firebase/core/BaseFirebaseService.ts:80`)
+with a real measurement id (`core/services/firebase/config/firebaseConfig.ts:13`,
+`G-TX89XGGZE0` as the fallback). Nothing else reads `this.analytics`.
+
+- **Unverified**: whether page views reach Google Analytics from the live
+  site. Not observed; the live site's network tab or the GA property shows it.
+  No CSP in `firebase/firebase.json` would stop it.
+- **Catch**: drop it, or keep it and say so (with consent, if it sets cookies),
+  is the maintainer's call, and T137 asks for traffic metrics.
+- **Source**: found while filing T137, 2026-10-08
 
 ---
 
@@ -329,6 +345,37 @@ The maintainer asks whether the site should have an "about us" page.
 - **Related**: T118's Google branding check flagged "does not explain the
   purpose" and "insufficient content", from a checker that runs no JavaScript.
 - **Source**: todo.txt, 2026-10-08
+
+### T137 — An operator page: founder links, extraction limits, metrics
+**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-08
+
+The maintainer wants one web page for operator work: issue founder links,
+raise one person's extraction allowance (their own, since they pay for OpenAI,
+or a player's who asks), and perhaps traffic, health and performance figures.
+
+- **Founder links**: come only from
+  `firebase/functions/scripts/issue-founder-invitation.js`, which runs
+  `issueFounderInvitation` (`functions/src/signUp/founderInvitations.ts:62`)
+  under the maintainer's own gcloud login.
+- **Extraction limits**: `users/{uid}.entityExtractionUsage` already carries
+  `isUnlimited` (honoured at `functions/src/entityExtraction.ts:266` and `:297`)
+  and `customLimit` (`:230`), which only the server can write
+  (`firestore.rules.prod:504`, tested at `firestore-rules-prod.test.ts:174`).
+  Setting `isUnlimited` in the console works today. But `customLimit` raises
+  the **daily** limit only: `readUsage` (`:249`) resets weekly and monthly to
+  5 and 10 on every read, so a `customLimit` of 50 still stops at 5 a week.
+  The functions suite (`test/extractEntities.test.ts`) tests neither.
+- **Catch**: the app has no operator role. The global-admin flag was removed on
+  2026-10-07 (`firestore.rules.prod`, note 15) because it made the maintainer's
+  session a key to every group, and the onboarding plan's D6 recommends the
+  script over "a callable behind a flag". A page needs a server-checked
+  identity for the maintainer that grants these actions and nothing else, or
+  it brings back what T119 removed.
+- **Questions before sizing**: which actions beyond these two; inside the app
+  or a separate site; which metrics, and whether the Google Cloud console's
+  Functions, Firestore and Hosting figures already answer them. Analytics is a
+  question of its own (T138).
+- **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
 ---
 
