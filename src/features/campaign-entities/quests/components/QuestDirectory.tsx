@@ -163,10 +163,8 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   // had). Resolve once here and key everything -- display, options and the
   // filter comparison -- off the resolved name, so the three cannot disagree.
   //
-  // `resolveLocationName` prefers `quest.locationId` (the canonical
-  // reference) and falls back to the legacy `quest.location` free text for
-  // documents written before that field existed; see the contract on
-  // `NPC.location`.
+  // `resolveLocationName` gives the place `quest.locationId` names, else the
+  // free text as written; see the contract on `NPC.location`.
   const questLocationName = useMemo(() => {
     // One lookup per quest, not a search of every place (T101).
     const index = indexLocationNames(locations);

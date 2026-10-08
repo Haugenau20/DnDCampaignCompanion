@@ -395,11 +395,11 @@ describe('QuestDirectory', () => {
   // -------------------------------------------------------------------------
   describe('location filter', () => {
     // The options and the filter comparison both key off the resolved name, so
-    // picking a human-readable option must actually match slug-stored quests.
-    it('offers resolved display names and filters slug-stored quests by them', () => {
+    // picking a human-readable option must actually match quests stored by id.
+    it('offers resolved display names and filters quests stored by id by them', () => {
       mockLocations = [makeLocation({ id: 'mines-of-moria', name: 'Mines of Moria' })];
       mockQuestContext.quests = [
-        makeQuest({ id: 'q-moria', title: 'Escape from Moria', location: 'mines-of-moria' }),
+        makeQuest({ id: 'q-moria', title: 'Escape from Moria', locationId: 'mines-of-moria', location: 'mines-of-moria' }),
         makeQuest({ id: 'q-other', title: 'Elsewhere Entirely', location: 'somewhere-else' }),
       ];
       renderPage();
@@ -442,7 +442,7 @@ describe('QuestDirectory', () => {
     it('shows the location\'s display name, not its id', () => {
       mockLocations = [makeLocation({ id: 'mines-of-moria', name: 'Mines of Moria' })];
       mockQuestContext.quests = [
-        makeQuest({ id: 'q-moria', title: 'Escape from Moria', location: 'mines-of-moria' }),
+        makeQuest({ id: 'q-moria', title: 'Escape from Moria', locationId: 'mines-of-moria', location: 'mines-of-moria' }),
       ];
       renderPage();
       const row = within(expandButton('Escape from Moria'));

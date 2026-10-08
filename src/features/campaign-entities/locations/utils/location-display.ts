@@ -14,16 +14,14 @@ export interface LocationReference {
 }
 
 /**
- * The campaign's locations, looked up by id and by lower-cased name rather
- * than searched. A roster resolves one reference per row, and searching the
- * array for each one made a 1,200-row list do 1.4 million comparisons per
- * redraw at that many places (T101). Build it once per `locations` array
- * (`useMemo`) and pass it where the array would go.
+ * The campaign's locations, looked up by id rather than searched. A roster
+ * resolves one reference per row, and searching the array for each one made a
+ * 1,200-row list do 1.4 million comparisons per redraw at that many places
+ * (T101). Build it once per `locations` array (`useMemo`) and pass it where
+ * the array would go.
  */
 export interface LocationNameIndex {
   byId: ReadonlyMap<string, Location>;
-  /** The FIRST location with each lower-cased name, as `Array.find` gives. */
-  byLowerName: ReadonlyMap<string, Location>;
 }
 
 /**
@@ -33,65 +31,37 @@ export interface LocationNameIndex {
  */
 export const indexLocationNames = (locations: readonly Location[]): LocationNameIndex => {
   const byId = new Map<string, Location>();
-  const byLowerName = new Map<string, Location>();
   for (const loc of locations) {
     if (!byId.has(loc.id)) byId.set(loc.id, loc);
-    const lower = loc.name.toLowerCase();
-    if (!byLowerName.has(lower)) byLowerName.set(lower, loc);
   }
-  return { byId, byLowerName };
+  return { byId };
 };
 
 /**
  * Resolve a stored location reference to the name a user should see.
  *
- * Entities disagree about what they store, and about which field is
- * authoritative when both are present:
- * - NPCs and Quests historically stored the location's **id** — a slug like
- *   `mines-of-moria` — in `location` when created by the sample-data
- *   generators, but the **display name** when created through their forms.
- * - Rumors stored the display name, e.g. "Rivendell".
- * - `locationId` is now the canonical reference (see `LocationReference`
- *   above): when it is set and resolves, it wins outright, so a Location
- *   rename propagates to every entity that references it. `location` is kept
- *   as a free-text fallback for entities with no selected Location record,
- *   and as a human-readable convenience alongside `locationId` -- but it is
- *   never authoritative once `locationId` resolves.
- *
- * Resolution order:
+ * `locationId` is the reference (see the contract on `NPC.location`); the
+ * free-text `location` is only ever shown, never looked up:
  * 1. `locationId` set and resolves to a Location -> that Location's current
- *    `name`. This is the whole point of `locationId`: renames propagate
- *    everywhere the Location is referenced, instead of every entity needing
- *    its own copy of the name kept in sync.
- * 2. `locationId` set but resolves to nothing (the Location was deleted, or
- *    the id was never valid) -> fall through to step 3's free-text
- *    resolution; only once `location` is also empty do we surface the
- *    dangling id itself, verbatim.
- * 3. No usable `locationId` -- either never set, or dangling with `location`
- *    the only thing left to try. This is the pre-`locationId` behaviour,
- *    unchanged: both the id form and the name form are resolved here, by id
- *    first, then by a case-insensitive name match. A value matching neither
- *    is returned exactly as it came in. This branch is what keeps documents
- *    written before this contract existed working, and must not be removed.
+ *    `name`, so a rename shows everywhere the place is referenced.
+ * 2. Otherwise the free text, exactly as written. "Somewhere in Mirkwood" is
+ *    what a player wrote, and it stays visible.
+ * 3. No free text either, but a `locationId` that names nothing -> that id,
+ *    verbatim.
  * 4. Neither field set -> `undefined`, so callers keep their own
  *    "Location unknown" / "--" fallback rather than this function inventing
  *    one.
  *
- * Returning an unresolved reference untouched (steps 2 and 3's tail) is the
- * deliberate part (#1412). A reference to a location that no longer exists —
- * or never did, as with the sample data's `lothlorien` — has to stay visible
- * as itself rather than be dressed up as something real. Title-casing the
- * slug instead would invent "Lothlorien" for a location that does not exist,
- * and would silently diverge from the real name the moment anyone renames a
- * location: the same broken `id === slugify(name)` assumption already
- * catalogued in #303 and #009. A dangling `locationId` gets the same
- * treatment for the same reason -- it must stay visible rather than vanish
- * or be prettified.
+ * Returning an unresolved reference untouched (steps 2 and 3) is the
+ * deliberate part (#1412). A reference to a location that no longer exists
+ * has to stay visible as itself rather than be dressed up as something real
+ * -- title-casing a slug would invent a place, and would silently diverge
+ * from the real name the moment anyone renamed one (#303, #009).
  *
- * Resolving by name as well as by id is what lets this be the single answer
- * for all three directories. It also canonicalises case, so an entity stored
- * as "rivendell" and one stored as "Rivendell" land in one group rather than
- * two.
+ * The free text used to be matched against the campaign's places too, by id
+ * and then by name, for documents written before `locationId` existed. None
+ * is left in production: those documents were given their `locationId` on
+ * 2026-10-08 (T079, `firebase/functions/scripts/audit-location-ids.js`).
  */
 export const resolveLocationName = (
   reference: LocationReference,
@@ -102,8 +72,8 @@ export const resolveLocationName = (
     return resolved.name;
   }
 
-  // Steps 2 and 3's tails: whatever was stored, verbatim -- the free text if
-  // there is any, else the dangling id. Step 4 when neither is set.
+  // Steps 2 and 3: whatever was stored, verbatim -- the free text if there is
+  // any, else the dangling id. Step 4 when neither is set.
   return reference.location || reference.locationId || undefined;
 };
 
@@ -112,11 +82,9 @@ export const resolveLocationName = (
  * at none.
  *
  * The record-returning twin of {@link resolveLocationName}, for callers that
- * link to the place rather than print it, and the order that function
- * documents lives here: a `locationId` that resolves wins outright; otherwise
- * the free-text `location` is tried by id, then by case-insensitive name.
- * What this does not do is that function's verbatim fallback -- a reference
- * that names nothing has no record to return.
+ * link to the place rather than print it: the `locationId`'s record, if it
+ * resolves. The free-text `location` names no record, even when it happens to
+ * read like one.
  *
  * @param reference The stored pair; either field may be missing
  * @param locations The campaign's locations, or an index of them
@@ -125,25 +93,11 @@ export const resolveLocation = (
   reference: LocationReference,
   locations: readonly Location[] | LocationNameIndex
 ): Location | undefined => {
-  const { locationId, location } = reference;
-  const index = isIndex(locations) ? locations : null;
-  const list = index ? [] : (locations as readonly Location[]);
-  const findById = (id: string) =>
-    index ? index.byId.get(id) : list.find(loc => loc.id === id);
-  const findByName = (name: string) =>
-    index
-      ? index.byLowerName.get(name.toLowerCase())
-      : list.find(loc => loc.name.toLowerCase() === name.toLowerCase());
-
-  // Steps 1 and 2: the canonical reference wins when it resolves; a dangling
-  // one falls through to the free text.
-  const byLocationId = locationId ? findById(locationId) : undefined;
-  if (byLocationId) {
-    return byLocationId;
-  }
-
-  // Step 3: the free-text fallback, by id then by name.
-  return location ? findById(location) ?? findByName(location) : undefined;
+  const { locationId } = reference;
+  if (!locationId) return undefined;
+  return isIndex(locations)
+    ? locations.byId.get(locationId)
+    : locations.find(loc => loc.id === locationId);
 };
 
 /** Whether `locations` is an index rather than the array it was built from. */
@@ -152,47 +106,62 @@ const isIndex = (
 ): locations is LocationNameIndex => !Array.isArray(locations);
 
 /**
- * Whether a location reference points at `location`, canonically or via the
- * legacy free-text fallback.
+ * Whether a location reference points at `location`: its `locationId` names
+ * that Location. Free text never does (see {@link resolveLocationName}).
  *
- * Shared by `NPCContext.getNPCsByLocation` and `QuestContext.getQuestsByLocation`
- * so the id/legacy fallback logic exists in exactly one place rather than
- * being hand-rolled twice. Matches `reference.locationId` first when set --
- * against `location.id` only, nothing else, since a canonical reference
- * either names that Location or it doesn't. Otherwise falls back to a
- * case-insensitive comparison of the legacy `location` text against
- * *either* `location.id` or `location.name`.
- *
- * The fallback checks both because `resolveLocationName`'s step 3 -- the
- * behaviour this preserves for un-migrated documents -- accepts both: NPCs
- * and Quests wrote the location's id into `location` when created by the
- * sample-data generators, but its display name when created through their
- * forms. A caller here has only the id form of "which location", so this
- * takes the whole `Location` record (not a bare id) precisely so it can
- * check the legacy field against both of that Location's identifying
- * strings -- resolving a name back to an id would need the full locations
- * array to search, which not every caller has (`NPCContext` is one: it is
- * mounted outside `LocationProvider`, so `useLocations()` isn't available to
- * it).
- *
- * This is a narrower question than `resolveLocationName` answers -- "does
- * this reference identify this location?" rather than "what should I print
- * for this reference?" -- so it does not reuse that function directly, but
- * shares its two-field input shape and its id-first-then-legacy-text
- * priority.
+ * Shared by `NPCContext.getNPCsByLocation`, `QuestContext.getQuestsByLocation`
+ * and the location page, so "who is recorded here" has one answer.
  */
 export const referencesLocation = (
   reference: LocationReference,
   location: Location
-): boolean => {
-  if (reference.locationId) {
-    return reference.locationId === location.id;
-  }
+): boolean => !!reference.locationId && reference.locationId === location.id;
 
-  if (!reference.location) {
-    return false;
-  }
+/** A place inside a quest: a name, and the Location it is, if it is one. */
+export interface KeyPlace {
+  name: string;
+  locationId?: string;
+}
 
-  const legacy = reference.location.toLowerCase();
-  return legacy === location.id.toLowerCase() || legacy === location.name.toLowerCase();
+/**
+ * The Location a place inside a quest (`Quest.keyLocations`) is, if any: the
+ * one its stored `locationId` names, else the one its name names -- by id, then
+ * by case-insensitive name.
+ *
+ * Unlike an entity's `location`, a place's name is still looked up. Places
+ * added before #1421 stored no id, the sample data writes none, and T079's
+ * audit did not read them. Adding a place under the name of a known location
+ * goes through here too, which is how it gets its id.
+ *
+ * @param place The place, or just a name being added
+ * @param locations The campaign's locations
+ */
+export const resolveKeyPlace = (
+  place: KeyPlace,
+  locations: readonly Location[]
+): Location | undefined => {
+  const byId = place.locationId
+    ? locations.find(loc => loc.id === place.locationId)
+    : undefined;
+  if (byId) return byId;
+  const lower = place.name.toLowerCase();
+  return (
+    locations.find(loc => loc.id === place.name) ??
+    locations.find(loc => loc.name.toLowerCase() === lower)
+  );
+};
+
+/**
+ * Whether a place inside a quest is `location`: by its stored `locationId`
+ * when it has one, else by its name against the Location's id or name,
+ * case-insensitively -- the test {@link resolveKeyPlace} applies, for a
+ * caller holding one Location rather than the list.
+ *
+ * @param place The quest's place
+ * @param location The Location being asked about
+ */
+export const keyPlaceIsLocation = (place: KeyPlace, location: Location): boolean => {
+  if (place.locationId) return place.locationId === location.id;
+  const lower = place.name.toLowerCase();
+  return lower === location.id.toLowerCase() || lower === location.name.toLowerCase();
 };

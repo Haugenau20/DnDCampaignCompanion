@@ -534,6 +534,7 @@ describe('QuestContext Behavioral Testing', () => {
         {
           id: '1',
           title: 'Quest with location ID',
+          locationId: 'dungeon-123',
           location: 'dungeon-123',
           keyLocations: []
         },
@@ -568,8 +569,8 @@ describe('QuestContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should find quests by location ID and key location name.
       // `getQuestsByLocation` takes a `Location` record: its `id` matches
-      // quest 1's legacy `location` field (the id form), and its `name`
-      // matches quest 2's `keyLocations[0].name`.
+      // quest 1's `locationId`, and its `name` matches quest 2's
+      // `keyLocations[0].name`.
       const locationQuests = questContext.getQuestsByLocation({ id: 'dungeon-123', name: 'dungeon-123' });
 
       expect(locationQuests).toHaveLength(2); // Should find both direct and key location matches
@@ -577,24 +578,20 @@ describe('QuestContext Behavioral Testing', () => {
       expect(locationQuests[1].id).toBe('2');
     });
 
-    // `locationId` is the canonical reference introduced alongside this
-    // contract; `getQuestsByLocation` must prefer it and only fall back to
-    // the legacy `location` text comparison for documents that have none. The
-    // legacy field may hold either the location's id (sample-data generator
-    // shape) or its display name (form-created shape), so both must match.
-    // `getQuestsByLocation` takes the whole `Location` record -- not a bare
-    // id -- for the same reason NPCContext's sibling helper does.
-    test('should match by locationId first, falling back to either legacy id or legacy name for un-migrated documents', async () => {
+    // `locationId` is the reference; free text in `location` is what a
+    // player wrote and places no quest, even when it reads like the place's
+    // id or name. It used to match, for documents written before `locationId`;
+    // production has none left (T079).
+    test('should match by locationId only, never by free text that reads like the place', async () => {
       const minesOfMoria = { id: 'mines-of-moria', name: 'Mines of Moria' };
       const rivendellLocation = { id: 'rivendell', name: 'Rivendell' };
 
       const mockQuests = [
         // Migrated: canonical locationId set.
         { id: '1', title: 'Quest with locationId', locationId: 'mines-of-moria', location: 'Mines of Moria', keyLocations: [] },
-        // Un-migrated, storing the id (sample-data generator shape).
+        // Free text that reads like the place's id.
         { id: '2', title: 'Quest without locationId (id)', location: 'mines-of-moria', keyLocations: [] },
-        // Un-migrated, storing the display name (form-created shape) -- the
-        // case that was previously missed.
+        // Free text that reads like the place's name.
         { id: '3', title: 'Quest without locationId (name)', location: 'Mines of Moria', keyLocations: [] },
         // Unrelated location entirely.
         { id: '4', title: 'Quest elsewhere', locationId: 'rivendell', location: 'Rivendell', keyLocations: [] },
@@ -618,7 +615,7 @@ describe('QuestContext Behavioral Testing', () => {
       const matches = questContext.getQuestsByLocation(minesOfMoria);
       const unrelated = questContext.getQuestsByLocation(rivendellLocation);
 
-      expect(matches.map((quest: any) => quest.id).sort()).toEqual(['1', '2', '3']);
+      expect(matches.map((quest: any) => quest.id).sort()).toEqual(['1']);
       expect(unrelated.map((quest: any) => quest.id)).toEqual(['4']);
       expect(matches.some((quest: any) => quest.id === '4')).toBe(false);
     });

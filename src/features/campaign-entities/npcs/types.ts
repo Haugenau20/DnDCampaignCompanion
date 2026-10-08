@@ -54,11 +54,11 @@ export interface NPC extends BaseContent {
    * in Mirkwood"). It is also written alongside `locationId` as a
    * human-readable convenience, but is never authoritative.
    *
-   * Documents predating this contract have no `locationId`; their `location`
-   * may hold either an id or a name, which is why the resolver
-   * (`resolveLocationName` in
-   * `features/campaign-entities/locations/utils/location-display.ts`) still
-   * accepts both.
+   * Free text is shown as written and never looked up as a place, even when
+   * it reads like one (`resolveLocationName` in
+   * `features/campaign-entities/locations/utils/location-display.ts`).
+   * Documents predating this contract stored only `location`, an id or a
+   * name; production's were given their `locationId` on 2026-10-08 (T079).
    */
   location?: string;
   /** See the `location`/`locationId` contract documented on `location` above. */

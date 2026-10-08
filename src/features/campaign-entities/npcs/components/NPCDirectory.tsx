@@ -255,14 +255,10 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
 
   // Group NPCs by location for display.
   //
-  // `npc.location` holds the location's id, so grouping on it verbatim printed
-  // slugs as headings -- "mines-of-moria" where the Locations page says "Mines
-  // of Moria" (#1412). Resolve to the display name, which also merges entries
-  // stored under different cases of the same place into one group.
-  //
-  // `resolveLocationName` prefers `npc.locationId` (the canonical reference)
-  // and falls back to the legacy `npc.location` free text for documents
-  // written before that field existed; see the contract on `NPC.location`.
+  // Grouping on a stored id verbatim printed slugs as headings --
+  // "mines-of-moria" where the Locations page says "Mines of Moria" (#1412).
+  // `resolveLocationName` gives the place `npc.locationId` names, else the
+  // free text as written; see the contract on `NPC.location`.
   const groupedNPCs = useMemo(() => {
     return filteredNPCs.reduce((acc, npc) => {
       const location =

@@ -122,20 +122,14 @@ export function buildCandidates(
   /**
    * Where an NPC is, as a name.
    *
-   * `locationId` wins when it resolves. `location` is free text a player may
-   * legitimately have written ("somewhere in Mirkwood") -- but the contract
-   * documented on `NPC.location` records that documents predating `locationId`
-   * may hold **an id** in that field, so it is resolved against the same map
-   * before being shown. An id that resolves to nothing contributes nothing
-   * rather than being printed raw.
+   * `locationId` wins when it is set: its place's name, or nothing when it
+   * names no place, rather than the id printed raw. Without one, `location`
+   * is free text a player wrote ("somewhere in Mirkwood") and is shown as
+   * written; see the contract on `NPC.location`.
    */
   const resolvePlace = (record: any): string | undefined => {
     if (record.locationId) return locationNames.get(record.locationId);
-    const free = record.location;
-    if (!free) return undefined;
-    // Resolve it as an id first; if nothing answers, it is the free text a
-    // player wrote and is shown as written.
-    return locationNames.get(free) ?? free;
+    return record.location || undefined;
   };
 
   const describe = (kind: AttachKind, record: any): { name: string; lineText: string } => {

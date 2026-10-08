@@ -20,7 +20,7 @@ export interface QuestLocation {
   /**
    * The Location this place already is, stored when a place is added under
    * the name of one (#1421) so the link survives a rename. Places added
-   * before that resolve by `name` alone, the way `location` does for a quest.
+   * before that resolve by `name` alone (`resolveKeyPlace`).
    */
   locationId?: string;
 }

@@ -140,7 +140,7 @@ describe('NPCDirectory', () => {
   // users saw "mines-of-moria" where the Locations page says "Mines of Moria".
   // -------------------------------------------------------------------------
   describe('location headings', () => {
-    const moriaNpc = makeNPC({ id: 'npc-m', name: 'Balin', location: 'mines-of-moria' });
+    const moriaNpc = makeNPC({ id: 'npc-m', name: 'Balin', locationId: 'mines-of-moria', location: 'mines-of-moria' });
 
     beforeEach(() => {
       mockLocations = [
@@ -159,12 +159,14 @@ describe('NPCDirectory', () => {
       ).not.toBeInTheDocument();
     });
 
-    test('groups NPCs stored under the id and under the name together', () => {
-      const byName = makeNPC({ id: 'npc-r1', name: 'Arwen', location: 'Rivendell' });
-      const byId = makeNPC({ id: 'npc-r2', name: 'Elrond', location: 'rivendell' });
-      render(<NPCDirectory npcs={[byName, byId]} />);
+    // The free text is the name when each was written; the group is the place.
+    test('groups NPCs at one place together, whatever name each was written with', () => {
+      const byName = makeNPC({ id: 'npc-r1', name: 'Arwen', locationId: 'rivendell', location: 'Rivendell' });
+      const byOldName = makeNPC({ id: 'npc-r2', name: 'Elrond', locationId: 'rivendell', location: 'Imladris' });
+      render(<NPCDirectory npcs={[byName, byOldName]} />);
 
       expect(screen.getAllByRole('heading', { name: 'Rivendell' })).toHaveLength(1);
+      expect(screen.queryByRole('heading', { name: 'Imladris' })).not.toBeInTheDocument();
       expect(screen.getByText('Arwen')).toBeInTheDocument();
       expect(screen.getByText('Elrond')).toBeInTheDocument();
     });

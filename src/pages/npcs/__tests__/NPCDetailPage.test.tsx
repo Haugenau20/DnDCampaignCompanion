@@ -101,7 +101,10 @@ const fullNPC = {
   relationship: "friendly",
   race: "Maia",
   occupation: "Wizard",
-  location: "mines-of-moria",
+  // Stored as every save writes it: the id, and the name when it was written.
+  // An older name, so a page that printed the free text would be caught.
+  locationId: "mines-of-moria",
+  location: "Moria",
   description: "A wandering wizard.",
   appearance: "Elderly man with a long grey beard and a tall pointed hat.",
   personality: "Wise, occasionally short-tempered, deeply kind.",
@@ -535,7 +538,7 @@ describe("NPCDetailPage", () => {
       // #1412: a dangling reference must stay visible rather than be
       // prettified into a location that does not exist.
       mockNPCDataReturn = {
-        npcs: [{ ...fullNPC, location: "lothlorien" }],
+        npcs: [{ ...fullNPC, locationId: "lothlorien", location: "" }],
         loading: false,
         error: null,
       };
@@ -1625,6 +1628,12 @@ describe("NPCDetailPage", () => {
     });
 
     it("replaces the place rather than collecting several, because someone is in one place", async () => {
+      // Somewhere else first: a place written as text, which the pick replaces.
+      mockNPCDataReturn = {
+        npcs: [{ ...fullNPC, locationId: undefined, location: "Bree" }],
+        loading: false,
+        error: null,
+      };
       renderPage();
       openTray();
       fireEvent.click(
