@@ -23,10 +23,11 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
+| medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
 | medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
-| low | T137 | An operator page: founder links, extraction limits, metrics | L | needs scoping | The script and the console work meanwhile; a page reopens D6 and the risk the global admin's removal closed |
+| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; designed 2026-10-08 (`docs/architecture/operator/`), awaiting review |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -347,34 +348,25 @@ The maintainer asks whether the site should have an "about us" page.
 - **Source**: todo.txt, 2026-10-08
 
 ### T137 — An operator page: founder links, extraction limits, metrics
-**Type** feature · **Size** L · **Status** needs scoping · **Verified** 2026-10-08
+**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-08
 
-The maintainer wants one web page for operator work: issue founder links,
-raise one person's extraction allowance (their own, since they pay for OpenAI,
-or a player's who asks), and perhaps traffic, health and performance figures.
+One web page for operator work, usable from a phone: issue and revoke founder
+links, and set one person's extraction allowance (their own, since they pay for
+OpenAI, or a player's who asks). Health and traffic figures are phase 2.
 
-- **Founder links**: come only from
-  `firebase/functions/scripts/issue-founder-invitation.js`, which runs
-  `issueFounderInvitation` (`functions/src/signUp/founderInvitations.ts:62`)
-  under the maintainer's own gcloud login.
-- **Extraction limits**: `users/{uid}.entityExtractionUsage` already carries
-  `isUnlimited` (honoured at `functions/src/entityExtraction.ts:266` and `:297`)
-  and `customLimit` (`:230`), which only the server can write
-  (`firestore.rules.prod:504`, tested at `firestore-rules-prod.test.ts:174`).
-  Setting `isUnlimited` in the console works today. But `customLimit` raises
-  the **daily** limit only: `readUsage` (`:249`) resets weekly and monthly to
-  5 and 10 on every read, so a `customLimit` of 50 still stops at 5 a week.
-  The functions suite (`test/extractEntities.test.ts`) tests neither.
-- **Catch**: the app has no operator role. The global-admin flag was removed on
-  2026-10-07 (`firestore.rules.prod`, note 15) because it made the maintainer's
-  session a key to every group, and the onboarding plan's D6 recommends the
-  script over "a callable behind a flag". A page needs a server-checked
-  identity for the maintainer that grants these actions and nothing else, or
-  it brings back what T119 removed.
-- **Questions before sizing**: which actions beyond these two; inside the app
-  or a separate site; which metrics, and whether the Google Cloud console's
-  Functions, Firestore and Hosting figures already answer them. Analytics is a
-  question of its own (T138).
+- **Design** (proposed 2026-10-08, awaiting the maintainer's review):
+  [`docs/architecture/operator/`](docs/architecture/operator/design.md): a
+  design, a security architecture, and a plan in steps 0 to 8. Decided: its own
+  Cloud Run service behind Google's Identity-Aware Proxy, outside the app and its
+  sign-in; code in this repository; security over setup effort.
+- **Extraction limits today**: `customLimit` raises the **daily** limit only
+  (`functions/src/entityExtraction.ts:230`); `readUsage` (`:241`) resets weekly
+  and monthly to 5 and 10 on every read, so a `customLimit` of 50 still stops at
+  5 a week. `isUnlimited` works (`:266`, `:297`). Only the server writes either
+  (`firestore.rules.prod:507`). The functions suite tests neither. Plan step 1
+  replaces both with `extractionAllowance`.
+- **Next**: the plan's step 0 is the maintainer's: an operator Google account,
+  and whether the project sits in a Google Cloud organization.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
 ---
@@ -569,6 +561,29 @@ is correct, and once they did not (F7).
   `exists()`; copy first, then switch the rules, in separate merges.
 - **Not urgent**: correct today.
 - **Source**: `data-model-review.md` change 7 (F7)
+
+### T139 — CI signs in to Google Cloud with long-lived keys
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+
+Every Google Cloud sign-in in CI is a service-account JSON key kept as a
+GitHub secret. A key never expires on its own, and whoever reads one holds that
+account's roles from anywhere. Keyless Workload Identity Federation, restricted
+to this repository by id and to the workflow and branch, removes them.
+
+- **Where**: `FIREBASE_FUNCTIONS_DEPLOY_SA` (functions and rules,
+  `firebase-hosting-merge.yml:43` and `:95`); `FIREBASE_SERVICE_ACCOUNT_DND_CAMPAIGN_COMPANION`
+  (Hosting, `:141`; PR previews, `firebase-hosting-pull-request.yml:58`;
+  channel cleanup, `firebase-hosting-pull-request-cleanup.yml:45`).
+- **Catch**: the preview job runs an unmerged branch's `npm ci` and build
+  (`firebase-hosting-pull-request.yml:26-31`) on the runner that then holds the
+  Hosting key, so a poisoned dependency in a PR can wait for that step and take it.
+  `FirebaseExtended/action-hosting-deploy` takes only a JSON key (its README:
+  `firebaseServiceAccount` "required", "a service account JSON key"), so those
+  steps move to the CLI under `google-github-actions/auth`; unverified whether
+  the action accepts anything else.
+- **Then**: delete both keys in the console once nothing uses them.
+- **Source**: found while designing T137's operator deploy, which uses
+  Workload Identity Federation from the start, 2026-10-08
 
 ---
 
