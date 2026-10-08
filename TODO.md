@@ -27,7 +27,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
-| low | T079 | Do old documents still lack `locationId`? | S | blocked | The audit script exists (2026-10-07); waits on the maintainer running it against production |
+| low | T079 | Do old documents still lack `locationId`? | S | blocked | Production has 13 (audited 2026-10-08); the script's migrate mode is written and waits on the maintainer running it; then the fallback's matching can go |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
@@ -299,7 +299,7 @@ modular API only, so the code itself is ready for 14. Two things hold the bump.
   `firebase-admin` 13 and the modular API landed first
 
 ### T079 — Do old documents still lack `locationId`?
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-07
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-08
 
 NPCs and quests (and rumors) refer to a location by `locationId`. Documents
 written before that field existed carry only the free-text `location`, and
@@ -308,14 +308,20 @@ still resolve through a legacy fallback (`resolveLocationName` and
 shipped without a migration (`d6d9847`): such a document gains an id the next
 time anyone edits it.
 
-- **Blocked on the maintainer**: run the read-only audit against production,
-  with your own Google login (it needs gcloud; the steps are at the top of
-  `firebase/functions/scripts/audit-location-ids.js`). It counts, per campaign,
-  the NPCs, quests and rumors whose place resolves only through the fallback
-  (by id, or by name), and lists them; it writes nothing.
-- **Then**: none left, and the fallback can go; some left, and either migrate
-  them (a migrate mode with a revert, on the same script) or keep the fallback
-  on purpose.
+- **Production, audited 2026-10-08**: 13 documents resolve only through the
+  fallback, all by name (10 NPCs and 3 quests, in two campaigns); none by id,
+  and no `locationId` is dangling. 11 more (10 NPCs, 1 quest) carry a free-text
+  `location` that names no place.
+- **Blocked on the maintainer**: run the migration
+  (`firebase/functions/scripts/audit-location-ids.js --migrate`; the steps are
+  at the top of the script). It gives each of the 13 the `locationId` the app
+  already shows, writes nothing else, and records a revert file. Then run the
+  audit again: the fallback column should read 0.
+- **Then**: drop the fallback's matching of `location` against places (by id
+  and by name) from `resolveLocation` and `referencesLocation`. Keep showing
+  a free-text `location` as written: that is what the 11 rely on, and hiding it
+  would hide what players wrote. Every current save path (the detail pages,
+  quick-add) writes `locationId` alongside `location`; recheck that first.
 - **The dev emulator is no guide**: the sample-data generators have written
   `locationId` since `d6d9847`, and data generated before that holds the legacy
   shape. One such dataset, audited on 2026-10-07, had 37 NPCs and 20 quests with
@@ -325,7 +331,8 @@ time anyone edits it.
 - **See also**: T119, the full review of the data model, should take in
   whatever this audit finds.
 - **Source**: the post-test-coverage roadmap (2026-08-28), carried over when it
-  was deleted; decided 2026-10-06; the audit written 2026-10-07
+  was deleted; decided 2026-10-06; the audit written 2026-10-07; run, and
+  the migration written, 2026-10-08
 
 ### T118 — Finish the move to `muninn.quest`
 **Type** debt · **Size** S · **Status** open · **Verified** 2026-10-07
