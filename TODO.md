@@ -23,8 +23,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
-| medium | T126 | `createGroup` guarded | M | open | Today any signed-in caller can create unlimited groups, all named "Admin"; founder links exist but nothing spends them |
-| medium | T127 | A founder's first run | M | blocked | After T126; a founder has no path from link to first campaign |
+| medium | T126 | App Check on the sign-up and group callables | S | open | Anyone holding the public API key can call them from a script; the guard on starting groups bounds that, App Check closes it |
+| medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
@@ -272,29 +272,25 @@ invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
 3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
 create a campaign, and up to 3 groups per founder. Founder invitations exist:
 `firebase/functions/scripts/issue-founder-invitation.js` issues one, and sign-up
-admits it. T126 and T127 are the rest of the smallest change that lets a table
-start alone; T128 makes it safe to hand out more than
-a few links. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
+admits it, and `createGroup` spends one or allows up to 3 groups to whoever has
+started one. T127 is the rest of the smallest change that lets a table start
+alone; T126 and T128 make it safe to hand out more than a few links. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
 group → campaign → invitation → a second player joins.
 
-### T126 — `createGroup` guarded
-**Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08
+### T126 — App Check on the sign-up and group callables
+**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-08
 
-`groupManagement/createGroup.ts` accepts any signed-in caller, with no limit, no
-throttle and no App Check, and names every creator "Admin" (it reads a
-`username` on the global profile that no flow writes).
+`createGroup`, `reserveSignUp` and `redeemInvitation` accept a call without an
+App Check token: anyone holding the public API key can drive them from a
+script. App Check already guards Auth (`core/services/firebase/config/appCheck.ts`).
+`createGroup` itself is guarded (a founder link, or up to 3 groups for whoever
+started one), which bounds what such a script can do; App Check closes it.
 
-- **Change**: it spends an unspent founder invitation
-  (`founderInvitations/{token}`, `signUp/founderInvitations.ts`: mark it
-  `used`) in the same transaction as the group it creates, as
-  `redeemInvitation.ts` spends a group invitation;
-  or uses the account's allowance (up to **3 groups** per founder in all). It
-  takes the founder's name in the group as an argument. `enforceAppCheck: true`
-  on `createGroup`, `reserveSignUp` and `redeemInvitation`; check first that the
-  emulator and the e2e journeys still pass App Check, or exempt the emulator.
+- **Change**: `enforceAppCheck: true` on the three. Check first that the
+  emulator and the e2e journeys still pass, or exempt the emulator.
 - **Deploy order**: enforcement merges only after a live frontend sends App
-  Check tokens to those callables.
-- **Source**: the onboarding plan, step 2; decided 2026-10-08
+  Check tokens to those callables; check the live site does.
+- **Source**: the onboarding plan, step 2 (D4); decided 2026-10-08
 
 ### T127 — A founder's first run
 **Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
@@ -310,7 +306,9 @@ From founder link to first campaign as one guided flow, not three admin pages
   already allow (`firestore.rules.prod`, `match /campaigns/{campaignId}`); today
   only the admin UI offers it. The empty campaign state ("Your first campaign
   will appear here as soon as it's created") gets a button for every member.
-- **Blocked on**: T126
+- **The server side is done**: `createGroup` takes `{name, description,
+  username, founderToken}` and spends the link (`GroupService.createGroup`
+  passes them through); `reserveSignUp` takes `{founderToken, email}`.
 - **Source**: the onboarding plan, step 3; decided 2026-10-08
 
 ### T128 — Caps on members, campaigns and accounts

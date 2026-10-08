@@ -2,11 +2,30 @@
 import * as functions from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
 import {rethrowHttpsError} from "../shared/httpsErrors";
+import {registrationTokenProblem} from "../shared/registrationToken";
+import {FOUNDER_INVITATIONS} from "../signUp/founderInvitations";
 
 interface CreateGroupData {
   name: string;
   description?: string;
+  /** The founder's name in the new group, as a member gives one on joining. */
+  username: string;
+  /** A founder invitation to spend (T125); without one, the allowance applies. */
+  founderToken?: string;
 }
+
+/** The bounds of a name in a group, the same as `redeemInvitation`'s. */
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 20;
+
+/**
+ * How many groups one person may start without a founder link (T126; the
+ * onboarding plan, D4, decided 2026-10-08): the first comes from a founder
+ * link, and whoever started one may start more, up to this many in all, for
+ * another table. A founder link always works: the maintainer issued it on
+ * purpose.
+ */
+export const MAX_GROUPS_STARTED = 3;
 
 /**
  * The longest name and description a group may have (T119). The same as the
@@ -19,6 +38,12 @@ const MAX_DESCRIPTION_LENGTH = 10_000;
 
 /**
  * Creates a new group and the group creator's admin profile.
+ *
+ * Who may (T126): someone spending a founder invitation, which this spends in
+ * the same transaction as the group it creates; or someone who has already
+ * started a group, and has started fewer than `MAX_GROUPS_STARTED`. Started
+ * means the group's `createdBy`, so a deleted group no longer counts. Before
+ * this, any signed-in caller could create any number of groups.
  *
  * This has to run server-side with the Admin SDK because it writes the
  * caller's own group profile with `role: "admin"`. Production Firestore
@@ -40,8 +65,11 @@ export const createGroup = functions.onCall(
       );
     }
 
-    const {name, description} = request.data;
+    const {name, description, founderToken} = request.data ?? {};
     const trimmedName = typeof name === "string" ? name.trim() : "";
+    const username = typeof request.data?.username === "string" ?
+      request.data.username.trim() :
+      "";
 
     if (!trimmedName) {
       throw new functions.HttpsError(
@@ -68,6 +96,21 @@ export const createGroup = functions.onCall(
       );
     }
 
+    if (username.length < USERNAME_MIN || username.length > USERNAME_MAX) {
+      throw new functions.HttpsError(
+        "invalid-argument",
+        `Your name in the group must be ${USERNAME_MIN}-${USERNAME_MAX} ` +
+          "characters."
+      );
+    }
+    if (founderToken !== undefined &&
+        (typeof founderToken !== "string" || !founderToken)) {
+      throw new functions.HttpsError(
+        "invalid-argument",
+        "This link to start a group is incomplete."
+      );
+    }
+
     try {
       const callerUid = request.auth.uid;
       const callerEmail = request.auth.token.email;
@@ -76,11 +119,57 @@ export const createGroup = functions.onCall(
       await getFirestore().runTransaction(async (transaction) => {
         const now = new Date();
 
-        // The one read comes first: the SDK refuses a read after a write in
-        // the same transaction, and reading this after writing the group
+        // The reads come first: the SDK refuses a read after a write in the
+        // same transaction, and reading the profile after writing the group
         // failed every call.
         const userDocRef = getFirestore().collection("users").doc(callerUid);
-        const userDoc = await transaction.get(userDocRef);
+        const invitationRef = founderToken ?
+          getFirestore().collection(FOUNDER_INVITATIONS).doc(founderToken) :
+          null;
+        const [userDoc, invitation, started] = await Promise.all([
+          transaction.get(userDocRef),
+          invitationRef ? transaction.get(invitationRef) : null,
+          invitationRef ?
+            null :
+            transaction.get(getFirestore().collection("groups")
+              .where("createdBy", "==", callerUid)
+              .limit(MAX_GROUPS_STARTED)),
+        ]);
+
+        if (invitationRef && invitation) {
+          if (!invitation.exists) {
+            throw new functions.HttpsError(
+              "not-found",
+              "This link to start a group does not exist. Ask for a new one."
+            );
+          }
+          const problem = registrationTokenProblem(invitation.data() ?? {});
+          if (problem !== null) {
+            throw new functions.HttpsError(
+              "failed-precondition",
+              problem === "used" ?
+                "This link to start a group has already been used. Ask for a new one." :
+                "This link to start a group has expired. Ask for a new one."
+            );
+          }
+          transaction.update(invitationRef, {
+            used: true,
+            usedAt: now,
+            usedBy: callerUid,
+            groupId,
+          });
+        } else if (!started || started.empty) {
+          throw new functions.HttpsError(
+            "permission-denied",
+            "Starting a group needs a link to start a group. Ask for one."
+          );
+        } else if (started.size >= MAX_GROUPS_STARTED) {
+          throw new functions.HttpsError(
+            "resource-exhausted",
+            `You have started ${MAX_GROUPS_STARTED} groups, the most one ` +
+              "person may start without a new link."
+          );
+        }
 
         // Create the group document.
         const groupDocRef = getFirestore().collection("groups").doc(groupId);
@@ -92,9 +181,6 @@ export const createGroup = functions.onCall(
         });
 
         // Add the group to the caller's global profile.
-        // Default username to use if we can't find one.
-        let usernameToUse = "Admin";
-
         if (userDoc.exists) {
           const userData = userDoc.data() || {};
           const updatedGroups = [...(userData.groups || []), groupId];
@@ -103,11 +189,6 @@ export const createGroup = functions.onCall(
             groups: updatedGroups,
             activeGroupId: groupId, // Set as the active group.
           });
-
-          // If the caller has a username in their global profile, use it.
-          if (userData.username) {
-            usernameToUse = userData.username;
-          }
         } else {
           // If the user document doesn't exist (shouldn't happen), create it.
           transaction.set(userDocRef, {
@@ -128,7 +209,7 @@ export const createGroup = functions.onCall(
           .doc(callerUid);
         transaction.set(groupUserDocRef, {
           userId: callerUid,
-          username: usernameToUse,
+          username,
           role: "admin",
           joinedAt: now,
           preferences: {
@@ -137,7 +218,7 @@ export const createGroup = functions.onCall(
         });
 
         // Reserve the username.
-        const usernameLower = usernameToUse.toLowerCase();
+        const usernameLower = username.toLowerCase();
         const usernameDocRef = getFirestore()
           .collection("groups")
           .doc(groupId)
@@ -145,7 +226,7 @@ export const createGroup = functions.onCall(
           .doc(usernameLower);
         transaction.set(usernameDocRef, {
           userId: callerUid,
-          originalUsername: usernameToUse,
+          originalUsername: username,
           createdAt: now,
         });
       });

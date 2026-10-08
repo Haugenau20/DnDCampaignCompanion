@@ -46,6 +46,7 @@ function setup({ members = MEMBERS, createdBy = "u1" } = {}) {
     ],
     activeGroupId: "group1",
     activeGroup: { id: "group1", name: "The Fellowship" },
+    activeGroupUserProfile: { userId: "u1", username: "DungeonMaster", role: "admin" },
     createGroup,
     updateGroup,
   });
@@ -313,7 +314,31 @@ describe("AdminGroupPage", () => {
         within(dialog).getByRole("button", { name: "Create group" })
       );
       await settle();
-      expect(createGroup).toHaveBeenCalledWith("The Second Party", "");
+      expect(createGroup).toHaveBeenCalledWith({
+        name: "The Second Party",
+        description: "",
+        username: "DungeonMaster",
+      });
+    });
+
+    // T126: the founder is named in the new group, as a member is on joining;
+    // every creator used to be named "Admin".
+    test("asks for your name in the new group, starting from your name here", async () => {
+      setup();
+      await settle();
+      await userEvent.click(
+        screen.getByRole("button", { name: "Create a different group" })
+      );
+      const dialog = await screen.findByRole("dialog");
+      const yourName = within(dialog).getByLabelText(/your name in the new group/i);
+      expect(yourName).toHaveValue("DungeonMaster");
+
+      await userEvent.clear(yourName);
+      await userEvent.type(yourName, "Strider");
+      await userEvent.type(within(dialog).getByLabelText(/^Name/), "The Rangers");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Create group" }));
+      await settle();
+      expect(createGroup).toHaveBeenCalledWith({ name: "The Rangers", description: "", username: "Strider" });
     });
   });
 });

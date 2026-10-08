@@ -1,9 +1,9 @@
 # Plan: how a new group starts on its own (T120)
 
 Written 2026-10-07 against `main` at `b78d72f`. The maintainer decided on it on 2026-10-08
-([Answers](#answers-maintainer-2026-10-08)). Nothing in it is built; the building is TODO entries
-T126 to T128 ([Build order](#build-order)); founder invitations (step 1, with step 6's
-`/privacy`), step 5's persistent cache and D3's lower limits have shipped.
+([Answers](#answers-maintainer-2026-10-08)). Shipped: founder invitations (step 1, with step 6's
+`/privacy`), the guarded `createGroup` (step 2, App Check aside), step 5's persistent cache and
+D3's lower limits. The rest is TODO entries T126 to T128 ([Build order](#build-order)).
 
 **The question.** Suppose the site were sent tomorrow to 30 groups that have never used it. Can they
 sign up, create a group and start playing without the maintainer? **No.** This plan covers what is

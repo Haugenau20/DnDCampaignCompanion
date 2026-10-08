@@ -277,16 +277,16 @@ describe("useGroups Behavioral Testing", () => {
 
   // -------------------------------------------------------------------------
   describe("createGroup Behavior", () => {
-    test("should call group.createGroup with name and description", async () => {
+    test("should call group.createGroup with the name, description and founder name", async () => {
       mockCreateGroup.mockResolvedValue("g1");
 
       const { result } = renderHook(() => useGroups());
 
       await act(async () => {
-        await result.current.createGroup("My Group", "A description");
+        await result.current.createGroup({ name: "My Group", description: "A description", username: "Gandalf" });
       });
 
-      expect(mockCreateGroup).toHaveBeenCalledWith("My Group", "A description");
+      expect(mockCreateGroup).toHaveBeenCalledWith({ name: "My Group", description: "A description", username: "Gandalf" });
     });
 
     test("should call refreshGroups after successful creation", async () => {
@@ -295,7 +295,7 @@ describe("useGroups Behavioral Testing", () => {
       const { result } = renderHook(() => useGroups());
 
       await act(async () => {
-        await result.current.createGroup("My Group");
+        await result.current.createGroup({ name: "My Group", username: "Gandalf" });
       });
 
       expect(mockRefreshGroups).toHaveBeenCalledTimes(1);
@@ -308,7 +308,7 @@ describe("useGroups Behavioral Testing", () => {
 
       let id: string | undefined;
       await act(async () => {
-        id = await result.current.createGroup("Camp");
+        id = await result.current.createGroup({ name: "Camp", username: "Gandalf" });
       });
 
       expect(id).toBe("new-group-id");
@@ -321,7 +321,7 @@ describe("useGroups Behavioral Testing", () => {
 
       await act(async () => {
         try {
-          await result.current.createGroup("Fail Group");
+          await result.current.createGroup({ name: "Fail Group", username: "Gandalf" });
         } catch (_) {}
       });
 
@@ -667,7 +667,7 @@ describe("useGroups Behavioral Testing", () => {
 
       await act(async () => {
         try {
-          await result.current.createGroup("Group");
+          await result.current.createGroup({ name: "Group", username: "Gandalf" });
         } catch (_) {}
       });
 
