@@ -1,6 +1,7 @@
 // functions/src/signUp/reserveSignUp.ts
 import * as functions from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
+import {ENFORCE_APP_CHECK} from "../shared/appCheck";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {registrationTokenProblem} from "../shared/registrationToken";
 import {
@@ -89,6 +90,7 @@ async function reserveForFounder(founderToken: string, email: string): Promise<v
 export const reserveSignUp = functions.onCall(
   {
     region: "europe-west1",
+    enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (request: functions.CallableRequest<ReserveSignUpData>) => {
     const {groupId, token, founderToken, email} = request.data ?? {};

@@ -148,7 +148,9 @@ The reason is recorded in that file.
   and `extractEntities`'s party exclusion — with OpenAI stubbed by `jest.mock("openai")`, the way to
   test any callable that calls out. A callable with no suite can be broken in production with every
   gate green -- `createGroup` failed every call until 2026-10-06 -- so give a new one a suite;
-  `test/emulator.ts` is the harness to copy.
+  `test/emulator.ts` is the harness to copy. `fn.run` skips the SDK's request checks, App Check
+  among them: `reserveSignUp`, `redeemInvitation` and `createGroup` enforce it outside the emulator
+  (`src/shared/appCheck.ts`), and `appCheck.test.ts` calls their HTTP handlers to test that.
 - **Scheduled** — `sweepOrphanedImagesDaily` never fires in the emulator; its two bodies are
   tested directly: `sweepReleasedImages(now)`, the daily run over the `releasedImages` and
   `pendingUploads` ledgers, and `sweepOrphanedImages(now)`, the full read it adds on the 1st of

@@ -1,6 +1,7 @@
 // functions/src/groupManagement/redeemInvitation.ts
 import * as functions from "firebase-functions/v2/https";
 import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {ENFORCE_APP_CHECK} from "../shared/appCheck";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {registrationTokenProblem} from "../shared/registrationToken";
 
@@ -38,6 +39,7 @@ const USERNAME_MAX = 20;
 export const redeemInvitation = functions.onCall(
   {
     region: "europe-west1",
+    enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (request: functions.CallableRequest<RedeemInvitationData>) => {
     if (!request.auth) {

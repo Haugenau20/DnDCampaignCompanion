@@ -1,6 +1,7 @@
 // functions/src/groupManagement/createGroup.ts
 import * as functions from "firebase-functions/v2/https";
 import {getFirestore} from "firebase-admin/firestore";
+import {ENFORCE_APP_CHECK} from "../shared/appCheck";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {registrationTokenProblem} from "../shared/registrationToken";
 import {FOUNDER_INVITATIONS} from "../signUp/founderInvitations";
@@ -56,6 +57,7 @@ const MAX_DESCRIPTION_LENGTH = 10_000;
 export const createGroup = functions.onCall(
   {
     region: "europe-west1",
+    enforceAppCheck: ENFORCE_APP_CHECK,
   },
   async (request: functions.CallableRequest<CreateGroupData>) => {
     if (!request.auth) {
