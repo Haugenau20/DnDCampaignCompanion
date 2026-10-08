@@ -1,6 +1,6 @@
 # The operator page: implementation plan
 
-**Status** proposed, 2026-10-08 · **TODO** T137 · **With** [design](design.md) and
+**Status** approved by the maintainer, 2026-10-08 · **TODO** T137 · **With** [design](design.md) and
 [security architecture](security-architecture.md)
 
 A high-level plan: what lands in which order, who does it, and how each step is checked. Each code

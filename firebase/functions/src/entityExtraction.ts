@@ -5,6 +5,7 @@ import {DocumentSnapshot, getFirestore} from "firebase-admin/firestore";
 import OpenAI from "openai";
 import {rethrowHttpsError} from "./shared/httpsErrors";
 import {dropPartyCharacters, partyPrompt, readPartyNames} from "./partyCharacters";
+import {USAGE_PERIODS, UsagePeriod, effectiveLimits} from "./extractionAllowance";
 
 // Types matching your existing OpenAI types
 interface ExtractEntitiesRequest {
@@ -70,40 +71,38 @@ interface PeriodUsage {
   limit: number;
 }
 
+/**
+ * A person's usage as the client sees it: the counters, each period's `limit`
+ * set to the limit in force, and whether there are limits at all.
+ *
+ * `customLimit` used to be sent too, and raised the daily limit only; the
+ * client still reads `customLimit ?? daily.limit`, so `daily.limit` carries
+ * it now (T137).
+ */
 interface EntityExtractionUsage {
   daily: PeriodUsage;
   weekly: PeriodUsage;
   monthly: PeriodUsage;
-  customLimit?: number;
-  isUnlimited?: boolean;
+  isUnlimited: boolean;
+  /** When a raised allowance runs out, if it does (ISO 8601). */
+  raisedUntil?: string;
   lastExtraction?: string;
 }
+
+/** `entityExtractionUsage` as stored: any part of it may be missing. */
+type StoredUsage = Partial<Record<UsagePeriod, Partial<PeriodUsage>>> &
+  {lastExtraction?: string};
 
 interface UsageStatus {
   usage: EntityExtractionUsage;
   limitExceeded: boolean;
-  exceededPeriod?: 'daily' | 'weekly' | 'monthly';
+  exceededPeriod?: UsagePeriod;
   nextReset: {
     daily: string;
     weekly: string;
     monthly: string;
   };
 }
-
-/**
- * Each person's extraction allowance, across all their groups (T129,
- * maintainer 2026-10-08). The project-wide ceiling is the OpenAI account
- * itself: prepaid, with no automatic top-up.
- *
- * These are the limits, whatever a usage record says: every record copies
- * them when it is created, and records written before 10 / 30 / 100 became
- * 3 / 5 / 10 still carry the old numbers (`readUsage`).
- */
-const DEFAULT_USAGE_LIMITS = {
-  daily: 3,
-  weekly: 5,
-  monthly: 10
-};
 
 /**
  * Calculate next reset time for a given period
@@ -168,30 +167,6 @@ function getWeekNumber(date: Date): number {
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
-/**
- * Initialize default usage data
- */
-function initializeUsageData(): EntityExtractionUsage {
-  const now = new Date().toISOString();
-  
-  return {
-    daily: {
-      count: 0,
-      lastReset: now,
-      limit: DEFAULT_USAGE_LIMITS.daily
-    },
-    weekly: {
-      count: 0,
-      lastReset: now,
-      limit: DEFAULT_USAGE_LIMITS.weekly
-    },
-    monthly: {
-      count: 0,
-      lastReset: now,
-      limit: DEFAULT_USAGE_LIMITS.monthly
-    }
-  };
-}
 
 /** When each period next resets, as the client shows it. */
 function nextResets(): UsageStatus["nextReset"] {
@@ -212,7 +187,7 @@ function resetElapsedPeriods(
   now: string
 ): boolean {
   let changed = false;
-  for (const period of ['daily', 'weekly', 'monthly'] as const) {
+  for (const period of USAGE_PERIODS) {
     if (shouldResetPeriod(usageData[period].lastReset, period)) {
       usageData[period].count = 0;
       usageData[period].lastReset = now;
@@ -222,33 +197,70 @@ function resetElapsedPeriods(
   return changed;
 }
 
-/** Which period, if any, has no calls left. */
+/**
+ * Which period, if any, has no calls left.
+ *
+ * @param {EntityExtractionUsage} usageData The usage, held to its limits
+ * @return {UsagePeriod | undefined} The first period spent, if one is
+ */
 function exhaustedPeriod(
   usageData: EntityExtractionUsage
-): 'daily' | 'weekly' | 'monthly' | undefined {
-  // `??`, not `||`: a custom limit of 0 is a real limit (AI-003).
-  const dailyLimit = usageData.customLimit ?? usageData.daily.limit;
-  if (usageData.daily.count >= dailyLimit) return 'daily';
-  if (usageData.weekly.count >= usageData.weekly.limit) return 'weekly';
-  if (usageData.monthly.count >= usageData.monthly.limit) return 'monthly';
-  return undefined;
+): UsagePeriod | undefined {
+  return USAGE_PERIODS.find(
+    (period) => usageData[period].count >= usageData[period].limit
+  );
 }
 
 /**
- * The stored usage, or a fresh record for a user who has none, held to the
- * current limits: a stored `limit` is a copy, and an old one is replaced.
+ * The user's counters, or fresh ones for a user who has none, held to the
+ * limits in force (`effectiveLimits`). A stored `limit` is only a copy:
+ * records written before 10 / 30 / 100 became 3 / 5 / 10 still carry the
+ * old numbers.
+ *
+ * @param {DocumentSnapshot} userDoc `users/{uid}`
+ * @param {Date} now The moment to decide the limits for
+ * @return {EntityExtractionUsage} The usage, as the client sees it
  */
 function readUsage(
-  userDoc: DocumentSnapshot
+  userDoc: DocumentSnapshot,
+  now: Date
 ): EntityExtractionUsage {
-  const stored = userDoc.exists ?
-    userDoc.data()?.entityExtractionUsage as EntityExtractionUsage | undefined :
-    undefined;
-  if (!stored) return initializeUsageData();
-  for (const period of ['daily', 'weekly', 'monthly'] as const) {
-    stored[period].limit = DEFAULT_USAGE_LIMITS[period];
-  }
-  return stored;
+  const profile = userDoc.exists ? userDoc.data() : undefined;
+  const stored = profile?.entityExtractionUsage as
+    StoredUsage | undefined;
+  const effective = effectiveLimits(profile, now);
+
+  const period = (name: UsagePeriod): PeriodUsage => ({
+    count: stored?.[name]?.count ?? 0,
+    lastReset: stored?.[name]?.lastReset ?? now.toISOString(),
+    limit: effective.limits[name],
+  });
+  return {
+    daily: period("daily"),
+    weekly: period("weekly"),
+    monthly: period("monthly"),
+    isUnlimited: effective.unlimited,
+    ...(effective.raisedUntil &&
+      {raisedUntil: effective.raisedUntil.toISOString()}),
+    ...(stored?.lastExtraction && {lastExtraction: stored.lastExtraction}),
+  };
+}
+
+/**
+ * What the extraction transaction writes back: the counters, and nothing of
+ * the policy. The old `customLimit` and `isUnlimited` stay as they are stored
+ * until an allowance replaces them, and `raisedUntil` is never stored.
+ *
+ * @param {EntityExtractionUsage} usageData The usage after the call
+ * @return {object} The update, for `set` with `merge`
+ */
+function storedCounters(usageData: EntityExtractionUsage) {
+  const {daily, weekly, monthly, lastExtraction} = usageData;
+  return {
+    entityExtractionUsage: {
+      daily, weekly, monthly, ...(lastExtraction && {lastExtraction}),
+    },
+  };
 }
 
 /**
@@ -261,13 +273,14 @@ function readUsage(
  */
 async function getUserUsageStatus(userId: string): Promise<UsageStatus> {
   const userDoc = await getFirestore().collection("users").doc(userId).get();
-  const usageData = readUsage(userDoc);
+  const now = new Date();
+  const usageData = readUsage(userDoc, now);
 
   if (usageData.isUnlimited) {
     return {usage: usageData, limitExceeded: false, nextReset: nextResets()};
   }
 
-  resetElapsedPeriods(usageData, new Date().toISOString());
+  resetElapsedPeriods(usageData, now.toISOString());
   const exceededPeriod = exhaustedPeriod(usageData);
   return {
     usage: usageData,
@@ -292,13 +305,14 @@ async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
   const userRef = db.collection("users").doc(userId);
 
   return db.runTransaction(async (transaction) => {
-    const usageData = readUsage(await transaction.get(userRef));
+    const at = new Date();
+    const usageData = readUsage(await transaction.get(userRef), at);
 
     if (usageData.isUnlimited) {
       return {usage: usageData, limitExceeded: false, nextReset: nextResets()};
     }
 
-    const now = new Date().toISOString();
+    const now = at.toISOString();
     let needsUpdate = resetElapsedPeriods(usageData, now);
     const exceededPeriod = exhaustedPeriod(usageData);
 
@@ -311,7 +325,7 @@ async function checkAndUpdateUsage(userId: string): Promise<UsageStatus> {
     }
 
     if (needsUpdate) {
-      transaction.set(userRef, {entityExtractionUsage: usageData}, {merge: true});
+      transaction.set(userRef, storedCounters(usageData), {merge: true});
     }
 
     return {
@@ -337,9 +351,9 @@ async function releaseUsage(userId: string, reserved: EntityExtractionUsage): Pr
   const userRef = db.collection("users").doc(userId);
 
   await db.runTransaction(async (transaction) => {
-    const usageData = readUsage(await transaction.get(userRef));
+    const usageData = readUsage(await transaction.get(userRef), new Date());
     let changed = false;
-    for (const period of ['daily', 'weekly', 'monthly'] as const) {
+    for (const period of USAGE_PERIODS) {
       const now = usageData[period];
       if (now.lastReset === reserved[period].lastReset && now.count > 0) {
         now.count--;
@@ -347,7 +361,7 @@ async function releaseUsage(userId: string, reserved: EntityExtractionUsage): Pr
       }
     }
     if (changed) {
-      transaction.set(userRef, {entityExtractionUsage: usageData}, {merge: true});
+      transaction.set(userRef, storedCounters(usageData), {merge: true});
     }
   });
 }

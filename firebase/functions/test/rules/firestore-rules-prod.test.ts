@@ -191,6 +191,35 @@ describe("server-owned profile fields (T080)", () => {
     await assertFails(db.doc("users/frodo").set({id: "frodo", groups: [G], activeGroupId: G}));
   });
 
+  // T137: the operator sets `extractionAllowance`; its holder may see it.
+  it("a member can read their own extraction allowance", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc("users/frodo").update({
+        extractionAllowance: {unlimited: false, limits: {daily: 10, weekly: 40, monthly: 80}, expiresAt: null},
+      })
+    );
+
+    const own = await assertSucceeds(as("frodo").doc("users/frodo").get());
+    expect(own.get("extractionAllowance.limits.daily")).toBe(10);
+  });
+
+  it("nor raise, lift or remove their extraction allowance", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc("users/frodo").update({
+        extractionAllowance: {unlimited: false, limits: {daily: 10, weekly: 40, monthly: 80}, expiresAt: null},
+      })
+    );
+    const db = as("frodo");
+
+    await assertFails(db.doc("users/frodo").update({"extractionAllowance.unlimited": true}));
+    await assertFails(db.doc("users/frodo").update({"extractionAllowance.limits.daily": 50}));
+    await assertFails(db.doc("users/frodo").update({extractionAllowance: firebase.firestore.FieldValue.delete()}));
+  });
+
+  it("nor give themselves an extraction allowance they do not have", async () => {
+    await assertFails(as("frodo").doc("users/frodo").update({extractionAllowance: {unlimited: true}}));
+  });
+
   it("nor add a field the client never writes", async () => {
     await assertFails(as("frodo").doc("users/frodo").update({id: "gandalf"}));
     await assertFails(as("frodo").doc("users/frodo").update({anything: true}));

@@ -1,6 +1,6 @@
 # The operator page: design
 
-**Status** proposed, 2026-10-08 · **TODO** T137 · **With** [security architecture](security-architecture.md)
+**Status** approved by the maintainer, 2026-10-08 · **TODO** T137 · **With** [security architecture](security-architecture.md)
 and [implementation plan](implementation-plan.md)
 
 ## Purpose
@@ -317,7 +317,8 @@ A sketch, to be designed when it is picked up:
 
 ## Decisions with defaults
 
-Each is the design's choice; the maintainer may overturn any of them.
+Each is the design's choice. The maintainer kept all eight (2026-10-08), the emails
+included, and may still overturn any of them.
 
 1. **Founder links:** at most 10 in any 24 hours.
 2. **Allowances:** at most 50 / 150 / 500, an expiry within a year, the form defaulting to the end

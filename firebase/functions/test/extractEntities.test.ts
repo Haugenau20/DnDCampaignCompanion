@@ -5,6 +5,7 @@
 // OpenAI is replaced with a stub that records the prompt and returns what the
 // test tells it to; everything else -- the roster read, the membership check,
 // usage counting -- runs against the emulator.
+import {Timestamp} from "firebase-admin/firestore";
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 
 const mockCreate = jest.fn();
@@ -254,6 +255,200 @@ describe("the usage allowance", () => {
     await extract({content: CONTENT, groupId: GROUP}, "frodo");
 
     expect((await storedUsage()).daily.count).toBe(1);
+  });
+});
+
+// T137: one person's limits can be raised, lowered or lifted, optionally until
+// a date, by `users/{uid}.extractionAllowance`. Until every profile has moved
+// over, the fields that came before it still apply: `isUnlimited`, and
+// `customLimit`, which raises the daily limit only.
+describe("a person's extraction allowance", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const today = () => new Date().toISOString();
+  const counts = (daily: number, weekly: number, monthly: number) => ({
+    daily: {count: daily, lastReset: today(), limit: 3},
+    weekly: {count: weekly, lastReset: today(), limit: 5},
+    monthly: {count: monthly, lastReset: today(), limit: 10},
+  });
+  const allowance = (
+    limits: {daily: number; weekly: number; monthly: number} | null,
+    expiresAt: Date | null = null
+  ) => ({
+    unlimited: limits === null,
+    limits,
+    expiresAt: expiresAt && Timestamp.fromDate(expiresAt),
+    setAt: Timestamp.now(),
+  });
+
+  type Usage = {
+    isUnlimited: boolean;
+    raisedUntil?: string;
+    customLimit?: number;
+    daily: {limit: number};
+    weekly: {limit: number};
+    monthly: {limit: number};
+  };
+  const status = async () =>
+    (await call(getUsageStatus, {}, "frodo") as {usage: {limitExceeded: boolean; usage: Usage}}).usage;
+  const limitsOf = (usage: Usage) => [usage.daily.limit, usage.weekly.limit, usage.monthly.limit];
+  const storedUsage = async () =>
+    (await db.doc("users/frodo").get()).get("entityExtractionUsage");
+  const answerEveryCall = () => mockCreate.mockResolvedValue({
+    choices: [{message: {refusal: null, tool_calls: [{type: "function", function: {
+      name: "extract_entities", arguments: JSON.stringify({entities: []}),
+    }}]}}],
+  });
+
+  beforeEach(answerEveryCall);
+
+  it("raises every period, not only the day", async () => {
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: counts(9, 20, 30),
+      extractionAllowance: allowance({daily: 10, weekly: 40, monthly: 80}),
+    });
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+
+    const usage = (await status()).usage;
+    expect(limitsOf(usage)).toEqual([10, 40, 80]);
+    expect(usage.isUnlimited).toBe(false);
+    expect(usage.raisedUntil).toBeUndefined();
+  });
+
+  it("holds the raised week and month too", async () => {
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: counts(0, 39, 39),
+      extractionAllowance: allowance({daily: 10, weekly: 40, monthly: 80}),
+    });
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+    const refused = await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect((refused.details as {usage: {exceededPeriod: string}}).usage.exceededPeriod).toBe("weekly");
+  });
+
+  it("can lower a limit below the default, down to none", async () => {
+    await db.doc("users/frodo").set({extractionAllowance: allowance({daily: 0, weekly: 5, monthly: 10})});
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("lifts the limits altogether when unlimited, and counts nothing", async () => {
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: counts(3, 5, 10),
+      extractionAllowance: allowance(null),
+    });
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect((await status()).usage.isUnlimited).toBe(true);
+    expect((await storedUsage()).daily.count).toBe(3);
+  });
+
+  it("applies until its date, and says until when", async () => {
+    const until = new Date(Date.now() + 7 * DAY);
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: counts(5, 5, 5),
+      extractionAllowance: allowance({daily: 10, weekly: 40, monthly: 80}, until),
+    });
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    const usage = (await status()).usage;
+    expect(limitsOf(usage)).toEqual([10, 40, 80]);
+    expect(usage.raisedUntil).toBe(until.toISOString());
+  });
+
+  it("stops applying once its date has passed, and the defaults are back", async () => {
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: counts(3, 3, 3),
+      extractionAllowance: allowance(null, new Date(Date.now() - DAY)),
+    });
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+
+    const usage = (await status()).usage;
+    expect(usage.isUnlimited).toBe(false);
+    expect(limitsOf(usage)).toEqual([3, 5, 10]);
+    expect(usage.raisedUntil).toBeUndefined();
+  });
+
+  it("wins over the fields that came before it", async () => {
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: {...counts(4, 4, 4), isUnlimited: true, customLimit: 50},
+      extractionAllowance: allowance({daily: 4, weekly: 40, monthly: 80}),
+    });
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("is ignored when malformed, and grants nothing", async () => {
+    jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: counts(3, 3, 3),
+      extractionAllowance: {unlimited: "yes", limits: {daily: 50, weekly: "lots", monthly: 500}},
+    });
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+
+    const usage = (await status()).usage;
+    expect(usage.isUnlimited).toBe(false);
+    expect(limitsOf(usage)).toEqual([3, 5, 10]);
+  });
+
+  it("without one, the old isUnlimited still lifts the limits", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: {...counts(3, 5, 10), isUnlimited: true}});
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect((await status()).usage.isUnlimited).toBe(true);
+  });
+
+  it("without one, the old customLimit raises the day and nothing else", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: {...counts(4, 4, 4), customLimit: 50}});
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const usage = (await status()).usage;
+    expect(limitsOf(usage)).toEqual([50, 5, 10]);
+    // The client reads `customLimit ?? daily.limit`; `daily.limit` carries it.
+    expect(usage.customLimit).toBeUndefined();
+  });
+
+  it("without one, a customLimit of 0 is a real limit (AI-003)", async () => {
+    await db.doc("users/frodo").set({entityExtractionUsage: {...counts(0, 0, 0), customLimit: 0}});
+
+    await expectHttpsError(extract({content: CONTENT, groupId: GROUP}, "frodo"), "resource-exhausted");
+  });
+
+  it("is never written by counting a call, nor are the fields that came before it", async () => {
+    const stored = {
+      unlimited: false,
+      limits: {daily: 10, weekly: 40, monthly: 80},
+      expiresAt: null,
+      setAt: Timestamp.fromMillis(1_000_000),
+    };
+    await db.doc("users/frodo").set({
+      entityExtractionUsage: {...counts(1, 1, 1), customLimit: 7},
+      extractionAllowance: stored,
+    });
+
+    await extract({content: CONTENT, groupId: GROUP}, "frodo");
+
+    const profile = (await db.doc("users/frodo").get()).data();
+    expect(profile?.extractionAllowance).toEqual(stored);
+    expect(profile?.entityExtractionUsage.customLimit).toBe(7);
+    expect(profile?.entityExtractionUsage).not.toHaveProperty("isUnlimited");
+    expect(profile?.entityExtractionUsage).not.toHaveProperty("raisedUntil");
+    expect(profile?.entityExtractionUsage.daily.count).toBe(2);
   });
 });
 

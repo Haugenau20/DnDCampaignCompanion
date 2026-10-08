@@ -1,6 +1,6 @@
 # The operator page: security architecture
 
-**Status** proposed, 2026-10-08 · **TODO** T137 · **With** [design](design.md) and
+**Status** approved by the maintainer, 2026-10-08 · **TODO** T137 · **With** [design](design.md) and
 [implementation plan](implementation-plan.md)
 
 What protects the operator page, against whom, and how each protection is checked. The design says
