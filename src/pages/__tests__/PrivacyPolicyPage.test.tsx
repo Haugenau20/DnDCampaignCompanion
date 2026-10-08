@@ -331,6 +331,15 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     expect(section!.textContent).toMatch(/your own device|your browser/i);
   });
 
+  // T130: a remembered session keeps a copy of the campaign data it has read.
+  it("says a remembered session keeps campaign data in the browser until sign-out", () => {
+    render(<PrivacyPolicyPage />);
+    const paragraph = screen.getByText(/if you asked to be remembered, the campaign records/i);
+    expect(paragraph).toHaveTextContent(/kept in your browser/i);
+    expect(paragraph).toHaveTextContent(/signing out deletes it/i);
+    expect(paragraph).toHaveTextContent(/otherwise nothing of your campaigns stays/i);
+  });
+
   it("no longer ends with a Contact Us card", () => {
     const { container } = render(<PrivacyPolicyPage />);
     const cards = Array.from(container.querySelectorAll(".card"));

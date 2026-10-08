@@ -2,7 +2,7 @@
 
 Written 2026-10-07 against `main` at `b78d72f`. The maintainer decided on it on 2026-10-08
 ([Answers](#answers-maintainer-2026-10-08)). Nothing in it is built; the building is TODO entries
-T125 to T130 ([Build order](#build-order)).
+T125 to T129 ([Build order](#build-order)); step 5, the persistent cache, has shipped.
 
 **The question.** Suppose the site were sent tomorrow to 30 groups that have never used it. Can they
 sign up, create a group and start playing without the maintainer? **No.** This plan covers what is

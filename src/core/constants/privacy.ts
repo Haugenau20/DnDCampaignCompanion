@@ -20,12 +20,12 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-10-07";
+export const PRIVACY_LAST_UPDATED = "2026-10-08";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "We now say plainly that the person who runs the site can reach what is stored here, private notes included, though nothing in the app shows them to anyone else.",
-  "If you can no longer sign in, we will delete your account for you when you ask.",
+  "If you ask to be remembered, the campaign records you have opened are now kept in your browser until you sign out.",
+  "If you don't, nothing of your campaigns stays in your browser after you close the page, and any copy an earlier remembered visit left is deleted.",
 ]
 
 /**

@@ -27,3 +27,6 @@ export function idleDeadline(info: StoredSessionInfo): number | null {
   if (info.rememberMe) return null;
   return (info.lastActivityAt ?? info.createdAt) + INACTIVITY_TIMEOUT;
 }
+
+/** Where the session record is kept in `localStorage`. */
+export const SESSION_INFO_KEY = 'sessionInfo';

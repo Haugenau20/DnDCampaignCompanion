@@ -44,6 +44,7 @@ const mockFirebaseAuthModule = () => ({
   setPersistence: (a: any, b: any) => mockSetPersistence(a, b),
   browserLocalPersistence: 'LOCAL',
   browserSessionPersistence: 'SESSION',
+  onAuthStateChanged: jest.fn(() => jest.fn()),
 });
 const mockSignOut = jest.fn();
 const mockSetPersistence = jest.fn();
@@ -55,6 +56,11 @@ jest.mock('firebase/auth', () => mockFirebaseAuthModule());
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  initializeFirestore: jest.fn(() => ({})),
+  memoryLocalCache: jest.fn(),
+  clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+  persistentLocalCache: jest.fn(),
+  persistentMultipleTabManager: jest.fn(),
   connectFirestoreEmulator: jest.fn(),
   doc: (a: any, ...rest: string[]) => mockDoc(a, ...rest),
   getDoc: (a: any) => mockGetDoc(a),
@@ -131,6 +137,11 @@ describe('AuthService', () => {
     jest.doMock('firebase/auth', () => mockFirebaseAuthModule());
     jest.doMock('firebase/firestore', () => ({
       getFirestore: jest.fn(() => ({})),
+      initializeFirestore: jest.fn(() => ({})),
+      memoryLocalCache: jest.fn(),
+      clearIndexedDbPersistence: jest.fn(() => Promise.resolve()),
+      persistentLocalCache: jest.fn(),
+      persistentMultipleTabManager: jest.fn(),
       connectFirestoreEmulator: jest.fn(),
       doc: (a: any, ...rest: string[]) => mockDoc(a, ...rest),
       getDoc: (a: any) => mockGetDoc(a),

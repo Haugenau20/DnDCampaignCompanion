@@ -4,7 +4,7 @@ import {
   getAuth, Auth, connectAuthEmulator 
 } from "firebase/auth";
 import {
-  getFirestore, Firestore, connectFirestoreEmulator,
+  Firestore, connectFirestoreEmulator,
   doc, getDoc, DocumentData
 } from "firebase/firestore";
 import { getAnalytics, Analytics } from "firebase/analytics";
@@ -21,6 +21,20 @@ import {
   emulatorPorts 
 } from "../config/firebaseConfig";
 import ServiceRegistry from "./ServiceRegistry";
+import { clearCacheOnSignOut, isRememberedSession, openFirestore } from "./firestoreCache";
+import { SESSION_INFO_KEY } from "../auth/sessionTimeout";
+
+/**
+ * Whether this browser holds a remembered session, reading `localStorage`
+ * defensively: a browser that refuses storage gets no persistent cache.
+ */
+const rememberedSession = (): boolean => {
+  try {
+    return isRememberedSession(localStorage.getItem(SESSION_INFO_KEY), Date.now());
+  } catch {
+    return false;
+  }
+};
 
 /**
  * BaseFirebaseService provides core Firebase functionality and shared resources
@@ -60,7 +74,9 @@ abstract class BaseFirebaseService {
       
       // Initialize other Firebase services
       const auth = getAuth(app);
-      const db = getFirestore(app);
+      // A persistent cache only for a remembered session (T130).
+      const persistCache = rememberedSession();
+      const db = openFirestore(app, persistCache);
       const analytics = getAnalytics(app);
       const functions = getFunctions(app, 'europe-west1');
       // From the default app: it is the one App Check is attached to
@@ -98,6 +114,10 @@ abstract class BaseFirebaseService {
           emulatorHost,
           parseInt(emulatorPorts.storage)
         );
+      }
+
+      if (persistCache) {
+        clearCacheOnSignOut(auth, db, () => window.location.reload());
       }
       
       this.registry.register("auth", auth);

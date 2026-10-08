@@ -272,6 +272,13 @@ const PrivacyPolicyPage: React.FC = () => {
               analytics, no advertising, and no third-party scripts watching
               you read.
             </Typography>
+            <Typography>
+              If you asked to be remembered, the campaign records you have
+              opened are also kept in your browser, so pages load without
+              fetching everything again. Signing out deletes it. Otherwise
+              nothing of your campaigns stays on the device after you close
+              the page.
+            </Typography>
           </Section>
 
           <Section id="security" title="Security">

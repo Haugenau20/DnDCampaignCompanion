@@ -1,8 +1,8 @@
 # Firestore data model review (T119)
 
 Written 2026-10-07 against `main` at `b78d72f`, for the maintainer to read before anything changes.
-Since then F4 (which collections, a name on every record, a limit on every text field) and F7's
-global admin have been done; those two sections describe what is left.
+Since then F4 (which collections, a name on every record, a limit on every text field), F7's
+global admin and F2's client cache have been done; those sections describe what is left.
 
 **How this was measured.** Everything below was read in the code unless it says otherwise.
 "Run" means it was run: against the dev emulator after a fresh `manage-dev-data.ps1 -Action
@@ -164,7 +164,9 @@ switched on:
 
 **Recommendation, in order of cost:**
 
-1. **Enable `persistentLocalCache`** in `initializeFirestore`. A resumed listener is then billed
+1. **Done (2026-10-08), for remembered sessions only**: `core/services/firebase/core/firestoreCache.ts`.
+   A session the user did not ask to keep gets the memory cache, and signing out deletes the
+   persistent one. **Enable `persistentLocalCache`** in `initializeFirestore`. A resumed listener is then billed
    only for documents that changed since the cache was written, as long as it resumes within
    Firestore's resume window (30 minutes, per Firebase's billing documentation; not measured
    here). This is one call. It needs a check of the multi-tab manager against the app's

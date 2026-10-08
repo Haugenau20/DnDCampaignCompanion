@@ -22,7 +22,7 @@ import {
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
   import { SESSION_DURATION, REMEMBER_ME_DURATION } from '../config/firebaseConfig';
-  import { idleDeadline, StoredSessionInfo } from './sessionTimeout';
+  import { idleDeadline, SESSION_INFO_KEY, StoredSessionInfo } from './sessionTimeout';
 
   /** Where `sendSignInLink` remembers the address it sent a link to. */
   export const PENDING_EMAIL_SIGN_IN_KEY = 'pendingEmailSignIn';
@@ -150,7 +150,7 @@ import {
             lastActivityAt: new Date().getTime(),
             rememberMe: rememberMe
         };
-        localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo));
+        localStorage.setItem(SESSION_INFO_KEY, JSON.stringify(sessionInfo));
         
         // Update Firebase Auth persistence if different from current setting
         const persistenceType = rememberMe 
@@ -174,12 +174,12 @@ import {
      * Used for the sliding window session timeout
      */
     public updateLastActivity(): void {
-      const sessionInfoStr = localStorage.getItem('sessionInfo');
+      const sessionInfoStr = localStorage.getItem(SESSION_INFO_KEY);
       if (sessionInfoStr) {
         try {
           const sessionInfo = JSON.parse(sessionInfoStr);
           sessionInfo.lastActivityAt = new Date().getTime();
-          localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo));
+          localStorage.setItem(SESSION_INFO_KEY, JSON.stringify(sessionInfo));
         } catch (e) {
           console.error('Error updating last activity:', e);
         }
@@ -191,7 +191,7 @@ import {
      * @returns true if the session has expired, false otherwise
      */
     public checkSessionExpired(): boolean {
-      const sessionInfoStr = localStorage.getItem('sessionInfo');
+      const sessionInfoStr = localStorage.getItem(SESSION_INFO_KEY);
       if (!sessionInfoStr) return false; // No session info, let Firebase handle it
       
       try {
@@ -416,7 +416,7 @@ import {
         lastActivityAt: new Date().getTime(),
         rememberMe: rememberMe
       };
-      localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo));
+      localStorage.setItem(SESSION_INFO_KEY, JSON.stringify(sessionInfo));
 
       const userDoc = doc(this.db, 'users', credential.user.uid);
       const userDocSnapshot = await getDoc(userDoc);
@@ -454,7 +454,7 @@ import {
      */
     public async signOut(): Promise<void> {
       // Clear the session info from local storage
-      localStorage.removeItem('sessionInfo');
+      localStorage.removeItem(SESSION_INFO_KEY);
       
       // Clear group/campaign context, and the profiles read under it
       this.setActiveGroup(null);

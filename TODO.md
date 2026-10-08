@@ -20,7 +20,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T131 | Store each link once, shown both ways | M | open | The one data-model defect players see: a link added on one page is missing on the other |
-| medium | T130 | Turn on Firestore's persistent cache | S | open | Reads are the one cost with no bound; the restructure's cheapest change, and wanted before founder links go out |
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
 | medium | T129 | Lower the AI limits to 3 / 5 / 10 | S | open | The OpenAI balance ($5, prepaid) is the ceiling; when it runs out players see a generic failure |
@@ -275,9 +274,7 @@ invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
 3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
 create a campaign, and up to 3 groups per founder. T125 to T127 are the smallest
 change that lets a table start alone; T128 and T129 make it safe to hand out more
-than a few links; T130 (the Firestore restructure's cache) should land before
-outreach too. Every step
-that changes a flow lands with its e2e journey; the last one runs founder link →
+than a few links. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
 group → campaign → invitation → a second player joins.
 
 ### T125 — Founder invitations
@@ -448,7 +445,7 @@ anyway. What is left:
 - **Source**: todo.txt, 2026-10-06; the site, sign-in, mail, redirect and repo
   moved 2026-10-07
 
-### Restructuring Firestore before the site scales (T130 to T136)
+### Restructuring Firestore before the site scales (T131 to T136)
 
 Decided by the maintainer on 2026-10-08: **R2**, Firestore restructured; the
 site stays on Firebase. Why, and the routes set aside, are in
@@ -466,24 +463,6 @@ field that moves or is renamed ships in steps: the frontend reads both shapes;
 the script rewrites; a later frontend drops the old shape; only then, in its own
 merge, a rule refuses it. The review's read-only production checks (campaign
 sizes, how often a link's two halves disagree) go into each change's audit.
-
-### T130 — Turn on Firestore's persistent cache
-**Type** debt · **Size** S · **Status** open · **Verified** 2026-10-08
-
-Every page reads whole collections and the client keeps no cache between visits
-(`data-model-review.md`, F2), so reads grow with campaign size times page loads,
-and nothing bounds them. The cache is the restructure's cheapest change and
-needs no data migration; the onboarding plan wants it before founder links go
-out.
-
-- **Where**: `core/services/firebase/core/BaseFirebaseService.ts:63` builds
-  Firestore with `getFirestore(app)`. `initializeFirestore` with
-  `persistentLocalCache` (multi-tab) replaces it, and the emulator connection
-  must still follow.
-- **Catch**: the cache keeps a member's data in their browser after sign-out.
-  Clear it on sign-out (`clearIndexedDbPersistence`, which needs Firestore
-  terminated first), and check what `/privacy` says about local storage.
-- **Source**: `data-model-review.md` change 2; the onboarding plan, step 5
 
 ### T131 — Store each link once, and show it both ways
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
