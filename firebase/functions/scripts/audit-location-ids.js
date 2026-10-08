@@ -432,7 +432,13 @@ async function main() {
   const projectId = valueOf("--project");
   const revertFrom = valueOf("--revert");
   const revertFile = valueOf("--revert-file");
-  if (!projectId || (migrate && revertFrom) || (apply && !migrate && !revertFrom) ||
+  // An argument it does not know is a mistyped or misplaced flag: refuse it
+  // rather than run something other than what was asked.
+  const valued = ["--project", "--revert", "--revert-file"];
+  const unknown = args.filter((arg, i) =>
+    !valued.includes(args[i - 1]) && ![...valued, "--emulator", "--apply", "--migrate"].includes(arg));
+  if (unknown.length) console.error(`Unknown argument(s): ${unknown.join(" ")}`);
+  if (unknown.length || !projectId || (migrate && revertFrom) || (apply && !migrate && !revertFrom) ||
       (migrate && apply && !revertFile)) {
     console.error(
       "Usage: node scripts/audit-location-ids.js --project <project-id> [--emulator]\n" +
