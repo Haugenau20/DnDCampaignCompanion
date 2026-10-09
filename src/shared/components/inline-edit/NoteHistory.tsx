@@ -64,9 +64,13 @@ export function NoteHistory<T extends EntityNote>({
     }
   }, [editing, returnFocus]);
 
+  /**
+   * Close this note's editor -- only if it is still the open one: a save that
+   * lands after the player has opened another note's editor leaves that open.
+   */
   const closeEditor = (index: number) => {
-    setEditing(null);
-    setReturnFocus(index);
+    setEditing((open) => (open === index ? null : open));
+    setReturnFocus((focus) => (focus === null ? index : focus));
   };
 
   return (

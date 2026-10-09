@@ -93,10 +93,21 @@ jest.mock('@/shared/hooks/useCampaignContextStatus', () => ({
   useCampaignContextStatus: () => ({ isResolving: false, hasRequiredContext: true, missingContext: null }),
 }));
 
+// A note is a document of its own (T133), created through the document
+// service into the same store.
 jest.mock('core/services/firebase', () => ({
   __esModule: true,
   images: { upload: jest.fn(), remove: jest.fn().mockResolvedValue(undefined) },
-  default: { document: { batchOperations: () => Promise.resolve() } },
+  default: {
+    document: {
+      batchOperations: () => Promise.resolve(),
+      getCollectionFromServer: async () => [],
+      createDocument: async (path: string, data: Record<string, unknown>, id: string) => {
+        (mockStore[path] ??= []).push({ ...JSON.parse(JSON.stringify(data)), id });
+        return id;
+      },
+    },
+  },
 }));
 
 /** The latest render's context values, for the test to call. */
@@ -189,6 +200,9 @@ function anotherPlayer(collection: string, id: string, fields: Doc) {
 const stored = (collection: string, id: string) =>
   mockStore[`${CAMPAIGN}/${collection}`].find((doc) => doc.id === id)!;
 
+/** A record's notes in their own documents (T133), as the server holds them. */
+const notesOf = (collection: string, id: string): Doc[] => mockStore[`${CAMPAIGN}/${collection}/${id}/notes`] ?? [];
+
 describe('an NPC edit leaves what it did not change (T083)', () => {
   beforeEach(async () => {
     await mount();
@@ -202,9 +216,11 @@ describe('an NPC edit leaves what it did not change (T083)', () => {
     expect(stored('npcs', 'aldric').image).toEqual(NEW_IMAGE);
   };
 
+  // Since T133 a note is a document of its own, so the record is not written
+  // at all: theirs stands by construction.
   it('adding a note', async () => {
     await act(() => npcs.updateNPCNote('aldric', { date: '2026-10-04', text: 'Owes us a sword' } as any));
-    expect(stored('npcs', 'aldric').notes).toHaveLength(1);
+    expect(notesOf('npcs', 'aldric').map((n) => n.text)).toEqual(['Owes us a sword']);
     keptTheirs();
   });
 
@@ -279,7 +295,7 @@ describe('a location edit leaves what it did not change (T083)', () => {
 
   it('adding a note', async () => {
     await act(() => locations.updateLocationNote('bree', { text: 'The Prancing Pony' } as any));
-    expect(stored('locations', 'bree').notes).toHaveLength(1);
+    expect(notesOf('locations', 'bree').map((n) => n.text)).toEqual(['The Prancing Pony']);
     keptTheirs();
   });
 
@@ -309,7 +325,7 @@ describe('a rumour edit leaves what it did not change (T083)', () => {
 
   it('adding a note', async () => {
     await act(() => rumors.updateRumorNote('smoke', { id: 'n1', content: 'Rangers about' } as any));
-    expect(stored('rumors', 'smoke').notes).toHaveLength(1);
+    expect(notesOf('rumors', 'smoke').map((n) => n.content)).toEqual(['Rangers about']);
     keptTheirs();
   });
 
@@ -378,22 +394,27 @@ describe('two changes to one list both survive (T083)', () => {
     expect(stored('quests', 'ring').objectives.every((o: Doc) => o.completed)).toBe(true);
   });
 
+  // A note in the record's old array (before the T133 migration) and a new
+  // one, its own document: both survive.
   it('two notes on an NPC', async () => {
     anotherPlayer('npcs', 'aldric', { notes: [{ date: '2026-10-03', text: 'Mends armour' }] });
     await act(() => npcs.updateNPCNote('aldric', { date: '2026-10-04', text: 'Owes us a sword' } as any));
-    expect(stored('npcs', 'aldric').notes.map((n: Doc) => n.text)).toEqual(['Mends armour', 'Owes us a sword']);
+    expect(stored('npcs', 'aldric').notes.map((n: Doc) => n.text)).toEqual(['Mends armour']);
+    expect(notesOf('npcs', 'aldric').map((n) => n.text)).toEqual(['Owes us a sword']);
   });
 
   it('two notes on a location', async () => {
     anotherPlayer('locations', 'bree', { notes: [{ date: '2026-10-03', text: 'Bill Ferny lurks' }] });
     await act(() => locations.updateLocationNote('bree', { text: 'The Prancing Pony' } as any));
-    expect(stored('locations', 'bree').notes.map((n: Doc) => n.text)).toEqual(['Bill Ferny lurks', 'The Prancing Pony']);
+    expect(stored('locations', 'bree').notes.map((n: Doc) => n.text)).toEqual(['Bill Ferny lurks']);
+    expect(notesOf('locations', 'bree').map((n) => n.text)).toEqual(['The Prancing Pony']);
   });
 
   it('two notes on a rumour', async () => {
     anotherPlayer('rumors', 'smoke', { notes: [{ id: 'n0', content: 'Seen twice' }] });
     await act(() => rumors.updateRumorNote('smoke', { id: 'n1', content: 'Rangers about' } as any));
-    expect(stored('rumors', 'smoke').notes.map((n: Doc) => n.id)).toEqual(['n0', 'n1']);
+    expect(stored('rumors', 'smoke').notes.map((n: Doc) => n.id)).toEqual(['n0']);
+    expect(notesOf('rumors', 'smoke').map((n) => n.content)).toEqual(['Rangers about']);
   });
 
   it('a page change worked out from the record, not the copy', async () => {

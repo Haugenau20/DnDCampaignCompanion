@@ -11,6 +11,11 @@ import { updateAfterReadingThrough } from '@/test-utils/update-after-reading';
  * 
  * Tests ACTUAL NPC note behavior including creation, updates, and validation.
  * This focuses on the note management features of NPCs.
+ *
+ * T133 (maintainer, 2026-10-08): a new note is a document of its own under
+ * the NPC (`npcs/{id}/notes/{noteId}`), not one more entry in the record's
+ * array. The addition tests assert that write instead of the record rewrite
+ * they asserted before; the record's existing notes are left where they are.
  */
 
 // Mock Firebase dependencies
@@ -20,6 +25,14 @@ const mockUseGroups = jest.fn();
 const mockUseCampaigns = jest.fn();
 const mockUseNPCData = jest.fn();
 const mockUseFirebaseData = jest.fn();
+const { addRecordNote: mockAddRecordNote } = jest.requireMock('features/campaign-entities/shared/recordNotes');
+
+/** The note documents written, as `[collection path, NPC id, note]`. */
+const writtenNotes = (): Array<[string, string, Record<string, unknown>]> => mockAddRecordNote.mock.calls;
+const NPCS_PATH = 'groups/test-group/campaigns/test-campaign/npcs';
+
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
 
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
@@ -153,18 +166,12 @@ describe('NPCContext Note Management Behavior', () => {
         await npcContext.updateNPCNote('test-npc', noteData);
       });
 
-      // BEHAVIOR: Should call Firebase with updated NPC data
-      expect(mockUpdateData).toHaveBeenCalledTimes(1);
-      const [npcId, updatedNPCData] = mockUpdateData.mock.calls[0];
-
-      expect(npcId).toBe('test-npc');
-      
-      // Verify note was added correctly
-      expect(updatedNPCData.notes).toHaveLength(1);
-      expect(updatedNPCData.notes[0]).toMatchObject({
-        date: '2023-06-15',
-        text: 'Met this NPC at the tavern. Seems trustworthy.'
-      });
+      // BEHAVIOR: The note is written as a document of its own under the NPC,
+      // and the NPC's record is not rewritten
+      expect(writtenNotes()).toEqual([
+        [NPCS_PATH, 'test-npc', { date: '2023-06-15', text: 'Met this NPC at the tavern. Seems trustworthy.' }],
+      ]);
+      expect(mockUpdateData).not.toHaveBeenCalled();
 
       // Attribution is applied by DocumentService and asserted in DocumentService.test.ts
 
@@ -218,18 +225,11 @@ describe('NPCContext Note Management Behavior', () => {
         await npcContext.updateNPCNote('test-npc', secondNote);
       });
 
-      const [npcId, updatedNPCData] = mockUpdateData.mock.calls[0];
-
-      // BEHAVIOR: Should have both notes
-      expect(updatedNPCData.notes).toHaveLength(2);
-      expect(updatedNPCData.notes[0]).toMatchObject({
-        date: '2023-06-01',
-        text: 'First meeting notes'
-      });
-      expect(updatedNPCData.notes[1]).toMatchObject({
-        date: '2023-06-15',
-        text: 'Second encounter - learned more about their background'
-      });
+      // BEHAVIOR: Only the new note is written; the first stays where it is
+      expect(writtenNotes()).toEqual([
+        [NPCS_PATH, 'test-npc', { date: '2023-06-15', text: 'Second encounter - learned more about their background' }],
+      ]);
+      expect(mockUpdateData).not.toHaveBeenCalled();
     });
 
     test('should validate note data structure', async () => {
@@ -275,16 +275,15 @@ describe('NPCContext Note Management Behavior', () => {
         await npcContext.updateNPCNote('test-npc', minimalNote);
       });
 
-      const [npcId, updatedNPCData] = mockUpdateData.mock.calls[0];
-
       // BEHAVIOR: Note should be stored exactly as provided
-      expect(updatedNPCData.notes[0]).toMatchObject({
+      const [, , addedNote] = writtenNotes()[0];
+      expect(addedNote).toMatchObject({
         date: '2023-06-15',
         text: 'Brief note'
       });
 
-      // BEHAVIOR: Note should follow NPCNote interface (date + text only)
-      const addedNote = updatedNPCData.notes[0];
+      // BEHAVIOR: Note should follow NPCNote interface (date + text only);
+      // the attribution is added by the write
       expect(Object.keys(addedNote)).toEqual(['date', 'text']);
     });
   });
@@ -318,6 +317,7 @@ describe('NPCContext Note Management Behavior', () => {
 
       // BEHAVIOR: Firebase should not be called for nonexistent NPC
       expect(mockUpdateData).not.toHaveBeenCalled();
+      expect(mockAddRecordNote).not.toHaveBeenCalled();
     });
 
     test('should require authentication for note addition', async () => {
@@ -342,6 +342,7 @@ describe('NPCContext Note Management Behavior', () => {
 
       // BEHAVIOR: Firebase should not be called
       expect(mockUpdateData).not.toHaveBeenCalled();
+      expect(mockAddRecordNote).not.toHaveBeenCalled();
     });
 
     test('should require group and campaign context for note addition', async () => {
@@ -382,6 +383,7 @@ describe('NPCContext Note Management Behavior', () => {
 
       // BEHAVIOR: Firebase should not be called without context
       expect(mockUpdateData).not.toHaveBeenCalled();
+      expect(mockAddRecordNote).not.toHaveBeenCalled();
     });
   });
 
@@ -430,10 +432,8 @@ describe('NPCContext Note Management Behavior', () => {
         await npcContext.updateNPCNote('test-npc', emptyNote);
       });
 
-      const [npcId, updatedNPCData] = mockUpdateData.mock.calls[0];
-
       // DISCOVERY: Documents current behavior with empty text
-      expect(updatedNPCData.notes[0].text).toBe('');
+      expect(writtenNotes()[0][2].text).toBe('');
       
       // Future enhancement could add validation for empty notes
     });
@@ -482,10 +482,8 @@ describe('NPCContext Note Management Behavior', () => {
         await npcContext.updateNPCNote('test-npc', malformedNote);
       });
 
-      const [npcId, updatedNPCData] = mockUpdateData.mock.calls[0];
-
       // DISCOVERY: Documents how extra fields are handled
-      const addedNote = updatedNPCData.notes[0];
+      const [, , addedNote] = writtenNotes()[0];
       expect(addedNote.date).toBe('2023-06-15');
       expect(addedNote.text).toBe('Valid text');
       
@@ -540,30 +538,10 @@ describe('NPCContext Note Management Behavior', () => {
         await npcContext.updateNPCNote('test-npc', newNote);
       });
 
-      const [npcId, updatedNPCData] = mockUpdateData.mock.calls[0];
-
-      // BEHAVIOR: Should have all original notes plus new one
-      expect(updatedNPCData.notes).toHaveLength(4);
-      
-      // Original notes should be preserved
-      expect(updatedNPCData.notes[0]).toMatchObject({
-        date: '2023-06-01',
-        text: 'First note'
-      });
-      expect(updatedNPCData.notes[1]).toMatchObject({
-        date: '2023-06-05',
-        text: 'Second note'
-      });
-      expect(updatedNPCData.notes[2]).toMatchObject({
-        date: '2023-06-10',
-        text: 'Third note'
-      });
-      
-      // New note should be added
-      expect(updatedNPCData.notes[3]).toMatchObject({
-        date: '2023-06-15',
-        text: 'Fourth note'
-      });
+      // BEHAVIOR: The existing notes are preserved by not being touched: the
+      // record is not rewritten, and only the new note is written
+      expect(mockUpdateData).not.toHaveBeenCalled();
+      expect(writtenNotes()).toEqual([[NPCS_PATH, 'test-npc', { date: '2023-06-15', text: 'Fourth note' }]]);
     });
   });
 });

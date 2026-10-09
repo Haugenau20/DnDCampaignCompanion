@@ -29,6 +29,9 @@ const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 // Mock the Firebase context hooks
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('@/features/user-management', () => ({
   // The provider's writes name the active group and campaign by full path (T082).
   useGroups: () => ({ activeGroupId: 'group-1' }),
@@ -746,19 +749,16 @@ describe('RumorContext Behavioral Testing', () => {
         await rumorContext.updateRumorNote('test-rumor', newNote);
       });
 
-      // BEHAVIOR: Should add note to existing notes
-      expect(mockUpdateData).toHaveBeenCalledWith(
+      // BEHAVIOR: The note is a document of its own under the rumour (T133,
+      // maintainer 2026-10-08), not one more entry in its array. Only the
+      // text is the context's: the write attributes it, as every document.
+      const { addRecordNote } = jest.requireMock('features/campaign-entities/shared/recordNotes');
+      expect(addRecordNote).toHaveBeenCalledWith(
+        'groups/group-1/campaigns/campaign-1/rumors',
         'test-rumor',
-        expect.objectContaining({
-          notes: [
-            expect.objectContaining({
-              content: 'Additional investigation revealed more details',
-              createdBy: 'test-user',
-              dateAdded: expect.any(String)
-            })
-          ]
-        })
+        { content: 'Additional investigation revealed more details' }
       );
+      expect(mockUpdateData).not.toHaveBeenCalled();
     });
 
     test('should reject note update for non-existent rumor', async () => {
@@ -1093,7 +1093,7 @@ describe('RumorContext Behavioral Testing', () => {
       expect(questPayload).not.toHaveProperty('modifiedByUsername');
     });
 
-    test('should still attribute the note appended to converted rumors (nested note, not a document write)', async () => {
+    test('records the conversion as a note of its own on each converted rumour, in the same commit', async () => {
       renderRumorContext();
 
       await waitFor(() => {
@@ -1104,29 +1104,22 @@ describe('RumorContext Behavioral Testing', () => {
         await rumorContext.convertToQuest(['rumor-to-convert'], { title: 'Investigate Dragon Rumors' });
       });
 
-      // BEHAVIOR: The note recording the conversion is appended to the
-      // *original* rumor's `notes` array -- a plain field inside the rumor
-      // document, not a document of its own. DocumentService only attributes
-      // the top-level document it writes, so this nested note must keep
-      // carrying its own creation attribution built by the context.
-      // Since T088 (DATA-005) the converted rumours are marked in the
-      // quest's own commit.
-      const { updates } = mockCommit.mock.calls[0][3];
+      // BEHAVIOR: Since T088 (DATA-005) the converted rumours are marked in
+      // the quest's own commit. The note recording the conversion was an
+      // entry appended to the rumour's array, carrying attribution the
+      // context built; since T133 (maintainer, 2026-10-08) it is a document
+      // of its own under the rumour, in the same commit, and attributed by
+      // the write like every document -- so the rumour is no longer rewritten.
+      const { updates, notes } = mockCommit.mock.calls[0][3];
       expect(updates).toEqual([
-        expect.objectContaining({
-          id: 'rumor-to-convert',
-          data: expect.objectContaining({
-            convertedToQuestId: 'investigate-dragon-rumors',
-            notes: expect.arrayContaining([
-              expect.objectContaining({
-                content: 'Converted to quest: investigate-dragon-rumors',
-                createdBy: 'test-user',
-                createdByUsername: 'Test User',
-                createdByCharacterName: 'Test Character'
-              })
-            ])
-          })
-        })
+        { id: 'rumor-to-convert', data: { convertedToQuestId: 'investigate-dragon-rumors' } }
+      ]);
+      expect(notes).toEqual([
+        {
+          under: { updated: 'rumor-to-convert' },
+          id: expect.any(String),
+          data: { content: 'Converted to quest: investigate-dragon-rumors' }
+        }
       ]);
     });
   });

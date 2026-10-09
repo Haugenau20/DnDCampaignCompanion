@@ -10,10 +10,10 @@ import { useNavigation } from 'shared/context/NavigationContext';
 import useHighlightTarget from 'shared/hooks/useHighlightTarget';
 import useSelection from 'shared/hooks/useSelection';
 import StateLadder from 'shared/components/row-controls/StateLadder';
-import { formatNoteDate } from 'shared/utils/dateFormatter';
 import useCreatorName from 'shared/hooks/useCreatorName';
 import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog';
 import EntityBatchActions, { type BatchStatusOption } from '../../shared/EntityBatchActions';
+import NPCRowNotes from './NPCRowNotes';
 import {
   RosterStatusBar,
   RosterFilterBar,
@@ -409,27 +409,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
                             }}
                           />
 
-                          <RosterField label="Notes" emptyText="No notes yet">
-                            {npc.notes?.length ? (
-                              <div className="flex flex-col gap-2">
-                                {npc.notes.map((note, noteIndex) => (
-                                  <div
-                                    key={noteIndex}
-                                    className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary"
-                                  >
-                                    <Typography
-                                      variant="body-sm"
-                                      color="muted"
-                                      className="text-xs whitespace-nowrap"
-                                    >
-                                      {formatNoteDate(note.date)}
-                                    </Typography>
-                                    <Typography variant="body-sm">{note.text}</Typography>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : undefined}
-                          </RosterField>
+                          <NPCRowNotes npc={npc} />
                         </div>
 
                         <div className="flex flex-col gap-4">

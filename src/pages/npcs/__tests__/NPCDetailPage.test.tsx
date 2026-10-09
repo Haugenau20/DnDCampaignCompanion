@@ -203,6 +203,8 @@ jest.mock("features/campaign-entities", () => ({
   // The real link modules (T131): which field owns each link is the contract.
   ...jest.requireActual("features/campaign-entities/shared/links"),
   createLinkActions: jest.requireActual("features/campaign-entities/shared/linkActions").createLinkActions,
+  // Notes are documents of their own (T133); see the mock.
+  ...require("@/test-utils/record-notes-mock").recordNotesMock(),
   // The real resolver, not a stub: the page's contract is that it reuses the
   // directories' answer rather than inventing its own.
   resolveLocationName: jest.requireActual(
@@ -1398,6 +1400,61 @@ describe("NPCDetailPage", () => {
       mockUser = null;
       renderPage();
       expect(screen.queryByRole("button", { name: /the note from/ })).not.toBeInTheDocument();
+    });
+
+    // T133: a note added since is a document of its own, beside the NPC's old
+    // array until the migration moves it. It is shown with the rest and
+    // changed in its own document; the NPC is not rewritten.
+    describe("a note in its own document", () => {
+      const notesModule = jest.requireMock("features/campaign-entities");
+      beforeEach(() => {
+        notesModule.useRecordNotes.mockReturnValue([
+          { date: "2025-06-03", text: "Rode to Rohan.", author: "Elanor", noteId: "n-9" },
+        ]);
+      });
+      afterEach(() => notesModule.useRecordNotes.mockReturnValue(undefined));
+
+      it("is read under this NPC, and shown after the older ones", () => {
+        renderPage();
+        expect(notesModule.useRecordNotes).toHaveBeenCalledWith("groups/group-1/campaigns/campaign-1/npcs", "npc-1");
+        const dates = screen.getAllByText(/^\d{2}\/\d{2}\/\d{4}$/).map((n) => n.textContent);
+        expect(dates).toEqual(["02/04/2025", "31/05/2025", "03/06/2025"]);
+        expect(screen.getByText("Rode to Rohan.")).toBeInTheDocument();
+      });
+
+      it("is edited in its own document, from the text it was opened with", async () => {
+        renderPage();
+        fireEvent.click(screen.getByRole("button", { name: "Edit the note from 03/06/2025" }));
+        fireEvent.change(screen.getByLabelText("Note from 03/06/2025"), { target: { value: "Rode to Edoras." } });
+        fireEvent.click(screen.getByText("Save note"));
+
+        await waitFor(() => expect(notesModule.editRecordNote).toHaveBeenCalled());
+        expect(notesModule.editRecordNote).toHaveBeenCalledWith(
+          "groups/group-1/campaigns/campaign-1/npcs", "npc-1", "n-9", "text", "Rode to Rohan.", "Rode to Edoras."
+        );
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
+      });
+
+      it("is deleted in its own document once confirmed", async () => {
+        renderPage();
+        fireEvent.click(screen.getByRole("button", { name: "Delete the note from 03/06/2025" }));
+        fireEvent.click(screen.getByText("Confirm delete"));
+
+        await waitFor(() => expect(notesModule.deleteRecordNote).toHaveBeenCalled());
+        expect(notesModule.deleteRecordNote).toHaveBeenCalledWith(
+          "groups/group-1/campaigns/campaign-1/npcs", "npc-1", "n-9"
+        );
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
+      });
+
+      it("leaves a note in the old array to the NPC's own write", async () => {
+        renderPage();
+        fireEvent.click(screen.getByRole("button", { name: "Delete the note from 02/04/2025" }));
+        fireEvent.click(screen.getByText("Confirm delete"));
+
+        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
+        expect(notesModule.deleteRecordNote).not.toHaveBeenCalled();
+      });
     });
   });
 

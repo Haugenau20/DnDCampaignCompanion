@@ -32,7 +32,7 @@
   "src/features/campaign-entities/npcs/components/__tests__/NPCDirectory.test.tsx": 15,
   "src/features/campaign-entities/npcs/context/__tests__/NPCContext.behavioral.test.tsx": 1,
   "src/features/campaign-entities/npcs/context/__tests__/NPCContext.bugs.test.tsx": 2,
-  "src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx": 6,
+  "src/features/campaign-entities/npcs/context/__tests__/NPCContext.notes.test.tsx": 1,
   "src/features/campaign-entities/quests/components/__tests__/QuestDirectory.test.tsx": 21,
   "src/features/campaign-entities/quests/context/__tests__/QuestContext.behavioral.test.tsx": 1,
   "src/features/campaign-entities/quests/context/__tests__/QuestContext.bugs.test.tsx": 2,

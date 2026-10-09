@@ -17,6 +17,9 @@ const mockRecordReleased = jest.fn();
 const mockClearReleased = jest.fn();
 let mockLocations: any[] = [];
 
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('features/user-management', () => ({
   useAuth: () => ({ user: { uid: 'user-1' } }),
   useUser: () => ({ userProfile: {}, activeGroupUserProfile: {} }),

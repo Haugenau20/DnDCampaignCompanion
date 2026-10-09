@@ -17,6 +17,10 @@ import {
   npcIdsOfLocation,
   questIdsOfLocation,
   rumorIdsOfLocation,
+  useRecordNotes,
+  mergeRecordNotes,
+  editRecordNote,
+  deleteRecordNote,
   WhereThisSits,
   DeleteLocationDialog,
   buildLocationIndex,
@@ -26,7 +30,7 @@ import {
   formatLocationStatus,
   KNOWLEDGE_OPTIONS,
 } from 'features/campaign-entities';
-import type { Location, LocationNote, LocationType, LocationStatus } from 'features/campaign-entities';
+import type { Location, LocationNote, LocationType, LocationStatus, RecordNote } from 'features/campaign-entities';
 import type { RecordChange } from 'core/types/common';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
@@ -147,6 +151,9 @@ const LocationDetailPage: React.FC = () => {
     createLocation,
   } = useLocations();
   const locationsPath = useCampaignCollectionPath('locations');
+  // The notes: their own documents (T133), and the record's old array until
+  // the migration has moved it.
+  const noteDocuments = useRecordNotes<LocationNote>(locationsPath, locationId);
   const { npcs, updateNPC } = useNPCs();
   const { quests, updateQuest } = useQuests();
   const { rumors, updateRumor } = useRumors();
@@ -288,13 +295,20 @@ const LocationDetailPage: React.FC = () => {
     });
   };
 
-  // Through `save`, like every other field. The stored array is searched, not
-  // the sorted copy on screen, so notes keep the order they were written in --
-  // the array the server holds (T083), so another player's new note stays.
-  const editNote = async (note: LocationNote, text: string) =>
-    save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
-  const deleteNote = async (note: LocationNote) =>
-    save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
+  /**
+   * A note in its own document (T133) is changed there; one still in the
+   * record's old array goes through `save`, which searches the array the
+   * server holds (T083), so a note another player added meanwhile stays and
+   * one they changed first is refused rather than guessed at.
+   */
+  const editNote = async (note: RecordNote<LocationNote>, text: string) =>
+    note.noteId && locationsPath && location
+      ? editRecordNote(locationsPath, location.id, note.noteId, 'text', note.text, text)
+      : save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
+  const deleteNote = async (note: RecordNote<LocationNote>) =>
+    note.noteId && locationsPath && location
+      ? deleteRecordNote(locationsPath, location.id, note.noteId)
+      : save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
 
   /**
    * A feature becomes a real place (§6.4, item 7).
@@ -827,7 +841,7 @@ const LocationDetailPage: React.FC = () => {
 
           {/* --------------------------------- notes -------------------------------- */}
           <EntityNotes
-            notes={location.notes}
+            notes={mergeRecordNotes(location.notes, noteDocuments)}
             canEdit={canAct}
             onAdd={addNote}
             onEdit={editNote}

@@ -993,6 +993,90 @@ describe('DocumentService', () => {
     });
   });
 
+  // T133: the notes saying what a conversion did are documents of their own,
+  // written in its commit. Here `doc` and `collection` build full paths, so a
+  // note's place under its record shows.
+  describe('createDocumentWithUpdates, with notes', () => {
+    const PROFILE = { username: 'Sam', activeCharacterId: null, characters: [] };
+    const RUMORS = 'groups/g1/campaigns/c1/rumors';
+    const QUESTS = 'groups/g1/campaigns/c1/quests';
+    const flatDoc = mockDoc.getMockImplementation()!;
+    const flatCollection = mockCollection.getMockImplementation()!;
+
+    beforeEach(() => {
+      mockGetDoc.mockResolvedValue(makeDocSnapshot(true, PROFILE));
+      mockDoc.mockImplementation((parent: any, ...segs: string[]) => {
+        const path = [parent?.path, ...segs].filter(Boolean).join('/');
+        return { path, id: path.split('/').pop()! };
+      });
+      mockCollection.mockImplementation((parent: any, ...segs: string[]) => ({
+        path: [parent?.path, ...segs].filter(Boolean).join('/'),
+      }));
+    });
+    afterEach(() => {
+      mockDoc.mockImplementation(flatDoc);
+      mockCollection.mockImplementation(flatCollection);
+    });
+
+    const inCampaign = () => {
+      const svc = DocumentService.getInstance();
+      svc.setActiveGroup('g1');
+      svc.setActiveCampaign('c1');
+      return svc;
+    };
+
+    test('writes each note under its record, attributed as a created document, in the same commit', async () => {
+      mockFirestoreStore.seed(`${RUMORS}/smoke`, { title: 'Smoke', notes: [] });
+
+      await inCampaign().createDocumentWithUpdates<any, any>('quests', 'find-the-fire', 'rumors', async () => ({
+        create: { title: 'Find the fire' },
+        updates: [{ id: 'smoke', data: { convertedToQuestId: 'find-the-fire' } }],
+        notes: [
+          { under: { updated: 'smoke' }, id: 'n1', data: { content: 'Converted to quest: find-the-fire' } },
+          { under: 'created', id: 'n2', data: { content: 'Made from: smoke' } },
+        ],
+      }));
+
+      expect(mockFirestoreStore.read(`${RUMORS}/smoke/notes/n1`)).toMatchObject({
+        content: 'Converted to quest: find-the-fire',
+        createdByUsername: 'Sam',
+        createdAt: 'SERVER_TIMESTAMP',
+      });
+      expect(mockFirestoreStore.read(`${QUESTS}/find-the-fire/notes/n2`)).toMatchObject({
+        content: 'Made from: smoke',
+        createdByUsername: 'Sam',
+      });
+      // The record's own notes are not touched.
+      expect(mockFirestoreStore.read(`${RUMORS}/smoke`)!.notes).toEqual([]);
+    });
+
+    test('puts a note under a record whose id is "created" there, not under the new record', async () => {
+      mockFirestoreStore.seed(`${RUMORS}/created`, { title: 'Created', notes: [] });
+
+      await inCampaign().createDocumentWithUpdates<any, any>('rumors', 'combined', 'rumors', async () => ({
+        create: { title: 'Combined' },
+        updates: [{ id: 'created', data: { status: 'confirmed' } }],
+        notes: [{ under: { updated: 'created' }, id: 'n1', data: { content: 'Combined into rumor: combined' } }],
+      }));
+
+      expect(mockFirestoreStore.read(`${RUMORS}/created/notes/n1`)).toMatchObject({ content: 'Combined into rumor: combined' });
+      expect(mockFirestoreStore.read(`${RUMORS}/combined/notes/n1`)).toBeUndefined();
+    });
+
+    test('refuses the whole commit when a note is too long, writing nothing', async () => {
+      mockFirestoreStore.seed(`${RUMORS}/smoke`, { title: 'Smoke', notes: [] });
+
+      await expect(inCampaign().createDocumentWithUpdates<any, any>('quests', 'q1', 'rumors', async () => ({
+        create: { title: 'Find the fire' },
+        updates: [{ id: 'smoke', data: { convertedToQuestId: 'q1' } }],
+        notes: [{ under: { updated: 'smoke' }, id: 'n1', data: { content: 'x'.repeat(10_001) } }],
+      }))).rejects.toMatchObject({ name: 'TextTooLongError' });
+
+      expect(mockFirestoreStore.paths().sort()).toEqual([`${RUMORS}/smoke`]);
+      expect(mockFirestoreStore.read(`${RUMORS}/smoke`)).toEqual({ title: 'Smoke', notes: [] });
+    });
+  });
+
   // ─── collection path construction ───────────────────────────────────────────
 
 
@@ -1303,6 +1387,24 @@ describe('DocumentService', () => {
         { type: 'set', collection: 'chapters', id: 'c2', data: { title: 'x'.repeat(201), order: 1 } },
       ])).rejects.toMatchObject({ name: 'TextTooLongError' });
       expect(mockBatchCommit).not.toHaveBeenCalled();
+    });
+
+    // T133: a record's notes are documents of their own, each capped alone.
+    it.each([
+      ['text', 10_000],
+      ['content', 10_000],
+      ['date', 200],
+      ['author', 200],
+    ])("a record's note's %s takes %d characters and refuses one more", async (field, limit) => {
+      const svc = inCampaign();
+      const notes = 'groups/g1/campaigns/c1/npcs/n1/notes';
+
+      await svc.createDocument(notes, { [field]: 'x'.repeat(limit) }, 'ok');
+      await expect(svc.createDocument(notes, { [field]: 'x'.repeat(limit + 1) }, 'long'))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field, limit });
+      await expect(svc.updateDocument(notes, 'ok', { [field]: 'x'.repeat(limit + 1) }))
+        .rejects.toMatchObject({ name: 'TextTooLongError' });
+      expect(mockFirestoreStore.read('long')).toBeUndefined();
     });
 
     it('leaves lists, uncapped fields and everything outside campaign records alone', async () => {

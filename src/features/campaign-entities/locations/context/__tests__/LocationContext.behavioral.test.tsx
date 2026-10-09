@@ -28,6 +28,9 @@ const mockUseLocationData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 // Mock the Firebase context hooks
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),
@@ -759,19 +762,16 @@ describe('LocationContext Behavioral Testing', () => {
         await locationContext.updateLocationNote('test-location', newNote);
       });
 
-      // BEHAVIOR: Should add note to existing notes with timestamp
-      expect(mockUpdateData).toHaveBeenCalledWith(
+      // BEHAVIOR: The note is a document of its own under the location (T133,
+      // maintainer 2026-10-08), dated; the record and its existing note are
+      // not rewritten
+      const { addRecordNote } = jest.requireMock('features/campaign-entities/shared/recordNotes');
+      expect(addRecordNote).toHaveBeenCalledWith(
+        'groups/test-group/campaigns/test-campaign/locations',
         'test-location',
-        expect.objectContaining({
-          notes: [
-            { date: '2025-06-14', text: 'Initial note' },
-            { 
-              date: expect.any(String), // Should be current timestamp
-              text: 'New session note'
-            }
-          ]
-        })
+        { date: expect.any(String), text: 'New session note' }
       );
+      expect(mockUpdateData).not.toHaveBeenCalled();
     });
 
     test('stamps a new note with a calendar date, not a timestamp (T001)', async () => {
@@ -788,8 +788,10 @@ describe('LocationContext Behavioral Testing', () => {
         });
       });
 
-      const [, saved] = mockUpdateData.mock.calls[0];
-      expect(saved.notes[saved.notes.length - 1].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // The note's own document since T133
+      const { addRecordNote } = jest.requireMock('features/campaign-entities/shared/recordNotes');
+      const [, , saved] = addRecordNote.mock.calls[0];
+      expect(saved.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
     test('should reject note update for non-existent location', async () => {

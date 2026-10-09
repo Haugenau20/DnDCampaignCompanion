@@ -22,6 +22,9 @@ let mockLoaded: Rumor[] = [];
 let mockServer: Rumor[] = [];
 const mockCommit = jest.fn();
 
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('@/features/user-management', () => ({
   useGroups: () => ({ activeGroupId: 'group-1' }),
   useCampaigns: () => ({ activeCampaignId: 'campaign-1' }),
@@ -128,6 +131,11 @@ describe('a conversion is one commit (T088, DATA-005)', () => {
 });
 
 describe('the marks are worked out from the rumours as the server holds them', () => {
+  // These held that the note recording a conversion was appended to the
+  // array the server held, so another player's newer note survived. Since T133
+  // (maintainer, 2026-10-08) that note is a document of its own and the
+  // rumour's notes are not rewritten at all, which keeps theirs by
+  // construction: the commit must not touch `notes`.
   test('a note another player added since the page loaded is kept when converting', async () => {
     mockServer = [rumor('a', [note('from-another-player')]), rumor('b')];
     await renderContext();
@@ -136,10 +144,10 @@ describe('the marks are worked out from the rumours as the server holds them', (
       await context.convertToQuest(['a'], { title: 'Find the fire' });
     });
 
-    const [, , , { updates }] = mockCommit.mock.calls[0];
-    expect(updates[0].data.notes.map((n: RumorNote) => n.content)).toEqual([
-      'note from-another-player',
-      'Converted to quest: find-the-fire',
+    const [, , , { updates, notes }] = mockCommit.mock.calls[0];
+    expect(updates[0].data).not.toHaveProperty('notes');
+    expect(notes.map((n: { under: unknown; data: RumorNote }) => [n.under, n.data.content])).toEqual([
+      [{ updated: 'a' }, 'Converted to quest: find-the-fire'],
     ]);
   });
 
@@ -151,10 +159,12 @@ describe('the marks are worked out from the rumours as the server holds them', (
       await context.combineRumors(['a', 'b'], { title: 'Smoke and ash', content: 'Both' });
     });
 
-    const [, , , { updates }] = mockCommit.mock.calls[0];
-    expect(updates[1].data.notes.map((n: RumorNote) => n.content)).toEqual([
-      'note from-another-player',
-      'Combined into rumor: smoke-and-ash',
+    const [, , , { updates, notes }] = mockCommit.mock.calls[0];
+    expect(updates[1].data).not.toHaveProperty('notes');
+    expect(notes.map((n: { under: unknown; data: RumorNote }) => [n.under, n.data.content])).toEqual([
+      ['created', 'Combined from rumors: a, b'],
+      [{ updated: 'a' }, 'Combined into rumor: smoke-and-ash'],
+      [{ updated: 'b' }, 'Combined into rumor: smoke-and-ash'],
     ]);
   });
 
@@ -185,31 +195,36 @@ describe('the marks are worked out from the rumours as the server holds them', (
 });
 
 describe('a selection one commit cannot hold is refused before anything is written', () => {
-  // 499 rumours plus the new record is Firestore's 500-write limit. Checked
-  // after the create, as it was, 501 selected rumours left a quest behind on
-  // every attempt (DATA-005's deterministic case).
+  // Firestore's 500-write limit. Checked after the create, as it was, too
+  // large a selection left a quest behind on every attempt (DATA-005's
+  // deterministic case). Each rumour was one write until T133 made the note
+  // recording what happened a document of its own: now it is two, beside the
+  // new record and, when combining, its note -- 2 + 2 x 249 = 500. These held
+  // 499 before.
   const many = (count: number) => Array.from({ length: count }, (_, i) => rumor(`r${i}`));
 
-  test('500 rumours cannot be converted or combined', async () => {
-    mockLoaded = many(500);
+  test('250 rumours cannot be converted or combined', async () => {
+    mockLoaded = many(250);
     mockServer = mockLoaded;
     await renderContext();
     const ids = mockLoaded.map((r) => r.id);
 
-    await expect(context.convertToQuest(ids, { title: 'Too many' })).rejects.toThrow(/at most 499 rumours/);
-    await expect(context.combineRumors(ids, { title: 'Too many', content: 'x' })).rejects.toThrow(/at most 499 rumours/);
+    await expect(context.convertToQuest(ids, { title: 'Too many' })).rejects.toThrow(/at most 249 rumours/);
+    await expect(context.combineRumors(ids, { title: 'Too many', content: 'x' })).rejects.toThrow(/at most 249 rumours/);
     expect(mockCommit).not.toHaveBeenCalled();
   });
 
-  test('499 rumours fit', async () => {
-    mockLoaded = many(499);
+  test('249 rumours fit, in at most 500 writes', async () => {
+    mockLoaded = many(249);
     mockServer = mockLoaded;
     await renderContext();
 
     await act(async () => {
-      await context.convertToQuest(mockLoaded.map((r) => r.id), { title: 'Just enough' });
+      await context.combineRumors(mockLoaded.map((r) => r.id), { title: 'Just enough', content: 'x' });
     });
 
-    expect(mockCommit.mock.calls[0][3].updates).toHaveLength(499);
+    const { updates, notes } = mockCommit.mock.calls[0][3];
+    expect(updates).toHaveLength(249);
+    expect(1 + updates.length + notes.length).toBeLessThanOrEqual(500);
   });
 });

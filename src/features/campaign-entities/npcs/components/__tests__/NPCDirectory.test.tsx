@@ -9,6 +9,9 @@ import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs
 // Mock all context dependencies used by NPCDirectory and the roster rows it renders
 // ---------------------------------------------------------------------------
 
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('shared/context/NavigationContext', () => ({
   useNavigation: jest.fn(),
 }));

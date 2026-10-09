@@ -11,6 +11,7 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution, modificationTimes } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
+import { addRecordNote, deleteRecordNotes } from '../../shared/recordNotes';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
@@ -91,14 +92,10 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('NPC not found');
     }
 
-    // The notes alone, appended to the list the server holds (T083).
-    await writeRecordChange(
-      { updateData, updateDataAfterReading },
-      npcId,
-      (current) => ({ notes: [...(current.notes || []), note] }),
-      'NPC not found'
-    );
-  }, [getNPCById, updateData, updateDataAfterReading, hasRequiredContext, user, userProfile]);
+    // A note of its own (T133), not one more entry in the record.
+    if (!npcsPath) throw new Error('No campaign selected');
+    await addRecordNote(npcsPath, npcId, { ...note });
+  }, [getNPCById, hasRequiredContext, user, userProfile, npcsPath]);
 
   // Update NPC relationship
   const updateNPCRelationship = useCallback(async (npcId: string, relationship: NPCRelationship) => {
@@ -180,13 +177,15 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const image = getNPCById(npcId)?.image;
     const discard = image ? releaseImage(image.path) : undefined;
+    // Its notes first (T133): a record's subcollection outlives the record.
+    if (npcsPath) await deleteRecordNotes(npcsPath, [npcId]);
     await deleteData(npcId);
     // After the document: a failure can then only orphan the file, which the
     // released record lets the daily sweep find.
     discard?.();
     // And out of every list that named them (T131).
     await unlinkDeletedQuietly(recordPaths, 'npc', [npcId]);
-  }, [hasRequiredContext, user, getNPCById, deleteData, recordPaths]);
+  }, [hasRequiredContext, user, getNPCById, deleteData, recordPaths, npcsPath]);
 
   /**
    * Sets the status of several NPCs in one batch (T017): one round trip, and
@@ -227,6 +226,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const image = getNPCById(id)?.image;
       return image ? [releaseImage(image.path)] : [];
     });
+    if (npcsPath) await deleteRecordNotes(npcsPath, npcIds);
     await commitEntityWrites<NPC>(npcsPath, 'NPCs', npcIds.map(id => ({ type: 'delete' as const, id })));
     // After the documents: a failure can then only orphan files.
     discards.forEach(discard => discard());

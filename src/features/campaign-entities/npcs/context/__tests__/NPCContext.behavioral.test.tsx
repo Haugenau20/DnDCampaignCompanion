@@ -27,6 +27,9 @@ const mockUseNPCData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
 // Mock the Firebase context hooks
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('@/features/user-management', () => ({
   useAuth: () => mockUseAuth(),
   useUser: () => mockUseUser(),

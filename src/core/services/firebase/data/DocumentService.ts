@@ -29,7 +29,7 @@ import {
 import { DocumentAlreadyExistsError } from './DocumentAlreadyExistsError';
 import { createDocumentIfAbsent } from './createDocumentIfAbsent';
 import { assertTextFits } from './TextTooLongError';
-import { RECORD_TEXT_LIMITS } from '../../../constants/textLimits';
+import { NOTE_TEXT_LIMITS, RECORD_TEXT_LIMITS } from '../../../constants/textLimits';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents
@@ -125,10 +125,15 @@ class DocumentService extends BaseFirebaseService {
    */
   private assertTextFits(collectionRef: { path: string }, data: unknown): void {
     const [root, , campaigns, , recordType, ...deeper] = collectionRef.path.split('/');
-    if (root !== 'groups' || campaigns !== 'campaigns' || !recordType || deeper.length > 0) {
+    if (root !== 'groups' || campaigns !== 'campaigns' || !recordType) {
       return;
     }
-    const limits = RECORD_TEXT_LIMITS[recordType];
+    // A record's own notes (T133), `{record}/{id}/notes`, are capped one by one.
+    const isNotes = deeper.length === 2 && deeper[1] === 'notes';
+    if (deeper.length > 0 && !isNotes) {
+      return;
+    }
+    const limits = isNotes ? NOTE_TEXT_LIMITS : RECORD_TEXT_LIMITS[recordType];
     if (limits && typeof data === 'object' && data !== null) {
       assertTextFits(limits, data as Record<string, unknown>);
     }
@@ -435,9 +440,9 @@ class DocumentService extends BaseFirebaseService {
    * For an operation that turns records into a new one -- rumours into a
    * quest, several rumours into one. Created first and marked after, a failed
    * mark left the new record behind, and every retry made another (DATA-005).
-   * Here the new record and the marks commit together or not at all, and a
-   * list the marks extend (a rumour's notes) is extended from the copy the
-   * server holds, so a note another player added meanwhile is kept.
+   * Here the new record, the marks and the notes saying what happened (each a
+   * document of its own, T133) commit together or not at all, and the marks
+   * are decided from the copies the server holds.
    *
    * `decide` reads by id from `sourceCollection` and returns the new document
    * and the updates; throwing refuses the whole operation. It may run more
@@ -460,6 +465,13 @@ class DocumentService extends BaseFirebaseService {
     decide: (read: (id: string) => Promise<(S & { id: string }) | undefined>) => Promise<{
       create: T;
       updates: Array<{ id: string; data: Partial<S> }>;
+      /**
+       * Notes to create in the same commit (T133), each a document under the
+       * new record (`under: 'created'`) or under one of the updated ones
+       * (`under: { updated: id }`). An object, not the bare id: a record's id
+       * is a slug of its title, and one may well be `created`.
+       */
+      notes?: Array<{ under: 'created' | { updated: string }; id: string; data: DocumentData }>;
     }>
   ): Promise<void> {
     // Resolved before any await, as in `createDocument` (T082).
@@ -476,9 +488,15 @@ class DocumentService extends BaseFirebaseService {
         const snapshot = await transaction.get(doc(sourceRef, sourceId));
         return snapshot.exists() ? ({ ...(snapshot.data() as S), id: snapshot.id }) : undefined;
       };
-      const { create, updates } = await decide(read);
+      const { create, updates, notes = [] } = await decide(read);
       this.assertTextFits(collectionRef, create);
       updates.forEach((update) => this.assertTextFits(sourceRef, update.data));
+      const noteRefs = notes.map((note) => {
+        const parent = note.under === 'created' ? targetRef : doc(sourceRef, note.under.updated);
+        const notesRef = collection(parent, 'notes');
+        this.assertTextFits(notesRef, note.data);
+        return doc(notesRef, note.id);
+      });
       // Attribution only once the id is known to be free, as in `createDocument`.
       const creation = await this.getCreationAttribution(groupId);
       const modification = await this.getModificationAttribution(groupId);
@@ -490,6 +508,7 @@ class DocumentService extends BaseFirebaseService {
           ...modification
         } as Partial<DocumentData>);
       }
+      notes.forEach((note, i) => transaction.set(noteRefs[i], { ...note.data, ...creation }));
       return true;
     });
 

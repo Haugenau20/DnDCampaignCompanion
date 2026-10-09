@@ -30,6 +30,9 @@ const QUESTS = 'groups/group-1/campaigns/campaign-1/quests';
 const mockUseRumorData = jest.fn();
 const mockUseFirebaseData = jest.fn();
 
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('@/features/user-management', () => ({
   // The provider's writes name the active group and campaign by full path (T082).
   useGroups: () => ({ activeGroupId: 'group-1' }),
@@ -281,22 +284,17 @@ describe('RumorContext Bug Discovery Tests', () => {
         await rumorContext.updateRumorNote('test-rumor', note);
       });
 
-      // Specifies the correct attribution values; currently passes. The former
-      // "will FAIL until attribution utilities are fixed" note referred to the
-      // Pattern 1 premise struck on 2026-07-28 — it was never a real defect.
-      expect(mockUpdateData).toHaveBeenCalledWith(
-        'test-rumor',
-        expect.objectContaining({
-          notes: [
-            expect.objectContaining({
-              createdByUsername: 'Test User',
-              createdByCharacterName: 'Test Character'
-            })
-          ],
-          modifiedByUsername: 'Test User',
-          modifiedByCharacterName: 'Test Character'
-        })
-      );
+      // The note was an entry in the rumour's array, attributed by the
+      // context, and adding it marked the rumour modified. Since T133
+      // (maintainer, 2026-10-08) it is a document of its own, written through
+      // `createDocument`, which attributes every document it creates
+      // (DocumentService.test.ts; `recordNotes.test.ts` holds that notes go
+      // through it). The rumour itself is not rewritten.
+      const { addRecordNote } = jest.requireMock('features/campaign-entities/shared/recordNotes');
+      expect(addRecordNote).toHaveBeenCalledWith(expect.stringMatching(/\/rumors$/), 'test-rumor', {
+        content: 'Test note content'
+      });
+      expect(mockUpdateData).not.toHaveBeenCalled();
     });
   });
 
@@ -583,7 +581,7 @@ describe('RumorContext Bug Discovery Tests', () => {
       // RumorContext.behavioral.test.tsx > 'Rumor Convert To Quest Behavior').
       // For T088 (DATA-005), the quest and the rumour marks became one commit.
       expect(mockCommit).toHaveBeenCalledTimes(1);
-      const [collection, questId, sourceCollection, { create, updates }] = mockCommit.mock.calls[0];
+      const [collection, questId, sourceCollection, { create, updates, notes }] = mockCommit.mock.calls[0];
       expect([collection, questId, sourceCollection]).toEqual([QUESTS, 'investigate-dragon-rumors', RUMORS]);
       expect(create).toEqual(expect.objectContaining({
         title: 'Investigate Dragon Rumors',
@@ -592,18 +590,18 @@ describe('RumorContext Bug Discovery Tests', () => {
       }));
       expect(mockSetDocument).not.toHaveBeenCalled();
 
-      // Should update rumor with conversion tracking
+      // Should update rumor with conversion tracking; the note saying so is a
+      // document of its own under the rumour since T133, in the same commit
       expect(updates).toEqual([
         expect.objectContaining({
           id: 'rumor-to-convert',
-          data: expect.objectContaining({
-            convertedToQuestId: 'investigate-dragon-rumors',
-            notes: expect.arrayContaining([
-              expect.objectContaining({
-                content: 'Converted to quest: investigate-dragon-rumors'
-              })
-            ])
-          })
+          data: expect.objectContaining({ convertedToQuestId: 'investigate-dragon-rumors' })
+        })
+      ]);
+      expect(notes).toEqual([
+        expect.objectContaining({
+          under: { updated: 'rumor-to-convert' },
+          data: { content: 'Converted to quest: investigate-dragon-rumors' }
         })
       ]);
 

@@ -55,6 +55,9 @@ const mockCampaignsState = {
   setActiveCampaign: jest.fn(),
 };
 
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock("@/features/user-management", () => ({
   AUTH_STATE_CHANGED_EVENT: "auth-state-changed",
   useFirestore: () => mockFirestore,
