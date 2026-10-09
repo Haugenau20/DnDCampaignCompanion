@@ -13,6 +13,7 @@ export const E2E = {
   host: "127.0.0.1",
   authPort: 19099,
   firestorePort: 18080,
+  functionsPort: 15001,
   appPort: 4300,
   get appUrl(): string {
     return `http://${this.host}:${this.appPort}`;
@@ -35,9 +36,9 @@ export const appBuildEnv: Record<string, string> = {
   REACT_APP_EMULATOR_HOST: E2E.host,
   REACT_APP_AUTH_EMULATOR_PORT: String(E2E.authPort),
   REACT_APP_FIRESTORE_EMULATOR_PORT: String(E2E.firestorePort),
+  REACT_APP_FUNCTIONS_EMULATOR_PORT: String(E2E.functionsPort),
   // Not started (see firebase.e2e.json), and not the development emulators'
-  // 5001 and 9199 either: a call there fails at once instead of reaching them.
-  REACT_APP_FUNCTIONS_EMULATOR_PORT: "15001",
+  // 9199 either: a call there fails at once instead of reaching them.
   REACT_APP_STORAGE_EMULATOR_PORT: "19199",
   REACT_APP_PROJECT_ID: E2E.projectId,
   REACT_APP_API_KEY: "fake-api-key",

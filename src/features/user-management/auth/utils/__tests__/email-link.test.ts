@@ -15,6 +15,7 @@ describe('signInLinkUrl', () => {
     expect(roundTrip(signInLinkUrl(ORIGIN, { next: '/npcs?filter=alive' }))).toEqual({
       next: '/npcs?filter=alive',
       invitation: null,
+      founder: null,
       device: null,
     });
   });
@@ -26,6 +27,7 @@ describe('signInLinkUrl', () => {
     expect(roundTrip(signInLinkUrl(ORIGIN, { invitation }))).toEqual({
       next: null,
       invitation,
+      founder: null,
       device: null,
     });
   });
@@ -41,6 +43,7 @@ describe('signInLinkUrl', () => {
     expect(roundTrip(signInLinkUrl(ORIGIN, { next: '/quests', device: 'req-1' }))).toEqual({
       next: '/quests',
       invitation: null,
+      founder: null,
       device: 'req-1',
     });
   });
@@ -56,16 +59,42 @@ describe('signInLinkUrl', () => {
     const url = signInLinkUrl(ORIGIN, { invitation: { groupId: 'g-1', token: 't', username: 'Sam' } });
     expect(new URL(url).searchParams.get('groupId')).toBe('g-1');
   });
+
+  // T127: a founder signs in from their founder link and must land back on
+  // it, to name the group; `next` cannot carry `/join`.
+  test('carries a founder link', () => {
+    expect(roundTrip(signInLinkUrl(ORIGIN, { founder: 'f-tok_1' }))).toEqual({
+      next: null,
+      invitation: null,
+      founder: 'f-tok_1',
+      device: null,
+    });
+  });
+
+  test('drops `device` and `next` when there is a founder link', () => {
+    const intent = roundTrip(signInLinkUrl(ORIGIN, { founder: 'f', next: '/quests', device: 'req-1' }));
+    expect(intent.device).toBeNull();
+    expect(intent.next).toBeNull();
+  });
 });
 
 describe('readSignInLinkIntent', () => {
   test('ignores Firebase\'s own parameters', () => {
     const params = new URLSearchParams('mode=signIn&oobCode=abc&apiKey=k&next=%2Fquests');
-    expect(readSignInLinkIntent(params)).toEqual({ next: '/quests', invitation: null, device: null });
+    expect(readSignInLinkIntent(params)).toEqual({ next: '/quests', invitation: null, founder: null, device: null });
   });
 
   test('is no invitation when any part of one is missing', () => {
     const params = new URLSearchParams('groupId=g-1&token=tok');
     expect(readSignInLinkIntent(params).invitation).toBeNull();
+  });
+
+  test('an invitation wins over a founder link in the same URL', () => {
+    const params = new URLSearchParams('groupId=g-1&token=tok&username=Sam&founder=f');
+    expect(readSignInLinkIntent(params).founder).toBeNull();
+  });
+
+  test('is no founder link when the parameter is empty', () => {
+    expect(readSignInLinkIntent(new URLSearchParams('founder=')).founder).toBeNull();
   });
 });

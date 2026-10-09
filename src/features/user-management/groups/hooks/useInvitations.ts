@@ -62,6 +62,20 @@ export function useInvitations() {
     }
   }, [setError]);
 
+  // Reserve an account for `email` against a founder link (T127)
+  const reserveFounderSignUp = useCallback(async (
+    founderToken: string,
+    email: string
+  ): Promise<void> => {
+    try {
+      setError(null);
+      await firebaseServices.invitation.reserveFounderSignUp(founderToken, email);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not prepare your sign-up');
+      throw err;
+    }
+  }, [setError]);
+
   // Join group with token
   const joinGroupWithToken = useCallback(async (
     token: string, 
@@ -140,6 +154,7 @@ export function useInvitations() {
     generateRegistrationToken,
     validateToken,
     reserveSignUp,
+    reserveFounderSignUp,
     joinGroupWithToken,
     getRegistrationTokens,
     deleteRegistrationToken,

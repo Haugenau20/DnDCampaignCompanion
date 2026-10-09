@@ -17,6 +17,12 @@ export interface SignInLinkIntent {
   next: string | null;
   invitation: InvitationToRedeem | null;
   /**
+   * A founder link (T127) the reader is starting a group with. Signing in
+   * spends nothing; the link page takes it from there, so the reader lands
+   * back on it.
+   */
+  founder: string | null;
+  /**
    * The sign-in request of the device that asked for the link, so that
    * another device opening it can approve that one instead of itself. Never
    * set on an invitation link.
@@ -37,7 +43,8 @@ export interface SignInLinkIntent {
  * query string.
  *
  * @param origin The app's origin, e.g. `window.location.origin`
- * @param intent Where to go next and which device asked, or which invitation to redeem
+ * @param intent Where to go next and which device asked, which invitation to
+ *   redeem, or which founder link to go back to
  */
 export function signInLinkUrl(
   origin: string,
@@ -48,6 +55,8 @@ export function signInLinkUrl(
     params.set('groupId', intent.invitation.groupId);
     params.set('token', intent.invitation.token);
     params.set('username', intent.invitation.username);
+  } else if (intent.founder) {
+    params.set('founder', intent.founder);
   } else {
     if (intent.next) params.set('next', intent.next);
     if (intent.device) params.set('device', intent.device);
@@ -66,9 +75,11 @@ export function readSignInLinkIntent(params: URLSearchParams): SignInLinkIntent 
   const username = params.get('username');
   const invitation =
     groupId && token && username ? { groupId, token, username } : null;
+  const founder = invitation ? null : params.get('founder') || null;
   return {
     next: params.get('next'),
     invitation,
-    device: invitation ? null : params.get('device'),
+    founder,
+    device: invitation || founder ? null : params.get('device'),
   };
 }

@@ -271,6 +271,22 @@ import {
       const reserve = httpsCallable(this.functions, 'reserveSignUp');
       await reserve({ groupId, token, email });
     }
+
+    /**
+     * Reserve an account for `email` on the strength of a founder link (T127).
+     *
+     * The founder-link twin of {@link reserveSignUp}. There is nothing to check
+     * here first: founder invitations are server-only, so `reserveSignUp`
+     * checks the link itself and says what is wrong with it. It spends
+     * nothing; `createGroup` spends the link.
+     *
+     * @param founderToken The token from `/join?founder=…`
+     * @param email The address the new account will have
+     */
+    public async reserveFounderSignUp(founderToken: string, email: string): Promise<void> {
+      const reserve = httpsCallable(this.functions, 'reserveSignUp');
+      await reserve({ founderToken, email });
+    }
   }
 
   export default InvitationService;

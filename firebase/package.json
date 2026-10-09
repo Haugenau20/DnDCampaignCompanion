@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "test:functions": "firebase emulators:exec --ui --only auth,firestore,storage --config firebase.emulators.json \"npm --prefix functions test\"",
-    "test:e2e": "firebase emulators:exec --project demo-e2e --only auth,firestore --config firebase.e2e.json \"npm --prefix ../e2e test\""
+    "test:e2e": "npm --prefix functions run build && firebase emulators:exec --project demo-e2e --only auth,firestore,functions --config firebase.e2e.json \"npm --prefix ../e2e test\""
   },
   "devDependencies": {
     "firebase-tools": "15.22.4"

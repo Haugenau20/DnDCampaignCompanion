@@ -28,6 +28,11 @@ export const FIXTURES = {
   npc: { id: "maren-hollis", name: "Maren Hollis" },
   /** Written before records stored their author's name: only the uid. */
   legacyNpc: { id: "old-tam", name: "Old Tam" },
+  /**
+   * An unused founder link (T127), as the operator's script issues one: it
+   * admits one account, which may start one group.
+   */
+  founderLink: { token: "e2e-founder-link-0123456789abcdefghij" },
 } as const;
 
 const NOW = "2026-10-01T12:00:00.000Z";
@@ -62,7 +67,7 @@ async function resetEmulators(): Promise<void> {
  * Reset the emulators and write the fixtures: one player who administers one
  * group with one campaign, holding a three-level location tree, a quest set in
  * the town, an NPC who lives there, and an older NPC that names its author by
- * uid alone.
+ * uid alone. And an unused founder link, which belongs to nobody yet.
  *
  * Written with the Admin SDK, which the rules do not apply to; everything the
  * journeys then do goes through the app, which they do.
@@ -73,7 +78,7 @@ export async function seed(): Promise<void> {
   const app = getApps()[0] ?? initializeApp({ projectId: E2E.projectId });
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const { player, group, campaign, locations, quest, npc, legacyNpc } = FIXTURES;
+  const { player, group, campaign, locations, quest, npc, legacyNpc, founderLink } = FIXTURES;
 
   await auth.createUser({
     uid: player.uid,
@@ -186,6 +191,13 @@ export async function seed(): Promise<void> {
     description: "Mends nets on the harbour wall.",
     connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
     notes: [],
+  });
+
+  batch.set(db.doc(`founderInvitations/${founderLink.token}`), {
+    used: false,
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    issuedBy: "e2e",
   });
 
   await batch.commit();

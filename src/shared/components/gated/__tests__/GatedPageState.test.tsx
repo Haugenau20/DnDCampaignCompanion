@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import GatedPageState, { CampaignOption } from "../GatedPageState";
 
@@ -199,5 +199,77 @@ describe("GatedPageState, pick campaign", () => {
     expect(
       screen.getByRole("button", { name: /Phandelver/ })
     ).toBeInTheDocument();
+  });
+});
+
+// T127: a group with no campaign is started from here, by any member, and
+// someone in no group can follow a founder link as well as an invitation.
+describe("GatedPageState, starting out (T127)", () => {
+  const pickProps = {
+    variant: "pick-campaign" as const,
+    heading: "unused",
+    blurb: "unused",
+    hasGroups: true,
+    campaigns: [] as CampaignOption[],
+  };
+
+  it("offers the first campaign's form when the group has none", async () => {
+    const onCreateCampaign = jest.fn().mockResolvedValue(undefined);
+    renderPanel({ ...pickProps, onCreateCampaign });
+
+    fireEvent.change(screen.getByLabelText(/campaign name/i), {
+      target: { value: "The Sunken Library" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create campaign/i }));
+
+    await waitFor(() =>
+      expect(onCreateCampaign).toHaveBeenCalledWith({
+        name: "The Sunken Library",
+        description: "",
+      })
+    );
+  });
+
+  it("says what failed, and keeps what was typed", async () => {
+    const onCreateCampaign = jest.fn().mockRejectedValue(new Error("You are not a member of this group"));
+    renderPanel({ ...pickProps, onCreateCampaign });
+
+    fireEvent.change(screen.getByLabelText(/campaign name/i), {
+      target: { value: "The Sunken Library" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create campaign/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/not a member/i);
+    expect(screen.getByLabelText(/campaign name/i)).toHaveValue("The Sunken Library");
+  });
+
+  it("offers no form while the campaigns are still being found", () => {
+    renderPanel({ ...pickProps, campaignsLoading: true, onCreateCampaign: jest.fn() });
+    expect(screen.queryByLabelText(/campaign name/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps the form folded away where there are campaigns to pick", () => {
+    renderPanel({ ...pickProps, campaigns: OPTIONS, onCreateCampaign: jest.fn() });
+    expect(screen.getByText(/start a campaign in/i)).toBeVisible();
+    expect(screen.getByLabelText(/campaign name/i)).not.toBeVisible();
+  });
+
+  it("offers a founder link beside an invitation to someone in no group", () => {
+    renderPanel({ ...pickProps, hasGroups: false, startGroupHref: "/join?founder=" });
+    expect(
+      screen.getByRole("link", { name: /link to start a group/i })
+    ).toHaveAttribute("href", "/join?founder=");
+    expect(screen.getByRole("link", { name: /invite link/i })).toBeInTheDocument();
+  });
+
+  it("folds the form under the list when only other groups have campaigns", () => {
+    renderPanel({
+      ...pickProps,
+      campaigns: OPTIONS,
+      onCreateCampaign: jest.fn(),
+      createCampaignGroupName: "Staddle Table",
+    });
+    expect(screen.getByRole("button", { name: /Phandelver/ })).toBeInTheDocument();
+    expect(screen.getByText("Start a campaign in Staddle Table")).toBeInTheDocument();
   });
 });

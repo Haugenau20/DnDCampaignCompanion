@@ -11,6 +11,8 @@ import { CAMPAIGN_HOME } from '../../auth/utils/next-path';
 import JoinAsExistingUser from '../components/JoinAsExistingUser';
 import JoinAsNewUser from '../components/JoinAsNewUser';
 import JoinTokenPrompt from '../components/JoinTokenPrompt';
+import StartGroup from '../components/StartGroup';
+import { FOUNDER_PARAM } from '../utils/founder-link';
 import PreviewSignInNotice from '../../auth/components/PreviewSignInNotice';
 import { isPreviewBuild } from 'core/constants/app';
 
@@ -33,6 +35,9 @@ type TokenState = 'absent' | 'checking' | 'valid' | 'rejected';
  * - **A bad link is a page state, not a red line under a field.** The link is
  *   the problem and the next step is asking whoever sent it; there is nothing
  *   to retype.
+ *
+ * A **founder link** (`/join?founder=…`, T127) is an invitation to start a
+ * group rather than join one, and gets its own flow (`StartGroup`).
  */
 const JoinPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,6 +48,8 @@ const JoinPage: React.FC = () => {
   const completeJoin = useJoinGroupCompletion();
 
   const linkToken = searchParams.get('token');
+  // Present, even empty, on a founder link or on the page that asks for one.
+  const founderToken = searchParams.get(FOUNDER_PARAM);
   const groupId = searchParams.get('groupId') ?? '';
   // True while the new-account form is mid-way through a Google sign-in; see
   // `JoinAsNewUserProps.onBusyChange`.
@@ -103,6 +110,10 @@ const JoinPage: React.FC = () => {
       </div>
     </div>
   );
+
+  if (founderToken !== null && !isPreviewBuild()) {
+    return <StartGroup founderToken={founderToken.trim()} />;
+  }
 
   // Joining means signing in or creating an account, and a preview site stays
   // signed out on purpose (T110). The invitation is not even checked there.
