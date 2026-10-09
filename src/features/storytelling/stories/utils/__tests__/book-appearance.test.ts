@@ -75,6 +75,18 @@ describe('deriveBookAppearances', () => {
     expect(widths[0]).toBeLessThan(widths[2]);
   });
 
+  // T134: the text is a document of its own, so the shelf sizes a book by the
+  // length the chapter stores -- or by the text a chapter written before holds.
+  it('sizes a book by the length the chapter stores when its text is elsewhere', () => {
+    const appearances = appearancesFor([
+      chapter(1, { content: null, contentLength: 200 }),
+      chapter(2, { content: 'x'.repeat(4000) }),
+      chapter(3, { content: null, contentLength: 4000 }),
+    ]);
+    expect(appearances.get('chapter-02')!.width).toBeGreaterThan(appearances.get('chapter-01')!.width);
+    expect(appearances.get('chapter-03')!.width).toBe(appearances.get('chapter-02')!.width);
+  });
+
   it('gives every chapter the same thickness when they are all the same length', () => {
     const appearances = appearancesFor([chapter(1), chapter(2)]);
     expect(appearances.get('chapter-01')!.width).toBe(

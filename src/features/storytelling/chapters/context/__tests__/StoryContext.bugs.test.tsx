@@ -190,17 +190,25 @@ describe('StoryContext Bug Discovery Tests', () => {
       // Since T032 the new chapter is written in the batch that also shifts
       // any chapters after it, so its attribution is built here -- with the
       // same builder `createDocument` uses -- and is visible to this test.
+      // Since T134 its text is a document of its own in the same batch, and
+      // the chapter carries the text's length instead.
       expect(committedBatch()).toContainEqual({
         type: 'set',
         collection: 'groups/group-1/campaigns/campaign-1/chapters',
         id: chapterId,
         data: expect.objectContaining({
           title: 'Test Chapter for Attribution',
-          content: 'A test chapter to check user attribution',
+          contentLength: 'A test chapter to check user attribution'.length,
           order: 1,
           createdByUsername: 'Test User',
           createdByCharacterName: 'Test Character'
         })
+      });
+      expect(committedBatch()).toContainEqual({
+        type: 'set',
+        collection: `groups/group-1/campaigns/campaign-1/chapters/${chapterId}/body`,
+        id: 'text',
+        data: { content: 'A test chapter to check user attribution' }
       });
     });
 
@@ -241,13 +249,17 @@ describe('StoryContext Bug Discovery Tests', () => {
       // Specifies the correct attribution values; currently passes. The former
       // "will FAIL until attribution utilities are fixed" note referred to the
       // Pattern 1 premise struck on 2026-07-28 — it was never a real defect.
-      expect(mockUpdateData).toHaveBeenCalledWith(
-        'chapter-01',
-        expect.objectContaining({
+      // Since T134 a change of text is one batch -- the chapter and its text's
+      // own document -- so the attribution is on the chapter's write in it.
+      expect(committedBatch()).toContainEqual({
+        type: 'update',
+        collection: 'groups/group-1/campaigns/campaign-1/chapters',
+        id: 'chapter-01',
+        data: expect.objectContaining({
           modifiedByUsername: 'Test User',
           modifiedByCharacterName: 'Test Character'
         })
-      );
+      });
     });
 
     test('BUG: should include proper user attribution in complex reordering operations', async () => {
@@ -353,12 +365,19 @@ describe('StoryContext Bug Discovery Tests', () => {
         });
       });
 
+      // With its text's own document since T134.
       expect(committedBatch()).toEqual([
         {
           type: 'set',
           collection: 'groups/group-1/campaigns/campaign-1/chapters',
           id: chapterId,
           data: expect.objectContaining({ id: chapterId, order: 1 })
+        },
+        {
+          type: 'set',
+          collection: `groups/group-1/campaigns/campaign-1/chapters/${chapterId}/body`,
+          id: 'text',
+          data: { content: 'Chapter with high order number' }
         }
       ]);
     });

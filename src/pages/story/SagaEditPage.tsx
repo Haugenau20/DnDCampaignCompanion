@@ -8,7 +8,8 @@ import Button from '../../core/components/Button';
 import Card from '../../core/components/Card';
 import Breadcrumb from 'shared/components/Breadcrumb';
 import { useNavigation } from 'shared/context/NavigationContext';
-import { useSagaData, useStory } from 'features/storytelling';
+import { readChapterContent, useSagaData, useStory } from 'features/storytelling';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import type { SagaContentInput } from 'features/storytelling';
 import { Save, ArrowLeft, FileDown, HelpCircle } from 'lucide-react';
 import { exportChaptersAsText } from 'shared/utils/export-utils';
@@ -33,6 +34,7 @@ const SAGA_DEFAULT_OPENING = "In a realm where magic weaves through the fabric o
 const SagaEditPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
   const { chapters } = useStory();
+  const chaptersPath = useCampaignCollectionPath('chapters');
   const { saga, loading, error, saveSaga } = useSagaData();
 
   const gate = usePageGate('story', { loading, error, mode: 'write' });
@@ -118,15 +120,20 @@ const SagaEditPage: React.FC = () => {
     navigateToPage('/story/saga');
   };
 
-  // Function to handle exporting chapters as text
-  const handleExportChapters = () => {
+  /**
+   * Export every chapter's text. Each is a document of its own (T134), read
+   * here and nowhere else at once.
+   */
+  const handleExportChapters = async () => {
     if (chapters.length === 0) {
       setLocalError('No chapters available to export');
       return;
     }
 
     try {
-      exportChaptersAsText(chapters);
+      if (!chaptersPath) throw new Error('No campaign selected');
+      const texts = await Promise.all(chapters.map((chapter) => readChapterContent(chaptersPath, chapter)));
+      exportChaptersAsText(chapters.map((chapter, i) => ({ ...chapter, content: texts[i] })));
     } catch (err) {
       setLocalError('Failed to export chapters');
       console.error('Export error:', err);

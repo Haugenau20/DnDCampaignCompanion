@@ -5,10 +5,11 @@ import type { Chapter } from 'features/storytelling';
 
 /**
  * Generates a text file containing all chapter content in order
- * @param chapters Array of chapters to export
+ * @param chapters Array of chapters to export, each with its text read
+ *   (`readChapterContent`): a chapter's text is a document of its own (T134)
  * @returns void - Triggers a file download
  */
-export const exportChaptersAsText = (chapters: Chapter[]): void => {
+export const exportChaptersAsText = (chapters: Array<Chapter & { content: string }>): void => {
     // Sort chapters by order
     const sortedChapters = [...chapters].sort((a, b) => a.order - b.order);
     

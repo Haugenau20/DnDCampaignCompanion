@@ -86,16 +86,23 @@ let mockStoryContext: StoryContextMock;
 
 // The page derives read state through the real `deriveChapterProgress`, so the
 // rail mock below records what it was handed rather than re-deriving anything.
+// A chapter's text is a document of its own since T134, read through
+// `useChapterContent` (its own suite): undefined here while it "loads".
+let mockContentLoading = false;
+
 jest.mock("features/storytelling", () => ({
   // The page's read state and bylines come from the real helpers, which the
   // barrel re-exports; only the context and the components are stand-ins.
   ...jest.requireActual("features/storytelling/chapters/utils/chapter-progress"),
   ...jest.requireActual("features/storytelling/chapters/utils/chapter-byline"),
   useStory: () => mockStoryContext,
+  useChapterContent: (chapter?: { content?: string | null }) =>
+    mockContentLoading || !chapter ? undefined : chapter.content ?? "",
   ChapterReader: (props: any) => (
     <div
       data-testid="chapter-reader"
       data-title={props.title}
+      data-content={props.content}
       data-chapter-id={props.chapterId ?? ""}
       data-position={String(props.position)}
       data-chapter-number={String(props.chapterNumber)}
@@ -228,6 +235,7 @@ function renderPage() {
 describe("StoryPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockContentLoading = false;
     mockChapterId = "chapter-01";
     mockUser = { uid: "user-1" };
     mockIsResolving = false;
@@ -353,6 +361,19 @@ describe("StoryPage", () => {
         "data-title",
         "The Beginning"
       );
+    });
+
+    // T134: the text comes from its own document, as the chapter opens.
+    it("hands the reader the chapter's text", () => {
+      renderPage();
+      expect(screen.getByTestId("chapter-reader").getAttribute("data-content")).toBeTruthy();
+    });
+
+    it("says the chapter is loading, rather than that it has no text, while its text loads", () => {
+      mockContentLoading = true;
+      renderPage();
+      expect(screen.getByText("Loading the chapter...")).toBeInTheDocument();
+      expect(screen.queryByTestId("chapter-reader")).not.toBeInTheDocument();
     });
 
     // T098: the reader's per-chapter state follows this, not the chapter's

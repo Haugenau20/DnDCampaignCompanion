@@ -52,7 +52,8 @@ const HomePage: React.FC = () => {
           id: chapter.id,
           type: 'chapter',
           title: chapter.title,
-          description: chapter.summary || chapter.content.substring(0, 100) + '...',
+          // The text is not on the chapter since T134; the form always writes a summary.
+          description: chapter.summary ?? '',
           actor: determineActor(chapter),
           timestamp: touched,
           link: `/story/chapters/${chapter.id}`

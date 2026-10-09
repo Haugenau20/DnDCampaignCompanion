@@ -158,6 +158,9 @@ describe('StoryContext Behavioral Testing', () => {
     return calls[0][0];
   };
 
+  /** The campaign's chapters, where every chapter write goes. */
+  const CHAPTERS = 'groups/group-1/campaigns/campaign-1/chapters';
+
   /** The `order` each chapter is moved to by the committed batch, by id. */
   const movesIn = (batch: Array<{ type: string; id: string; data?: any }>) =>
     Object.fromEntries(
@@ -393,7 +396,9 @@ describe('StoryContext Behavioral Testing', () => {
         chapterId = await storyContext.createChapter(chapterData);
       });
 
-      // BEHAVIOR: one batch, writing the chapter under the id it returned.
+      // BEHAVIOR: one batch, writing the chapter under the id it returned --
+      // and since T134 its text as a document of its own beside it, the
+      // chapter keeping only the text's length.
       expect(committedBatch()).toEqual([
         {
           type: 'set',
@@ -401,12 +406,19 @@ describe('StoryContext Behavioral Testing', () => {
           id: chapterId,
           data: expect.objectContaining({
             title: 'The Beginning',
-            content: 'Our adventure starts in the tavern...',
+            contentLength: 'Our adventure starts in the tavern...'.length,
             order: 1,
             id: chapterId
           })
+        },
+        {
+          type: 'set',
+          collection: `groups/group-1/campaigns/campaign-1/chapters/${chapterId}/body`,
+          id: 'text',
+          data: { content: 'Our adventure starts in the tavern...' }
         }
       ]);
+      expect(committedBatch()[0].data).not.toHaveProperty('content');
     });
 
     // REWRITTEN (T032, PERF-05). This pinned ids derived from order
@@ -775,16 +787,41 @@ describe('StoryContext Behavioral Testing', () => {
         });
       });
 
-      // BEHAVIOR: Should update with basic metadata
-      expect(mockUpdateData).toHaveBeenCalledWith(
-        'chapter-01',
-        expect.objectContaining({
-          title: 'Updated Chapter Title',
-          content: 'Updated chapter content',
-          modifiedBy: 'test-user',
-          dateModified: expect.any(String)
-        })
-      );
+      // BEHAVIOR: Should update with basic metadata. Since T134 the text goes
+      // to its own document, in one batch with the chapter's fields; the
+      // chapter's own copy is emptied, so the newer text is the one read.
+      expect(committedBatch()).toEqual([
+        {
+          type: 'update',
+          collection: 'groups/group-1/campaigns/campaign-1/chapters',
+          id: 'chapter-01',
+          data: expect.objectContaining({
+            title: 'Updated Chapter Title',
+            content: null,
+            contentLength: 'Updated chapter content'.length,
+            modifiedBy: 'test-user',
+            dateModified: expect.any(String)
+          })
+        },
+        {
+          type: 'set',
+          collection: 'groups/group-1/campaigns/campaign-1/chapters/chapter-01/body',
+          id: 'text',
+          data: { content: 'Updated chapter content' }
+        }
+      ]);
+    });
+
+    test('changes the fields alone through one attributed update, when the text is not among them', async () => {
+      renderStoryContext();
+      await waitFor(() => expect(storyContext).toBeDefined());
+
+      await act(async () => {
+        await storyContext.updateChapter('chapter-01', { title: 'Renamed' });
+      });
+
+      expect(mockUpdateData).toHaveBeenCalledWith('chapter-01', expect.objectContaining({ title: 'Renamed', modifiedBy: 'test-user' }));
+      expect(mockFirebaseServices.document.batchOperations).not.toHaveBeenCalled();
     });
 
     test('a save in flight is not loading (T044)', async () => {
@@ -949,7 +986,8 @@ describe('StoryContext Behavioral Testing', () => {
       });
 
       const batch = committedBatch();
-      expect(batch).toHaveLength(33);
+      // 32 moves, the new chapter, and its text's own document (T134).
+      expect(batch).toHaveLength(34);
       expect(movesIn(batch)['chapter-32']).toBe(33);
       expect(mockFirebaseServices.document.getDocument).not.toHaveBeenCalled();
       expect(mockFirebaseServices.document.setDocument).not.toHaveBeenCalled();
@@ -994,8 +1032,12 @@ describe('StoryContext Behavioral Testing', () => {
 
       expect(mockFirebaseServices.document.batchOperations).toHaveBeenCalledTimes(1);
       const batch = committedBatch();
-      expect(batch.filter((write) => write.type === 'delete').map((write) => write.id))
-        .toEqual(['chapter-2', 'chapter-4']);
+      // Each with its text's own document (T134), in the same commit.
+      expect(batch.filter((write) => write.type === 'delete').map((write) => `${write.collection}/${write.id}`))
+        .toEqual([
+          `${CHAPTERS}/chapter-2/body/text`, `${CHAPTERS}/chapter-2`,
+          `${CHAPTERS}/chapter-4/body/text`, `${CHAPTERS}/chapter-4`,
+        ]);
       expect(movesIn(batch)).toEqual({ 'chapter-3': 2, 'chapter-5': 3 });
     });
 
@@ -1009,7 +1051,8 @@ describe('StoryContext Behavioral Testing', () => {
       });
 
       const batch = committedBatch();
-      expect(batch.filter((write) => write.type === 'delete').map((write) => write.id)).toEqual(['chapter-1']);
+      expect(batch.filter((write) => write.type === 'delete' && write.collection === CHAPTERS).map((write) => write.id))
+        .toEqual(['chapter-1']);
       expect(movesIn(batch)).toEqual({ 'chapter-2': 1, 'chapter-3': 2 });
     });
 
@@ -1177,9 +1220,11 @@ describe('StoryContext Behavioral Testing', () => {
         await storyContext.deleteChapter('chapter-01');
       });
 
-      // BEHAVIOR: one batch deletes the chapter and moves the later one back
+      // BEHAVIOR: one batch deletes the chapter -- and since T134 its text's
+      // own document, which would outlive it -- and moves the later one back
       // into its place, keeping its id.
       expect(committedBatch()).toEqual([
+        { type: 'delete', collection: 'groups/group-1/campaigns/campaign-1/chapters/chapter-01/body', id: 'text' },
         { type: 'delete', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-01' },
         { type: 'update', collection: 'groups/group-1/campaigns/campaign-1/chapters', id: 'chapter-02', data: { order: 1 } }
       ]);

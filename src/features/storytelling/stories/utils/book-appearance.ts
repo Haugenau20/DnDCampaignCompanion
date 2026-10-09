@@ -1,5 +1,6 @@
 // src/features/storytelling/stories/utils/book-appearance.ts
 import { ChapterWithProgress } from 'features/storytelling/chapters/utils/chapter-progress';
+import { contentLengthOf } from 'features/storytelling/chapters/utils/chapter-body';
 
 /**
  * How a chapter is drawn on the shelf.
@@ -88,7 +89,7 @@ export function deriveBookAppearances(
   items: ChapterWithProgress[],
   bookCount: number
 ): Map<string, BookAppearance> {
-  const lengths = items.map((item) => item.chapter.content?.length ?? 0);
+  const lengths = items.map((item) => contentLengthOf(item.chapter));
   const shortest = lengths.length > 0 ? Math.min(...lengths) : 0;
   const longest = lengths.length > 0 ? Math.max(...lengths) : 0;
 

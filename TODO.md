@@ -33,7 +33,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
-| low | T134 | Chapter text and the saga out of their documents | M | open | Search downloads the whole story; the saga is one document that will hit 1 MiB |
+| low | T134 | The saga in sections; run the chapter migration | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
 | low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
@@ -470,7 +470,8 @@ migration.
 - **Blocked on the maintainer**: once the frontend that reads both is live,
   `firebase/functions/scripts/migrate-records.js` from `firebase/functions`,
   first read-only, then `--apply --revert-file <file>` (its header has the
-  steps). Each record is one transaction; T132's times go in the same pass.
+  steps). Each record is one transaction; T132's times and T134's chapter
+  text go in the same pass.
 - **Then**: a frontend that reads only the documents -- drop
   `mergeRecordNotes` and the array branch of each page's note edit and delete
   -- and the sample-data generators (`utils/__dev__/generators/contentGenerators/`),
@@ -481,15 +482,26 @@ migration.
   them where the rumour is opened instead.
 - **Source**: `data-model-review.md` change 5 (F3)
 
-### T134 — Chapter text and the saga out of their documents
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+### T134 — The saga in sections; run the chapter migration
+**Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
 
-A chapter holds its full text, so search downloads the whole story; the saga is
-a single document (`saga/sagaData`) that will reach 1 MiB (F2, F3).
+A chapter's text is a document of its own, `chapters/{id}/body/text`, read
+where the chapter is opened (`features/storytelling/chapters/utils/chapter-body.ts`);
+the chapter keeps its title, place, summary and `contentLength`, and search
+reads the summary. A chapter written before keeps its text on the chapter,
+which the app reads and moves on its next save. The saga is still one
+document (`saga/sagaData`) that will reach 1 MiB (F3).
 
-- **Change**: `chapters/{id}` keeps title, order and summary, and the body moves
-  to its own document, read when the chapter is opened; search then needs the
-  summary, not the book. The saga becomes sections, as chapters already are.
+- **Blocked on the maintainer -- the saga**: it becomes sections, as chapters
+  already are, but how a player writes a sectioned saga is a design question:
+  one editor per section, or one editor that splits on headings, and what the
+  saga page shows while it reads them.
+- **Blocked on the maintainer -- the chapters**: `scripts/migrate-records.js`
+  moves the text in the same pass as T132's times and T133's notes, once the
+  frontend that reads both is live. **Then** a frontend that reads only the
+  body (drop `ownContentOf`), and the sample-data generators, which still
+  write `content` on the chapter, rewritten. A rule refusing text on a
+  chapter, in a later merge.
 - **Source**: `data-model-review.md` change 4
 
 ### T135 — The index file matches production

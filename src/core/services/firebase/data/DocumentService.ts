@@ -29,7 +29,7 @@ import {
 import { DocumentAlreadyExistsError } from './DocumentAlreadyExistsError';
 import { createDocumentIfAbsent } from './createDocumentIfAbsent';
 import { assertTextFits } from './TextTooLongError';
-import { NOTE_TEXT_LIMITS, RECORD_TEXT_LIMITS } from '../../../constants/textLimits';
+import { RECORD_TEXT_LIMITS, SUBCOLLECTION_TEXT_LIMITS } from '../../../constants/textLimits';
 
 /**
  * DocumentService provides generic CRUD operations for Firestore documents
@@ -128,12 +128,13 @@ class DocumentService extends BaseFirebaseService {
     if (root !== 'groups' || campaigns !== 'campaigns' || !recordType) {
       return;
     }
-    // A record's own notes (T133), `{record}/{id}/notes`, are capped one by one.
-    const isNotes = deeper.length === 2 && deeper[1] === 'notes';
-    if (deeper.length > 0 && !isNotes) {
+    // A record's own notes (T133) and a chapter's body (T134),
+    // `{record}/{id}/{subcollection}`, are capped document by document.
+    const subcollection = deeper.length === 2 ? SUBCOLLECTION_TEXT_LIMITS[deeper[1]] : undefined;
+    if (deeper.length > 0 && !subcollection) {
       return;
     }
-    const limits = isNotes ? NOTE_TEXT_LIMITS : RECORD_TEXT_LIMITS[recordType];
+    const limits = subcollection ?? RECORD_TEXT_LIMITS[recordType];
     if (limits && typeof data === 'object' && data !== null) {
       assertTextFits(limits, data as Record<string, unknown>);
     }

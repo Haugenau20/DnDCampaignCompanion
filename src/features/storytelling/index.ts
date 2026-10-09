@@ -1,6 +1,8 @@
 // src/features/storytelling/index.ts
 export { StoryProvider, useStory } from './chapters/context/StoryContext';
 export { useChapterData } from './chapters/hooks/useChapterData';
+export { useChapterContent } from './chapters/hooks/useChapterContent';
+export { readChapterContent } from './chapters/utils/chapter-body';
 export { useSagaData } from './sagas/hooks/useSagaData';
 export type { Chapter, ChapterProgress, StoryProgress, StoryContextState, StoryContextValue } from './chapters/types';
 export type { SagaData, SagaContentInput, SagaContextState, SagaContextValue } from './sagas/types';

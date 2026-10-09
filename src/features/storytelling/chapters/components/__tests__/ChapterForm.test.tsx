@@ -28,6 +28,15 @@ jest.mock('@/features/user-management', () => ({
   useAuth: jest.fn(),
 }));
 
+// A chapter's text is a document of its own since T134, read by this hook
+// (tested in useChapterContent.test.ts). Here: the chapter's own copy when it
+// has one, else `mockBodyText` -- undefined while it loads.
+let mockBodyText: string | undefined;
+jest.mock('features/storytelling/chapters/hooks/useChapterContent', () => ({
+  useChapterContent: (chapter?: { content?: string | null }) =>
+    chapter === undefined ? undefined : typeof chapter.content === 'string' ? chapter.content : mockBodyText,
+}));
+
 const { useNavigation } = require('shared/context/NavigationContext');
 const { useStory } = require('features/storytelling/chapters/context/StoryContext');
 const { useAuth } = require('@/features/user-management');
@@ -73,6 +82,7 @@ function setupMocks({
 describe('ChapterForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockBodyText = undefined;
     setupMocks();
     mockCreateChapter.mockResolvedValue('new-chapter-id');
     mockUpdateChapter.mockResolvedValue(undefined);
@@ -148,6 +158,19 @@ describe('ChapterForm', () => {
     test('pre-fills content field from chapter prop', () => {
       render(<ChapterForm mode="edit" chapter={makeChapter({ content: 'My Content' })} />);
       expect(screen.getByDisplayValue('My Content')).toBeInTheDocument();
+    });
+
+    test("pre-fills the text from the chapter's own document (T134)", () => {
+      mockBodyText = 'Kept in its own document';
+      render(<ChapterForm mode="edit" chapter={makeChapter({ content: null })} />);
+      expect(screen.getByDisplayValue('Kept in its own document')).toBeInTheDocument();
+    });
+
+    test('offers no way to save over the text while it loads (T134)', () => {
+      render(<ChapterForm mode="edit" chapter={makeChapter({ content: null })} />);
+      expect(screen.getByLabelText(/Chapter Content/)).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDisabled();
+      expect(screen.getByText("Loading the chapter's text...")).toBeInTheDocument();
     });
 
     test('pre-fills summary field from chapter prop', () => {

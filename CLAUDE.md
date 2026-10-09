@@ -169,11 +169,13 @@ The reason is recorded in that file.
   `delete-account.js`, which deletes an account on request -- for someone who cannot sign in to
   press the button -- with the same `deleteAccount` the `deleteUser` callable runs. Both only read
   unless given `--apply`. `migrate-links.js` (T131) merges each link's old second half into its
-  owner, a campaign per transaction, with a revert file. `issue-founder-invitation.js` (T125) issues a founder link -- one account,
+  owner, a campaign per transaction, with a revert file. `migrate-records.js` (T132-T134) gives
+  records their server times and moves notes and chapter text into their own documents, a record
+  per transaction, with a revert file. `issue-founder-invitation.js` (T125) issues a founder link -- one account,
   to start one group -- and prints it; it only adds. Tested through what they export
   (`auditLocationIds.test.ts`, `migrateLocationIds.test.ts`, `accountDeletion.test.ts`,
   `deleteAccountScript.test.ts`, `founderInvitations.test.ts`, `issueFounderInvitationScript.test.ts`,
-  `migrateLinks.test.ts`);
+  `migrateLinks.test.ts`, `migrateRecords.test.ts`);
   run one against the dev emulators with `--emulator` after a change.
 - **The operator page** (T137, `src/operator/`) — its own Cloud Run service behind IAP, never a
   function: `test/operator/notPublic.test.ts` holds `src/index.ts` clear of it. `npm run

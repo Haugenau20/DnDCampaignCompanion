@@ -5,11 +5,13 @@ import { useParams } from 'react-router-dom';
 import {
   ChapterRail,
   ChapterReader,
+  useChapterContent,
   useStory,
   deriveChapterProgress,
   deriveChapterByline,
 } from 'features/storytelling';
 import Button from '../../core/components/Button';
+import Typography from '../../core/components/Typography';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import PageShell from 'shared/components/page-shell/PageShell';
@@ -133,6 +135,8 @@ const StoryPage: React.FC = () => {
    * chapter does, which is exactly when a restore is wanted.
    */
   const restoredFor = useRef<string | undefined>(undefined);
+  // The text, a document of its own since T134, read as the chapter opens.
+  const content = useChapterContent(currentChapter ?? undefined);
   const restoredPosition = useRef(0);
   if (currentChapter && restoredFor.current !== currentChapter.id) {
     restoredFor.current = currentChapter.id;
@@ -211,9 +215,14 @@ const StoryPage: React.FC = () => {
           </Button>
         </div>
 
+        {currentChapter && content === undefined ? (
+          <Typography color="secondary" className="max-w-[68ch] mx-auto py-16 text-center">
+            Loading the chapter...
+          </Typography>
+        ) : (
         <ChapterReader
           chapterId={currentChapter?.id}
-          content={currentChapter?.content || ''}
+          content={content ?? ''}
           title={currentChapter?.title ?? ''}
           position={restoredPosition.current}
           chapterNumber={chapterNumber}
@@ -228,6 +237,7 @@ const StoryPage: React.FC = () => {
           hasPreviousChapter={!!previousChapter}
           onEdit={gate.canAct ? handleEditChapter : undefined}
         />
+        )}
       </div>
     </div>
   );

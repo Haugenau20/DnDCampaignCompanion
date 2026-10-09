@@ -10,6 +10,7 @@ import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'feature
 import firebaseServices from 'core/services/firebase';
 import { buildCreationAttribution, buildModificationAttribution, creationTimes, modificationTimes } from 'core/attribution';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
+import { bodyDelete, contentWrites } from '../utils/chapter-body';
 
 interface StoryContextState {
   chapters: Chapter[];
@@ -58,6 +59,8 @@ type ChapterWrite = {
   type: 'set' | 'update' | 'delete';
   id: string;
   data?: Record<string, unknown>;
+  /** Another collection than the chapters': a chapter's body (T134). */
+  collection?: string;
 };
 
 /** Firestore commits at most 500 writes in one batch. */
@@ -69,7 +72,7 @@ export const MAX_CHAPTER_WRITES = 500;
  * @param collection The chapters' full path, from the caller's render
  *   (`useCampaignCollectionPath`), so the change lands in the campaign it was
  *   made in (T082); `null` when there is no campaign
- * @param writes The writes, all to that collection
+ * @param writes The writes, to that collection unless one names its own
  */
 const commitChapterWrites = async (collection: string | null, writes: ChapterWrite[]): Promise<void> => {
   if (writes.length === 0) return;
@@ -81,7 +84,7 @@ const commitChapterWrites = async (collection: string | null, writes: ChapterWri
       `This change would rewrite ${writes.length} chapters at once; one change can rewrite at most ${MAX_CHAPTER_WRITES}.`
     );
   }
-  await firebaseServices.document.batchOperations(writes.map(write => ({ ...write, collection })));
+  await firebaseServices.document.batchOperations(writes.map(write => ({ ...write, collection: write.collection ?? collection })));
 };
 
 /** Moves one chapter to a new place, changing nothing else about it. */
@@ -495,11 +498,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Chapter not found');
     }
 
-    // The id is the document's, never a field to change.
-    const fields: Partial<Chapter> = { ...updates };
+    // The id is the document's, never a field to change; the text goes to its
+    // own document (T134), beside the chapter's fields in the same batch.
+    const { content, ...fields }: Partial<Chapter> = { ...updates };
     delete fields.id;
+    const moves = fields.order !== undefined && fields.order !== chapter.order;
 
-    if (fields.order === undefined || fields.order === chapter.order) {
+    if (!moves && typeof content !== 'string') {
       await updateData(chapterId, {
         ...fields,
         ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
@@ -507,29 +512,37 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    if (fields.order < 1) {
+    if (fields.order !== undefined && fields.order < 1) {
       throw new Error('Chapter order must be at least 1');
+    }
+    if (chaptersPath === null) {
+      throw new Error('No campaign selected');
     }
 
     // The others move by place. Only `order` changes on them, so their
     // created* and modified* fields stay exactly as their authors left them
     // (#1203).
     const stored = reading.find(c => c.id === chapterId)!;
-    const sequence = withAt(reading.filter(c => c.id !== chapterId), stored, fields.order);
-    const place = sequence.indexOf(stored) + 1;
+    const sequence = moves
+      ? withAt(reading.filter(c => c.id !== chapterId), stored, fields.order!)
+      : reading;
+    const place = moves ? sequence.indexOf(stored) + 1 : chapter.order;
+    const text = typeof content === 'string' ? contentWrites(chaptersPath, chapterId, content) : undefined;
 
     await commitChapterWrites(chaptersPath, [
-      ...placeWrites(sequence, chapterId),
+      ...(moves ? placeWrites(sequence, chapterId) : []),
       {
         type: 'update',
         id: chapterId,
         data: {
           ...fields,
+          ...text?.chapterFields,
           order: place,
           ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
           ...modificationTimes()
         }
-      }
+      },
+      ...(text ? [text.body] : [])
     ]);
   }, [updateData, reading, getChapterById, user, activeGroupUserProfile, hasRequiredContext, chaptersPath]);
 
@@ -551,10 +564,17 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Chapter order must be at least 1');
     }
 
+    if (chaptersPath === null) {
+      throw new Error('No campaign selected');
+    }
+
     const chapterId = generateChapterId();
     const placeholder = { id: chapterId } as Chapter;
     const sequence = withAt(reading, placeholder, chapterData.order ?? reading.length + 1);
     const newOrder = sequence.indexOf(placeholder) + 1;
+    // The text in its own document (T134), in the same batch.
+    const { content, ...fields } = chapterData;
+    const text = contentWrites(chaptersPath, chapterId, content ?? '');
 
     await commitChapterWrites(chaptersPath, [
       ...placeWrites(sequence, chapterId),
@@ -565,13 +585,15 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // current user -- the same fields `createDocument` would stamp. The
         // chapters moved above are not re-attributed (#1203).
         data: {
-          ...chapterData,
+          ...fields,
+          contentLength: text.chapterFields.contentLength,
           id: chapterId,
           order: newOrder,
           ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile }),
           ...creationTimes()
         }
-      }
+      },
+      text.body
     ]);
 
     return chapterId;
@@ -592,7 +614,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Chapter not found');
     }
 
+    if (chaptersPath === null) {
+      throw new Error('No campaign selected');
+    }
+
+    // Its text with it (T134): a subcollection outlives its parent.
     await commitChapterWrites(chaptersPath, [
+      bodyDelete(chaptersPath, chapterId),
       { type: 'delete', id: chapterId },
       ...placeWrites(reading.filter(c => c.id !== chapterId))
     ]);
@@ -612,9 +640,13 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('No active group or campaign selected');
     }
 
+    if (chaptersPath === null) {
+      throw new Error('No campaign selected');
+    }
+
     const doomed = new Set(chapterIds.filter(id => getChapterById(id)));
     await commitChapterWrites(chaptersPath, [
-      ...[...doomed].map((id): ChapterWrite => ({ type: 'delete', id })),
+      ...[...doomed].flatMap((id): ChapterWrite[] => [bodyDelete(chaptersPath, id), { type: 'delete', id }]),
       ...placeWrites(reading.filter(c => !doomed.has(c.id)))
     ]);
   }, [getChapterById, reading, user, hasRequiredContext, chaptersPath]);
