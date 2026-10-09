@@ -1,6 +1,7 @@
 // functions/test/redeemInvitation.test.ts
 import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {redeemInvitation} from "../src/groupManagement/redeemInvitation";
+import {MAX_GROUP_MEMBERS} from "../src/groupManagement/groupLimits";
 
 const PROJECT = "demo-redeem-invitation";
 const db = useEmulatorProject(PROJECT);
@@ -113,6 +114,49 @@ describe("redeemInvitation", () => {
       await redeem({groupId: GROUP, token: TOKEN, username: "Frodo"}, "u1");
       await expectHttpsError(redeem({groupId: GROUP, token: TOKEN, username: "Sam"}, "u2"), "failed-precondition");
       expect((await db.doc(`groups/${GROUP}/users/u2`).get()).exists).toBe(false);
+    });
+  });
+
+  // T128: a group holds at most ten members.
+  describe("a group's member limit", () => {
+    /** Members beside the seeded admin, until the group holds `total`. */
+    async function fillTo(total: number) {
+      for (let i = 1; i < total; i++) {
+        await db.doc(`groups/${GROUP}/users/m${i}`).set({userId: `m${i}`, username: `Member${i}`, role: "member"});
+      }
+    }
+
+    it("refuses a joiner once the group is full, and grants nothing", async () => {
+      await seed();
+      await fillTo(MAX_GROUP_MEMBERS);
+      const error = await expectHttpsError(
+        redeem({groupId: GROUP, token: TOKEN, username: "Frodo"}, "u1"),
+        "resource-exhausted"
+      );
+      expect(error.message).toMatch(/group is full/);
+      expect((await db.doc(`groups/${GROUP}/users/u1`).get()).exists).toBe(false);
+      expect((await tokenDoc()).data()?.used).toBe(false);
+    });
+
+    it("admits the joiner who takes the last place", async () => {
+      await seed();
+      await fillTo(MAX_GROUP_MEMBERS - 1);
+      await redeem({groupId: GROUP, token: TOKEN, username: "Frodo"}, "u1");
+      expect((await db.collection(`groups/${GROUP}/users`).count().get()).data().count).toBe(MAX_GROUP_MEMBERS);
+    });
+
+    it("lets only one of two joiners racing for the last place in", async () => {
+      await seed();
+      await fillTo(MAX_GROUP_MEMBERS - 1);
+      await db.doc(`groups/${GROUP}/registrationTokens/tok-2`).set({token: "tok-2", used: false});
+
+      const results = await Promise.allSettled([
+        redeem({groupId: GROUP, token: TOKEN, username: "Frodo"}, "u1"),
+        redeem({groupId: GROUP, token: "tok-2", username: "Samwise"}, "u2"),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect((await db.collection(`groups/${GROUP}/users`).count().get()).data().count).toBe(MAX_GROUP_MEMBERS);
     });
   });
 

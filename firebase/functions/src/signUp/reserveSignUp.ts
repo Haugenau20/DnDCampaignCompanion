@@ -13,6 +13,7 @@ import {
   reservationId,
 } from "./signUpGate";
 import {FOUNDER_INVITATIONS, founderReservationId} from "./founderInvitations";
+import {GROUP_FULL_MESSAGE, MAX_GROUP_MEMBERS} from "../groupManagement/groupLimits";
 
 /**
  * An invitation into a group (`groupId` and `token`), or a founder invitation
@@ -157,6 +158,13 @@ export const reserveSignUp = functions.onCall(
             "This invitation has already been used. Ask for a new link." :
             "This invitation has expired. Ask for a new link."
         );
+      }
+
+      // Said here, before the visitor goes to their inbox and back, as for
+      // the account cap; `redeemInvitation` is what holds it (T128).
+      const members = await db.collection(`groups/${groupId}/users`).count().get();
+      if (members.data().count >= MAX_GROUP_MEMBERS) {
+        throw new functions.HttpsError("resource-exhausted", GROUP_FULL_MESSAGE);
       }
 
       if (await accountLimitReached()) {

@@ -6,6 +6,7 @@ import Input from 'core/components/Input';
 import Button from 'core/components/Button';
 import EntitySigil from 'core/components/EntitySigil';
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
+import { GROUP_LIMITS } from 'core/constants/groupLimits';
 import { Search, UserPlus } from 'lucide-react';
 import { memberId, type GroupMember } from '../types';
 
@@ -88,11 +89,15 @@ const MembersCard: React.FC<MembersCardProps> = ({
     });
   }, [members, query]);
 
+  // A full group admits nobody (T128), so a new link would only fail when
+  // used. Said here rather than after someone has signed up.
+  const full = !loading && members.length >= GROUP_LIMITS.members;
+
   const inviteButton = (
     <Button
       variant="primary"
       onClick={onInvite}
-      disabled={inviting}
+      disabled={inviting || full}
       isLoading={inviting}
       startIcon={<UserPlus className="w-4 h-4" />}
       className="min-h-[2.75rem]"
@@ -114,7 +119,7 @@ const MembersCard: React.FC<MembersCardProps> = ({
               Members
             </Typography>
             <Typography color="secondary" variant="body-sm">
-              {members.length}
+              {members.length} of {GROUP_LIMITS.members}
             </Typography>
           </div>
 
@@ -135,6 +140,13 @@ const MembersCard: React.FC<MembersCardProps> = ({
         </div>
 
         <div className="sm:hidden mt-3 [&>button]:w-full">{inviteButton}</div>
+
+        {full && (
+          <Typography color="secondary" variant="body-sm" className="mt-3">
+            This group is full: {GROUP_LIMITS.members} members is the most a
+            group may have. Someone has to leave before anyone else can join.
+          </Typography>
+        )}
       </div>
 
       {/* Column labels, and only where there are columns. The rows say the same

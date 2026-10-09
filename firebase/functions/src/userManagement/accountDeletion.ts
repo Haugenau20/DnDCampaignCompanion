@@ -10,6 +10,7 @@ import {
   strandsGroup,
 } from "../shared/groupAdmins";
 import {releaseUsernames} from "../shared/usernameReservations";
+import {releaseAccountSlot} from "../signUp/accountCount";
 
 /** One group of an account, as its deletion would leave it. */
 export interface GroupInPlan {
@@ -52,6 +53,7 @@ async function signInOf(uid: string): Promise<UserRecord | undefined> {
 
 /**
  * Deletes the Auth account; one that is already gone counts as deleted.
+ * A deleted one gives its slot back to the account count (T128).
  *
  * @param {string} uid The account
  * @return {Promise<boolean>} Whether there was one to delete
@@ -59,6 +61,7 @@ async function signInOf(uid: string): Promise<UserRecord | undefined> {
 async function deleteSignIn(uid: string): Promise<boolean> {
   try {
     await getAuth().deleteUser(uid);
+    await releaseAccountSlot();
     return true;
   } catch (error) {
     if ((error as {code?: string}).code === "auth/user-not-found") return false;

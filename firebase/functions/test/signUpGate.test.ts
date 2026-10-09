@@ -5,6 +5,8 @@ import {call, clearProject, expectHttpsError, useEmulatorProject} from "./emulat
 import {reserveSignUp} from "../src/signUp/reserveSignUp";
 import {admitAccount} from "../src/signUp/gateAccountCreation";
 import {MAX_ACCOUNTS, RESERVATIONS, reservationId} from "../src/signUp/signUpGate";
+import {ACCOUNT_COUNT} from "../src/signUp/accountCount";
+import {MAX_GROUP_MEMBERS} from "../src/groupManagement/groupLimits";
 
 const PROJECT = "demo-sign-up-gate";
 const db = useEmulatorProject(PROJECT);
@@ -114,6 +116,30 @@ describe("reserveSignUp", () => {
       expect((await reservationDoc()).exists).toBe(false);
     });
 
+    // T128: said before the visitor signs up, as for a full project.
+    it("an invitation into a group that is already full", async () => {
+      await seedToken();
+      for (let i = 0; i < MAX_GROUP_MEMBERS; i++) {
+        await db.doc(`groups/${GROUP}/users/m${i}`).set({userId: `m${i}`, role: "member"});
+      }
+      const error = await expectHttpsError(
+        reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"}),
+        "resource-exhausted"
+      );
+      expect(error.message).toMatch(/group is full/);
+      expect((await reservationDoc()).exists).toBe(false);
+    });
+
+    it("anyone once the account count says the project is full", async () => {
+      await seedToken();
+      await db.doc(ACCOUNT_COUNT).set({count: MAX_ACCOUNTS});
+      const error = await expectHttpsError(
+        reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"}),
+        "resource-exhausted"
+      );
+      expect(error.message).toContain("ACCOUNTS_FULL");
+    });
+
     it("anyone once the project is at the account limit", async () => {
       await seedToken();
       await fillAccounts(MAX_ACCOUNTS);
@@ -133,6 +159,36 @@ describe("admitAccount (beforeUserCreated)", () => {
     await reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"});
     await expect(creating("Frodo@Shire.dev")).resolves.toBeUndefined();
     expect((await reservationDoc()).exists).toBe(false);
+  });
+
+  // T128: the count is kept here, so the cap holds without listing Auth.
+  it("counts the account it admits", async () => {
+    await seedToken();
+    await db.doc(ACCOUNT_COUNT).set({count: 7});
+    await reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"});
+    await creating("frodo@shire.dev");
+    expect((await db.doc(ACCOUNT_COUNT).get()).data()?.count).toBe(8);
+  });
+
+  it("starts the count from the accounts there are, the first time", async () => {
+    await seedToken();
+    await fillAccounts(3);
+    await reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"});
+    await creating("frodo@shire.dev");
+    expect((await db.doc(ACCOUNT_COUNT).get()).data()?.count).toBe(4);
+  });
+
+  it("lets only one of two sign-ups racing for the last account in", async () => {
+    await seedToken();
+    await db.doc(`groups/${GROUP}/registrationTokens/tok-2`).set({token: "tok-2", used: false});
+    await reserve({groupId: GROUP, token: TOKEN, email: "frodo@shire.dev"});
+    await reserve({groupId: GROUP, token: "tok-2", email: "sam@shire.dev"});
+    await db.doc(ACCOUNT_COUNT).set({count: MAX_ACCOUNTS - 1});
+
+    const results = await Promise.allSettled([creating("frodo@shire.dev"), creating("sam@shire.dev")]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect((await db.doc(ACCOUNT_COUNT).get()).data()?.count).toBe(MAX_ACCOUNTS);
   });
 
   it("admits one account per reservation", async () => {

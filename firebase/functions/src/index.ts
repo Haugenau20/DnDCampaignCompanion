@@ -16,7 +16,7 @@ export {
   resumeGroupDeletionsDaily,
   setMemberRole,
 } from "./groupManagement";
-export { gateAccountCreation, reserveSignUp } from "./signUp";
+export { gateAccountCreation, recountAccountsDaily, reserveSignUp } from "./signUp";
 export {
   approveDeviceSignIn,
   claimDeviceSignIn,

@@ -11,17 +11,12 @@
 // reservation keyed to the email the visitor said they would use. The blocking
 // function then admits exactly the emails that hold one.
 
-import {getAuth} from "firebase-admin/auth";
 import {DocumentReference, Firestore} from "firebase-admin/firestore";
 import {registrationTokenProblem} from "../shared/registrationToken";
 import {FOUNDER_INVITATIONS} from "./founderInvitations";
 
-/**
- * The most Auth accounts the project will hold. A backstop, not the gate: the
- * gate is the invitation. This only bounds the damage if invitations leak
- * faster than anyone notices. Raise it here and redeploy.
- */
-export const MAX_ACCOUNTS = 20;
+// The account cap and its count live in `accountCount.ts` (T128).
+export {MAX_ACCOUNTS, accountLimitReached} from "./accountCount";
 
 /**
  * How long a reservation stays usable. Long enough to cover a magic link that
@@ -67,19 +62,6 @@ export function normalizeEmail(email: string): string {
  */
 export function reservationId(groupId: string, token: string): string {
   return `${groupId}_${token}`;
-}
-
-/**
- * Whether the project already holds `MAX_ACCOUNTS` Auth accounts.
- *
- * Lists at most that many rather than counting everything: the answer only
- * needs to know whether the cap is reached.
- *
- * @return {Promise<boolean>} true when no further account may be created
- */
-export async function accountLimitReached(): Promise<boolean> {
-  const {users} = await getAuth().listUsers(MAX_ACCOUNTS);
-  return users.length >= MAX_ACCOUNTS;
 }
 
 /**

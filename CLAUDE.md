@@ -161,6 +161,8 @@ The reason is recorded in that file.
   top-level `groupDeletions`.
   `sweepContactThrottleDaily` too: `sweepContactThrottle(now)` deletes the contact form's expired
   budgets (`contactThrottle`), which the privacy page promises are gone within a day.
+  `recountAccountsDaily` too: `recountAccounts(now)` sets the account count the sign-up gate keeps
+  (`signUpCounters/accounts`, T128) from Auth itself, correcting what other paths left behind.
 - **Operator scripts** (`scripts/`, run by the maintainer with their own gcloud login; each one's
   header has the steps): `audit-location-ids.js` (T079), which audits documents without a
   `locationId` and, with `--migrate`, gives them one and records a revert file; and

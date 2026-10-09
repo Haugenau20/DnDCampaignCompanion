@@ -6,6 +6,7 @@
 import {getAuth} from "firebase-admin/auth";
 import {clearProject, expectHttpsError, useEmulatorProject} from "./emulator";
 import {deleteAccount, planAccountDeletion} from "../src/userManagement/accountDeletion";
+import {ACCOUNT_COUNT} from "../src/signUp/accountCount";
 
 const PROJECT = "demo-account-deletion";
 const db = useEmulatorProject(PROJECT);
@@ -133,6 +134,20 @@ describe("deleting an account", () => {
     await deleteAccount("frodo");
 
     await expect(getAuth().getUser("frodo")).rejects.toMatchObject({code: "auth/user-not-found"});
+  });
+
+  // T128: the account count gives the slot back.
+  it("counts one account fewer", async () => {
+    await db.doc(ACCOUNT_COUNT).set({count: 12});
+    await deleteAccount("frodo");
+    expect((await db.doc(ACCOUNT_COUNT).get()).data()?.count).toBe(11);
+  });
+
+  it("counts nothing for a sign-in that was already gone", async () => {
+    await db.doc(ACCOUNT_COUNT).set({count: 12});
+    await getAuth().deleteUser("frodo");
+    await deleteAccount("frodo");
+    expect((await db.doc(ACCOUNT_COUNT).get()).data()?.count).toBe(12);
   });
 
   it("is not-found when there is nothing to delete", async () => {
