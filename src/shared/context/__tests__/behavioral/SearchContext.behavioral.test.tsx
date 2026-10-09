@@ -610,6 +610,22 @@ describe("SearchContext Behavioral Testing", () => {
       expect(storyDoc.metadata.title).toBe("Chapter One");
     });
 
+    // T134: a chapter's text is a document of its own, read where the chapter
+    // is opened; search finds a chapter by its title and summary.
+    test("indexes a chapter by its title and summary, not its text", async () => {
+      mockUseChapterData.mockReturnValue({
+        chapters: [{ id: "ch-2", title: "The Mines", summary: "Into Moria", content: "Speak friend", order: 2 }],
+      });
+      renderHook(() => useSearch(), { wrapper });
+
+      await waitFor(() => expect(mockInitializeIndex).toHaveBeenCalledTimes(1));
+
+      const [indexArg] = mockInitializeIndex.mock.calls[0];
+      expect(indexArg.story[0].content).toContain("The Mines");
+      expect(indexArg.story[0].content).toContain("Into Moria");
+      expect(indexArg.story[0].content).not.toContain("Speak friend");
+    });
+
     test("should map quest title to search document title metadata", async () => {
       renderHook(() => useSearch(), { wrapper });
 

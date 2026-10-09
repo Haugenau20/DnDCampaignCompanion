@@ -1,6 +1,6 @@
 // src/pages/story/__tests__/SagaEditPage.test.tsx
 import React from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SagaEditPage from "../SagaEditPage";
 import { unnamedControlsIn } from "../../../test-utils/accessible-names";
@@ -81,9 +81,12 @@ let mockChapters: any[] = [
   { id: "ch-1", title: "Chapter 1", order: 1, content: "Content 1" },
 ];
 
+// A chapter's text is a document of its own since T134, read for the export.
+const mockReadChapterContent = jest.fn();
 jest.mock("features/storytelling", () => ({
   useSagaData: () => mockSagaData,
   useStory: () => ({ chapters: mockChapters }),
+  readChapterContent: (path: string, chapter: unknown) => mockReadChapterContent(path, chapter),
 }));
 
 // ---------------------------------------------------------------------------
@@ -713,10 +716,26 @@ describe("SagaEditPage", () => {
   // Export chapter content
   // -------------------------------------------------------------------------
   describe("export chapter content", () => {
-    it("calls exportChaptersAsText when Export button is clicked", () => {
+    // Since T134 each chapter's text is read from its own document first.
+    it("calls exportChaptersAsText with every chapter's text when Export button is clicked", async () => {
+      mockReadChapterContent.mockImplementation(async (_path, chapter) => `Text of ${chapter.id}`);
       renderPage();
       fireEvent.click(screen.getByTestId("button-export-chapter-content"));
-      expect(mockExportChaptersAsText).toHaveBeenCalledWith(mockChapters);
+      await waitFor(() => expect(mockExportChaptersAsText).toHaveBeenCalled());
+      expect(mockReadChapterContent).toHaveBeenCalledWith("groups/group-1/campaigns/campaign-1/chapters", mockChapters[0]);
+      expect(mockExportChaptersAsText).toHaveBeenCalledWith(
+        mockChapters.map((chapter) => ({ ...chapter, content: `Text of ${chapter.id}` }))
+      );
+    });
+
+    it("says the export failed, and exports nothing, when a chapter's text cannot be read", async () => {
+      mockReadChapterContent.mockRejectedValue(new Error("offline"));
+      renderPage();
+      fireEvent.click(screen.getByTestId("button-export-chapter-content"));
+      await waitFor(() =>
+        expect(screen.getByTestId("typography-error")).toHaveTextContent("Failed to export chapters")
+      );
+      expect(mockExportChaptersAsText).not.toHaveBeenCalled();
     });
 
     it("shows error when no chapters available to export", () => {

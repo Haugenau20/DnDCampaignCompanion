@@ -1,6 +1,6 @@
 /*
- * Records' server times and notes (T132, T133): an audit, a migration and its
- * revert, one pass for both.
+ * Records' server times, notes and chapter text (T132, T133, T134): an audit,
+ * a migration and its revert, one pass for all three.
  *
  * Since T132 every record write stamps `createdAt` / `modifiedAt` with the
  * server's clock beside the old `dateAdded` / `dateModified` strings; records
@@ -8,7 +8,9 @@
  * times (T132's second half) would refuse their next edit. Since T133 a
  * person's, a place's and a rumour's notes are documents of their own,
  * `{record}/{id}/notes/{noteId}`; notes written before sit in the record's
- * `notes` array. The app reads both until this has run in production.
+ * `notes` array. Since T134 a chapter's text is a document of its own,
+ * `chapters/{id}/body/text`; a chapter written before holds it as `content`.
+ * The app reads both places until this has run in production.
  *
  * For every campaign record it gives:
  *
@@ -20,7 +22,10 @@
  * array. A moved note keeps every field it had, and gains `createdAt` and
  * `modifiedAt`: the day or time it names, nudged a millisecond past the note
  * before it where needed, so the documents read back in the array's order.
- * A note that is not an object stays in the array.
+ * A note that is not an object stays in the array. And it moves a chapter's
+ * `content` into its body document, leaving on the chapter its length
+ * (`contentLength`). Text still on a chapter is always the newest -- the app
+ * empties it whenever it saves a body -- so it replaces any body there is.
  *
  * THE AUDIT WRITES NOTHING. Run it with your own Google account, which needs
  * read access to the project's Firestore; the Admin SDK uses the Application
@@ -47,10 +52,12 @@
  * named.
  *
  * REVERT. The revert file records every field written, before and after, and
- * every note document created. `--revert <file>` lists which records still
- * hold what the migration wrote; with `--apply` it restores those, each in a
- * transaction: a time still as written is removed, and notes whose array is
- * still empty and whose documents are all as created go back into the array.
+ * every note and body document written. `--revert <file>` lists which records
+ * still hold what the migration wrote; with `--apply` it restores those, each
+ * in a transaction: a time still as written is removed, notes whose array is
+ * still empty and whose documents are all as created go back into the array,
+ * and a chapter's text whose body and chapter are as written goes back onto
+ * the chapter, the body as it was before.
  * Anything edited since is left as it is:
  *
  *   node scripts/migrate-records.js --project dnd-campaign-companion --revert <file> [--apply]
@@ -73,7 +80,7 @@ const NOTE_KINDS = ["npcs", "locations", "rumors"];
 const MAX_NOTES = 450;
 
 /** What the migration counts. */
-const COUNTS = ["createdAtGiven", "modifiedAtGiven", "notesMoved", "recordsWithNotes"];
+const COUNTS = ["createdAtGiven", "modifiedAtGiven", "notesMoved", "recordsWithNotes", "chaptersMoved"];
 
 /**
  * The campaign a record belongs to: `groups/{g}/campaigns/{c}`, or null.
@@ -110,9 +117,10 @@ const missing = (value) => value === undefined || value === null;
  * @param {{path: string, data: object, createTime: Timestamp}} record The record
  * @param {() => string} newId Makes a note document's id
  * @return {{fields: Record<string, unknown>, before: Record<string, unknown>,
- *   notes: Array<{path: string, data: object}>, counts: Record<string, number>}}
- *   The fields to set and what they held (null for absent), the note
- *   documents to create, and what was done
+ *   notes: Array<{path: string, data: object}>, body: {path: string, data: object}|null,
+ *   counts: Record<string, number>}} The fields to set (null deletes) and what
+ *   they held (null for absent), the note documents to create, the chapter
+ *   body to write, and what was done
  */
 function planRecord(record, newId) {
   const {path, data} = record;
@@ -151,7 +159,17 @@ function planRecord(record, newId) {
     counts.notesMoved = notes.length;
     counts.recordsWithNotes = 1;
   }
-  return {fields, before, notes, counts};
+
+  let body = null;
+  if (kind === "chapters" && typeof data.content === "string") {
+    body = {path: `${path}/body/text`, data: {content: data.content}};
+    fields.content = null;
+    fields.contentLength = data.content.length;
+    before.content = data.content;
+    before.contentLength = data.contentLength ?? null;
+    counts.chaptersMoved = 1;
+  }
+  return {fields, before, notes, body, counts};
 }
 
 /**
@@ -276,17 +294,23 @@ async function applyRecords(db, record) {
       const plan = planRecord(recordOf(doc), () => db.collection(`${path}/notes`).doc().id);
       if (plan.notes.length > MAX_NOTES) return {tooLarge: true};
       if (Object.keys(plan.fields).length === 0) return {};
-      transaction.update(db.doc(path), plan.fields);
+      // Every read before the first write: the body this replaces, for the revert.
+      const bodyBefore = plan.body ? await transaction.get(db.doc(plan.body.path)) : null;
+      transaction.update(db.doc(path), Object.fromEntries(
+        Object.entries(plan.fields).map(([field, value]) => [field, stored(value)])));
       for (const note of plan.notes) transaction.create(db.doc(note.path), note.data);
-      return {plan};
+      if (plan.body) transaction.set(db.doc(plan.body.path), plan.body.data);
+      const body = plan.body &&
+        {path: plan.body.path, data: plan.body.data, before: bodyBefore.exists ? bodyBefore.data() : null};
+      return {plan: {...plan, body}};
     });
     if (result.tooLarge) {
       tooLarge.push(path);
       continue;
     }
     if (!result.plan) continue;
-    const {fields, before, notes, counts} = result.plan;
-    record.writes.push({path, before: encode(before), after: encode(fields), notes: encode(notes)});
+    const {fields, before, notes, body, counts} = result.plan;
+    record.writes.push({path, before: encode(before), after: encode(fields), notes: encode(notes), body: encode(body)});
     for (const count of COUNTS) totals[count] += counts[count];
   }
   return {tooLarge, counts: totals};
@@ -308,8 +332,11 @@ async function revertRecords(db, record, apply) {
   const changed = [];
   for (const write of record.writes) {
     const whole = await db.runTransaction(async (transaction) => {
-      const [doc, ...noteDocs] = await transaction.getAll(
-        db.doc(write.path), ...write.notes.map((note) => db.doc(note.path)));
+      const body = write.body ?? null;
+      const [doc, ...others] = await transaction.getAll(
+        db.doc(write.path), ...write.notes.map((note) => db.doc(note.path)), ...(body ? [db.doc(body.path)] : []));
+      const noteDocs = others.slice(0, write.notes.length);
+      const bodyDoc = body ? others[write.notes.length] : null;
       if (!doc.exists) return false;
       const data = doc.data();
       const restore = {};
@@ -325,9 +352,23 @@ async function revertRecords(db, record, apply) {
       if (notesAsLeft) restore.notes = decode(write.before.notes);
       else if ("notes" in write.after) leftSome = true;
 
+      // A chapter's text goes back only while neither place was written since.
+      const textAsLeft = body !== null &&
+        canonical(data.content) === canonical(null) &&
+        canonical(data.contentLength) === canonical(write.after.contentLength) &&
+        bodyDoc.exists && canonical(bodyDoc.data()) === canonical(body.data);
+      if (textAsLeft) {
+        restore.content = decode(write.before.content);
+        restore.contentLength = stored(decode(write.before.contentLength));
+      } else if (body) leftSome = true;
+
       if (apply) {
         if (Object.keys(restore).length) transaction.update(db.doc(write.path), restore);
         if (notesAsLeft) noteDocs.forEach((note) => transaction.delete(note.ref));
+        if (textAsLeft) {
+          if (body.before === null) transaction.delete(bodyDoc.ref);
+          else transaction.set(bodyDoc.ref, decode(body.before));
+        }
       }
       return !leftSome;
     }, apply ? {} : {readOnly: true});

@@ -1407,6 +1407,19 @@ describe('DocumentService', () => {
       expect(mockFirestoreStore.read('long')).toBeUndefined();
     });
 
+    // T134: a chapter's text is a document of its own, capped as the chapter's was.
+    it("a chapter's body takes 200000 characters and refuses one more", async () => {
+      const svc = inCampaign();
+      const body = 'groups/g1/campaigns/c1/chapters/ch-1/body';
+
+      await svc.batchOperations([{ type: 'set', collection: body, id: 'text', data: { content: 'x'.repeat(200_000) } }]);
+      expect(mockBatchCommit).toHaveBeenCalledTimes(1);
+      await expect(svc.batchOperations([
+        { type: 'set', collection: body, id: 'text', data: { content: 'x'.repeat(200_001) } },
+      ])).rejects.toMatchObject({ name: 'TextTooLongError', field: 'content', limit: 200_000 });
+      expect(mockBatchCommit).toHaveBeenCalledTimes(1);
+    });
+
     it('leaves lists, uncapped fields and everything outside campaign records alone', async () => {
       const svc = inCampaign();
       const long = 'x'.repeat(20_000);

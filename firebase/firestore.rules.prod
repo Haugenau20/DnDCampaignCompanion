@@ -763,6 +763,19 @@ service cloud.firestore {
                                  existsAfter(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/$(entityCollection)/$(entityId));
           allow delete: if hasNotes(entityCollection) && isGroupMember(groupId);
         }
+
+        // A chapter's text, a document of its own beside the chapter (T134),
+        // so the story's listener no longer downloads the book. It holds the
+        // text alone, capped as the chapter's own was, and only under a
+        // chapter there is after the write: a new chapter's text commits with it.
+        match /chapters/{chapterId}/body/{bodyId} {
+          allow read: if isGroupMember(groupId);
+          allow create, update: if isGroupMember(groupId) && campaignOpen(groupId, campaignId) &&
+                                 bodyId == 'text' && request.resource.data.keys().hasOnly(['content']) &&
+                                 fits(changedKeys(), 'content', 200000) &&
+                                 existsAfter(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/chapters/$(chapterId));
+          allow delete: if isGroupMember(groupId);
+        }
       }
     }
 

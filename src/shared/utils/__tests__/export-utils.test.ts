@@ -44,7 +44,7 @@ describe('export-utils', () => {
       jest.restoreAllMocks();
     });
 
-    const makeChapter = (overrides: Partial<Chapter> = {}): Chapter => ({
+    const makeChapter = (overrides: Partial<Chapter> & { content?: string } = {}): Chapter & { content: string } => ({
       id: 'chapter-01',
       title: 'Chapter Title',
       content: 'Chapter content body.',
@@ -56,7 +56,7 @@ describe('export-utils', () => {
     });
 
     test('should create a Blob and trigger a download', () => {
-      const chapters: Chapter[] = [makeChapter()];
+      const chapters = [makeChapter()];
       exportChaptersAsText(chapters);
 
       expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
@@ -70,7 +70,7 @@ describe('export-utils', () => {
     });
 
     test('should set anchor href to the created object URL and use the expected filename', () => {
-      const chapters: Chapter[] = [makeChapter()];
+      const chapters = [makeChapter()];
       exportChaptersAsText(chapters);
 
       const anchor = appendChildSpy.mock.calls[0][0] as HTMLAnchorElement;
@@ -80,7 +80,7 @@ describe('export-utils', () => {
     });
 
     test('should sort chapters by order before serializing', () => {
-      const chapters: Chapter[] = [
+      const chapters = [
         makeChapter({ id: 'c3', title: 'Third', order: 3, content: 'Third content' }),
         makeChapter({ id: 'c1', title: 'First', order: 1, content: 'First content' }),
         makeChapter({ id: 'c2', title: 'Second', order: 2, content: 'Second content' }),
@@ -101,7 +101,7 @@ describe('export-utils', () => {
     });
 
     test('should include a header, per-chapter heading, content, and separator', () => {
-      const chapters: Chapter[] = [makeChapter({ order: 1, title: 'Intro', content: 'Hello' })];
+      const chapters = [makeChapter({ order: 1, title: 'Intro', content: 'Hello' })];
       exportChaptersAsText(chapters);
 
       const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
@@ -114,7 +114,7 @@ describe('export-utils', () => {
     });
 
     test('should not mutate the input chapters array', () => {
-      const chapters: Chapter[] = [
+      const chapters = [
         makeChapter({ order: 2 }),
         makeChapter({ order: 1 }),
       ];
@@ -124,7 +124,7 @@ describe('export-utils', () => {
     });
 
     test('should clean up DOM anchor and revoke URL after timeout', () => {
-      const chapters: Chapter[] = [makeChapter()];
+      const chapters = [makeChapter()];
       exportChaptersAsText(chapters);
 
       // Cleanup is scheduled, not yet executed

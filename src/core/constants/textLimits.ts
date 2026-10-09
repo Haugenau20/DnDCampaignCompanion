@@ -88,3 +88,18 @@ export function overlongField(limits: TextLimitTable, data: Record<string, unkno
  * author are lines. `firestore.rules.prod` (`noteTextFits`) holds the same.
  */
 export const NOTE_TEXT_LIMITS: TextLimitTable = { text, content: text, date: line, author: line };
+
+/**
+ * A chapter's text, in a document of its own beside the chapter (T134).
+ * `firestore.rules.prod` holds the same.
+ */
+export const CHAPTER_BODY_TEXT_LIMITS: TextLimitTable = { content: chapter };
+
+/**
+ * The capped documents under a record, by subcollection: a record's notes
+ * (T133) and a chapter's body (T134).
+ */
+export const SUBCOLLECTION_TEXT_LIMITS: Readonly<Record<string, TextLimitTable>> = {
+  notes: NOTE_TEXT_LIMITS,
+  body: CHAPTER_BODY_TEXT_LIMITS,
+};

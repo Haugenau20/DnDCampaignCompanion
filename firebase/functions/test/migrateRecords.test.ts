@@ -1,9 +1,9 @@
 // functions/test/migrateRecords.test.ts
 //
-// scripts/migrate-records.js (T132, T133): give every campaign record the
-// server times it lacks, move a person's, a place's and a rumour's notes into
-// documents of their own -- each record in one transaction -- and undo
-// exactly that.
+// scripts/migrate-records.js (T132, T133, T134): give every campaign record
+// the server times it lacks, move a person's, a place's and a rumour's notes
+// into documents of their own, and a chapter's text into its body -- each
+// record in one transaction -- and undo exactly that.
 import {Timestamp} from "firebase-admin/firestore";
 import {useEmulatorProject, clearProject} from "./emulator";
 
@@ -11,7 +11,10 @@ const PROJECT = "demo-migrate-records";
 const db = useEmulatorProject(PROJECT);
 
 type Counts = Record<string, number>;
-type Write = {path: string; before: object; after: object; notes: Array<{path: string; data: object}>};
+type Write = {
+  path: string; before: object; after: object; notes: Array<{path: string; data: object}>;
+  body?: {path: string; data: object; before: object | null} | null;
+};
 type RevertRecord = {project: string; migratedAt: string; writes: Write[]};
 
 // A plain-JS operator script, so required rather than imported.
@@ -59,6 +62,12 @@ async function seed(): Promise<void> {
   // A quest keeps no notes: only its times.
   batch.set(db.doc(`${A}/quests/ring`), {title: "The Ring", dateAdded: "not a date", notes: [{text: "kept"}]});
   batch.set(db.doc(`${A}/saga/sagaData`), {title: "Saga", content: ""});
+  // A chapter from before T134, its text on the chapter.
+  batch.set(db.doc(`${A}/chapters/ch-1`), {title: "A party", order: 1, content: "In a hole", dateAdded: "2025-01-01T00:00:00.000Z"});
+  // Saved since by a browser still on the old app: its text on the chapter is
+  // newer than the body a newer browser wrote before.
+  batch.set(db.doc(`${A}/chapters/ch-2`), {title: "Shadow", order: 2, content: "Newer text", createdAt: NOW, modifiedAt: NOW});
+  batch.set(db.doc(`${A}/chapters/ch-2/body/text`), {content: "Older body"});
   batch.set(db.doc(`${B}/npcs/sam`), {name: "Sam", createdAt: NOW, modifiedAt: NOW, notes: []});
   // Not a campaign record.
   batch.set(db.doc("groups/g1/users/u1/notes/private"), {content: "Mine", campaignId: "a"});
@@ -80,8 +89,8 @@ describe("migrate-records", () => {
 
     expect(rows.map((row) => row.campaign)).toEqual([A, B]);
     expect(rows[0]).toMatchObject({
-      counts: {createdAtGiven: 5, modifiedAtGiven: 5, notesMoved: 4, recordsWithNotes: 2},
-      records: 5,
+      counts: {createdAtGiven: 6, modifiedAtGiven: 6, notesMoved: 4, recordsWithNotes: 2, chaptersMoved: 2},
+      records: 7,
     });
     expect(rows[1].records).toBe(0);
     expect(await data(`${A}/npcs/aldric`)).toEqual(before);
@@ -108,7 +117,7 @@ describe("migrate-records", () => {
   it("moves each note into a document of its own, in the array's order, and empties the array", async () => {
     const {counts} = await script.applyRecords(db, fresh());
 
-    expect(counts).toEqual({createdAtGiven: 5, modifiedAtGiven: 5, notesMoved: 4, recordsWithNotes: 2});
+    expect(counts).toEqual({createdAtGiven: 6, modifiedAtGiven: 6, notesMoved: 4, recordsWithNotes: 2, chaptersMoved: 2});
     expect((await data(`${A}/npcs/aldric`))!.notes).toEqual([]);
     const moved = await notesOf(`${A}/npcs/aldric`);
     expect(moved.map((note) => note.text)).toEqual(["Mends armour", "Owes us a sword", "Seen in Bree"]);
@@ -126,6 +135,30 @@ describe("migrate-records", () => {
     expect((await data(`${A}/quests/ring`))!.notes).toEqual([{text: "kept"}]);
     expect(await notesOf(`${A}/quests/ring`)).toEqual([]);
     expect(await data("groups/g1/users/u1/notes/private")).toEqual({content: "Mine", campaignId: "a"});
+  });
+
+  it("moves a chapter's text into its body, the text on the chapter being the newest", async () => {
+    await script.applyRecords(db, fresh());
+
+    const first = (await data(`${A}/chapters/ch-1`))!;
+    expect(first).not.toHaveProperty("content");
+    expect(first.contentLength).toBe("In a hole".length);
+    expect(await data(`${A}/chapters/ch-1/body/text`)).toEqual({content: "In a hole"});
+    expect(await data(`${A}/chapters/ch-2/body/text`)).toEqual({content: "Newer text"});
+    expect((await data(`${A}/chapters/ch-2`))!.contentLength).toBe("Newer text".length);
+  });
+
+  it("leaves a chapter's text where it is when it was edited since", async () => {
+    const record = fresh();
+    await script.applyRecords(db, record);
+    const fromFile = JSON.parse(JSON.stringify(record)) as RevertRecord;
+    await db.doc(`${A}/chapters/ch-1/body/text`).set({content: "In a hole in the ground"});
+
+    const {changed} = await script.revertRecords(db, fromFile, true);
+
+    expect(changed).toContain(`${A}/chapters/ch-1`);
+    expect(await data(`${A}/chapters/ch-1/body/text`)).toEqual({content: "In a hole in the ground"});
+    expect((await data(`${A}/chapters/ch-1`))!).not.toHaveProperty("content");
   });
 
   it("changes nothing a second time", async () => {
@@ -170,8 +203,13 @@ describe("migrate-records", () => {
     expect((await data(`${A}/npcs/aldric`))!.notes).toEqual([]);
 
     const {unchanged} = await script.revertRecords(db, fromFile, true);
-    expect(unchanged).toHaveLength(5);
+    expect(unchanged).toHaveLength(7);
     expect(await data(`${A}/npcs/aldric`)).toEqual(before);
+    // The text back on the chapters, and each body as it was.
+    expect((await data(`${A}/chapters/ch-1`))!.content).toBe("In a hole");
+    expect(await data(`${A}/chapters/ch-1/body/text`)).toBeUndefined();
+    expect((await data(`${A}/chapters/ch-2`))!.content).toBe("Newer text");
+    expect(await data(`${A}/chapters/ch-2/body/text`)).toEqual({content: "Older body"});
     expect(await notesOf(`${A}/npcs/aldric`)).toEqual([]);
     expect((await data(`${A}/rumors/smoke`))!.notes).toHaveLength(2);
   });
@@ -187,7 +225,7 @@ describe("migrate-records", () => {
     const {unchanged, changed} = await script.revertRecords(db, fromFile, true);
 
     expect(changed).toEqual([`${A}/locations/bree`, `${A}/npcs/aldric`]);
-    expect(unchanged).toHaveLength(3);
+    expect(unchanged).toHaveLength(5);
     // Aldric's notes stay documents, the edit with them; his times go back.
     expect((await data(`${A}/npcs/aldric`))!.notes).toEqual([]);
     expect((await notesOf(`${A}/npcs/aldric`)).map((note) => note.text)[0]).toBe("Mends armour and blades");

@@ -1064,6 +1064,70 @@ describe("a record's notes are documents of their own (T133)", () => {
   });
 });
 
+// T134: a chapter's text is a document of its own beside the chapter,
+// `chapters/{id}/body/text`, so the story's listener no longer downloads it.
+describe("a chapter's text is a document of its own (T134)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+  const BODY = `${C}/chapters/ch-1/body/text`;
+
+  beforeEach(() => env.withSecurityRulesDisabled((context) =>
+    context.firestore().doc(`${C}/chapters/ch-1`).set({title: "A long-expected party", order: 1})
+  ));
+
+  it("control: a member writes, reads, rewrites and deletes it", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.doc(BODY).set({content: "In a hole in the ground"}));
+    await assertSucceeds(db.doc(BODY).get());
+    await assertSucceeds(db.doc(BODY).set({content: "In a hole in the ground there lived a hobbit"}));
+    await assertSucceeds(db.doc(BODY).delete());
+  });
+
+  it("is written with a new chapter in one commit, and the chapter keeps no text", async () => {
+    const db = as("frodo");
+    const batch = db.batch();
+    batch.set(db.doc(`${C}/chapters/ch-2`), {title: "The shadow of the past", order: 2, contentLength: 5});
+    batch.set(db.doc(`${C}/chapters/ch-2/body/text`), {content: "Gandalf"});
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(db.doc(`${C}/chapters/ch-1`).update({content: null, contentLength: 3}));
+  });
+
+  it("shows a stranger nothing and takes nothing from one", async () => {
+    await env.withSecurityRulesDisabled((context) => context.firestore().doc(BODY).set({content: "Mine"}));
+    const db = as("sauron");
+    await assertFails(db.doc(BODY).get());
+    await assertFails(db.doc(BODY).set({content: "Yours"}));
+    await assertFails(db.doc(BODY).delete());
+  });
+
+  it("takes 200,000 characters and refuses one more", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc(BODY).set({content: "x".repeat(200_001)}));
+    await assertSucceeds(db.doc(BODY).set({content: "x".repeat(200_000)}));
+    await assertFails(db.doc(BODY).update({content: "x".repeat(200_001)}));
+  });
+
+  it("holds the text and nothing else, under the one id", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc(BODY).set({content: "Short", extra: "x".repeat(900_000)}));
+    await assertFails(db.doc(`${C}/chapters/ch-1/body/other`).set({content: "Short"}));
+  });
+
+  it("refuses a body under a chapter that does not exist, or under another kind of record", async () => {
+    await assertFails(as("frodo").doc(`${C}/chapters/nowhere/body/text`).set({content: "Junk"}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1/body/text`).set({content: "Junk"}));
+  });
+
+  it("takes no text while the campaign is being deleted, but lets it be deleted", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(BODY).set({content: "Before"});
+      await context.firestore().doc(C).update({deleting: true});
+    });
+    const db = as("frodo");
+    await assertFails(db.doc(BODY).set({content: "Late"}));
+    await assertSucceeds(db.doc(BODY).delete());
+  });
+});
+
 // T119 (F4): every text field of a record has a limit, the app's
 // `RECORD_TEXT_LIMITS` (src/core/constants/textLimits.ts). The app stops
 // there; the rules refuse a client that does not.

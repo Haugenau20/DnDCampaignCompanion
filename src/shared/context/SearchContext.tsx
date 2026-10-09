@@ -47,7 +47,9 @@ const createChapterSearchDocuments = (chapters: Chapter[]): SearchDocument[] => 
   return chapters.map(chapter => ({
     id: chapter.id,
     type: 'story' as SearchResultType,
-    content: `${chapter.title} ${chapter.content} ${chapter.summary || ''}`,
+    // The title and summary: the text is a document of its own, read where a
+    // chapter is opened (T134), so search no longer downloads the book.
+    content: `${chapter.title} ${chapter.summary || ''}`,
     metadata: {
       title: chapter.title,
       order: chapter.order

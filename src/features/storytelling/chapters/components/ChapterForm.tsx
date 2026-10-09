@@ -11,6 +11,7 @@ import MarkdownToolbar from 'core/components/MarkdownToolbar';
 import { Save, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigation } from 'shared/context/NavigationContext';
 import { useStory } from '../context/StoryContext';
+import { useChapterContent } from '../hooks/useChapterContent';
 
 interface ChapterFormProps {
   /** The chapter to edit, or undefined for create mode */
@@ -41,12 +42,14 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // The text is a document of its own (T134), read once the chapter is open.
+  const storedContent = useChapterContent(mode === 'edit' ? chapter : undefined);
+  const contentLoading = mode === 'edit' && storedContent === undefined;
 
   // Initialize form with chapter data if in edit mode
   useEffect(() => {
     if (chapter && mode === 'edit') {
       setTitle(chapter.title);
-      setContent(chapter.content);
       setSummary(chapter.summary || '');
       setOrder(chapter.order);
     } else if (mode === 'create') {
@@ -57,6 +60,10 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
       setOrder(maxOrder + 1);
     }
   }, [chapter, mode, chapters]);
+
+  useEffect(() => {
+    if (storedContent !== undefined) setContent(storedContent);
+  }, [storedContent]);
 
   /**
    * Generate a summary from content if none is provided
@@ -235,7 +242,12 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
                   isTextArea
                   rows={15}
                   required
-                  helperText="Takes markdown: **bold**, *italic*, > quote. One Enter breaks the line, a blank line starts a new paragraph."
+                  // Nothing typed before the text arrives could be saved
+                  // without replacing it.
+                  disabled={contentLoading}
+                  helperText={contentLoading
+                    ? "Loading the chapter's text..."
+                    : "Takes markdown: **bold**, *italic*, > quote. One Enter breaks the line, a blank line starts a new paragraph."}
                 />
               </div>
             </div>
@@ -270,6 +282,7 @@ const ChapterForm: React.FC<ChapterFormProps> = ({
               startIcon={<Save />}
               type="submit"
               isLoading={isSubmitting}
+              disabled={contentLoading}
             >
               {mode === 'create' ? 'Create Chapter' : 'Save Changes'}
             </Button>

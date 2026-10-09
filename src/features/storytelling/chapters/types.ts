@@ -7,8 +7,15 @@ import { BaseContent } from 'core/types/common';
 export interface Chapter extends BaseContent {
   /** Chapter title */
   title: string;
-  /** Main content of the chapter */
-  content: string;
+  /**
+   * The chapter's text as stored on the chapter itself: by chapters written
+   * before T134, or by a browser still on the app before it. Since T134 the
+   * text is a document of its own (`chapter-body.ts`), and saving it there
+   * sets this to `null`. Read it through `useChapterContent`.
+   */
+  content?: string | null;
+  /** How long the text is, so the shelf can size the book without it (T134). */
+  contentLength?: number;
   /** Chapter order number (for sequencing) */
   order: number;
   /** Optional chapter summary */
