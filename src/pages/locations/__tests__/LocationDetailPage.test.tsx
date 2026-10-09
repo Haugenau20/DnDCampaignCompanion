@@ -85,7 +85,6 @@ const place = (id: string, name: string, extra: any = {}) => ({
   description: `About ${name}`,
   features: [],
   connectedNPCs: [],
-  relatedQuests: [],
   notes: [],
   tags: [],
   createdByUsername: 'DungeonMaster',
@@ -103,16 +102,21 @@ const TREE = [
     connectedNPCs: ['npc-1'],
     tags: ['hidden'],
     lastVisited: '2025-05-31T00:00:00.000Z',
-    notes: [
-      { date: '2025-05-31T19:27:30.387Z', text: 'The last of the great kingdoms.', author: 'Zendikarr' },
-      { date: '2025-06-14T10:00:00.000Z', text: 'Turgon will not open the gates.' },
-    ],
+    // Its notes are documents of their own (T133): `GONDOLIN_NOTES`.
   }),
   place('kings-square', "King's square", { parentId: 'gondolin', type: 'poi' }),
   place('seven-gates', 'Seven gates', { parentId: 'gondolin', type: 'landmark' }),
   place('fountain', 'The fountain', { parentId: 'kings-square', type: 'poi' }),
   place('doriath', 'Doriath', { parentId: 'beleriand', type: 'region' }),
 ];
+
+/** Gondolin's notes, as their documents. */
+const GONDOLIN_NOTES = [
+  { noteId: 'n-1', date: '2025-05-31T19:27:30.387Z', text: 'The last of the great kingdoms.', author: 'Zendikarr' },
+  { noteId: 'n-2', date: '2025-06-14T10:00:00.000Z', text: 'Turgon will not open the gates.' },
+];
+/** Gondolin's notes as `useRecordNotes` delivers them; reset to `GONDOLIN_NOTES` before each test. */
+let mockNoteDocuments: any[] | undefined = GONDOLIN_NOTES;
 
 let mockLocations: any[] = TREE;
 const mockUpdateLocation = jest.fn().mockResolvedValue(undefined);
@@ -153,6 +157,7 @@ jest.mock('features/campaign-entities', () => {
   return {
     // Notes are documents of their own (T133); see the mock.
     ...require('@/test-utils/record-notes-mock').recordNotesMock(),
+    useRecordNotes: jest.fn((_path: string, id?: string) => (id === 'gondolin' ? mockNoteDocuments : undefined)),
     rumorTitleText: actualRumorTitle.rumorTitleText,
     useLocations: () => ({
       locations: mockLocations,
@@ -262,6 +267,7 @@ const hierarchy = () =>
 beforeEach(() => {
   mockStoredRecords = {};
   jest.clearAllMocks();
+  mockNoteDocuments = GONDOLIN_NOTES;
   mockLocationId = 'gondolin';
   mockRouterState = null;
   mockLocations = TREE;
@@ -677,83 +683,48 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
     expect(mockUpdateLocationNote.mock.calls[0][1].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  // T006: notes were append-only until the maintainer decided otherwise.
-  it('edits a note in place, keeping its date and author', async () => {
-    renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit the note from 31/05/2025' }));
-    fireEvent.change(screen.getByLabelText('Note from 31/05/2025'), {
-      target: { value: 'The last of the hidden kingdoms.' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
-
-    await waitFor(() =>
-      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', {
-        notes: [
-          {
-            date: '2025-05-31T19:27:30.387Z',
-            text: 'The last of the hidden kingdoms.',
-            author: 'Zendikarr',
-          },
-          { date: '2025-06-14T10:00:00.000Z', text: 'Turgon will not open the gates.' },
-        ],
-      })
-    );
-    // The listener carries the write (T032).
-    expect(mockRefreshLocations).not.toHaveBeenCalled();
-  });
-
-  it('deletes a note only once the delete is confirmed', async () => {
-    renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete the note from 14/06/2025' }));
-    expect(mockUpdateLocation).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
-    await waitFor(() =>
-      expect(mockUpdateLocation).toHaveBeenCalledWith('gondolin', {
-        notes: [
-          {
-            date: '2025-05-31T19:27:30.387Z',
-            text: 'The last of the great kingdoms.',
-            author: 'Zendikarr',
-          },
-        ],
-      })
-    );
-  });
-
-  // T133: a note added since is a document of its own, shown with the old
-  // array's and changed where it lives; the location is not rewritten.
-  describe('a note in its own document', () => {
+  // T006: notes were append-only until the maintainer decided otherwise. Each
+  // is a document of its own (T133), changed where it lives; the location is
+  // not rewritten.
+  describe('a note, in its own document', () => {
     const notesModule = jest.requireMock('features/campaign-entities');
     const PATH = 'groups/group-1/campaigns/campaign-1/locations';
-    beforeEach(() => {
-      notesModule.useRecordNotes.mockReturnValue([
-        { date: '2025-06-20', text: 'The eagles came.', noteId: 'n-7' },
-      ]);
-    });
-    afterEach(() => notesModule.useRecordNotes.mockReturnValue(undefined));
 
-    it('is read under this location and counted with the rest', () => {
+    it('is read under this location, and nothing from its old array', () => {
+      mockLocations = TREE.map((place: any) =>
+        place.id === 'gondolin' ? { ...place, notes: [{ date: '2025-06-20', text: 'The eagles came.' }] } : place
+      );
       renderPage();
       expect(notesModule.useRecordNotes).toHaveBeenCalledWith(PATH, 'gondolin');
-      expect(screen.getByText('The eagles came.')).toBeInTheDocument();
-      expect(screen.getByText('3 · oldest first')).toBeInTheDocument();
+      expect(screen.getByText('The last of the great kingdoms.')).toBeInTheDocument();
+      expect(screen.queryByText('The eagles came.')).not.toBeInTheDocument();
     });
 
-    it('is edited and deleted in its own document', async () => {
+    it('is edited in place, from the text it was opened with', async () => {
       renderPage();
-      fireEvent.click(screen.getByRole('button', { name: 'Edit the note from 20/06/2025' }));
-      fireEvent.change(screen.getByLabelText('Note from 20/06/2025'), { target: { value: 'The eagles came at last.' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Edit the note from 31/05/2025' }));
+      fireEvent.change(screen.getByLabelText('Note from 31/05/2025'), {
+        target: { value: 'The last of the hidden kingdoms.' },
+      });
       fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+
       await waitFor(() =>
         expect(notesModule.editRecordNote).toHaveBeenCalledWith(
-          PATH, 'gondolin', 'n-7', 'text', 'The eagles came.', 'The eagles came at last.'
+          PATH, 'gondolin', 'n-1', 'text', 'The last of the great kingdoms.', 'The last of the hidden kingdoms.'
         )
       );
+      expect(mockUpdateLocation).not.toHaveBeenCalled();
+      // The listener carries the write (T032).
+      expect(mockRefreshLocations).not.toHaveBeenCalled();
+    });
 
-      fireEvent.click(await screen.findByRole('button', { name: 'Delete the note from 20/06/2025' }));
+    it('is deleted only once the delete is confirmed', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Delete the note from 14/06/2025' }));
+      expect(notesModule.deleteRecordNote).not.toHaveBeenCalled();
+
       fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
-      await waitFor(() => expect(notesModule.deleteRecordNote).toHaveBeenCalledWith(PATH, 'gondolin', 'n-7'));
+      await waitFor(() => expect(notesModule.deleteRecordNote).toHaveBeenCalledWith(PATH, 'gondolin', 'n-2'));
       expect(mockUpdateLocation).not.toHaveBeenCalled();
     });
   });
@@ -900,17 +871,16 @@ describe('LocationDetailPage — what points here', () => {
     expect(screen.queryByText('rumour, disproved')).not.toBeInTheDocument();
   });
 
-  // T131: a link is stored once now, and both sides show it. Until the
-  // migration has run, a person whose old record names this place is one of
-  // the people here -- no longer set apart as a disagreement, which there can
-  // no longer be.
-  it('counts an NPC whose old record names this place among the people here', () => {
+  // T131: a link is stored once, on the place, and both sides show it. A
+  // person's old single place was merged into the place's list in production
+  // and is read by nothing.
+  it("does not count an NPC whose old record alone names this place", () => {
     mockNPCs = [
       { id: 'npc-1', name: 'Turgon', title: 'King of Gondolin' },
       { id: 'npc-2', name: 'Glorfindel', locationId: 'gondolin' },
     ];
     renderPage();
-    expect(screen.getByText('Glorfindel')).toBeInTheDocument();
+    expect(screen.queryByText('Glorfindel')).not.toBeInTheDocument();
     expect(screen.queryByText('person, recorded as being here')).not.toBeInTheDocument();
   });
 });

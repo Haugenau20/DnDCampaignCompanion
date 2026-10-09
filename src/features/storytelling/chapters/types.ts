@@ -8,10 +8,11 @@ export interface Chapter extends BaseContent {
   /** Chapter title */
   title: string;
   /**
-   * The chapter's text as stored on the chapter itself: by chapters written
-   * before T134, or by a browser still on the app before it. Since T134 the
-   * text is a document of its own (`chapter-body.ts`), and saving it there
-   * sets this to `null`. Read it through `useChapterContent`.
+   * The text a chapter is created or updated with, which the write moves into
+   * its own document (T134, `chapter-body.ts`); read the text through
+   * `useChapterContent`. As stored, it is read by nothing: chapters before
+   * T134 kept their text here, `scripts/migrate-records.js` moved it in
+   * production, and saving the text sets it to `null`.
    */
   content?: string | null;
   /** How long the text is, so the shelf can size the book without it (T134). */

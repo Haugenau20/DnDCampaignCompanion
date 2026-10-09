@@ -93,7 +93,6 @@ function makeLocation(id: string, name: string, overrides: Partial<Location> = {
     description: `Description for ${name}`,
     features: [],
     connectedNPCs: [],
-    relatedQuests: [],
     notes: [],
     tags: [],
     createdBy: 'user-1',
@@ -172,11 +171,15 @@ describe('LocationDirectory', () => {
         npcs: [],
         getNPCById: jest.fn(() => ({ id: 'npc-1', name: 'Aldric', relationship: 'friendly' })),
       });
+      // The quest names the place (T131).
+      (useQuests as jest.Mock).mockReturnValue({
+        quests: [{ id: 'q-1', title: 'Find the Amulet', status: 'active', locationId: 'loc-1' }],
+        getQuestById: jest.fn(() => undefined),
+      });
       const parent = makeLocation('loc-1', 'Silverkeep', {
         type: 'city',
         status: 'visited',
         connectedNPCs: ['npc-1'],
-        relatedQuests: ['q-1'],
       });
       const child = makeLocation('loc-2', 'The Rusty Anchor', { parentId: 'loc-1' });
       const { container } = render(<LocationDirectory locations={[parent, child]} />);
@@ -363,13 +366,13 @@ describe('LocationDirectory', () => {
 
     test('navigates to a quest listed in the summary, whose status is a word', () => {
       (useQuests as jest.Mock).mockReturnValue({
-        quests: [],
+        quests: [{ id: 'q-1', title: 'Find the Amulet', status: 'active', locationId: 'loc-1' }],
         getQuestById: jest.fn(() => ({ id: 'q-1', title: 'Find the Amulet', status: 'active' })),
       });
       render(
         <LocationDirectory
           locations={[
-            makeLocation('loc-1', 'Silverkeep', { relatedQuests: ['q-1'] }),
+            makeLocation('loc-1', 'Silverkeep'),
             makeLocation('loc-2', 'Cellar', { parentId: 'loc-1' }),
           ]}
         />

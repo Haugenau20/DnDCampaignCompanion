@@ -83,11 +83,10 @@ describe('unlinkDeleted', () => {
     expect(mockWrites.map(({ id }) => id).sort()).toEqual(['aragorn', 'moria', 'ring', 'whisper']);
   });
 
-  it("takes a deleted quest out of the old halves that still name it", async () => {
+  it("writes nothing for a deleted quest: it owned its links, and the old halves are read by nothing", async () => {
     await unlinkDeleted(PATHS, 'quest', ['ring']);
 
-    expect(mockStore['c/npcs'].aragorn.connections.relatedQuests).toEqual([]);
-    expect(mockStore['c/locations'].moria.relatedQuests).toEqual([]);
+    expect(mockWrites).toEqual([]);
   });
 
   it("unlinks a deleted place from lists, and leaves a single reference visible as one (#1412)", async () => {

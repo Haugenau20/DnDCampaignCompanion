@@ -1,7 +1,7 @@
 // src/utils/__dev__/generators/contentGenerators/rumorGenerator.ts
 
-import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
+import { writeRecordWithNotes } from './recordNotes';
 import type { Rumor as AppRumor } from 'features/campaign-entities';
 
 
@@ -48,9 +48,12 @@ export const createRumors = async (
     rumorsData = getDunedainRumors(aragornUid, frodoUid, samwiseUid, pipinUid, formattedDate);
   }
   
-  // Create the rumors in Firestore
+  // Create the rumors in Firestore, each note a document of its own (T133).
+  // A rumour's notes name their own authors.
   for (const rumor of rumorsData) {
-    await setDoc(doc(db, 'groups', groupId, 'campaigns', campaignId, 'rumors', rumor.id), rumor);
+    await writeRecordWithNotes(
+      db, ['groups', groupId, 'campaigns', campaignId, 'rumors'], rumor, { uid: rumor.createdBy, username: rumor.createdByUsername }, formattedDate
+    );
     console.log(`Created rumor for ${campaignId}: ${rumor.title}`);
   }
   

@@ -1,7 +1,7 @@
 // src/utils/__dev__/generators/contentGenerators/locationGenerator.ts
 
-import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
+import { writeRecordWithNotes } from './recordNotes';
 // Relative, not `shared/...`: this runs under ts-node, which ignores baseUrl.
 import { toNoteDate } from '../../../../shared/utils/dateFormatter';
 import type { Location as AppLocation } from 'features/campaign-entities';
@@ -43,9 +43,11 @@ export const createLocations = async (
     locationsData = getDunedainLocations(dmUid, formattedDate);
   }
   
-  // Create the locations in Firestore
+  // Create the locations in Firestore, each note a document of its own (T133)
   for (const location of locationsData) {
-    await setDoc(doc(db, 'groups', groupId, 'campaigns', campaignId, 'locations', location.id), location);
+    await writeRecordWithNotes(
+      db, ['groups', groupId, 'campaigns', campaignId, 'locations'], location, { uid: dmUid, username: 'DungeonMaster' }, formattedDate
+    );
     console.log(`Created location for ${campaignId}: ${location.name}`);
   }
   
@@ -62,8 +64,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       status: 'explored' as LocationStatus,
       description: 'A peaceful region inhabited by hobbits, a small agricultural folk.',
       features: ['Green hills', 'Hobbit holes', 'The Party Tree', 'Bywater Pool'],
-      connectedNPCs: ['frodo', 'bilbo'],
-      relatedQuests: ['the-one-ring'],
+      connectedNPCs: ['frodo', 'bilbo', 'samwise'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Home of the hobbits and starting point of the journey.' }
       ],
@@ -84,8 +85,7 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       description: 'An elven outpost in Middle-earth and the house of Elrond.',
       parentId: null,
       features: ['Last Homely House', 'Council chamber', 'Waterfalls', 'Elven architecture'],
-      connectedNPCs: ['elrond', 'gandalf'],
-      relatedQuests: ['the-one-ring', 'council-of-elrond'],
+      connectedNPCs: ['elrond', 'gandalf', 'bilbo', 'aragorn', 'legolas', 'arwen', 'boromir'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Location of the Council where the Fellowship was formed.' }
       ],
@@ -107,7 +107,6 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Bridge of Khazad-dûm', 'Chamber of Mazarbul', 'Endless stairways', 'Cavernous halls'],
       connectedNPCs: ['gandalf', 'gimli', 'balrog'],
-      relatedQuests: ['escape-from-moria'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Gandalf fell here fighting the Balrog of Morgoth.' }
       ],
@@ -129,7 +128,6 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Mount Doom', 'Barad-dûr', 'Black Gate', 'Plateau of Gorgoroth'],
       connectedNPCs: ['sauron', 'gollum'],
-      relatedQuests: ['destroy-the-ring'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The final destination for the Ring-bearer.' }
       ],
@@ -151,7 +149,6 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Tower of Orthanc', 'Ring of Isengard', 'Underground forges', 'Gardens'],
       connectedNPCs: ['saruman'],
-      relatedQuests: ['defeat-saruman'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Once a beautiful place, now corrupted by Saruman\'s evil.' }
       ],
@@ -173,7 +170,6 @@ const getLOTRLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Golden Hall of Meduseld', 'Royal barrow-mounds', 'Fortified walls', 'Thatched-roof houses'],
       connectedNPCs: ['theoden'],
-      relatedQuests: ['defeat-saruman'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Seat of King Théoden, freed from Saruman\'s influence by Gandalf.' }
       ],
@@ -201,7 +197,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Party Tree', 'The Water', 'Hobbit-holes', 'The Hill'],
       connectedNPCs: ['bilbo'],
-      relatedQuests: ['unexpected-journey'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Where the company gathered before setting off on their journey.' }
       ],
@@ -222,8 +217,7 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       description: 'The comfortable hobbit-hole home of Bilbo Baggins in Hobbiton.',
       parentId: 'hobbiton',
       features: ['Round green door', 'Well-stocked pantry', 'Comfortable furnishings', 'Bilbo\'s study'],
-      connectedNPCs: ['bilbo', 'gandalf'],
-      relatedQuests: ['unexpected-journey'],
+      connectedNPCs: ['bilbo', 'gandalf', 'thorin', 'balin'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Starting point of the adventure, where the dwarves gathered.' }
       ],
@@ -245,7 +239,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Dense forests', 'Stone trolls', 'Troll hoard', 'Rocky terrain'],
       connectedNPCs: ['gandalf', 'thorin'],
-      relatedQuests: ['unexpected-journey'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Bilbo found Sting in the troll hoard.' }
       ],
@@ -267,7 +260,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Goblin tunnels', 'Gollum\'s lake', 'Treacherous passes', 'Eagle eyries'],
       connectedNPCs: ['gollum', 'great-goblin'],
-      relatedQuests: ['riddles-in-the-dark'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Bilbo found the One Ring here after getting separated from the company.' }
       ],
@@ -289,7 +281,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Enchanted river', 'Elven path', 'Spider lairs', 'Wood Elf kingdom'],
       connectedNPCs: ['thranduil', 'spiders'],
-      relatedQuests: ['escape-from-mirkwood'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The company was captured here first by spiders and then by elves.' }
       ],
@@ -311,7 +302,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Secret door', 'Great hall', 'Treasury', 'Smaug\'s lair'],
       connectedNPCs: ['thorin', 'smaug'],
-      relatedQuests: ['reclaim-erebor', 'slay-the-dragon'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The destination of the company\'s quest and the ancestral home of Thorin\'s people.' }
       ],
@@ -333,7 +323,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Great wooden hall', 'Beehives', 'Livestock pens', 'Garden'],
       connectedNPCs: ['beorn'],
-      relatedQuests: ['unexpected-journey'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The company rested here and restocked supplies before entering Mirkwood.' }
       ],
@@ -355,7 +344,6 @@ const getHobbitLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Ramshackle dwelling', 'Animal burrows', 'Overgrown garden'],
       connectedNPCs: ['radagast'],
-      relatedQuests: ['unexpected-journey'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Home to Radagast and the many creatures he tends.' }
       ],
@@ -383,7 +371,6 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Taniquetil', 'Halls of Mandos', 'Gardens of Lórien', 'Two Trees'],
       connectedNPCs: ['feanor', 'melkor'],
-      relatedQuests: ['creation-of-silmarils'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Source of the light captured in the Silmarils.' }
       ],
@@ -404,8 +391,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       description: 'The western region of Middle-earth during the First Age, later sunk beneath the sea.',
       parentId: null,
       features: ['Doriath', 'Nargothrond', 'Gondolin', 'Thangorodrim'],
-      connectedNPCs: ['beren', 'luthien', 'turin'],
-      relatedQuests: ['war-of-jewels', 'quest-for-silmaril'],
+      connectedNPCs: ['beren', 'luthien', 'turin', 'fingolfin'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The main battleground of the War of the Jewels.' }
       ],
@@ -426,8 +412,7 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       description: 'The great underground fortress of Morgoth in the Iron Mountains of the north.',
       parentId: null,
       features: ['Iron crown', 'Pits of Angband', 'Throne of Morgoth', 'Forges'],
-      connectedNPCs: ['morgoth', 'gothmog'],
-      relatedQuests: ['war-of-wrath'],
+      connectedNPCs: ['morgoth', 'gothmog', 'melkor'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Where Morgoth kept the Silmarils after stealing them.' }
       ],
@@ -449,7 +434,6 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       parentId: 'beleriand',
       features: ['Encircling mountains', 'Seven gates', 'King\'s square', 'White towers'],
       connectedNPCs: ['turgon', 'ecthelion', 'glorfindel'],
-      relatedQuests: ['fall-of-gondolin'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The last of the great elven kingdoms to fall to Morgoth.' }
       ],
@@ -471,7 +455,6 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Armenelos', 'Meneltarma', 'Haven of Rómenna', 'Temple of Morgoth'],
       connectedNPCs: ['elros', 'ar-pharazon'],
-      relatedQuests: ['fall-of-numenor'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Eventually sunk beneath the waves when its people turned to evil under Sauron\'s influence.' }
       ],
@@ -493,7 +476,6 @@ const getSilmarillionLocations = (dmUid: string, formattedDate: string) => {
       parentId: 'beleriand',
       features: ['Menegroth', 'The Girdle of Melian', 'Neldoreth forest', 'Esgalduin river'],
       connectedNPCs: ['thingol', 'luthien'],
-      relatedQuests: ['quest-for-silmaril'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Protected by an enchanted barrier that kept out all but the most determined intruders.' }
       ],
@@ -521,7 +503,6 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Ruins of Fornost', 'Weather Hills', 'North Downs', 'Ancient watchtowers'],
       connectedNPCs: ['aragorn-young', 'halbarad'],
-      relatedQuests: ['protect-the-north'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Former home of the northern Dúnedain, now patrolled by the Rangers.' }
       ],
@@ -542,8 +523,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       description: 'The large region between the Misty Mountains and the Blue Mountains, including the Shire.',
       parentId: null,
       features: ['Bree', 'Weathertop', 'The Old Forest', 'Ranger camps'],
-      connectedNPCs: ['aragorn-young', 'barrow-wights'],
-      relatedQuests: ['protect-the-shire', 'hunt-for-gollum'],
+      connectedNPCs: ['aragorn-young', 'barrow-wights', 'halbarad', 'gandalf', 'gollum'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'The main patrolling grounds of the Rangers.' }
       ],
@@ -565,7 +545,6 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       parentId: 'eriador',
       features: ['The Prancing Pony', 'Town gate', 'Market square', 'Mixed dwellings'],
       connectedNPCs: ['butterbur', 'aragorn-young'],
-      relatedQuests: ['protect-the-north', 'hunt-for-gollum'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'A rare place where Men and Hobbits live together, and a common stop for Rangers.' }
       ],
@@ -587,7 +566,6 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       parentId: 'eriador',
       features: ['Tower ruins', 'Defensive ring', 'Wide view', 'Ancient stones'],
       connectedNPCs: ['aragorn-young', 'trolls'],
-      relatedQuests: ['protect-the-north'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'An important landmark and meeting place for the Rangers.' }
       ],
@@ -608,8 +586,7 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       description: 'A hidden outpost used by the Rangers as a base and place to exchange information.',
       parentId: 'eriador',
       features: ['Hidden entrance', 'Meeting hall', 'Armory', 'Healing supplies'],
-      connectedNPCs: ['aragorn-young', 'halbarad'],
-      relatedQuests: ['protect-the-north', 'hunt-for-gollum'],
+      connectedNPCs: ['aragorn-young', 'halbarad', 'elder-ranger'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Location known only to trusted Rangers and allies.' }
       ],
@@ -631,7 +608,6 @@ const getDunedainLocations = (dmUid: string, formattedDate: string) => {
       parentId: null,
       features: ['Last Homely House', 'Elven archives', 'Waterfalls', 'Council chamber'],
       connectedNPCs: ['elrond', 'arwen'],
-      relatedQuests: ['lost-heritage'],
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Where Aragorn was fostered as "Estel" and learned of his true heritage.' }
       ],

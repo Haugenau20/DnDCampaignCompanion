@@ -29,15 +29,21 @@ export const FIXTURES = {
   /** Written before records stored their author's name: only the uid. */
   legacyNpc: { id: "old-tam", name: "Old Tam" },
   /**
-   * Written before T133: a note in the record's own array, which the app
-   * reads beside the notes' own documents until the migration moves it.
+   * A person with a note in its own document (T133), as the migration left
+   * every older note, and one stray note still in the record's old array,
+   * which nothing reads.
    */
-  notedNpc: { id: "brin-salt", name: "Brin Salt", arrayNote: "Sold us a leaky boat" },
+  notedNpc: { id: "brin-salt", name: "Brin Salt", note: "Sold us a leaky boat", strayNote: "Left in the array" },
   /**
-   * Written before T134: its text on the chapter, which the app reads until
-   * the migration moves it into the chapter's own body document.
+   * A chapter whose text the migration moved into its own body document
+   * (T134), with older text still left on the chapter, which nothing reads.
    */
-  legacyChapter: { id: "chapter-01", title: "The Drowned Bell", text: "The bell rang under the water." },
+  movedChapter: {
+    id: "chapter-01",
+    title: "The Drowned Bell",
+    text: "The bell rang under the water.",
+    staleText: "The bell was silent.",
+  },
   /**
    * An unused founder link (T127), as the operator's script issues one: it
    * admits one account, which may start one group.
@@ -88,7 +94,7 @@ export async function seed(): Promise<void> {
   const app = getApps()[0] ?? initializeApp({ projectId: E2E.projectId });
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const { player, group, campaign, locations, quest, npc, legacyNpc, notedNpc, legacyChapter, founderLink } = FIXTURES;
+  const { player, group, campaign, locations, quest, npc, legacyNpc, notedNpc, movedChapter, founderLink } = FIXTURES;
 
   await auth.createUser({
     uid: player.uid,
@@ -211,17 +217,25 @@ export async function seed(): Promise<void> {
     relationship: "neutral",
     description: "Hires out boats in Kettleby.",
     connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
-    notes: [{ date: "2026-09-20", text: notedNpc.arrayNote, author: player.character.name }],
+    notes: [{ date: "2026-09-19", text: notedNpc.strayNote, author: player.character.name }],
+  });
+  batch.set(db.doc(`${campaignPath}/npcs/${notedNpc.id}/notes/moved-1`), {
+    ...attribution,
+    date: "2026-09-20",
+    text: notedNpc.note,
+    author: player.character.name,
   });
 
-  batch.set(db.doc(`${campaignPath}/chapters/${legacyChapter.id}`), {
+  batch.set(db.doc(`${campaignPath}/chapters/${movedChapter.id}`), {
     ...attribution,
-    id: legacyChapter.id,
-    title: legacyChapter.title,
+    id: movedChapter.id,
+    title: movedChapter.title,
     order: 1,
     summary: "The first night on the coast.",
-    content: legacyChapter.text,
+    content: movedChapter.staleText,
+    contentLength: movedChapter.text.length,
   });
+  batch.set(db.doc(`${campaignPath}/chapters/${movedChapter.id}/body/text`), { content: movedChapter.text });
 
   batch.set(db.doc(`founderInvitations/${founderLink.token}`), {
     used: false,

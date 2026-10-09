@@ -19,9 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T131 | Links: run the migration, then stop reading the old halves | S | blocked | Waits on the maintainer running `migrate-links.js` once the reading frontend is live |
-| medium | T132 | Attribution the rules can check: run the migration, then the rules | M | blocked | Any member can still credit a record to someone else; the rules wait on the maintainer running `migrate-records.js` |
-| medium | T133 | Notes: run the migration, then stop reading the old arrays | S | blocked | Waits on the maintainer running `migrate-records.js` once the frontend that reads both is live |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
@@ -33,7 +30,10 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
-| low | T134 | The saga in sections; run the chapter migration | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
+| low | T132 | Stop writing `dateAdded` / `dateModified` | M | open | The rules check the server's times now; the old strings are only clutter, and a browser before T132 still reads them |
+| low | T131 | Links: a rule refusing the old halves | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
+| low | T133 | Notes: a rule refusing notes in a record's array | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
+| low | T134 | The saga in sections | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
 | low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
@@ -404,99 +404,72 @@ the script rewrites; a later frontend drops the old shape; only then, in its own
 merge, a rule refuses it. The review's read-only production checks (campaign
 sizes, how often a link's two halves disagree) go into each change's audit.
 
-### T131 — Links: run the migration, then stop reading the old halves
+### T131 — Links: a rule refusing the old halves
 **Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
 
-Every link has one owner field now, written from either page and read on both
-(`features/campaign-entities/shared/links.ts` has the table; decided by the
-maintainer 2026-10-08). The app still reads each old second half too, so
-nothing changes on screen before the migration.
+Every link has one owner field (`features/campaign-entities/shared/links.ts`
+has the table). Production was migrated, and the app neither reads nor writes
+the old second halves -- `NPC.connections.relatedQuests`, `NPC.locationId`,
+`Location.relatedQuests` -- except that a person's `locationId` naming a
+deleted place is still shown as one (#1412). Nothing stops a client writing
+them again.
 
-- **Blocked on the maintainer**: once the frontend that reads both halves is
-  live, `firebase/functions/scripts/migrate-links.js` from `firebase/functions`,
-  first read-only, then `--apply --revert-file <file>` (its header has the
-  steps). Each campaign is one transaction.
-- **Then**: a frontend that reads only the owners -- drop the old halves from
-  `links.ts` and their clearing from `linkActions.ts` and `unlinkDeleted.ts`
-  -- and the sample-data generators (`utils/__dev__/generators/`), which still
-  write `NPC.locationId`, `NPC.connections.relatedQuests` and
-  `Location.relatedQuests`, rewritten to the owners. A rule refusing the old
-  fields, if wanted, in a later merge.
+- **Blocked**: until the frontend that stops writing them is live; the one
+  before it still clears them and writes `relatedQuests: []` on a new record.
+- **Then**: rules refusing a non-empty value, or a change to one, in any of
+  the three; existing records keep theirs (empty lists, and the dangling
+  ids). Whether it is worth a rule is the maintainer's call.
 - **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
-### T132 — Attribution the rules can check: run the migration, then the rules
-**Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
+### T132 — Stop writing `dateAdded` / `dateModified`
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-09
 
-Who created or changed a record is still built in the browser and believed by
-the rules: any member can credit a record to someone else (F5). The app's half
-is done: every record write stamps `createdAt` / `modifiedAt` with the server's
-clock beside the old `dateAdded` / `dateModified` strings, readers take the
-server's times first (`core/attribution`, `recordTimes`), and names are the
-authors' current ones from the group's members (`useMemberDirectory`), the
-stored name kept for someone who has left.
+Every record and note write stamps `createdAt` / `modifiedAt` with the
+server's clock, and the rules check them and the writer's id
+(`stampsCreation`, `stampsModification` in `firestore.rules.prod`). Beside
+them every write still sets the old client-clock strings `dateAdded` /
+`dateModified`, which readers fall back to where a record has no server time
+(`core/attribution`, `recordTimes`).
 
-- **Blocked on the maintainer**: `firebase/functions/scripts/migrate-records.js`,
-  which gives every existing record `createdAt` and `modifiedAt` from the old
-  strings (else the document's creation) in the same pass as T133's notes;
-  first read-only, then `--apply --revert-file <file>` (its header has the
-  steps).
-- **Then** the rules:
-  on create, `createdBy` and `modifiedBy` equal `request.auth.uid` and
-  `createdAt` / `modifiedAt` equal `request.time`; on update, `createdBy` and
-  `createdAt` unchanged and `modifiedBy` / `modifiedAt` the caller and now.
-  Then a frontend that stops writing `dateAdded` / `dateModified`, and the
-  `dateAdded` → `createdAt` rename in `database-field-alignment.md` is done.
-- **Deploy order**: the rules only after the migration has run, in their own
-  merge; a record without `createdAt` is otherwise refused its next edit.
-- **Notes**, documents of their own now, carry the same times as any
-  document; the rules for them come with the records'.
+- **Change**: a frontend that writes the strings no more and reads only the
+  server's times, which completes the `dateAdded` → `createdAt` rename in
+  `database-field-alignment.md`. Records written before T132 have both, from
+  `migrate-records.js`.
+- **Catch**: a browser on an app from before T132 reads only the strings; ship
+  it a while after the reading frontend.
 - **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
 
-### T133 — Notes: run the migration, then stop reading the old arrays
+### T133 — Notes: a rule refusing notes in a record's array
 **Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
 
 A person's, a place's and a rumour's notes are documents of their own,
-`{record}/{id}/notes/{noteId}`, each capped by the rules on its own and read
-only where it is shown (`features/campaign-entities/shared/recordNotes.ts`).
-The app still reads the record's old `notes` array beside them, and edits a
-note from the array in the array, so nothing changes on screen before the
-migration.
+`{record}/{id}/notes/{noteId}`, each capped by the rules on its own
+(`features/campaign-entities/shared/recordNotes.ts`). Production's arrays were
+moved into them, and the app reads only the documents; a new record still
+writes `notes: []`, for a browser on the app from before. Nothing stops a
+client writing notes into the array again, where nothing would show them.
 
-- **Blocked on the maintainer**: once the frontend that reads both is live,
-  `firebase/functions/scripts/migrate-records.js` from `firebase/functions`,
-  first read-only, then `--apply --revert-file <file>` (its header has the
-  steps). Each record is one transaction; T132's times and T134's chapter
-  text go in the same pass.
-- **Then**: a frontend that reads only the documents -- drop
-  `mergeRecordNotes` and the array branch of each page's note edit and delete
-  -- and the sample-data generators (`utils/__dev__/generators/contentGenerators/`),
-  which still write the arrays, rewritten to the documents. A rule refusing a
-  non-empty `notes` array on a record, in a later merge.
-- **Search** reads a rumour's notes from its array only. Only conversions and
-  combinations write a rumour's notes, so it loses little; if wanted, it reads
-  them where the rumour is opened instead.
+- **Blocked**: until the frontend that reads only the documents is live.
+- **Then**: a rule refusing a non-empty `notes` array on a person, a place or
+  a rumour. Existing records hold empty ones.
 - **Source**: `data-model-review.md` change 5 (F3)
 
-### T134 — The saga in sections; run the chapter migration
+### T134 — The saga in sections
 **Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
 
 A chapter's text is a document of its own, `chapters/{id}/body/text`, read
 where the chapter is opened (`features/storytelling/chapters/utils/chapter-body.ts`);
 the chapter keeps its title, place, summary and `contentLength`, and search
-reads the summary. A chapter written before keeps its text on the chapter,
-which the app reads and moves on its next save. The saga is still one
-document (`saga/sagaData`) that will reach 1 MiB (F3).
+reads the summary. Production's chapters were migrated, and the app reads
+only the body. The saga is still one document (`saga/sagaData`) that will
+reach 1 MiB (F3).
 
 - **Blocked on the maintainer -- the saga**: it becomes sections, as chapters
   already are, but how a player writes a sectioned saga is a design question:
   one editor per section, or one editor that splits on headings, and what the
   saga page shows while it reads them.
-- **Blocked on the maintainer -- the chapters**: `scripts/migrate-records.js`
-  moves the text in the same pass as T132's times and T133's notes, once the
-  frontend that reads both is live. **Then** a frontend that reads only the
-  body (drop `ownContentOf`), and the sample-data generators, which still
-  write `content` on the chapter, rewritten. A rule refusing text on a
-  chapter, in a later merge.
+- **The chapters' rule**, once the frontend that reads only the body is live:
+  refuse text in a chapter's `content` (saving sets it to `null`).
 - **Source**: `data-model-review.md` change 4
 
 ### T135 — The index file matches production

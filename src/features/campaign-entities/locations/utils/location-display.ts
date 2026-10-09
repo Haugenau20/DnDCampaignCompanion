@@ -109,8 +109,7 @@ const isIndex = (
  * Whether a location reference points at `location`: its `locationId` names
  * that Location. Free text never does (see {@link resolveLocationName}).
  *
- * Shared by `NPCContext.getNPCsByLocation`, `QuestContext.getQuestsByLocation`
- * and the location page, so "who is recorded here" has one answer.
+ * Used by `QuestContext.getQuestsByLocation`.
  */
 export const referencesLocation = (
   reference: LocationReference,

@@ -2,15 +2,14 @@
 //
 // T133: a record's notes are documents of their own, `{record}/{id}/notes`.
 // Each is written alone, through the document service (which caps and
-// attributes it like any document), and read beside the record's old array
-// until the migration has moved that array.
+// attributes it like any document). The record's old array was moved into
+// them in production and is read by nothing.
 import { act, renderHook } from '@testing-library/react';
 import {
   addRecordNote,
   deleteRecordNote,
   deleteRecordNotes,
   editRecordNote,
-  mergeRecordNotes,
   notesPathOf,
   useCampaignRecordNotes,
   useRecordNotes,
@@ -181,20 +180,6 @@ describe('deleteRecordNotes', () => {
   });
 });
 
-describe('mergeRecordNotes', () => {
-  it("shows the record's old array first, then the notes' own documents", () => {
-    expect(
-      mergeRecordNotes([{ text: 'old' }], [{ text: 'new', noteId: 'n1' }])
-    ).toEqual([{ text: 'old' }, { text: 'new', noteId: 'n1' }]);
-  });
-
-  it('shows either alone, and nothing for neither', () => {
-    expect(mergeRecordNotes([{ text: 'old' }], undefined)).toEqual([{ text: 'old' }]);
-    expect(mergeRecordNotes(undefined, [{ text: 'new', noteId: 'n1' }])).toEqual([{ text: 'new', noteId: 'n1' }]);
-    expect(mergeRecordNotes(undefined, undefined)).toEqual([]);
-  });
-});
-
 describe('useRecordNotes', () => {
   it("reads the record's notes live, each with the id of its document", () => {
     const { result } = renderHook(() => useRecordNotes<{ text: string }>(NPCS, 'aldric'));
@@ -243,13 +228,12 @@ describe('useRecordNotes', () => {
 });
 
 describe('useCampaignRecordNotes', () => {
-  it("reads the active campaign's notes of the record, after its old array", () => {
-    const { result } = renderHook(() =>
-      useCampaignRecordNotes<{ text: string }>('npcs', { id: 'aldric', notes: [{ text: 'old' }] })
-    );
+  it("reads the active campaign's notes of the record, empty while they load", () => {
+    const { result } = renderHook(() => useCampaignRecordNotes<{ text: string }>('npcs', 'aldric'));
     expect(mockListeners.map((l) => l.path)).toEqual([ALDRIC_NOTES]);
+    expect(result.current).toEqual([]);
 
     act(() => mockListeners[0].onNext([{ id: 'n1', text: 'new' }]));
-    expect(result.current).toEqual([{ text: 'old' }, { text: 'new', noteId: 'n1' }]);
+    expect(result.current).toEqual([{ text: 'new', noteId: 'n1' }]);
   });
 });

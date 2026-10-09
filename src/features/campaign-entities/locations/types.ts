@@ -41,9 +41,18 @@ export interface Location extends BaseContent {
   features?: string[];
   /** Connected NPCs */
   connectedNPCs?: string[];
-  /** Associated quests */
+  /**
+   * @deprecated The old second half of a place's quests (T131), read and
+   * written by nothing: a quest's `locationId` and `keyLocations` own the
+   * link, and `scripts/migrate-links.js` emptied this in production.
+   */
   relatedQuests?: string[];
-  /** Session notes and updates */
+  /**
+   * @deprecated The old array of notes, read by nothing: each note is a
+   * document of its own (T133, `shared/recordNotes.ts`), and
+   * `scripts/migrate-records.js` emptied this in production. A new record
+   * still writes it empty, for a browser on the app from before.
+   */
   notes?: LocationNote[];
   /** Tags for organization */
   tags?: string[];

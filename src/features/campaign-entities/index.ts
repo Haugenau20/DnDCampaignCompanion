@@ -113,12 +113,10 @@ export {
 export { createLinkActions } from './shared/linkActions';
 export type { LinkEnd, LinkDeps } from './shared/linkActions';
 
-// A record's notes as documents of their own (T133), read beside the old array
-// until the migration has moved it.
+// A record's notes as documents of their own (T133).
 export {
   useRecordNotes,
-  mergeRecordNotes,
   editRecordNote,
   deleteRecordNote,
 } from './shared/recordNotes';
-export type { RecordNote, StoredNote } from './shared/recordNotes';
+export type { StoredNote } from './shared/recordNotes';

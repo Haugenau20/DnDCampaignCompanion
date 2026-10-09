@@ -150,7 +150,6 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
         connections: {
           relatedNPCs: [],
           affiliations: [],
-          relatedQuests: [],
         },
         notes: [],
       };
@@ -231,7 +230,6 @@ export const QUICK_ADD_SPECS: Record<QuickAddEntity, QuickAddSpec> = {
         type: "poi",
         features: [],
         connectedNPCs: [],
-        relatedQuests: [],
         notes: [],
         tags: [],
         ...(carried as Partial<DomainData<Location>>),

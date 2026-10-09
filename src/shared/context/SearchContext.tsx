@@ -104,13 +104,15 @@ const createLocationSearchDocuments = (locations: Location[]): SearchDocument[] 
 };
 
 /**
-   * Convert rumors to search documents
+   * Convert rumors to search documents. A rumour's notes are documents of
+   * their own (T133), read where the rumour is opened, and not searched; only
+   * conversions and combinations write them.
    */
 const createRumorSearchDocuments = (rumors: Rumor[]): SearchDocument[] => {
   return rumors.map(rumor => ({
     id: rumor.id,
     type: 'rumors' as SearchResultType,
-    content: `${rumorTitleText(rumor)} ${rumor.content} ${rumor.sourceName} ${rumor.notes.map(n => n.content).join(' ')}`,
+    content: `${rumorTitleText(rumor)} ${rumor.content} ${rumor.sourceName}`,
     metadata: {
       title: rumorTitleText(rumor),
       status: rumor.status,

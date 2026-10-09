@@ -10,18 +10,17 @@ import {
   useQuests,
   useRumors,
   useLocations,
-  resolveLocationName,
   createLinkActions,
   locationIdsOfNpc,
+  resolveLocationName,
   npcIdsOfNpc,
   questIdsOfNpc,
   rumorIdsOfNpc,
   useRecordNotes,
-  mergeRecordNotes,
   editRecordNote,
   deleteRecordNote,
 } from 'features/campaign-entities';
-import type { RecordNote } from 'features/campaign-entities';
+import type { StoredNote } from 'features/campaign-entities';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import type { NPC, NPCNote, NPCRelationship, NPCStatus } from 'features/campaign-entities';
 import type { RecordChange } from 'core/types/common';
@@ -37,7 +36,6 @@ import { useNavigation } from 'shared/context/NavigationContext';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor } from 'shared/components/inline-edit';
 import { editedText } from 'shared/utils/edit-conflict';
-import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import {
   EntityFact,
   EntityNotes,
@@ -180,7 +178,7 @@ const PROSE_BLOCKS: {
 
 /** The kinds of thing an NPC can be connected to, in the order they are shown. */
 /** An NPC with no `connections` stored yet. */
-const NO_CONNECTIONS = { relatedNPCs: [], affiliations: [], relatedQuests: [] };
+const NO_CONNECTIONS = { relatedNPCs: [], affiliations: [] };
 
 const RELATION_GROUPS = [
   { kind: 'people', label: 'People' },
@@ -256,11 +254,9 @@ const NPCDetailPage: React.FC = () => {
 
   const npc = npcs.find((candidate) => candidate.id === npcId);
 
-  // The notes: their own documents (T133), and the record's old array until
-  // the migration has moved it.
+  // The notes: their own documents (T133).
   const npcsPath = useCampaignCollectionPath('npcs');
-  const noteDocuments = useRecordNotes<NPCNote>(npcsPath, npc?.id);
-  const notes = useMemo(() => mergeRecordNotes(npc?.notes, noteDocuments), [npc?.notes, noteDocuments]);
+  const notes = useRecordNotes<NPCNote>(npcsPath, npc?.id);
 
   // `loading` folds into the gate's resolving state: `npcs` is empty while auth
   // and the campaign restore, and without this the page would claim "no NPC
@@ -572,19 +568,17 @@ const NPCDetailPage: React.FC = () => {
   };
 
   /**
-   * A note in its own document (T133) is changed there; one still in the
-   * record's old array goes through `save`, which searches the array the
-   * server holds (T083), so a note another player added meanwhile stays and
-   * one they changed first is refused rather than guessed at.
+   * A note is changed in its own document (T133); one another player changed
+   * first is refused rather than overwritten (T083).
    */
-  const editNote = async (note: RecordNote<NPCNote>, text: string) =>
-    note.noteId && npcsPath && npc
-      ? editRecordNote(npcsPath, npc.id, note.noteId, 'text', note.text, text)
-      : save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
-  const deleteNote = async (note: RecordNote<NPCNote>) =>
-    note.noteId && npcsPath && npc
-      ? deleteRecordNote(npcsPath, npc.id, note.noteId)
-      : save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
+  const editNote = async (note: StoredNote<NPCNote>, text: string) => {
+    if (!npcsPath || !npc) return;
+    await editRecordNote(npcsPath, npc.id, note.noteId, 'text', note.text, text);
+  };
+  const deleteNote = async (note: StoredNote<NPCNote>) => {
+    if (!npcsPath || !npc) return;
+    await deleteRecordNote(npcsPath, npc.id, note.noteId);
+  };
 
   const handleDelete = async () => {
     if (!npc) return;

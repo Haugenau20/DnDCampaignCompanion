@@ -1,7 +1,6 @@
 // src/features/campaign-entities/npcs/types.ts
 import { BaseContent, DomainData, RecordChange, CreateAlongside } from 'core/types/common';
 import { StoredImage } from 'core/types/storedImage';
-import { Location } from '../locations/types';
 
 export type NPCStatus = 'alive' | 'deceased' | 'missing' | 'unknown';
 export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
@@ -9,7 +8,13 @@ export type NPCRelationship = 'friendly' | 'neutral' | 'hostile' | 'unknown';
 export interface NPCConnections {
   relatedNPCs: string[];
   affiliations: string[];
-  relatedQuests: string[];
+  /**
+   * @deprecated The old second half of a person's quests (T131), read and
+   * written by nothing: a quest's `relatedNPCIds` owns the link, and
+   * `scripts/migrate-links.js` emptied this in production. Older records
+   * still store it, empty.
+   */
+  relatedQuests?: string[];
 }
 
 export interface NPCNote {
@@ -61,7 +66,14 @@ export interface NPC extends BaseContent {
    * name; production's were given their `locationId` on 2026-10-08 (T079).
    */
   location?: string;
-  /** See the `location`/`locationId` contract documented on `location` above. */
+  /**
+   * @deprecated For a person, written by nothing and never read as a link:
+   * the place's `connectedNPCs` owns that (T131). `scripts/migrate-links.js`
+   * emptied it in production except where the place no longer exists, and
+   * that dangling reference is still shown where a person has no linked
+   * place, as `resolveLocationName` reads any reference (#1412). The
+   * contract on `location` above holds for quests and rumours.
+   */
   locationId?: string;
   relationship: NPCRelationship;
   description: string;
@@ -69,6 +81,12 @@ export interface NPC extends BaseContent {
   personality?: string;
   background?: string;
   connections: NPCConnections;
+  /**
+   * @deprecated The old array of notes, read by nothing: each note is a
+   * document of its own (T133, `shared/recordNotes.ts`), and
+   * `scripts/migrate-records.js` emptied this in production. A new record
+   * still writes it empty, for a browser on the app from before.
+   */
   notes: NPCNote[];
   /** Free-text labels for grouping, the same shape `Location.tags` uses. */
   tags?: string[];
@@ -96,8 +114,6 @@ export interface NPCContextState {
 
 export interface NPCContextValue extends NPCContextState {
   getNPCById: (id: string) => NPC | undefined;
-  getNPCsByQuest: (questId: string) => NPC[];
-  getNPCsByLocation: (location: Location) => NPC[];
   getNPCsByRelationship: (relationship: NPCRelationship) => NPC[];
   updateNPCNote: (npcId: string, note: NPCNote) => void;
   updateNPCRelationship: (npcId: string, relationship: NPCRelationship) => Promise<void>;

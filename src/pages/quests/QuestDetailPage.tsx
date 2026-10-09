@@ -225,10 +225,9 @@ const QuestDetailPage: React.FC = () => {
     : undefined;
 
   /**
-   * The people on the quest, resolved to records: the quest's own list, and
-   * the people whose old record names it until the migration has run (T131).
+   * The people on the quest, resolved to records: the quest's own list (T131).
    */
-  const personIds = useMemo(() => (quest ? npcIdsOfQuest(quest, npcs) : []), [quest, npcs]);
+  const personIds = useMemo(() => (quest ? npcIdsOfQuest(quest) : []), [quest]);
   const people = useMemo(
     () => personIds.map((id) => ({ id, npc: npcs.find((candidate) => candidate.id === id) })),
     [personIds, npcs]
@@ -258,7 +257,7 @@ const QuestDetailPage: React.FC = () => {
   /**
    * What points here -- derived, read-only, and the reason a quest earns a page
    * (item 6). These are other records' references to this one, and the place to
-   * change a rumour's conversion or a location's quest list is that record.
+   * change a rumour's conversion is that rumour.
    */
   const inbound = useMemo<InboundLink[]>(() => {
     if (!quest) return [];
@@ -273,18 +272,6 @@ const QuestDetailPage: React.FC = () => {
           name: rumorTitleText(rumor),
           detail: `rumour, ${rumor.status} — became this quest`,
           href: `/rumors?highlight=${rumor.id}`,
-        })
-      );
-
-    locations
-      .filter((location) => location.relatedQuests?.includes(quest.id))
-      .forEach((location) =>
-        out.push({
-          key: `location-${location.id}`,
-          id: location.id,
-          name: location.name,
-          detail: 'location, points at this quest',
-          href: `/locations/${location.id}`,
         })
       );
 
@@ -309,7 +296,7 @@ const QuestDetailPage: React.FC = () => {
       );
 
     return out;
-  }, [quest, rumors, locations, notes]);
+  }, [quest, rumors, notes]);
 
   /** What the delete dialog names as losing a link. */
   const deletionLosses = useMemo(() => {
@@ -375,7 +362,6 @@ const QuestDetailPage: React.FC = () => {
       connectedNPCs: [],
       // The quest owns the link (T131): the place stays on it, now pointing
       // at the location it became.
-      relatedQuests: [],
       notes: [],
       tags: [],
     }, {

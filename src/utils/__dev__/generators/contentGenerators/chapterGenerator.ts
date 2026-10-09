@@ -36,9 +36,15 @@ export const createChapters = async (
     chaptersData = getDunedainChapters(dmUid, formattedDate);
   }
   
-  // Create the chapters in Firestore
-  for (const chapter of chaptersData) {
-    await setDoc(doc(db, 'groups', groupId, 'campaigns', campaignId, 'chapters', chapter.id), chapter);
+  // Create the chapters in Firestore, each one's text a document of its own
+  // (T134): `chapters/{id}/body/text`, with its length on the chapter, as the
+  // app writes them. The sample data keeps the text beside its chapter only
+  // because that is where it is easiest to read.
+  for (const { content, ...chapter } of chaptersData) {
+    const text = content ?? '';
+    const chapterPath = ['groups', groupId, 'campaigns', campaignId, 'chapters'] as const;
+    await setDoc(doc(db, ...chapterPath, chapter.id), { ...chapter, content: null, contentLength: text.length });
+    await setDoc(doc(db, ...chapterPath, chapter.id, 'body', 'text'), { content: text });
     console.log(`Created chapter for ${campaignId}: ${chapter.title}`);
   }
   

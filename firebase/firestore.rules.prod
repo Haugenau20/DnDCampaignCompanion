@@ -44,7 +44,8 @@
 //    no creator check anywhere in `src/`, so every such attempt failed at write
 //    time (bug #1406). This is a shared campaign journal; collective
 //    record-keeping is the point, and `createdBy`/`modifiedBy` still record
-//    authorship separately, so the audit trail survives.
+//    authorship separately, so the audit trail survives -- checked since
+//    T132: each is the writer's own id, stamped with the server's time.
 //
 // 2. SECURITY FIX -- personal notes were readable by the whole group.
 //    Notes live at `groups/{groupId}/users/{uid}/notes`, and the previous
@@ -490,6 +491,35 @@ service cloud.firestore {
                fits(changed, 'title', 200) && fits(changed, 'content', 500000)));
     }
 
+    // Who wrote a record or a note, and when, as the rules can check them
+    // (T132, F5, F6): the writer's own id, and the server's time of the write.
+    // Until these, any member could credit a record to someone else. The
+    // names beside the ids (`createdByUsername`, ...) are what the app shows
+    // for an author who has left, and are not checked.
+    function stampsCreation() {
+      let data = request.resource.data;
+      return data.get('createdBy', null) == request.auth.uid &&
+             data.get('modifiedBy', null) == request.auth.uid &&
+             data.get('createdAt', null) == request.time &&
+             data.get('modifiedAt', null) == request.time;
+    }
+
+    // An edit: by the writer, now, leaving who created it and when as they
+    // were -- absent on a record written before either existed.
+    function stampsModification() {
+      let data = request.resource.data;
+      return data.get('createdBy', null) == resource.data.get('createdBy', null) &&
+             data.get('createdAt', null) == resource.data.get('createdAt', null) &&
+             data.get('modifiedBy', null) == request.auth.uid &&
+             data.get('modifiedAt', null) == request.time;
+    }
+
+    // A chapter renumbered by another's move or deletion: its place alone
+    // changes, and its author's attribution stays (#1203).
+    function onlyRenumbersChapter(entityCollection) {
+      return entityCollection == 'chapters' && changedKeys().hasOnly(['order']);
+    }
+
     // A campaign's or a group's name and description (T119), as `createGroup`
     // checks them for a new group.
     function namedTextFits() {
@@ -729,7 +759,7 @@ service cloud.firestore {
           // entity carries one, so the check passes for them.
           // Only into a campaign that takes writes (T037, DATA-010).
           allow create: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
-                         textFits(entityCollection) &&
+                         textFits(entityCollection) && stampsCreation() &&
                          isGroupMember(groupId) && imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
                          locationFenceHolds(groupId, campaignId, entityCollection);
@@ -739,6 +769,7 @@ service cloud.firestore {
           // they had not personally created (bug #1406).
           allow update: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
                          textFits(entityCollection) &&
+                         (stampsModification() || onlyRenumbersChapter(entityCollection)) &&
                          isGroupMember(groupId) &&
                          imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
@@ -758,9 +789,12 @@ service cloud.firestore {
         // note can commit with it (a combined rumour's).
         match /{entityCollection}/{entityId}/notes/{noteId} {
           allow read: if hasNotes(entityCollection) && isGroupMember(groupId);
-          allow create, update: if hasNotes(entityCollection) && isGroupMember(groupId) &&
-                                 campaignOpen(groupId, campaignId) && noteTextFits() &&
-                                 existsAfter(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/$(entityCollection)/$(entityId));
+          allow create: if hasNotes(entityCollection) && isGroupMember(groupId) &&
+                         campaignOpen(groupId, campaignId) && noteTextFits() && stampsCreation() &&
+                         existsAfter(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/$(entityCollection)/$(entityId));
+          allow update: if hasNotes(entityCollection) && isGroupMember(groupId) &&
+                         campaignOpen(groupId, campaignId) && noteTextFits() && stampsModification() &&
+                         existsAfter(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/$(entityCollection)/$(entityId));
           allow delete: if hasNotes(entityCollection) && isGroupMember(groupId);
         }
 

@@ -9,7 +9,7 @@ const chapter = (order: number, extra: Partial<Chapter> = {}): Chapter =>
     order,
     title: `Chapter ${order}`,
     summary: `Summary ${order}`,
-    content: 'x'.repeat(500),
+    contentLength: 500,
     ...extra,
   } as Chapter);
 
@@ -50,8 +50,8 @@ describe('deriveBookAppearances', () => {
   // Thickness carries chapter length; a longer chapter is a fatter book.
   it('makes a longer chapter thicker than a shorter one', () => {
     const appearances = appearancesFor([
-      chapter(1, { content: 'x'.repeat(200) }),
-      chapter(2, { content: 'x'.repeat(4000) }),
+      chapter(1, { contentLength: 200 }),
+      chapter(2, { contentLength: 4000 }),
     ]);
     const thin = appearances.get('chapter-01')!.width;
     const thick = appearances.get('chapter-02')!.width;
@@ -64,9 +64,9 @@ describe('deriveBookAppearances', () => {
   // range keeps it visible whatever the campaign's typical chapter size.
   it('spreads thickness across a narrow range of lengths', () => {
     const appearances = appearancesFor([
-      chapter(1, { content: 'x'.repeat(444) }),
-      chapter(2, { content: 'x'.repeat(620) }),
-      chapter(3, { content: 'x'.repeat(799) }),
+      chapter(1, { contentLength: 444 }),
+      chapter(2, { contentLength: 620 }),
+      chapter(3, { contentLength: 799 }),
     ]);
     const widths = [1, 2, 3].map(
       (n) => appearances.get(`chapter-0${n}`)!.width
@@ -76,15 +76,15 @@ describe('deriveBookAppearances', () => {
   });
 
   // T134: the text is a document of its own, so the shelf sizes a book by the
-  // length the chapter stores -- or by the text a chapter written before holds.
-  it('sizes a book by the length the chapter stores when its text is elsewhere', () => {
+  // length the chapter stores; text left on a chapter is read by nothing.
+  it('sizes a book by the length the chapter stores, not text left on it', () => {
     const appearances = appearancesFor([
-      chapter(1, { content: null, contentLength: 200 }),
-      chapter(2, { content: 'x'.repeat(4000) }),
-      chapter(3, { content: null, contentLength: 4000 }),
+      chapter(1, { contentLength: 200 }),
+      chapter(2, { content: 'x'.repeat(4000), contentLength: 200 }),
+      chapter(3, { contentLength: 4000 }),
     ]);
-    expect(appearances.get('chapter-02')!.width).toBeGreaterThan(appearances.get('chapter-01')!.width);
-    expect(appearances.get('chapter-03')!.width).toBe(appearances.get('chapter-02')!.width);
+    expect(appearances.get('chapter-02')!.width).toBe(appearances.get('chapter-01')!.width);
+    expect(appearances.get('chapter-03')!.width).toBeGreaterThan(appearances.get('chapter-02')!.width);
   });
 
   it('gives every chapter the same thickness when they are all the same length', () => {
@@ -96,8 +96,8 @@ describe('deriveBookAppearances', () => {
 
   it('keeps thickness within the spine range', () => {
     const appearances = appearancesFor([
-      chapter(1, { content: '' }),
-      chapter(2, { content: 'x'.repeat(100000) }),
+      chapter(1, { contentLength: 0 }),
+      chapter(2, { contentLength: 100000 }),
     ]);
     appearances.forEach((a) => {
       expect(a.width).toBeGreaterThanOrEqual(34);
@@ -105,8 +105,8 @@ describe('deriveBookAppearances', () => {
     });
   });
 
-  it('does not throw on a chapter with no content', () => {
-    expect(() => appearancesFor([chapter(1, { content: undefined })])).not.toThrow();
+  it('does not throw on a chapter with no length stored', () => {
+    expect(() => appearancesFor([chapter(1, { contentLength: undefined })])).not.toThrow();
   });
 
   // Height is deliberately NOT tied to length -- thickness already carries
