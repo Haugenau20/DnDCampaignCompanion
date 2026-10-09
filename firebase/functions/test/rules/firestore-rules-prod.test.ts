@@ -693,8 +693,9 @@ describe("turning rumours into a quest is one transaction (T088)", () => {
 
   /**
    * What `DocumentService.createDocumentWithUpdates` sends: the quest's id is
-   * read and found free, every rumour is read, then the quest is set and each
-   * rumour updated, in one commit.
+   * read and found free, every rumour is read, then the quest is set, each
+   * rumour marked, and a note saying so written under it (a document of its
+   * own since T133), in one commit.
    */
   const convert = (uid: string, rumourIds: string[]) => {
     const db = as(uid);
@@ -703,11 +704,13 @@ describe("turning rumours into a quest is one transaction (T088)", () => {
       if ((await transaction.get(quest)).exists) throw new Error("taken");
       const rumours = await Promise.all(rumourIds.map((id) => transaction.get(db.doc(`${C}/rumors/${id}`))));
       transaction.set(quest, {title: "Find the fire", ...created(uid)});
-      rumours.forEach((rumour) => transaction.update(rumour.ref, {
-        convertedToQuestId: "find-the-fire",
-        notes: [...rumour.data()!.notes, {id: `converted-${rumour.id}`, content: "Converted to quest: find-the-fire"}],
-        ...modified(uid),
-      }));
+      rumours.forEach((rumour) => {
+        transaction.update(rumour.ref, {convertedToQuestId: "find-the-fire", ...modified(uid)});
+        transaction.set(rumour.ref.collection("notes").doc(`converted-${rumour.id}`), {
+          content: "Converted to quest: find-the-fire",
+          ...created(uid),
+        });
+      });
     });
   };
 
@@ -727,10 +730,11 @@ describe("turning rumours into a quest is one transaction (T088)", () => {
 
   // Every write's rules read the member's profile and the campaign, but a
   // request may make only so many reads; identical ones count once. The
-  // client allows 499 rumours per conversion.
-  it("and the largest selection the client allows, 499", async () => {
-    await seedRumours(499);
-    await assertSucceeds(convert("frodo", ids(499)));
+  // client allows 249 rumours per conversion, two writes each
+  // (`MAX_RUMOURS_PER_COMMIT`).
+  it("and the largest selection the client allows, 249", async () => {
+    await seedRumours(249);
+    await assertSucceeds(convert("frodo", ids(249)));
   });
 
   it("a stranger converts none, and nothing is created", async () => {
@@ -1171,7 +1175,6 @@ describe("a record's text has a limit (T119)", () => {
     ["rumors", "content", 10_000],
     ["chapters", "title", 200],
     ["chapters", "summary", 10_000],
-    ["chapters", "content", 200_000],
     ["saga", "title", 200],
     ["saga", "content", 500_000],
   ])("%s.%s takes %d characters and refuses one more", async (collection, field, limit) => {
@@ -1220,7 +1223,7 @@ describe("a record's text has a limit (T119)", () => {
   });
 
   it("leaves the lists inside a record alone, which no rule can look into", async () => {
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({notes: [{id: "n", text: "x".repeat(20_000)}], ...modified("frodo")}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({tags: ["x".repeat(20_000)], ...modified("frodo")}));
   });
 });
 
@@ -1298,5 +1301,62 @@ describe("a record says truly who wrote it, and when (T132)", () => {
   it("but not edited otherwise without saying who and when", async () => {
     await assertFails(as("frodo").doc(`${C}/chapters/ch-1`).update({order: 2, title: "A party"}));
     await assertFails(as("frodo").doc(NPC).update({order: 2}));
+  });
+});
+
+// T131, T133, T134: links' old second halves, records' notes arrays and a
+// chapter's own text were moved out in production, and nothing reads them. A
+// value written there, by a browser still on the app from before, would
+// vanish from every page; the rules refuse it instead.
+describe("the shapes records were moved out of stay empty (T131, T133, T134)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+
+  beforeEach(() => env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    // As the migration left them: empty, and one person's place since deleted.
+    await db.doc(`${C}/npcs/n1`).set({name: "Bilbo", locationId: "rivendell-gone", notes: [],
+      connections: {relatedNPCs: [], affiliations: [], relatedQuests: []}});
+    await db.doc(`${C}/locations/bree`).set({name: "Bree", notes: [], relatedQuests: []});
+    await db.doc(`${C}/rumors/r1`).set({title: "Smoke", content: "", notes: []});
+    await db.doc(`${C}/chapters/ch-1`).set({title: "A long-expected party", order: 1, content: null});
+  }));
+
+  it("control: the app's own writes, with the old fields empty or as they were", async () => {
+    const db = as("frodo");
+    // Quick add writes `locationId: ""` and `notes: []`; a new rumour `notes: []`.
+    await assertSucceeds(db.doc(`${C}/npcs/sam`).set({name: "Sam", locationId: "", notes: [],
+      connections: {relatedNPCs: [], affiliations: []}, ...created("frodo")}));
+    await assertSucceeds(db.doc(`${C}/rumors/r2`).set({title: "Ash", content: "", notes: [], ...created("frodo")}));
+    // A link added between two people rewrites `connections` as it was.
+    await assertSucceeds(db.doc(`${C}/npcs/n1`).update({
+      connections: {relatedNPCs: ["sam"], affiliations: [], relatedQuests: []}, ...modified("frodo")}));
+    // An edit leaves the place since deleted as it was; saving a chapter empties its text.
+    await assertSucceeds(db.doc(`${C}/npcs/n1`).update({name: "Bilbo Baggins", ...modified("frodo")}));
+    await assertSucceeds(db.doc(`${C}/chapters/ch-1`).update({content: null, contentLength: 9, ...modified("frodo")}));
+  });
+
+  it.each([
+    ["a person's old place", "npcs/n1", {locationId: "bree"}],
+    ["a person's old quest list", "npcs/n1", {connections: {relatedNPCs: [], affiliations: [], relatedQuests: ["q1"]}}],
+    ["a person's notes array", "npcs/n1", {notes: [{date: "2026-10-09", text: "Lost"}]}],
+    ["a place's old quest list", "locations/bree", {relatedQuests: ["q1"]}],
+    ["a place's notes array", "locations/bree", {notes: [{date: "2026-10-09", text: "Lost"}]}],
+    ["a rumour's notes array", "rumors/r1", {notes: [{content: "Lost"}]}],
+    ["a chapter's own text", "chapters/ch-1", {content: "Lost"}],
+  ])("refuses %s, written again", async (_what, path, data) => {
+    await assertFails(as("frodo").doc(`${C}/${path}`).update({...data, ...modified("frodo")}));
+  });
+
+  it("refuses a new record written in an old shape", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc(`${C}/npcs/sam`).set({name: "Sam", locationId: "bree", ...created("frodo")}));
+    await assertFails(db.doc(`${C}/rumors/r2`).set({title: "Ash", content: "", notes: [{content: "Lost"}], ...created("frodo")}));
+    await assertFails(db.doc(`${C}/chapters/ch-2`).set({title: "The shadow of the past", order: 2, content: "Lost", ...created("frodo")}));
+  });
+
+  it("leaves a rumour's own content and the saga's text alone", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.doc(`${C}/rumors/r1`).update({content: "Black riders on the road", ...modified("frodo")}));
+    await assertSucceeds(db.doc(`${C}/saga/sagaData`).set({title: "The saga", content: "Once", ...created("frodo")}));
   });
 });
