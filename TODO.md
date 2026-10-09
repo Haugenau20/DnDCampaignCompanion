@@ -26,7 +26,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
-| medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 and 2 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
@@ -279,41 +278,17 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
-### Letting a new group start on its own (T127 and T128)
+### Letting a new group start on its own (T128)
 
-A group cannot start today without the maintainer, who creates it, invites its
-first player, promotes them and leaves. The plan,
+A table starts without the maintainer: a founder link
+(`firebase/functions/scripts/issue-founder-invitation.js`) leads from an
+account to a group, its first campaign and the invite button
+(`/join?founder=…`; the journey is `e2e/tests/founder.spec.ts`), and
+`createGroup` allows up to 3 groups to whoever has started one. The plan,
 [`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md),
-says where things stand and what was decided (maintainer, 2026-10-08): founder
-invitations, 10 members and 5 campaigns per group, 300 accounts, AI limits of
-3 / 5 / 10 with the prepaid OpenAI balance as the ceiling, every member may
-create a campaign, and up to 3 groups per founder. Founder invitations exist:
-`firebase/functions/scripts/issue-founder-invitation.js` issues one, and sign-up
-admits it, and `createGroup` spends one or allows up to 3 groups to whoever has
-started one. T127 is the rest of the smallest change that lets a table start
-alone; T128 makes it safe to hand out more than a few links. The callables on
-the way in (`reserveSignUp`, `redeemInvitation`, `createGroup`) require App Check
-outside the emulator. Every step that changes a flow lands with its e2e journey; the last one runs founder link →
-group → campaign → invitation → a second player joins.
-
-### T127 — A founder's first run
-**Type** feature · **Size** M · **Status** blocked · **Verified** 2026-10-08
-
-From founder link to first campaign as one guided flow, not three admin pages
-(plan, D5).
-
-- **Where**: the group-less home (`shared/components/gated/GatedPageState.tsx`)
-  offers "I have a founder link" beside "I have an invite link"; the founder
-  names the group and themselves; then creates the first campaign; then lands on
-  `/admin/people` with the invite button in front.
-- **Every member may create a campaign** (decided 2026-10-08), as the rules
-  already allow (`firestore.rules.prod`, `match /campaigns/{campaignId}`); today
-  only the admin UI offers it. The empty campaign state ("Your first campaign
-  will appear here as soon as it's created") gets a button for every member.
-- **The server side is done**: `createGroup` takes `{name, description,
-  username, founderToken}` and spends the link (`GroupService.createGroup`
-  passes them through); `reserveSignUp` takes `{founderToken, email}`.
-- **Source**: the onboarding plan, step 3; decided 2026-10-08
+says what was decided (maintainer, 2026-10-08): 10 members and 5 campaigns per
+group, 300 accounts, AI limits of 3 / 5 / 10 with the prepaid OpenAI balance as
+the ceiling. T128 makes it safe to hand out more than a few links.
 
 ### T128 — Caps on members, campaigns and accounts
 **Type** feature · **Size** M · **Status** open · **Verified** 2026-10-08

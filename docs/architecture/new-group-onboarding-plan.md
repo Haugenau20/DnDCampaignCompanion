@@ -3,7 +3,8 @@
 Written 2026-10-07 against `main` at `b78d72f`. The maintainer decided on it on 2026-10-08
 ([Answers](#answers-maintainer-2026-10-08)). Shipped: founder invitations (step 1, with step 6's
 `/privacy`), the guarded `createGroup` with App Check (step 2), step 5's persistent cache and
-D3's lower limits. The rest is TODO entries T127 and T128 ([Build order](#build-order)).
+D3's lower limits, and step 3's first run (`/join?founder=…`). The rest is TODO entry T128
+([Build order](#build-order)).
 
 **The question.** Suppose the site were sent tomorrow to 30 groups that have never used it. Can they
 sign up, create a group and start playing without the maintainer? **No.** This plan covers what is

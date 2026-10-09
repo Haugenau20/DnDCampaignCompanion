@@ -56,7 +56,7 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
   const location = useLocation();
 
   const { groups, activeGroupId, setActiveGroup } = useGroups();
-  const { setActiveCampaign } = useCampaigns();
+  const { createCampaign, setActiveCampaign } = useCampaigns();
 
   const isPicking = gate.state === "pick-campaign";
   const { options, loading: campaignsLoading } = useSelectableCampaigns(isPicking);
@@ -82,6 +82,29 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
     }
   };
 
+  /**
+   * Make the first campaign in the active group and open it (T127). Offered
+   * only while the reader's groups have none, which the panel decides.
+   */
+  const handleCreateCampaign = async ({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) => {
+    if (!activeGroupId) throw new Error("No active group selected");
+    const campaignId = await createCampaign(activeGroupId, name, description);
+    await setActiveCampaign(campaignId);
+  };
+
+  // Whether the active group has no campaign of its own, judged once the
+  // cross-group list is in; only then is starting one offered.
+  const activeGroupHasNone =
+    !!activeGroupId &&
+    !campaignsLoading &&
+    !options.some((option) => option.groupId === activeGroupId);
+
   const panel =
     gate.state === "signed-out" || isPicking ? (
       <GatedPageState
@@ -91,6 +114,10 @@ const GatedContent: React.FC<GatedContentProps> = ({ gate, children }) => {
         eyebrow={gate.copy.eyebrow}
         signInHref={signInPathFor(location)}
         joinHref="/join"
+        // A founder link (T127); the page asks for it when it has no token.
+        startGroupHref="/join?founder="
+        onCreateCampaign={activeGroupHasNone ? handleCreateCampaign : undefined}
+        createCampaignGroupName={groups.find((group) => group.id === activeGroupId)?.name}
         campaigns={options}
         hasGroups={groups.length > 0}
         campaignsLoading={campaignsLoading}

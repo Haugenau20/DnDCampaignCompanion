@@ -8,6 +8,7 @@ import type { PageGate } from "../usePageGate";
 
 const mockSetActiveGroup = jest.fn().mockResolvedValue(undefined);
 const mockSetActiveCampaign = jest.fn().mockResolvedValue(undefined);
+const mockCreateCampaign = jest.fn().mockResolvedValue("c-new");
 let mockActiveGroupId: string | null = "g-1";
 
 jest.mock("features/user-management", () => ({
@@ -16,7 +17,10 @@ jest.mock("features/user-management", () => ({
     activeGroupId: mockActiveGroupId,
     setActiveGroup: mockSetActiveGroup,
   }),
-  useCampaigns: () => ({ setActiveCampaign: mockSetActiveCampaign }),
+  useCampaigns: () => ({
+    setActiveCampaign: mockSetActiveCampaign,
+    createCampaign: mockCreateCampaign,
+  }),
   // `SignInForm` and `JoinGroupDialog` were stubbed here until 14.5 deleted
   // the dialogs. `GatedContent` now links to the routes instead, and needs
   // only the path builder.
@@ -197,5 +201,45 @@ describe("GatedContent", () => {
         name: GATED_COPY.quests.writeHeading as string,
       })
     ).toBeInTheDocument();
+  });
+
+  // T127: any member starts the group's first campaign from the panel, in
+  // the active group, and lands in it.
+  it("makes the first campaign in the active group and opens it", async () => {
+    mockOptions = [];
+    renderGate(gate({ state: "pick-campaign", canAct: false }));
+    fireEvent.change(screen.getByLabelText(/campaign name/i), {
+      target: { value: "The Sunken Library" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create campaign/i }));
+
+    await waitFor(() => expect(mockSetActiveCampaign).toHaveBeenCalledWith("c-new"));
+    expect(mockCreateCampaign).toHaveBeenCalledWith("g-1", "The Sunken Library", "");
+  });
+
+  it("offers no campaign form without an active group", () => {
+    mockOptions = [];
+    mockActiveGroupId = null;
+    renderGate(gate({ state: "pick-campaign", canAct: false }));
+    expect(screen.queryByLabelText(/campaign name/i)).not.toBeInTheDocument();
+  });
+
+  it("offers no founder link to someone already in a group", () => {
+    renderGate(gate({ state: "pick-campaign", canAct: false }));
+    // The member here is in a group, so it is not offered.
+    expect(screen.queryByRole("link", { name: /link to start a group/i })).not.toBeInTheDocument();
+  });
+
+  it("offers starting a campaign in the active group when only another group has one", () => {
+    mockActiveGroupId = "g-2";
+    renderGate(gate({ state: "pick-campaign", canAct: false }));
+    expect(screen.getByRole("button", { name: /Phandelver/ })).toBeInTheDocument();
+    expect(screen.getByText(/start a campaign in/i)).toBeInTheDocument();
+  });
+
+  it("offers no campaign form when the active group has campaigns", () => {
+    renderGate(gate({ state: "pick-campaign", canAct: false }));
+    expect(screen.queryByText(/start a campaign in/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/campaign name/i)).not.toBeInTheDocument();
   });
 });

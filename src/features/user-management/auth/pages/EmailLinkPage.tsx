@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useInvitations } from '../../groups/hooks/useInvitations';
 import { readSignInLinkIntent } from '../utils/email-link';
 import { safeNextPath, CAMPAIGN_HOME } from '../utils/next-path';
+import { founderLinkPath } from '../../groups/utils/founder-link';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -35,8 +36,8 @@ const groupCode = (code: string): string => {
  * `/auth/link` -- where a magic sign-in link lands.
  *
  * Finishes the sign-in, then does whatever the link was sent for: redeem an
- * invitation (the join page's email path) or go to `next` (the sign-in
- * page's). Both travel in the link's own URL, so the link works on any device;
+ * invitation (the join page's email path), go back to a founder link (T127),
+ * or go to `next` (the sign-in page's). Both travel in the link's own URL, so the link works on any device;
  * only the address is remembered locally, and when it is missing -- the link
  * was opened on another device -- the page asks for it.
  *
@@ -135,6 +136,13 @@ const EmailLinkPage: React.FC = () => {
         }
         await reloadUserContext();
         navigate(CAMPAIGN_HOME, { replace: true });
+        return;
+      }
+
+      // A founder link is spent by naming the group, which the link's page
+      // asks for next. `next` cannot carry it: `/join` is never a `next`.
+      if (intent.founder) {
+        navigate(founderLinkPath(intent.founder), { replace: true });
         return;
       }
 

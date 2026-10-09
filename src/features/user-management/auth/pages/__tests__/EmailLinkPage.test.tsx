@@ -185,6 +185,26 @@ describe("EmailLinkPage", () => {
       expect(deleteFreshAccount).not.toHaveBeenCalled();
     });
   });
+
+  // T127: signing in spends nothing of a founder link; its page names the
+  // group next, so the reader lands back on it.
+  describe("starting a group from a founder link", () => {
+    test("lands back on the founder link, and redeems nothing", async () => {
+      completeSignInLink.mockResolvedValueOnce({ user: { uid: "u-new" }, isNewUser: true });
+      setup({ query: "?founder=f-tok_1" });
+      await waitFor(() =>
+        expect(screen.getByTestId("landed")).toHaveTextContent("/join?founder=f-tok_1")
+      );
+      expect(joinGroupWithToken).not.toHaveBeenCalled();
+      expect(deleteFreshAccount).not.toHaveBeenCalled();
+    });
+
+    test("never shows a code for another device", () => {
+      setup({ query: "?founder=f&device=req-1", pending: null });
+      expect(lookUpDeviceSignIn).not.toHaveBeenCalled();
+      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    });
+  });
 });
 
 describe("EmailLinkPage — showing the code for another device", () => {

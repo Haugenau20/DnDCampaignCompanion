@@ -603,6 +603,32 @@ describe('InvitationService', () => {
       await expect(svc.reserveSignUp('valid-token', 'frodo@shire.dev')).rejects.toThrow('ACCOUNTS_FULL');
     });
   });
+
+  // T127: a founder link is server-only, so the function checks it; the
+  // client reads nothing first and sends no group.
+  describe('reserveFounderSignUp', () => {
+    test('reserves the address against the founder link through the Cloud Function alone', async () => {
+      mockCallable.mockResolvedValueOnce({ data: { success: true } });
+
+      const svc = InvitationService.getInstance();
+      await svc.reserveFounderSignUp('f-tok', 'aragorn@gondor.test');
+
+      expect(mockCallable).toHaveBeenCalledWith('reserveSignUp', {
+        founderToken: 'f-tok',
+        email: 'aragorn@gondor.test',
+      });
+      expect(mockGetDoc).not.toHaveBeenCalled();
+      expect(mockSetDoc).not.toHaveBeenCalled();
+    });
+
+    test("surfaces the function's refusal", async () => {
+      mockCallable.mockRejectedValueOnce(
+        new Error('This link to start a group has already been used. Ask for a new one.')
+      );
+      const svc = InvitationService.getInstance();
+      await expect(svc.reserveFounderSignUp('f-tok', 'a@b.test')).rejects.toThrow(/already been used/);
+    });
+  });
 });
 
 export {};

@@ -220,20 +220,21 @@ once per machine, `npm --prefix e2e ci` and `npx playwright install chromium` fr
 it as the `e2e` job. Things that differ from the dev setup on purpose:
 
 - **Production Firestore rules.** A write the live rules refuse fails the journey that makes it.
-- **Own ports** (Auth 19099, Firestore 18080, the site on 4300; `e2e/support/env.ts`), so a run
+- **Own ports** (Auth 19099, Firestore 18080, Functions 15001, the site on 4300; `e2e/support/env.ts`), so a run
   shares the machine with the dev server and the dev emulators and touches neither. The build goes
   to the OS temp folder, not `build/`.
 - **Nothing leaves the machine** and **an uncaught page error fails the journey**
   (`e2e/support/test.ts`); journeys import `test` from there, not from `@playwright/test`.
 - `sign-in.setup.ts` signs in through the Auth emulator's outbox and saves the browser (IndexedDB
-  included), which every other journey starts from. No Functions or Storage emulator yet: a journey
-  that needs one adds it to `firebase.e2e.json` and the `--only` list.
+  included), which every other journey starts from. The Functions emulator runs too (port 15001;
+  `test:e2e` builds `firebase/functions` first), for the founder journey (`founder.spec.ts`). No
+  Storage emulator yet: a journey that needs one adds it to `firebase.e2e.json` and the `--only` list.
 
 **A defect found in a browser check lands with a journey that replays it** (maintainer,
 2026-10-06). Claude-in-Chrome stays for exploring. Locate by role and accessible name, as a
 player would; a selector that needs a class or `data-testid` usually means the control has no name.
 Iterating: start the emulators once (`npx firebase emulators:start --project demo-e2e --only
-auth,firestore --config firebase.e2e.json` from `firebase/`), then `npx playwright test` from `e2e/`
+auth,firestore,functions --config firebase.e2e.json`, after `npm --prefix functions run build` from `firebase/`), then `npx playwright test` from `e2e/`
 as often as needed. A failure leaves a screenshot, `error-context.md` (the page's accessibility
 tree) and a trace (`npx playwright show-trace …`) under `e2e/test-results/`.
 

@@ -128,6 +128,11 @@ jobs:
       - name: Install the journeys' dependencies
         run: npm ci --prefix e2e
 
+      # The founder journey calls functions (T127); `test:e2e` builds them for
+      # the Functions emulator, which runs their compiled lib/.
+      - name: Install the functions' dependencies
+        run: npm ci --prefix firebase/functions
+
       # The browser build follows the pinned @playwright/test version.
       - uses: actions/cache@v4
         with:

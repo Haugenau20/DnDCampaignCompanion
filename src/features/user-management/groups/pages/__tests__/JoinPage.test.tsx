@@ -54,6 +54,14 @@ jest.mock("@/features/user-management/groups/components/JoinAsExistingUser", () 
   ),
 }));
 
+// A founder link's flow has its own suite (StartGroup.test.tsx).
+jest.mock("@/features/user-management/groups/components/StartGroup", () => ({
+  __esModule: true,
+  default: ({ founderToken }: { founderToken: string }) => (
+    <div data-testid="start-group">{founderToken}</div>
+  ),
+}));
+
 const { useAuth } = require("@/features/user-management/auth/hooks/useAuth");
 const { useGroups } = require("@/features/user-management/groups/hooks/useGroups");
 const {
@@ -259,6 +267,23 @@ describe("JoinPage", () => {
       expect(useInvitations.mock.results[0].value.validateToken).not.toHaveBeenCalled();
       expect(screen.queryByTestId("new-user-step")).not.toBeInTheDocument();
       expect(screen.queryByTestId("existing-user-step")).not.toBeInTheDocument();
+    });
+  });
+
+  // T127: a founder link starts a group instead of joining one.
+  describe("a founder link", () => {
+    test("leads to starting a group, checking no invitation", async () => {
+      setup({ path: "/join?founder=f-tok" });
+      await settle();
+      expect(screen.getByTestId("start-group")).toHaveTextContent("f-tok");
+      expect(screen.queryByTestId("new-user-step")).not.toBeInTheDocument();
+      expect(useInvitations.mock.results[0].value.validateToken).not.toHaveBeenCalled();
+    });
+
+    test("with no token, still leads there, to ask for one", async () => {
+      setup({ path: "/join?founder=" });
+      await settle();
+      expect(screen.getByTestId("start-group")).toBeEmptyDOMElement();
     });
   });
 });

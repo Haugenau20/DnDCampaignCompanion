@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { buttonClasses } from "core/components/Button";
 import Typography from "core/components/Typography";
+import FirstCampaignForm, { type FirstCampaignValues } from "../FirstCampaignForm";
 import { GATED_FOOTNOTE } from "./gated-page-copy";
 import type { CampaignOption } from "./types";
 
@@ -28,6 +29,20 @@ export interface GatedPageStateProps {
   signInHref: string;
   /** Where "I have an invite link" goes. */
   joinHref: string;
+  /**
+   * Where "I have a link to start a group" goes (T127). `pick-campaign` with
+   * no group only; omitted, the link is not offered.
+   */
+  startGroupHref?: string;
+  /**
+   * Makes the first campaign of the active group (T127). Every member may.
+   * Shown as the panel's form while the reader's groups have no campaign at
+   * all, and folded under the list when only other groups have some.
+   * Omitted, no form is offered.
+   */
+  onCreateCampaign?: (values: FirstCampaignValues) => Promise<void>;
+  /** The active group's name, for the folded form's label. */
+  createCampaignGroupName?: string;
   /** Campaigns to offer. `pick-campaign` only. */
   campaigns?: CampaignOption[];
   /** Whether the user belongs to any group at all. `pick-campaign` only. */
@@ -74,6 +89,9 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
   eyebrow = "Private campaign",
   signInHref,
   joinHref,
+  startGroupHref,
+  onCreateCampaign,
+  createCampaignGroupName,
   campaigns = [],
   hasGroups = false,
   campaignsLoading = false,
@@ -123,7 +141,9 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
       : pickSituation === "loading"
       ? "One moment…"
       : pickSituation === "no-campaigns"
-      ? "Your first campaign will appear here as soon as it's created."
+      ? onCreateCampaign
+        ? "Start the first one. Everyone in your group can read it and add to it."
+        : "Your first campaign will appear here as soon as it's created."
       : `You're in ${campaigns.length === 1 ? "one campaign" : `${campaigns.length} campaigns`}. ` +
         "Pick one to carry on — you can switch any time from the campaign " +
         "name in the header.";
@@ -193,6 +213,19 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
             </ul>
           )}
 
+          {/* The list spans every group; the active one may still have
+              none, and its members may start it here (T127). */}
+          {pickSituation === "choose" && !campaignsLoading && onCreateCampaign && (
+            <details className="mt-6">
+              <summary className="cursor-pointer font-semibold primary">
+                Start a campaign in {createCampaignGroupName ?? "your group"}
+              </summary>
+              <div className="mt-4">
+                <FirstCampaignForm onCreate={onCreateCampaign} />
+              </div>
+            </details>
+          )}
+
           {pickSituation === "choose" && campaignsLoading && (
             <Typography variant="body-sm" color="secondary" className="mt-3">
               Still looking for more campaigns…
@@ -200,9 +233,20 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
           )}
 
           {pickSituation === "no-groups" && (
-            <Link to={joinHref} className={buttonClasses({ variant: "primary" })}>
-              I have an invite link
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link to={joinHref} className={buttonClasses({ variant: "primary" })}>
+                I have an invite link
+              </Link>
+              {startGroupHref && (
+                <Link to={startGroupHref} className={buttonClasses({ variant: "outline" })}>
+                  I have a link to start a group
+                </Link>
+              )}
+            </div>
+          )}
+
+          {pickSituation === "no-campaigns" && onCreateCampaign && (
+            <FirstCampaignForm onCreate={onCreateCampaign} />
           )}
         </>
       )}
