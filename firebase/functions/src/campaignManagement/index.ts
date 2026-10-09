@@ -1,5 +1,6 @@
 // functions/src/campaignManagement/index.ts
+import {createCampaign} from "./createCampaign";
 import {deleteCampaign} from "./deleteCampaign";
 import {resumeCampaignDeletionsDaily} from "./campaignDeletion";
 
-export {deleteCampaign, resumeCampaignDeletionsDaily};
+export {createCampaign, deleteCampaign, resumeCampaignDeletionsDaily};

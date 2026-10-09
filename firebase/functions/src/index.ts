@@ -7,7 +7,11 @@ export { extractEntities, getUsageStatus } from "./entityExtraction";
 export { sendContactEmail } from "./contact";
 export { sweepContactThrottleDaily } from "./contactThrottle";
 export { deleteUser, removeUserFromGroup } from "./userManagement";
-export { deleteCampaign, resumeCampaignDeletionsDaily } from "./campaignManagement";
+export {
+  createCampaign,
+  deleteCampaign,
+  resumeCampaignDeletionsDaily,
+} from "./campaignManagement";
 export { sweepOrphanedImagesDaily } from "./imageMaintenance";
 export {
   createGroup,

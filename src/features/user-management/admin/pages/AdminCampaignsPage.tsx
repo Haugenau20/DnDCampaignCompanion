@@ -9,6 +9,7 @@ import DeleteConfirmationDialog from 'shared/components/DeleteConfirmationDialog
 import { formatDisplayDate } from 'shared/utils/dateFormatter';
 import { Plus, Search } from 'lucide-react';
 import type { Campaign } from 'core/types/user';
+import { GROUP_LIMITS } from 'core/constants/groupLimits';
 import { useGroups } from '../../groups/hooks/useGroups';
 import { useCampaigns } from '../../groups/hooks/useCampaigns';
 import CampaignFormDialog from '../components/CampaignFormDialog';
@@ -109,6 +110,10 @@ const AdminCampaignsPage: React.FC = () => {
   const authorFor = (campaign: Campaign) =>
     members.find((member) => memberId(member) === campaign.createdBy)?.username;
 
+  // A group holds at most five campaigns (T128); the function refuses a
+  // sixth, so the page says so before anyone fills in the form.
+  const full = !loading && source.length >= GROUP_LIMITS.campaigns;
+
   const newCampaignButton = (
     <Button
       variant="primary"
@@ -116,6 +121,7 @@ const AdminCampaignsPage: React.FC = () => {
         setEditing(null);
         setFormOpen(true);
       }}
+      disabled={full}
       startIcon={<Plus className="w-4 h-4" />}
       className="min-h-[2.75rem]"
     >
@@ -137,7 +143,7 @@ const AdminCampaignsPage: React.FC = () => {
                 Campaigns
               </Typography>
               <Typography color="secondary" variant="body-sm">
-                {source.length}
+                {source.length} of {GROUP_LIMITS.campaigns}
               </Typography>
             </div>
 
@@ -158,6 +164,13 @@ const AdminCampaignsPage: React.FC = () => {
           <div className="sm:hidden mt-3 [&>button]:w-full">
             {newCampaignButton}
           </div>
+
+          {full && (
+            <Typography color="secondary" variant="body-sm" className="mt-3">
+              This group has {GROUP_LIMITS.campaigns} campaigns, the most a
+              group may have. Delete one to start another.
+            </Typography>
+          )}
         </div>
 
         <div

@@ -11,16 +11,8 @@ import {
   import ServiceRegistry from '../core/ServiceRegistry';
   import type UserService from '../user/UserService';
   import { Campaign } from '../../../types/user';
-  import { createDocumentIfAbsent } from '../data/createDocumentIfAbsent';
   import { assertTextFits } from '../data/TextTooLongError';
   import { NAMED_DOCUMENT_TEXT_LIMITS } from '../../../constants/textLimits';
-
-  /**
-   * How many ids `createCampaign` tries before giving up: the slug, then the
-   * slug with a timestamp. Only a run of simultaneous same-name creates can
-   * use more than two.
-   */
-  const MAX_CAMPAIGN_ID_ATTEMPTS = 5;
 
   /**
    * How much a campaign holds. Used to tell two campaigns apart in the
@@ -55,6 +47,12 @@ import {
   
     /**
      * Create a new campaign within a group
+     *
+     * Delegates to the `createCampaign` Cloud Function (T128), which counts
+     * the group's campaigns in the transaction that creates one: a group holds
+     * at most five, which the rules, unable to count, could not hold. It also
+     * picks the id (the name's slug, or the slug and a suffix when that is
+     * taken) and makes the new campaign the creator's active one.
      * @param groupId ID of the group to create campaign in
      * @param name Name of the campaign
      * @param description Optional description of the campaign
@@ -65,57 +63,23 @@ import {
       if (!userId) {
         throw new Error('Not authenticated');
       }
-      // The rules cap both (T119); refused here first, saying which.
+      // The function caps both (T119); refused here first, saying which.
       assertTextFits(NAMED_DOCUMENT_TEXT_LIMITS, { name, description });
-      
-      // Check if user is a member of this group
-      const userProfileDoc = await this.userService.getGroupUserProfile(groupId, userId);
-      if (!userProfileDoc) {
-        throw new Error('You are not a member of this group');
-      }
-      
-      // Generate a campaign ID from the name (slug format)
-      const slug = name.toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
-        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 
-      // The slug if it is free, else the slug and a timestamp. Each candidate
-      // is claimed with an atomic create: a read and then a write let two
-      // admins creating the same name at once both take the slug, and the
-      // second replaced the first campaign's metadata (T081).
-      const campaignData = {
-        name,
-        description: description || '',
-        createdAt: new Date(),
-        createdBy: userId,
-        isActive: true
-      };
-      let campaignId: string | undefined;
-      for (let attempt = 0; attempt < MAX_CAMPAIGN_ID_ATTEMPTS && !campaignId; attempt++) {
-        const candidate = attempt === 0 ? slug : `${slug}-${Date.now()}`;
-        const candidateRef = doc(this.db, 'groups', groupId, 'campaigns', candidate);
-        if (await createDocumentIfAbsent(this.db, candidateRef, () => campaignData)) {
-          campaignId = candidate;
-        }
-      }
-      if (!campaignId) {
-        throw new Error('Could not find a free name for this campaign. Please try again.');
-      }
-      
-      // Set as active campaign for the user
-      if (userProfileDoc) {
-        await this.userService.updateGroupUserProfile(groupId, userId, {
-          activeCampaignId: campaignId
-        });
-      }
-      
-      // Set active campaign in context
+      // `this.functions`, not a bare getFunctions(): that resolves the default
+      // `us-central1` region, where nothing in this project is deployed.
+      const createCampaignFn = httpsCallable<
+        { groupId: string; name: string; description: string },
+        { success: boolean; campaignId: string }
+      >(this.functions, 'createCampaign');
+      const { campaignId } = (
+        await createCampaignFn({ groupId, name, description: description || '' })
+      ).data;
+
       this.setActiveCampaign(campaignId);
-      
       return campaignId;
     }
-  
+
     /**
      * Get all campaigns in a specific group
      * @param groupId ID of the group to get campaigns for

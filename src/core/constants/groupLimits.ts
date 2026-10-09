@@ -9,4 +9,6 @@
 export const GROUP_LIMITS = {
   /** The most members one group may have. */
   members: 10,
+  /** The most campaigns one group may have; deleting one frees its place. */
+  campaigns: 5,
 } as const;

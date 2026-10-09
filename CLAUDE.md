@@ -141,7 +141,7 @@ from 15.23.0 the CLI ignores `NO_PROXY`, so behind a proxy the Storage rules sui
 The reason is recorded in that file.
 
 - **Callables** — invoked with `fn.run({data, auth})` against emulator Firestore. Covered:
-  `createGroup`, `redeemInvitation`, `setMemberRole`, `deleteGroup`, `deleteCampaign`, the sign-up gate (`reserveSignUp`, with
+  `createGroup`, `redeemInvitation`, `setMemberRole`, `deleteGroup`, `createCampaign`, `deleteCampaign`, the sign-up gate (`reserveSignUp`, with
   founder invitations too, and `gateAccountCreation`
   whose handler is exported as `admitAccount`), the last-admin guard in `removeUserFromGroup` /
   `deleteUser`, device sign-in (`startDeviceSignIn` / `approveDeviceSignIn` / `claimDeviceSignIn`),
