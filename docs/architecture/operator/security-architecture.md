@@ -10,7 +10,7 @@ what the page does; this says why it is safe to have it.
 
 | Asset | What it gives an attacker | What bounds it |
 |---|---|---|
-| Issuing founder links | Accounts, and groups started with them | 10 a day ([design](design.md#founder-links)); T128's caps once they land (300 accounts) |
+| Issuing founder links | Accounts, and groups started with them | 10 a day ([design](design.md#founder-links)); 300 accounts, 10 members and 5 campaigns a group |
 | Setting allowances | The OpenAI balance, spent | It is prepaid, $5, with no automatic top-up (onboarding plan, answer 3) |
 | Account look-up | Whether an email has an account, and its usage | One exact email at a time; no listing |
 | Founder tokens | One account and one group each | Shown once, at issue; 14 days |

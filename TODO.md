@@ -25,7 +25,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
-| medium | T128 | At most 5 campaigns per group | S | open | Bounds what one founder link can cost; members and accounts are capped already |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 and 2 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
@@ -278,30 +277,6 @@ important**.
   nothing built).
 - **Source**: todo.txt, 2026-10-06
 
-### Letting a new group start on its own (T128)
-
-A table starts without the maintainer: a founder link
-(`firebase/functions/scripts/issue-founder-invitation.js`) leads from an
-account to a group, its first campaign and the invite button
-(`/join?founder=…`; the journey is `e2e/tests/founder.spec.ts`), and
-`createGroup` allows up to 3 groups to whoever has started one. The plan,
-[`docs/architecture/new-group-onboarding-plan.md`](docs/architecture/new-group-onboarding-plan.md),
-says what was decided (maintainer, 2026-10-08): 10 members and 5 campaigns per
-group, 300 accounts, AI limits of 3 / 5 / 10 with the prepaid OpenAI balance as
-the ceiling. T128 makes it safe to hand out more than a few links.
-
-### T128 — At most 5 campaigns per group
-**Type** feature · **Size** S · **Status** open · **Verified** 2026-10-09
-
-Decided 2026-10-08 (plan, D2). Members (10, `groupManagement/groupLimits.ts`)
-and accounts (300, `signUp/accountCount.ts`) are capped.
-
-- **Campaigns**: created from the browser under the rules, which cannot count
-  (`CampaignService.createCampaign`); creation through a callable that counts
-  in its transaction, then a rule that refuses the browser's own create, in a
-  later merge. `deleteCampaign` must give the slot back.
-- **Source**: the onboarding plan, step 4; decided 2026-10-08
-
 ### T122 — An "about" page
 **Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
 
@@ -477,7 +452,7 @@ three ways, two of them from the client's clock (F6).
   Shown names are looked up from `createdBy` and `createdByCharacterId` (already
   written), so renames carry through; the stored name stays only as the fallback
   for an author who has left the group. One read of the group's profiles serves
-  every name on a page (at most 10 members, T128). `useCreatorName` and
+  every name on a page (at most 10 members, `groupManagement/groupLimits.ts`). `useCreatorName` and
   `AttributionInfo` change with it.
 - **With T133**: both rewrite every record; one script, one pass.
 - **Deploy order**: the frontend that writes server timestamps ships before the

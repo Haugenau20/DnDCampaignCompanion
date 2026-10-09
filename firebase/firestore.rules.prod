@@ -687,9 +687,11 @@ service cloud.firestore {
       // to the final deny rule instead of inheriting content permissions.
       match /campaigns/{campaignId} {
         allow read: if isGroupMember(groupId);
-        allow create: if isGroupMember(groupId) && namedTextFits() &&
-                       imageLeased(groupId, 'banner') &&
-                       !request.resource.data.keys().hasAny(['deleting']);
+        // No client creates a campaign: the `createCampaign` Cloud Function
+        // does, counting the group's campaigns in the same transaction, since
+        // a group holds at most five (T128). Until then any member could, and
+        // nothing bounded how many.
+        allow create: if false;
 
         // RELAXED: any group member may edit campaign metadata -- not once
         // its deletion has started, and never the `deleting` mark (T037).
