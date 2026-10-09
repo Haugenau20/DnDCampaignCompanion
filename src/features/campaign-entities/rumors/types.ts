@@ -53,6 +53,12 @@ export interface Rumor extends BaseContent {
   locationId?: string; // Optional reference to location in system
   relatedNPCs: string[]; // Array of NPC IDs
   relatedLocations: string[]; // Array of location IDs
+  /**
+   * @deprecated The old array of notes, read by nothing: each note is a
+   * document of its own (T133, `shared/recordNotes.ts`), and
+   * `scripts/migrate-records.js` emptied this in production. A new record
+   * still writes it empty, for a browser on the app from before.
+   */
   notes: RumorNote[];
   convertedToQuestId?: string; // If rumor was converted to quest
 }

@@ -20,7 +20,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T132 | Attribution the rules can check: run the migration, then the rules | M | blocked | Any member can still credit a record to someone else; the rules wait on the maintainer running `migrate-records.js` |
-| medium | T133 | Notes: run the migration, then stop reading the old arrays | S | blocked | Waits on the maintainer running `migrate-records.js` once the frontend that reads both is live |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
@@ -33,6 +32,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T131 | Links: a rule refusing the old halves | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
+| low | T133 | Notes: a rule refusing notes in a record's array | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
 | low | T134 | The saga in sections; run the chapter migration | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
 | low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
@@ -449,29 +449,19 @@ stored name kept for someone who has left.
   document; the rules for them come with the records'.
 - **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
 
-### T133 — Notes: run the migration, then stop reading the old arrays
+### T133 — Notes: a rule refusing notes in a record's array
 **Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
 
 A person's, a place's and a rumour's notes are documents of their own,
-`{record}/{id}/notes/{noteId}`, each capped by the rules on its own and read
-only where it is shown (`features/campaign-entities/shared/recordNotes.ts`).
-The app still reads the record's old `notes` array beside them, and edits a
-note from the array in the array, so nothing changes on screen before the
-migration.
+`{record}/{id}/notes/{noteId}`, each capped by the rules on its own
+(`features/campaign-entities/shared/recordNotes.ts`). Production's arrays were
+moved into them, and the app reads only the documents; a new record still
+writes `notes: []`, for a browser on the app from before. Nothing stops a
+client writing notes into the array again, where nothing would show them.
 
-- **Blocked on the maintainer**: once the frontend that reads both is live,
-  `firebase/functions/scripts/migrate-records.js` from `firebase/functions`,
-  first read-only, then `--apply --revert-file <file>` (its header has the
-  steps). Each record is one transaction; T132's times and T134's chapter
-  text go in the same pass.
-- **Then**: a frontend that reads only the documents -- drop
-  `mergeRecordNotes` and the array branch of each page's note edit and delete
-  -- and the sample-data generators (`utils/__dev__/generators/contentGenerators/`),
-  which still write the arrays, rewritten to the documents. A rule refusing a
-  non-empty `notes` array on a record, in a later merge.
-- **Search** reads a rumour's notes from its array only. Only conversions and
-  combinations write a rumour's notes, so it loses little; if wanted, it reads
-  them where the rumour is opened instead.
+- **Blocked**: until the frontend that reads only the documents is live.
+- **Then**: a rule refusing a non-empty `notes` array on a person, a place or
+  a rumour. Existing records hold empty ones.
 - **Source**: `data-model-review.md` change 5 (F3)
 
 ### T134 — The saga in sections; run the chapter migration

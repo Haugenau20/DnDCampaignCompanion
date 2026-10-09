@@ -156,9 +156,8 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   const titleRef = useRef<HTMLInputElement>(null);
   // Named as the rumour's attribution names it everywhere else (T124).
   const recordedBy = useCreatorName(rumor);
-  // Its notes: their own documents (T133), and the old array until the
-  // migration has moved it. Read only while the row is open.
-  const notes = useCampaignRecordNotes<RumorNote>('rumors', rumor);
+  // Its notes: their own documents (T133), read only while the row is open.
+  const notes = useCampaignRecordNotes<RumorNote>('rumors', rumor.id);
 
   // A rumour the composer just created opens with the caret in the *title*.
   // This was the content field, back when the composer took a title and left
@@ -477,7 +476,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
             <FieldLabel>Notes</FieldLabel>
             <div className="flex flex-col gap-2">
               {notes.map((note) => (
-                <div key={note.noteId ?? note.id} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
+                <div key={note.noteId} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
                   {/* Formatted, from the one shared helper (item 10, T001). */}
                   <Typography
                     variant="body-sm"

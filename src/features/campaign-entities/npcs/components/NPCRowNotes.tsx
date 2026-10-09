@@ -7,20 +7,19 @@ import { useCampaignRecordNotes } from '../../shared/recordNotes';
 import type { NPC, NPCNote } from '../types';
 
 /**
- * An NPC's notes in the list's open row: their own documents (T133) and the
- * record's old array until the migration has moved it, read only while the
- * row is open.
+ * An NPC's notes in the list's open row: their own documents (T133), read
+ * only while the row is open.
  *
  * @returns The row's Notes field
  */
 const NPCRowNotes: React.FC<{ npc: NPC }> = ({ npc }) => {
-  const notes = useCampaignRecordNotes<NPCNote>('npcs', npc);
+  const notes = useCampaignRecordNotes<NPCNote>('npcs', npc.id);
   return (
     <RosterField label="Notes" emptyText="No notes yet">
       {notes.length ? (
         <div className="flex flex-col gap-2">
-          {notes.map((note, noteIndex) => (
-            <div key={note.noteId ?? noteIndex} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
+          {notes.map((note) => (
+            <div key={note.noteId} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
               <Typography variant="body-sm" color="muted" className="text-xs whitespace-nowrap">
                 {formatNoteDate(note.date)}
               </Typography>

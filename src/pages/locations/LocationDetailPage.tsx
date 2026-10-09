@@ -18,7 +18,6 @@ import {
   questIdsOfLocation,
   rumorIdsOfLocation,
   useRecordNotes,
-  mergeRecordNotes,
   editRecordNote,
   deleteRecordNote,
   WhereThisSits,
@@ -30,7 +29,7 @@ import {
   formatLocationStatus,
   KNOWLEDGE_OPTIONS,
 } from 'features/campaign-entities';
-import type { Location, LocationNote, LocationType, LocationStatus, RecordNote } from 'features/campaign-entities';
+import type { Location, LocationNote, LocationType, LocationStatus, StoredNote } from 'features/campaign-entities';
 import type { RecordChange } from 'core/types/common';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
 import AttributionInfo from 'shared/components/AttributionInfo';
@@ -53,7 +52,6 @@ import { formatNoteDate, toNoteDate } from 'shared/utils/dateFormatter';
 import { getUserName, getActiveCharacterName } from 'core/utils/user-utils';
 import { InlineEditor } from 'shared/components/inline-edit';
 import { editedText } from 'shared/utils/edit-conflict';
-import { replaceNoteText, removeNote } from 'shared/utils/entity-notes';
 import { rumorTitleText } from 'features/campaign-entities';
 import { useInlineEditing } from 'shared/hooks/useInlineEditing';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
@@ -151,9 +149,8 @@ const LocationDetailPage: React.FC = () => {
     createLocation,
   } = useLocations();
   const locationsPath = useCampaignCollectionPath('locations');
-  // The notes: their own documents (T133), and the record's old array until
-  // the migration has moved it.
-  const noteDocuments = useRecordNotes<LocationNote>(locationsPath, locationId);
+  // The notes: their own documents (T133).
+  const notes = useRecordNotes<LocationNote>(locationsPath, locationId);
   const { npcs, updateNPC } = useNPCs();
   const { quests, updateQuest } = useQuests();
   const { rumors, updateRumor } = useRumors();
@@ -296,19 +293,17 @@ const LocationDetailPage: React.FC = () => {
   };
 
   /**
-   * A note in its own document (T133) is changed there; one still in the
-   * record's old array goes through `save`, which searches the array the
-   * server holds (T083), so a note another player added meanwhile stays and
-   * one they changed first is refused rather than guessed at.
+   * A note is changed in its own document (T133); one another player changed
+   * first is refused rather than overwritten (T083).
    */
-  const editNote = async (note: RecordNote<LocationNote>, text: string) =>
-    note.noteId && locationsPath && location
-      ? editRecordNote(locationsPath, location.id, note.noteId, 'text', note.text, text)
-      : save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
-  const deleteNote = async (note: RecordNote<LocationNote>) =>
-    note.noteId && locationsPath && location
-      ? deleteRecordNote(locationsPath, location.id, note.noteId)
-      : save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
+  const editNote = async (note: StoredNote<LocationNote>, text: string) => {
+    if (!locationsPath || !location) return;
+    await editRecordNote(locationsPath, location.id, note.noteId, 'text', note.text, text);
+  };
+  const deleteNote = async (note: StoredNote<LocationNote>) => {
+    if (!locationsPath || !location) return;
+    await deleteRecordNote(locationsPath, location.id, note.noteId);
+  };
 
   /**
    * A feature becomes a real place (§6.4, item 7).
@@ -840,7 +835,7 @@ const LocationDetailPage: React.FC = () => {
 
           {/* --------------------------------- notes -------------------------------- */}
           <EntityNotes
-            notes={mergeRecordNotes(location.notes, noteDocuments)}
+            notes={notes}
             canEdit={canAct}
             onAdd={addNote}
             onEdit={editNote}

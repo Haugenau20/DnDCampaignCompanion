@@ -1,7 +1,7 @@
 // src/utils/__dev__/generators/contentGenerators/npcGenerator.ts
 
-import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
+import { writeRecordWithNotes } from './recordNotes';
 // Relative, not `shared/...`: this runs under ts-node, which ignores baseUrl.
 import { toNoteDate } from '../../../../shared/utils/dateFormatter';
 import { NPC } from 'features/campaign-entities';
@@ -37,9 +37,11 @@ export const createNPCs = async (
     npcsData.push(...getDunedainNPCs(dmUid, formattedDate));
   }
   
-  // Create the NPCs in Firestore
+  // Create the NPCs in Firestore, each note a document of its own (T133)
   for (const npc of npcsData) {
-    await setDoc(doc(db, 'groups', groupId, 'campaigns', campaignId, 'npcs', npc.id), npc);
+    await writeRecordWithNotes(
+      db, ['groups', groupId, 'campaigns', campaignId, 'npcs'], npc, { uid: dmUid, username: 'DungeonMaster' }, formattedDate
+    );
     console.log(`Created NPC for ${campaignId}: ${npc.name}`);
   }
   

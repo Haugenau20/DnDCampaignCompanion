@@ -1,7 +1,7 @@
 // src/utils/__dev__/generators/contentGenerators/locationGenerator.ts
 
-import { doc, setDoc } from 'firebase/firestore';
 import { UserMapping } from '../userGenerator';
+import { writeRecordWithNotes } from './recordNotes';
 // Relative, not `shared/...`: this runs under ts-node, which ignores baseUrl.
 import { toNoteDate } from '../../../../shared/utils/dateFormatter';
 import type { Location as AppLocation } from 'features/campaign-entities';
@@ -43,9 +43,11 @@ export const createLocations = async (
     locationsData = getDunedainLocations(dmUid, formattedDate);
   }
   
-  // Create the locations in Firestore
+  // Create the locations in Firestore, each note a document of its own (T133)
   for (const location of locationsData) {
-    await setDoc(doc(db, 'groups', groupId, 'campaigns', campaignId, 'locations', location.id), location);
+    await writeRecordWithNotes(
+      db, ['groups', groupId, 'campaigns', campaignId, 'locations'], location, { uid: dmUid, username: 'DungeonMaster' }, formattedDate
+    );
     console.log(`Created location for ${campaignId}: ${location.name}`);
   }
   

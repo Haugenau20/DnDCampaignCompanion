@@ -15,9 +15,8 @@ import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPat
  * note's text inside the array (F4). As documents, each is written alone and
  * capped alone, and a record's notes are read only where they are shown.
  *
- * The old array is read beside them until `scripts/migrate-records.js` has
- * moved it; a note from the array is edited and deleted where it is, a note
- * from its own document through these.
+ * `scripts/migrate-records.js` moved every note from the old array into its
+ * own document in production and emptied the array, which nothing reads now.
  */
 
 /** Where a record's notes live. */
@@ -26,9 +25,6 @@ export const notesPathOf = (recordsPath: string, recordId: string): string =>
 
 /** A note read from its own document: `noteId` says where it lives. */
 export type StoredNote<T> = T & { noteId: string };
-
-/** A note from either place: its own document, or the record's old array. */
-export type RecordNote<T> = T & { noteId?: string };
 
 /**
  * Oldest first, as the array kept them: by the server's time of creation, or
@@ -70,31 +66,14 @@ export function useRecordNotes<T>(
 }
 
 /**
- * A record of the active campaign's notes, merged with its old array: what a
- * list's open row shows.
+ * A record of the active campaign's notes: what a list's open row shows.
+ * Empty while they load.
  *
  * @param collection The record's collection in the campaign, e.g. `npcs`
- * @param record The record, with its stored `notes`
+ * @param recordId The record
  */
-export function useCampaignRecordNotes<T>(
-  collection: string,
-  record: { id: string; notes?: readonly T[] }
-): RecordNote<T>[] {
-  const documents = useRecordNotes<T>(useCampaignCollectionPath(collection), record.id);
-  return mergeRecordNotes(record.notes, documents);
-}
-
-/**
- * The notes to show: the record's old array, then its notes' documents.
- *
- * @param fromArray The record's `notes`, as stored
- * @param fromDocuments Its notes' documents, from {@link useRecordNotes}
- */
-export function mergeRecordNotes<T>(
-  fromArray: readonly T[] | undefined,
-  fromDocuments: readonly StoredNote<T>[] | undefined
-): RecordNote<T>[] {
-  return [...((fromArray ?? []) as RecordNote<T>[]), ...(fromDocuments ?? [])];
+export function useCampaignRecordNotes<T>(collection: string, recordId: string): StoredNote<T>[] {
+  return useRecordNotes<T>(useCampaignCollectionPath(collection), recordId) ?? [];
 }
 
 /**
@@ -118,7 +97,7 @@ export async function addRecordNote(
 
 /**
  * Change a note's text, refusing when someone else changed it since it was
- * opened (T083), as an edit to a note in the array is refused.
+ * opened (T083).
  *
  * @param recordsPath The record's collection
  * @param recordId The record

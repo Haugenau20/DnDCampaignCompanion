@@ -9,19 +9,17 @@
  * `jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock())`
  * and reach the writes through `jest.requireMock` of the same path.
  *
- * Reads find no note documents, so what is shown is the record's own array;
- * writes resolve and record their arguments. The merge is the real one.
+ * Reads find no note documents unless a suite gives some, with
+ * `mockReturnValue` on `useRecordNotes` or `useCampaignRecordNotes`; writes
+ * resolve and record their arguments.
  */
 export function recordNotesMock() {
   const actual = jest.requireActual('features/campaign-entities/shared/recordNotes');
   return {
     __esModule: true,
     notesPathOf: actual.notesPathOf,
-    mergeRecordNotes: actual.mergeRecordNotes,
     useRecordNotes: jest.fn(() => undefined),
-    useCampaignRecordNotes: jest.fn((_collection: string, record: { notes?: unknown[] }) =>
-      actual.mergeRecordNotes(record.notes, undefined)
-    ),
+    useCampaignRecordNotes: jest.fn(() => []),
     addRecordNote: jest.fn(() => Promise.resolve('note-1')),
     editRecordNote: jest.fn(() => Promise.resolve()),
     deleteRecordNote: jest.fn(() => Promise.resolve()),

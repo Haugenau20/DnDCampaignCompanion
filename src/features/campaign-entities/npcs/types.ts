@@ -81,6 +81,12 @@ export interface NPC extends BaseContent {
   personality?: string;
   background?: string;
   connections: NPCConnections;
+  /**
+   * @deprecated The old array of notes, read by nothing: each note is a
+   * document of its own (T133, `shared/recordNotes.ts`), and
+   * `scripts/migrate-records.js` emptied this in production. A new record
+   * still writes it empty, for a browser on the app from before.
+   */
   notes: NPCNote[];
   /** Free-text labels for grouping, the same shape `Location.tags` uses. */
   tags?: string[];

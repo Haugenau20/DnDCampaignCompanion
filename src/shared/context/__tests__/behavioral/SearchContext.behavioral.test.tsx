@@ -680,7 +680,9 @@ describe("SearchContext Behavioral Testing", () => {
       expect(questDoc.content).toContain("Find the ring");
     });
 
-    test("should incorporate rumor notes into rumor search content", async () => {
+    // T133: a rumour's notes are documents of their own, not searched; the
+    // old array the migration emptied is read by nothing.
+    test("should not search a rumour's old notes array", async () => {
       renderHook(() => useSearch(), { wrapper });
 
       await waitFor(() => expect(mockInitializeIndex).toHaveBeenCalledTimes(1));
@@ -688,8 +690,7 @@ describe("SearchContext Behavioral Testing", () => {
       const [indexArg] = mockInitializeIndex.mock.calls[0];
       const rumorDoc = indexArg.rumors[0];
 
-      // BEHAVIOR: rumor notes are concatenated into search content
-      expect(rumorDoc.content).toContain("Interesting");
+      expect(rumorDoc.content).not.toContain("Interesting");
     });
 
     test("should handle multiple NPCs in the index", async () => {

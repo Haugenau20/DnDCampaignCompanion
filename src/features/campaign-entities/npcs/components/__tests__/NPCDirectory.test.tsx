@@ -874,16 +874,21 @@ describe('NPCDirectory — 15.3', () => {
 
   describe('note dates (T001)', () => {
     it('renders a stored ISO timestamp as a date', () => {
-      const withNote = makeNPC({
-        id: 'npc-9',
-        name: 'Dated',
-        notes: [{ date: '2025-05-31T19:27:30.387Z', text: 'Spoke at the council.' }],
-      });
-      render(<NPCDirectory npcs={[withNote]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Dated/ }));
+      const withNote = makeNPC({ id: 'npc-9', name: 'Dated' });
+      // The note's own document (T133).
+      const { useCampaignRecordNotes } = jest.requireMock('features/campaign-entities/shared/recordNotes');
+      useCampaignRecordNotes.mockReturnValue([
+        { noteId: 'n1', date: '2025-05-31T19:27:30.387Z', text: 'Spoke at the council.' },
+      ]);
+      try {
+        render(<NPCDirectory npcs={[withNote]} />);
+        fireEvent.click(screen.getByRole('button', { name: /Expand Dated/ }));
 
-      expect(screen.getByText('31/05/2025')).toBeInTheDocument();
-      expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
+        expect(screen.getByText('31/05/2025')).toBeInTheDocument();
+        expect(screen.queryByText('2025-05-31T19:27:30.387Z')).toBeNull();
+      } finally {
+        useCampaignRecordNotes.mockReturnValue([]);
+      }
     });
   });
 });
