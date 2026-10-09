@@ -1,0 +1,22 @@
+# What the operator image's build (operator/Dockerfile) never sees (T137).
+# Firebase's own functions deploy does not read this file.
+
+# Built inside the image, from the lockfile.
+node_modules
+lib
+
+# The development entry point and its signer: no image may carry a way to
+# trust keys other than Google's (security architecture, section 3).
+src/operator/dev.ts
+src/operator/devSigner.ts
+operator/dev.env
+
+# Not part of the service.
+test
+scripts
+coverage
+*.log
+.eslintrc.js
+jest.config.js
+tsconfig.dev.json
+*.local

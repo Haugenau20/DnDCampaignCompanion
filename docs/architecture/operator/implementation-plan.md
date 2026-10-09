@@ -108,6 +108,10 @@ pipeline deploys to it.
 
 ## Step 3: the service, run locally (PR)
 
+**Done** 2026-10-09. The HTTP suite is `test/operator/http.test.ts`; each control in the
+[security architecture's table](security-architecture.md#how-each-control-is-known-to-work) was
+broken once and its tests failed. The journey is `e2e/tests/operator.spec.ts`.
+
 - **`src/operator/http/`:**
   - the identity check (google-auth-library's IAP verification; keys and audience passed in)
   - CSRF
