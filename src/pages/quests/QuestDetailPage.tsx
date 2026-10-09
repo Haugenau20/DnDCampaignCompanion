@@ -20,6 +20,9 @@ import {
   objectiveProgressOf,
   QUEST_STATUS_OPTIONS,
   rumorTitleText,
+  createLinkActions,
+  npcIdsOfQuest,
+  locationIdsOfNpc,
 } from 'features/campaign-entities';
 import type { Quest, QuestStatus, QuestLocation } from 'features/campaign-entities';
 import type { RecordChange } from 'core/types/common';
@@ -154,10 +157,10 @@ const QuestDetailPage: React.FC = () => {
     markQuestCompleted,
     deleteQuest,
   } = useQuests();
-  const { npcs } = useNPCs();
-  const { locations, createLocation } = useLocations();
+  const { npcs, updateNPC } = useNPCs();
+  const { locations, createLocation, updateLocation } = useLocations();
   const questsPath = useCampaignCollectionPath('quests');
-  const { rumors } = useRumors();
+  const { rumors, updateRumor } = useRumors();
   const { notes } = useNotes();
 
   const quest = quests.find((candidate) => candidate.id === questId);
@@ -221,11 +224,36 @@ const QuestDetailPage: React.FC = () => {
       : `${resolvedName} — no such place`
     : undefined;
 
-  /** The people on the quest, resolved to records. The one relation list. */
-  const people = useMemo(() => {
-    const ids = quest?.relatedNPCIds ?? [];
-    return ids.map((id) => ({ id, npc: npcs.find((candidate) => candidate.id === id) }));
-  }, [quest, npcs]);
+  /**
+   * The people on the quest, resolved to records: the quest's own list, and
+   * the people whose old record names it until the migration has run (T131).
+   */
+  const personIds = useMemo(() => (quest ? npcIdsOfQuest(quest, npcs) : []), [quest, npcs]);
+  const people = useMemo(
+    () => personIds.map((id) => ({ id, npc: npcs.find((candidate) => candidate.id === id) })),
+    [personIds, npcs]
+  );
+
+  /** Adds and removes links, each in the field that owns it (T131). */
+  const links = createLinkActions({
+    npcs,
+    quests,
+    locations,
+    updateNPC,
+    updateQuest,
+    updateLocation,
+    updateRumor,
+  });
+  const linkPerson = (id: string) =>
+    quest ? links.link({ kind: 'quest', id: quest.id }, { kind: 'npc', id }) : Promise.resolve();
+  const unlinkPerson = (id: string) =>
+    quest ? links.unlink({ kind: 'quest', id: quest.id }, { kind: 'npc', id }) : Promise.resolve();
+
+  /** Where a person is, for their line in the list: their first place, or their free text. */
+  const whereIs = (npc: NonNullable<(typeof people)[number]['npc']>) => {
+    const firstPlace = locations.find((location) => location.id === locationIdsOfNpc(npc, locations)[0]);
+    return firstPlace?.name ?? resolveLocationName({ locationId: npc.locationId, location: npc.location }, locations);
+  };
 
   /**
    * What points here -- derived, read-only, and the reason a quest earns a page
@@ -332,9 +360,9 @@ const QuestDetailPage: React.FC = () => {
    */
   const promotePlace = async (place: QuestLocation) => {
     if (!quest || !questsPath) return;
-    // The place comes off the quest in the same commit as the location is
-    // created (T088): as a second write, a failure left the location behind
-    // and the place still offering to be promoted again.
+    // The place points at the new location in the same commit as the
+    // location is created (T088): as a second write, a failure left the
+    // location behind and the place still offering to be promoted again.
     const newId = await createLocation({
       name: place.name,
       type: 'poi',
@@ -345,17 +373,19 @@ const QuestDetailPage: React.FC = () => {
       parentId: locationRecord?.id ?? '',
       features: [],
       connectedNPCs: [],
-      relatedQuests: [quest.id],
+      // The quest owns the link (T131): the place stays on it, now pointing
+      // at the location it became.
+      relatedQuests: [],
       notes: [],
       tags: [],
     }, {
       collection: questsPath,
       id: quest.id,
-      change: (current) => {
+      change: (current, createdId) => {
         if (!current) throw new Error('Quest not found');
         return {
-          keyLocations: (current.keyLocations ?? []).filter(
-            (entry: QuestLocation) => entry.name !== place.name
+          keyLocations: (current.keyLocations ?? []).map((entry: QuestLocation) =>
+            entry.name === place.name && !entry.locationId ? { ...entry, locationId: createdId } : entry
           ),
         };
       },
@@ -549,13 +579,7 @@ const QuestDetailPage: React.FC = () => {
                                 color="secondary"
                                 className="block text-xs truncate"
                               >
-                                {[
-                                  npc.occupation || npc.title,
-                                  resolveLocationName(
-                                    { locationId: npc.locationId, location: npc.location },
-                                    locations
-                                  ),
-                                ]
+                                {[npc.occupation || npc.title, whereIs(npc)]
                                   .filter(Boolean)
                                   .join(' · ')}
                               </Typography>
@@ -576,13 +600,7 @@ const QuestDetailPage: React.FC = () => {
                           <button
                             type="button"
                             aria-label={`Remove ${npc ? npc.name : 'this person'} from ${quest.title}`}
-                            onClick={() =>
-                              void save((current) => ({
-                                relatedNPCIds: (current.relatedNPCIds ?? []).filter(
-                                  (existing) => existing !== id
-                                ),
-                              }))
-                            }
+                            onClick={() => void unlinkPerson(id)}
                             className="button-ghost rounded-full p-1 shrink-0"
                           >
                             <X size={14} aria-hidden="true" />
@@ -597,26 +615,14 @@ const QuestDetailPage: React.FC = () => {
                   <AttachTray
                     kinds={['npc']}
                     sources={{ npc: npcs, location: locations }}
-                    attached={attachRefs('npc', quest.relatedNPCIds ?? [])}
+                    attached={attachRefs('npc', personIds)}
                     // The list above already names each person, with their
                     // occupation and where they are. Chips under it would be
                     // the same person twice.
                     showAttachedChips={false}
                     ariaLabel={`the people in ${quest.title}`}
-                    onAttach={(id) =>
-                      void save((current) => ({
-                        relatedNPCIds: Array.from(
-                          new Set([...(current.relatedNPCIds ?? []), id])
-                        ),
-                      }))
-                    }
-                    onDetach={(id) =>
-                      void save((current) => ({
-                        relatedNPCIds: (current.relatedNPCIds ?? []).filter(
-                          (existing) => existing !== id
-                        ),
-                      }))
-                    }
+                    onAttach={(id) => void linkPerson(id)}
+                    onDetach={(id) => void unlinkPerson(id)}
                   />
                 )}
               </EntityPageSection>

@@ -134,6 +134,11 @@ let mockNotes: any[] = [
 ];
 
 const mockUpdateQuest = jest.fn().mockResolvedValue(undefined);
+// T131: unlinking a person also clears the old half on their record, and a
+// place's or rumour's side of a link is written through these.
+const mockUpdateNPC = jest.fn().mockResolvedValue(undefined);
+const mockUpdateLocation = jest.fn().mockResolvedValue(undefined);
+const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
 const mockUpdateQuestStatus = jest.fn().mockResolvedValue(undefined);
 const mockUpdateQuestObjective = jest.fn().mockResolvedValue(undefined);
 const mockAddQuestObjective = jest.fn().mockResolvedValue(undefined);
@@ -170,9 +175,22 @@ jest.mock('features/campaign-entities', () => {
       markQuestCompleted: mockMarkQuestCompleted,
       deleteQuest: mockDeleteQuest,
     }),
-    useNPCs: () => ({ npcs: mockNPCs }),
-    useLocations: () => ({ locations: mockLocations, createLocation: mockCreateLocation }),
-    useRumors: () => ({ rumors: mockRumors }),
+    useNPCs: () => ({
+      npcs: mockNPCs,
+      updateNPC: (id: string, change: any) =>
+        mockUpdateNPC(id, mockResolveChange(change, mockStoredRecords[id] ?? mockNPCs.find((n: any) => n.id === id))),
+    }),
+    useLocations: () => ({
+      locations: mockLocations,
+      createLocation: mockCreateLocation,
+      updateLocation: (id: string, change: any) =>
+        mockUpdateLocation(id, mockResolveChange(change, mockStoredRecords[id] ?? mockLocations.find((l: any) => l.id === id))),
+    }),
+    useRumors: () => ({ rumors: mockRumors, updateRumor: mockUpdateRumor }),
+    // The real link modules (T131): which field owns each link is the contract.
+    ...jest.requireActual('features/campaign-entities/shared/links'),
+    createLinkActions: jest.requireActual('features/campaign-entities/shared/linkActions').createLinkActions,
+
     // The real helper: a rumour is named the way its own list names it.
     rumorTitleText: jest.requireActual('shared/utils/rumor-name').rumorTitleText,
     // The real modules, not stubs: the page's contract is that the row and the
@@ -636,7 +654,8 @@ describe('places inside this quest', () => {
         expect.objectContaining({
           name: 'Secret door',
           parentId: 'erebor',
-          relatedQuests: ['reclaim-erebor'],
+          // T131: the quest owns the link, through the place it keeps.
+          relatedQuests: [],
         }),
         expect.anything()
       )
@@ -644,10 +663,12 @@ describe('places inside this quest', () => {
     await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/secret-door'));
   });
 
-  // T088 (DATA-005): the place comes off the quest in the same commit as the
-  // location is created, so a failed second write cannot leave the location
-  // behind with the place still offering to be promoted again.
-  it('takes the place off the quest in the same write as the location', async () => {
+  // T088 (DATA-005): the place changes in the same commit as the location is
+  // created, so a failed second write cannot leave the location behind with
+  // the place still offering to be promoted again. T131: it stays on the
+  // quest, now pointing at the location it became -- the quest owns the link,
+  // so both pages show it.
+  it('points the place at the new location in the same write as the location', async () => {
     renderPage();
     fireEvent.click(
       within(section('Places inside this quest')).getByRole('button', {
@@ -667,7 +688,9 @@ describe('places inside this quest', () => {
         keyLocations: [{ name: 'Secret door' }, { name: 'Added meanwhile' }],
       },
       'secret-door'
-    )).toEqual({ keyLocations: [{ name: 'Added meanwhile' }] });
+    )).toEqual({
+      keyLocations: [{ name: 'Secret door', locationId: 'secret-door' }, { name: 'Added meanwhile' }],
+    });
     expect(mockUpdateQuest).not.toHaveBeenCalled();
   });
 

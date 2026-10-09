@@ -19,7 +19,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T131 | Store each link once, shown both ways | M | open | The one data-model defect players see: a link added on one page is missing on the other |
+| medium | T131 | Links: run the migration, then stop reading the old halves | S | blocked | Waits on the maintainer running `migrate-links.js` once the reading frontend is live |
 | medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
@@ -409,33 +409,24 @@ the script rewrites; a later frontend drops the old shape; only then, in its own
 merge, a rule refuses it. The review's read-only production checks (campaign
 sizes, how often a link's two halves disagree) go into each change's audit.
 
-### T131 — Store each link once, and show it both ways
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+### T131 — Links: run the migration, then stop reading the old halves
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
 
-Several links are stored on both records, and each page edits only its own
-half, so a link added on a quest's page is missing on the NPC's (F1):
-`NPC.connections.relatedQuests` and `Quest.relatedNPCIds`; `NPC.locationId` and
-`Location.connectedNPCs`; `Quest.locationId` / `keyLocations` and
-`Location.relatedQuests`; `Rumor.locationId` and `Rumor.relatedLocations`. An
-NPC → NPC link is stored on one side only, and the other NPC's page does not
-show it. Deleting a record leaves its id in every list that named it.
+Every link has one owner field now, written from either page and read on both
+(`features/campaign-entities/shared/links.ts` has the table; decided by the
+maintainer 2026-10-08). The app still reads each old second half too, so
+nothing changes on screen before the migration.
 
-- **Decided (maintainer, 2026-10-08)**: every link is stored once and shown,
-  and editable, on both pages; adding it from either side has the same outcome.
-  NPC → NPC links are two-way. **An NPC may be linked to several places**: the
-  single `NPC.locationId` becomes part of a list (`Location.connectedNPCs`
-  already is one, so merging into it is the smaller migration).
-- **Linking before the other record exists** (the maintainer's reason for links
-  by name) stays covered by the attach tray's "add one" hatch, which creates
-  the record in quick add and links it without leaving the form
-  (`shared/components/attach-tray/AttachTray.tsx`). Quest places added before
-  #1421 still carry only a name (`resolveKeyPlace`); the script gives them ids
-  where one place matches.
-- **Pattern to copy**: rumor → NPC, stored on the rumor and derived on the NPC's
-  page (`NPCDetailPage.tsx`). Deleting a record removes its id from the owner's
-  lists.
-- **Migration**: an audit counting the pairs whose halves disagree, then a
-  script that merges each dropped half into the kept one. No rule changes.
+- **Blocked on the maintainer**: once the frontend that reads both halves is
+  live, `firebase/functions/scripts/migrate-links.js` from `firebase/functions`,
+  first read-only, then `--apply --revert-file <file>` (its header has the
+  steps). Each campaign is one transaction.
+- **Then**: a frontend that reads only the owners -- drop the old halves from
+  `links.ts` and their clearing from `linkActions.ts` and `unlinkDeleted.ts`
+  -- and the sample-data generators (`utils/__dev__/generators/`), which still
+  write `NPC.locationId`, `NPC.connections.relatedQuests` and
+  `Location.relatedQuests`, rewritten to the owners. A rule refusing the old
+  fields, if wanted, in a later merge.
 - **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
 ### T132 — Attribution and times stamped where the rules can check them

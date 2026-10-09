@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Location, LocationStatus } from '../types';
 import { useNPCs } from '../../npcs/context/NPCContext';
 import { useQuests } from '../../quests/context/QuestContext';
+import { npcIdsOfLocation, questIdsOfLocation } from '../../shared/links';
 import { useLocations } from '../context/LocationContext';
 import useHighlightTarget, { HIGHLIGHT_DEPTH_CAP } from 'shared/hooks/useHighlightTarget';
 import Button from '../../../../core/components/Button';
@@ -96,8 +97,25 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [expandedLocations, setExpandedLocations] = useState<Set<string>>(new Set());
 
-  const { getNPCById } = useNPCs();
-  const { getQuestById } = useQuests();
+  const { npcs, getNPCById } = useNPCs();
+  const { quests, getQuestById } = useQuests();
+
+  /**
+   * Each place's people and quests, linked from either side (T131): a quest
+   * stores its places now, and a person's old `locationId` counts until the
+   * migration has run. Counted as stored, as the row always counted them;
+   * the summary below resolves each to its record.
+   */
+  const linked = useMemo(() => {
+    const byPlace = new Map<string, { npcIds: string[]; questIds: string[] }>();
+    for (const location of locations) {
+      byPlace.set(location.id, {
+        npcIds: npcIdsOfLocation(location, npcs),
+        questIds: questIdsOfLocation(location, quests),
+      });
+    }
+    return byPlace;
+  }, [locations, npcs, quests]);
   const { updateLocationStatus, updateLocationsStatus, deleteLocations } = useLocations();
   /** Selection mode for the batch actions (T017). */
   const selection = useSelection();
@@ -232,11 +250,11 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
     (location: Location) => (
       <LocationRowSummary
         location={location}
-        people={(location.connectedNPCs ?? [])
+        people={(linked.get(location.id)?.npcIds ?? [])
           .map((id) => getNPCById(id))
           .filter((npc): npc is NonNullable<typeof npc> => Boolean(npc))
           .map((npc) => ({ id: npc.id, name: npc.name, detail: npc.title || undefined }))}
-        quests={(location.relatedQuests ?? [])
+        quests={(linked.get(location.id)?.questIds ?? [])
           .map((id) => getQuestById(id))
           .filter((quest): quest is NonNullable<typeof quest> => Boolean(quest))
           .map((quest) => ({
@@ -254,7 +272,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
         onOpenLocation={() => navigateToPage(`/locations/${location.id}`)}
       />
     ),
-    [getNPCById, getQuestById, updateLocationStatus, navigateToPage]
+    [linked, getNPCById, getQuestById, updateLocationStatus, navigateToPage]
   );
 
   /**
@@ -295,8 +313,8 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           highlighted={highlightedLocationId === location.id}
           path={path}
           insideCount={insideCountOf(index, location.id)}
-          npcCount={location.connectedNPCs?.length ?? 0}
-          questCount={location.relatedQuests?.length ?? 0}
+          npcCount={linked.get(location.id)?.npcIds.length ?? 0}
+          questCount={linked.get(location.id)?.questIds.length ?? 0}
           summary={expanded ? summaryFor(location) : undefined}
           selected={selectedIds.has(location.id)}
           isFirst={isFirst}
@@ -322,6 +340,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
       toggleExpansion,
       highlightedLocationId,
       summaryFor,
+      linked,
       selecting,
       selectedIds,
       setSelected,

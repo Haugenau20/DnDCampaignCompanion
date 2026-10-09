@@ -57,7 +57,7 @@ jest.mock('../../context/QuestContext', () => ({
 }));
 
 jest.mock('../../../npcs/context/NPCContext', () => ({
-  useNPCs: () => ({ getNPCById: mockGetNPCById }),
+  useNPCs: () => ({ npcs: [], getNPCById: mockGetNPCById }),
 }));
 
 jest.mock('../../../locations/context/LocationContext', () => ({

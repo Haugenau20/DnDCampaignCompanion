@@ -10,6 +10,7 @@ import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-managem
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
+import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { keyPlaceIsLocation, referencesLocation } from '../../locations/utils/location-display';
 import { moveObjective } from '../utils/quest-presentation';
 import { normaliseObjectives } from '../utils/quest-objectives';
@@ -38,6 +39,7 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const questsPath = useCampaignCollectionPath('quests');
+  const recordPaths = useCampaignRecordPaths();
   const { addData, updateData, updateDataAfterReading, deleteData, error: writeError } = useFirebaseData<Quest>({
     collection: questsPath,
     autoFetch: false
@@ -304,7 +306,9 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     await deleteData(questId);
-  }, [user, activeGroupId, activeCampaignId, deleteData]);
+    // And out of the old halves that still name it (T131).
+    await unlinkDeletedQuietly(recordPaths, 'quest', [questId]);
+  }, [user, activeGroupId, activeCampaignId, deleteData, recordPaths]);
 
   /**
    * Sets the status of several quests in one batch (T017): one round trip, and
@@ -347,7 +351,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     await commitEntityWrites<Quest>(questsPath, 'quests', questIds.map(id => ({ type: 'delete' as const, id })));
-  }, [user, activeGroupId, activeCampaignId, questsPath]);
+    await unlinkDeletedQuietly(recordPaths, 'quest', questIds);
+  }, [user, activeGroupId, activeCampaignId, questsPath, recordPaths]);
 
   // Mark quest as completed
   const markQuestCompleted = useCallback(async (questId: string, dateCompleted?: string) => {

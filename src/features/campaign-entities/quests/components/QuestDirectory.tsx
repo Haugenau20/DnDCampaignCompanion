@@ -3,6 +3,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Quest, QuestStatus } from '../types';
 import { useQuests } from '../context/QuestContext';
 import { useNPCs } from '../../npcs/context/NPCContext';
+import { npcIdsOfQuest } from '../../shared/links';
 import { useLocations } from '../../locations/context/LocationContext';
 import { indexLocationNames, resolveLocationName } from '../../locations/utils/location-display';
 import Button from '../../../../core/components/Button';
@@ -122,7 +123,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
   const { updateQuest, updateQuestObjective, updateQuestsStatus, deleteQuests } = useQuests();
   /** Selection mode for the batch actions (T017). */
   const selection = useSelection();
-  const { getNPCById } = useNPCs();
+  const { npcs, getNPCById } = useNPCs();
   const { locations } = useLocations();
   const { navigateToPage, getCurrentQueryParams } = useNavigation();
   // T014: one hook, four consumers. This directory used to set a prop and do
@@ -218,7 +219,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
           quest.title.toLowerCase().includes(search) ||
           quest.description.toLowerCase().includes(search) ||
           quest.objectives.some(obj => obj.description.toLowerCase().includes(search)) ||
-          quest.relatedNPCIds?.some(id => {
+          npcIdsOfQuest(quest, npcs).some(id => {
             // Resolve the id to its NPC's display name -- the same lookup the
             // expanded row below uses -- so a user typing a person's name
             // actually finds the quest. The raw id is still matched as a
@@ -239,7 +240,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
 
       return true;
     });
-  }, [quests, statusFilter, locationFilter, searchQuery, getNPCById, questLocationName]);
+  }, [quests, npcs, statusFilter, locationFilter, searchQuery, getNPCById, questLocationName]);
 
   // Grouped by status, in the fixed order above, skipping groups with nothing
   // left after filtering.
@@ -368,6 +369,7 @@ const QuestDirectory: React.FC<QuestDirectoryProps> = ({
                       expandedContent={
                         <QuestRowSummary
                           quest={quest}
+                          personIds={npcIdsOfQuest(quest, npcs)}
                           npcFor={npcFor}
                           onToggleObjective={(objectiveId, completed) =>
                             updateQuestObjective(quest.id, objectiveId, completed)

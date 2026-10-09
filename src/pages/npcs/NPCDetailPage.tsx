@@ -11,6 +11,11 @@ import {
   useRumors,
   useLocations,
   resolveLocationName,
+  createLinkActions,
+  locationIdsOfNpc,
+  npcIdsOfNpc,
+  questIdsOfNpc,
+  rumorIdsOfNpc,
 } from 'features/campaign-entities';
 import type { NPC, NPCNote, NPCRelationship, NPCStatus } from 'features/campaign-entities';
 import type { RecordChange } from 'core/types/common';
@@ -236,9 +241,9 @@ const NPCDetailPage: React.FC = () => {
   // of its own. Two independently fetched copies meant a write updated one
   // and the page rendered the other (T046).
   const { npcs, isLoading, loadError, refreshNPCs, updateNPC, updateNPCNote, deleteNPC } = useNPCs();
-  const { getQuestById, quests } = useQuests();
+  const { getQuestById, quests, updateQuest } = useQuests();
   const { rumors, updateRumor } = useRumors();
-  const { locations } = useLocations();
+  const { locations, updateLocation } = useLocations();
   const { activeGroupUserProfile } = useUser();
   const { activeGroupId } = useGroups();
   const { activeCampaignId } = useCampaigns();
@@ -314,16 +319,44 @@ const NPCDetailPage: React.FC = () => {
     setReturnFocus(null);
   }, [returnFocus]);
 
-  const locationName = npc
-    ? resolveLocationName(
-        { location: npc.location, locationId: npc.locationId },
-        locations
-      )
-    : undefined;
+  /**
+   * The places this person is linked to (T131): the places that list them,
+   * and the old `locationId` until the migration has run. A person may be
+   * in several. Each resolves to a record here, and one that does not is
+   * left out, as every link list here drops a dangling id.
+   */
+  const places = useMemo(
+    () =>
+      npc
+        ? locationIdsOfNpc(npc, locations)
+            .map((id) => locations.find((location) => location.id === id))
+            .filter((place): place is NonNullable<typeof place> => Boolean(place))
+        : [],
+    [npc, locations]
+  );
+
+  /**
+   * The place the subtitle and breadcrumb name: the first linked one, or --
+   * for a person with none -- the free text `location`, shown as written.
+   */
+  const locationName = places[0]?.name ?? (npc
+    ? resolveLocationName({ location: npc.location, locationId: npc.locationId }, locations)
+    : undefined);
 
   const locationHref = `/locations?highlight=${encodeURIComponent(
-    npc?.locationId || npc?.location || ''
+    places[0]?.id || npc?.location || ''
   )}`;
+
+  /** Adds and removes links, each in the field that owns it (T131). */
+  const links = createLinkActions({
+    npcs,
+    quests,
+    locations,
+    updateNPC,
+    updateQuest,
+    updateLocation,
+    updateRumor,
+  });
 
   /**
    * Every link this NPC has, grouped by what kind of thing it is.
@@ -345,20 +378,29 @@ const NPCDetailPage: React.FC = () => {
     }
     const out: Relation[] = [];
 
-    if (locationName) {
+    places.forEach((place) => {
+      out.push({
+        key: `location-${place.id}`,
+        id: place.id,
+        name: place.name,
+        kind: 'places',
+        href: `/locations/${place.id}`,
+      });
+    });
+    // Free text names no record, but it is still where they were last seen.
+    if (places.length === 0 && locationName) {
       out.push({
         key: `location-${locationName}`,
-        id: npc.locationId || npc.location || locationName,
+        id: npc.location || locationName,
         name: locationName,
         kind: 'places',
-        // "Places" does not say *which* place this is to them, so this one
-        // earns its line.
         detail: 'Last known location',
         href: locationHref,
       });
     }
 
-    npc.connections?.relatedNPCs?.forEach((id) => {
+    // Both ways: someone who lists this person is linked to them too.
+    npcIdsOfNpc(npc, npcs).forEach((id) => {
       const other = npcs.find((candidate) => candidate.id === id);
       if (!other) {
         return;
@@ -385,7 +427,7 @@ const NPCDetailPage: React.FC = () => {
       });
     });
 
-    npc.connections?.relatedQuests?.forEach((id) => {
+    questIdsOfNpc(npc, quests).forEach((id) => {
       const quest = getQuestById(id);
       if (!quest) {
         return;
@@ -414,7 +456,7 @@ const NPCDetailPage: React.FC = () => {
       });
 
     return out;
-  }, [npc, npcs, locationName, locationHref, getQuestById, rumors]);
+  }, [npc, npcs, quests, places, locationName, locationHref, getQuestById, rumors]);
 
   /**
    * What the tray already has: this NPC's place, their people, their quests,
@@ -428,17 +470,12 @@ const NPCDetailPage: React.FC = () => {
   const attached = useMemo(() => {
     if (!npc) return [];
     return [
-      ...attachRefs('location', [npc.locationId]),
-      ...attachRefs('npc', npc.connections?.relatedNPCs ?? []),
-      ...attachRefs('quest', npc.connections?.relatedQuests ?? []),
-      ...attachRefs(
-        'rumor',
-        (rumors ?? [])
-          .filter((rumor) => rumor.relatedNPCs?.includes(npc.id))
-          .map((rumor) => rumor.id)
-      ),
+      ...attachRefs('location', locationIdsOfNpc(npc, locations)),
+      ...attachRefs('npc', npcIdsOfNpc(npc, npcs)),
+      ...attachRefs('quest', questIdsOfNpc(npc, quests)),
+      ...attachRefs('rumor', rumorIdsOfNpc(npc, rumors ?? [])),
     ];
-  }, [npc, rumors]);
+  }, [npc, npcs, quests, locations, rumors]);
 
   /**
    * Nothing is patched locally after a write: the page shows the listener's
@@ -487,40 +524,14 @@ const NPCDetailPage: React.FC = () => {
   /**
    * Attach a relation from the rail (§5's tray, `15-2`).
    *
-   * Each kind is stored somewhere different, and one of them is not stored on
-   * this record at all: a rumour names the NPCs it concerns, so attaching one
-   * here writes the **rumour**. That asymmetry is why this is a switch rather
-   * than one array push -- the relationship is real in both directions, and
-   * only one direction has a field for it.
+   * Each kind is stored somewhere different, and most of them not on this
+   * record: a quest names its people, a place lists who is there, a rumour
+   * names who it concerns. `createLinkActions` writes each to the field that
+   * owns it (T131), so the link shows on both pages whichever one added it.
    */
   const attachRelation = async (id: string, kind: AttachKind) => {
     if (!npc) return;
-
-    switch (kind) {
-      case 'npc':
-        await changeConnections('relatedNPCs', (ids) => Array.from(new Set([...ids, id])));
-        break;
-      case 'quest':
-        await changeConnections('relatedQuests', (ids) => Array.from(new Set([...ids, id])));
-        break;
-      case 'location': {
-        // Where someone is, is one place. Attaching another replaces it rather
-        // than adding to a list that does not exist. `location` is written
-        // alongside as the human-readable convenience the contract on
-        // `NPC.location` describes; `locationId` is what resolves.
-        const place = locations.find((candidate) => candidate.id === id);
-        await save({ locationId: id, location: place?.name ?? '' });
-        break;
-      }
-      case 'rumor': {
-        const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
-        if (!rumor) return;
-        await updateRumor(rumor.id, (current) => ({
-          relatedNPCs: Array.from(new Set([...(current.relatedNPCs ?? []), npc.id])),
-        }));
-        break;
-      }
-    }
+    await links.link({ kind: 'npc', id: npc.id }, { kind, id });
   };
 
   /**
@@ -530,26 +541,7 @@ const NPCDetailPage: React.FC = () => {
    */
   const detachRelation = async (id: string, kind: AttachKind) => {
     if (!npc) return;
-
-    switch (kind) {
-      case 'location':
-        if (id === npc.locationId) await save({ locationId: '', location: '' });
-        break;
-      case 'rumor': {
-        const rumor = (rumors ?? []).find((candidate) => candidate.id === id);
-        if (!rumor?.relatedNPCs?.includes(npc.id)) return;
-        await updateRumor(rumor.id, (current) => ({
-          relatedNPCs: (current.relatedNPCs ?? []).filter((existing) => existing !== npc.id),
-        }));
-        break;
-      }
-      case 'npc':
-        await changeConnections('relatedNPCs', (ids) => ids.filter((existing) => existing !== id));
-        break;
-      case 'quest':
-        await changeConnections('relatedQuests', (ids) => ids.filter((existing) => existing !== id));
-        break;
-    }
+    await links.unlink({ kind: 'npc', id: npc.id }, { kind, id });
   };
 
   const addNote = async (text: string) => {

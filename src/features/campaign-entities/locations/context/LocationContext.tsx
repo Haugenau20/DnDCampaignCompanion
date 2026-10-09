@@ -14,6 +14,7 @@ import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-managem
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
+import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
@@ -46,6 +47,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const locationsPath = useCampaignCollectionPath('locations');
+  const recordPaths = useCampaignRecordPaths();
   const {
     updateData, updateDataAfterReading, updateManyAfterReading, queryData, deleteData, addData, error: writeError
   } = useFirebaseData<Location>({
@@ -302,6 +304,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // After the document: a failure can then only orphan the file, which the
       // released record lets the daily sweep find.
       discard?.();
+      // And out of every list that named it (T131).
+      await unlinkDeletedQuietly(recordPaths, 'location', [locationId]);
       return;
     }
 
@@ -345,7 +349,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Every deleted place's picture, once all the documents are gone.
     discards.forEach(discard => discard());
-  }, [user, activeGroupId, activeCampaignId, deleteData, queryData, updateManyAfterReading]);
+    await unlinkDeletedQuietly(recordPaths, 'location', [...childrenIds, locationId]);
+  }, [user, activeGroupId, activeCampaignId, deleteData, queryData, updateManyAfterReading, recordPaths]);
 
   const deleteLocation = useCallback(
     (locationId: string, childStrategy: LocationChildStrategy = 'delete-subtree') =>

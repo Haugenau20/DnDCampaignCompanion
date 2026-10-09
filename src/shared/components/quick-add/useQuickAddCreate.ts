@@ -156,7 +156,7 @@ export function useQuickAddCreate(reads?: QuickAddReads) {
   const { addNPC, npcs } = useNPCs({ subscribe: lists.npcs });
   // Writes only, never reads: a quest's create needs no other quest.
   const { addQuest } = useQuests({ subscribe: false });
-  const { createLocation, locations } = useLocations({ subscribe: lists.locations });
+  const { createLocation, updateLocation, locations } = useLocations({ subscribe: lists.locations });
   const { convertInto } = useNotes({ subscribe: lists.notes });
 
   return useCallback(
@@ -194,6 +194,21 @@ export function useQuickAddCreate(reads?: QuickAddReads) {
           : values;
       const document = QUICK_ADD_SPECS[entity].buildDocument(resolvedValues, carry);
 
+      /*
+        A person's place is a link the place owns (T131): it lists who is
+        there, and a person may be in several. So the resolved place is not
+        written on the NPC, but the NPC added to the place's list once it
+        exists. That takes a second write -- the one write beside the create
+        is the note's mark -- and a failure there leaves the person with the
+        place still named in their prose `location`, nothing lost.
+      */
+      let placeId: string | undefined;
+      if (entity === "npc") {
+        const npcDocument = document as { locationId?: string };
+        placeId = npcDocument.locationId || undefined;
+        npcDocument.locationId = "";
+      }
+
       /** The write, with a change to commit alongside it when there is one. */
       const create = (alongside?: CreateAlongside): Promise<string> => {
         const extra = alongside ? [alongside] : [];
@@ -210,12 +225,19 @@ export function useQuickAddCreate(reads?: QuickAddReads) {
       // Opened from a note: the record and the note's mark commit together
       // (T088). Created first and marked after, a failed mark left the record
       // behind while the note still offered to convert it again.
-      if (options.noteId && options.entityId) {
-        return convertInto(options.noteId, options.entityId, create);
+      const id = options.noteId && options.entityId
+        ? await convertInto(options.noteId, options.entityId, create)
+        : await create();
+
+      if (placeId) {
+        const place = placeId;
+        await updateLocation(place, (current) => ({
+          connectedNPCs: Array.from(new Set([...(current.connectedNPCs ?? []), id])),
+        }));
       }
-      return create();
+      return id;
     },
-    [addNPC, addQuest, createLocation, convertInto, npcs, locations]
+    [addNPC, addQuest, createLocation, updateLocation, convertInto, npcs, locations]
   );
 }
 

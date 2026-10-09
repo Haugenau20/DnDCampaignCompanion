@@ -149,6 +149,8 @@ const mockRefreshNPCs = jest.fn().mockResolvedValue(undefined);
 const mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
 const mockDeleteNPC = jest.fn().mockResolvedValue(undefined);
 const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
+const mockUpdateQuest = jest.fn().mockResolvedValue(undefined);
+const mockUpdateLocation = jest.fn().mockResolvedValue(undefined);
 let mockRumors: any[] = [];
 let mockQuests: any[] = [
   { id: "quest-1", title: "Destroy the Ring", status: "active" },
@@ -173,7 +175,15 @@ jest.mock("features/campaign-entities", () => ({
     updateNPCNote: mockUpdateNPCNote,
     deleteNPC: mockDeleteNPC,
   }),
-  useQuests: () => ({ getQuestById: mockGetQuestById, quests: mockQuests }),
+  useQuests: () => ({
+    getQuestById: mockGetQuestById,
+    quests: mockQuests,
+    updateQuest: (id: string, change: any) =>
+      mockUpdateQuest(
+        id,
+        mockResolveChange(change, mockStoredRecords[id] ?? mockQuests.find((q) => q.id === id))
+      ),
+  }),
   useRumors: () => ({
     rumors: mockRumors,
     updateRumor: (id: string, change: any) =>
@@ -182,7 +192,17 @@ jest.mock("features/campaign-entities", () => ({
         mockResolveChange(change, mockStoredRecords[id] ?? mockRumors.find((r) => r.id === id))
       ),
   }),
-  useLocations: () => ({ locations: mockLocations }),
+  useLocations: () => ({
+    locations: mockLocations,
+    updateLocation: (id: string, change: any) =>
+      mockUpdateLocation(
+        id,
+        mockResolveChange(change, mockStoredRecords[id] ?? mockLocations.find((l) => l.id === id))
+      ),
+  }),
+  // The real link modules (T131): which field owns each link is the contract.
+  ...jest.requireActual("features/campaign-entities/shared/links"),
+  createLinkActions: jest.requireActual("features/campaign-entities/shared/linkActions").createLinkActions,
   // The real resolver, not a stub: the page's contract is that it reuses the
   // directories' answer rather than inventing its own.
   resolveLocationName: jest.requireActual(
@@ -427,12 +447,14 @@ describe("NPCDetailPage", () => {
         },
       ];
       renderPage();
-      // A person's own title, a quest's and a rumor's status, and which place
-      // this is to them -- none of which the headings carry.
+      // A person's own title, a quest's and a rumor's status -- none of which
+      // the headings carry.
       expect(screen.getByText("The White")).toBeInTheDocument();
-      expect(screen.getByText("Last known location")).toBeInTheDocument();
       expect(screen.getByText("Active")).toBeInTheDocument();
       expect(screen.getByText("Unconfirmed")).toBeInTheDocument();
+      // T131: a person may be linked to several places, so a linked place is
+      // no longer "their last known location"; the Places heading says it all.
+      expect(screen.queryByText("Last known location")).not.toBeInTheDocument();
     });
 
     it("shows no heading for a kind this NPC has none of", () => {
@@ -531,7 +553,6 @@ describe("NPCDetailPage", () => {
       // Once in the breadcrumb, once in the relationships list -- the page
       // says where they are in both places it makes sense to look.
       expect(screen.getAllByText("Mines of Moria")).toHaveLength(2);
-      expect(screen.getByText("Last known location")).toBeInTheDocument();
     });
 
     it("leaves a location reference that resolves to nothing visible as itself", () => {
@@ -1586,7 +1607,10 @@ describe("NPCDetailPage", () => {
       expect(within(tray).queryByText("Gandalf")).not.toBeInTheDocument();
     });
 
-    it("attaches a quest to the NPC's own connections", async () => {
+    // T131: the quest owns the link, so attaching it here writes the quest --
+    // and the quest's page then shows the person too. It used to write this
+    // NPC's own list, which the quest's page never read.
+    it("attaches a quest by naming the NPC on the quest, which owns the link", async () => {
       renderPage();
       openTray();
       fireEvent.click(
@@ -1594,15 +1618,12 @@ describe("NPCDetailPage", () => {
       );
 
       await waitFor(() =>
-        expect(mockUpdateNPC).toHaveBeenCalledWith(
-          "npc-1",
-          expect.objectContaining({
-            connections: expect.objectContaining({
-              relatedQuests: ["quest-1", "quest-missing", "quest-2"],
-            }),
-          })
+        expect(mockUpdateQuest).toHaveBeenCalledWith(
+          "quest-2",
+          expect.objectContaining({ relatedNPCIds: ["npc-1"] })
         )
       );
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
     });
 
     it("writes the rumour, because that is the record that holds the link", async () => {
@@ -1627,8 +1648,10 @@ describe("NPCDetailPage", () => {
       expect(mockUpdateNPC).not.toHaveBeenCalled();
     });
 
-    it("replaces the place rather than collecting several, because someone is in one place", async () => {
-      // Somewhere else first: a place written as text, which the pick replaces.
+    // T131 (maintainer, 2026-10-08): a person may be linked to several
+    // places, and the place owns the link -- it lists who is there. Attaching
+    // one adds the person to that list and replaces nothing.
+    it("adds the person to the place's own list, which owns the link", async () => {
       mockNPCDataReturn = {
         npcs: [{ ...fullNPC, locationId: undefined, location: "Bree" }],
         loading: false,
@@ -1641,14 +1664,12 @@ describe("NPCDetailPage", () => {
       );
 
       await waitFor(() =>
-        expect(mockUpdateNPC).toHaveBeenCalledWith(
-          "npc-1",
-          expect.objectContaining({
-            locationId: "mines-of-moria",
-            location: "Mines of Moria",
-          })
+        expect(mockUpdateLocation).toHaveBeenCalledWith(
+          "mines-of-moria",
+          expect.objectContaining({ connectedNPCs: ["npc-1"] })
         )
       );
+      expect(mockUpdateNPC).not.toHaveBeenCalled();
     });
 
     it("says what is already attached instead of offering it again", () => {
@@ -1687,12 +1708,14 @@ describe("NPCDetailPage", () => {
 
         fireEvent.click(option("Clear the Mines"));
 
-        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
-        const [npcId, written] = mockUpdateNPC.mock.calls[0];
-        expect(npcId).toBe("npc-1");
-        expect(written.connections.relatedQuests).toContain("mines-of-moria");
-        // Untouched: the patch never names the place (T083).
-        expect(written).not.toHaveProperty("locationId");
+        // T131: written on the quest, which owns the link.
+        await waitFor(() => expect(mockUpdateQuest).toHaveBeenCalled());
+        const [questId, written] = mockUpdateQuest.mock.calls[0];
+        expect(questId).toBe("mines-of-moria");
+        expect(written.relatedNPCIds).toContain("npc-1");
+        // Untouched: the place that shares its id, on either record (T083).
+        expect(mockUpdateLocation).not.toHaveBeenCalled();
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
       });
 
       it("detaches the quest and keeps the person who shares its id", async () => {

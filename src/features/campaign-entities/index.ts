@@ -95,3 +95,20 @@ export { default as ConvertToQuestDialog } from './rumors/components/ConvertToQu
 export { rumorDisplayTitle, rumorTitleText, UNTITLED_RUMOR } from './rumors/utils/rumor-title';
 // Rumor types
 export type { Rumor, RumorStatus, SourceType, RumorNote, RumorContextState, RumorContextValue } from './rumors/types';
+
+// Links between records (T131): which field owns each, how each side reads
+// it, and the one way to add or remove one from any page.
+export {
+  questIdsOfNpc,
+  npcIdsOfQuest,
+  locationIdsOfNpc,
+  npcIdsOfLocation,
+  questNamesLocation,
+  questIdsOfLocation,
+  locationIdsOfRumor,
+  rumorIdsOfLocation,
+  npcIdsOfNpc,
+  rumorIdsOfNpc,
+} from './shared/links';
+export { createLinkActions } from './shared/linkActions';
+export type { LinkEnd, LinkDeps } from './shared/linkActions';

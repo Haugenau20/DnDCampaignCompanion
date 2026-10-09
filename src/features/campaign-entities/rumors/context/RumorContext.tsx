@@ -12,6 +12,7 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { rumorParagraph } from '../utils/rumor-title';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 import { commitEntityWrites, EntityBatchWrite, MAX_BATCH_WRITES } from '../../shared/commitEntityWrites';
+import { locationIdsOfRumor } from '../../shared/links';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
@@ -105,8 +106,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // ever match by coincidence (a location whose name happens to equal its own
   // id-shaped id). Adding the same fallback here would risk false matches
   // without recovering any real ones, so this stays as it was.
+  //
+  // `relatedLocations` counts too (T131): a rumour is linked to the places it
+  // concerns as well as to the one it was heard in.
   const getRumorsByLocation = useCallback((locationId: string) => {
-    return rumors.filter(rumor => rumor.locationId === locationId);
+    return rumors.filter(rumor => locationIdsOfRumor(rumor).includes(locationId));
   }, [rumors]);
 
   // Get rumors by NPC

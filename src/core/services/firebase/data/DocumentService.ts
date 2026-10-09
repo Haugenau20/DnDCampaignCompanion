@@ -390,15 +390,29 @@ class DocumentService extends BaseFirebaseService {
    *
    * @param collectionName Collection name or full path
    * @param field The field to match
-   * @param value The value it must equal
+   * @param value The value it must equal, or contain with `array-contains`
+   * @param operator `==`, or `array-contains` for a list holding `value` (T131)
    */
   public async queryFromServer<T>(
     collectionName: string,
     field: string,
-    value: unknown
+    value: unknown,
+    operator: '==' | 'array-contains' = '=='
   ): Promise<Array<T & { id: string }>> {
     const collectionRef = this.getCollectionRef(collectionName);
-    const snapshot = await getDocsFromServer(query(collectionRef, where(field, '==', value)));
+    const snapshot = await getDocsFromServer(query(collectionRef, where(field, operator, value)));
+    return snapshot.docs.map(document => ({ ...(document.data() as T), id: document.id }));
+  }
+
+  /**
+   * Every document of a collection, as the server holds it now (T131): for
+   * the rare question no query can ask, such as which quests name a place
+   * inside a list of objects. Offline, it fails.
+   *
+   * @param collectionName Collection name or full path
+   */
+  public async getCollectionFromServer<T>(collectionName: string): Promise<Array<T & { id: string }>> {
+    const snapshot = await getDocsFromServer(this.getCollectionRef(collectionName));
     return snapshot.docs.map(document => ({ ...(document.data() as T), id: document.id }));
   }
 
