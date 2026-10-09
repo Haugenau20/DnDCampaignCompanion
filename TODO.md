@@ -378,12 +378,7 @@ anyway. What is left:
   login", "does not explain the purpose". If they recur with the site live,
   serve real HTML for `/` and `/privacy`. The consent screen's support address,
   `dndcampaigncompanion@gmail.com`, is shown to users once verified.
-- **Cosmetic**: the email templates' action URL is still
-  `https://dnd-campaign-companion.firebaseapp.com/__/auth/action`
-  (Authentication → Templates). It keeps working, because the reserved
-  `/__/auth/` paths are not redirected. Moving it to
-  `https://muninn.quest/__/auth/action` is untested: try it on a preview channel
-  first. Google Cloud also holds two OAuth web clients, one left over from
+- **Cosmetic**: Google Cloud holds two OAuth web clients, one left over from
   switching the Google provider off and on; the one Firebase does not name
   (Authentication → Sign-in method → Google) can go, with a Google sign-in
   tried straight after.
