@@ -535,4 +535,32 @@ describe("AdminPeoplePage", () => {
       expect(within(region).getByText(/No invitations waiting/i)).toBeInTheDocument();
     });
   });
+
+  // T128: a group holds at most ten members, so a full one offers no new
+  // invitation, which could only fail when used.
+  describe("a full group", () => {
+    const TEN: GroupMember[] = Array.from({ length: 10 }, (_, i) => ({
+      id: i === 0 ? "u1" : `u${i + 1}`,
+      username: i === 0 ? "Legolas" : `Member${i + 1}`,
+      role: i === 0 ? "admin" : "member",
+      joinedAt: new Date("2025-05-31"),
+    }));
+
+    test("says it is full and offers no invitation", async () => {
+      setup({ members: TEN });
+      await settle();
+      for (const button of screen.getAllByRole("button", { name: "Invite someone" })) {
+        expect(button).toBeDisabled();
+      }
+      expect(screen.getByText(/this group is full/i)).toBeInTheDocument();
+      expect(screen.getByText("10 of 10")).toBeInTheDocument();
+    });
+
+    test("one place short of full still invites", async () => {
+      setup({ members: TEN.slice(0, 9) });
+      await settle();
+      expect(screen.getAllByRole("button", { name: "Invite someone" })[0]).toBeEnabled();
+      expect(screen.queryByText(/this group is full/i)).not.toBeInTheDocument();
+    });
+  });
 });

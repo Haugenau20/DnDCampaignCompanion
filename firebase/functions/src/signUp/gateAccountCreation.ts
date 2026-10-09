@@ -5,11 +5,8 @@ import {
   beforeUserCreated,
 } from "firebase-functions/v2/identity";
 import {getFirestore} from "firebase-admin/firestore";
-import {
-  REFUSAL,
-  accountLimitReached,
-  findLiveReservation,
-} from "./signUpGate";
+import {REFUSAL, findLiveReservation} from "./signUpGate";
+import {takeAccountSlot} from "./accountCount";
 
 /**
  * The sample-data generator creates its users through the client SDK with a
@@ -44,13 +41,15 @@ function isEmulatorSeedAccount(
  * API key could create an Auth account -- harmless, since membership was
  * already server-side (#1425), but not "invite only". Now creation needs a
  * live reservation for the account's email, left by `reserveSignUp` after it
- * checked an invitation, and a project under `MAX_ACCOUNTS`.
+ * checked an invitation, and a project under `MAX_ACCOUNTS` (`accountCount.ts`).
  *
  * Runs for every way an account is created from a client -- magic link,
  * Google, password -- and for none of the ways an existing account signs in.
  * The Admin SDK creates accounts without it.
  *
- * The reservation is consumed here, so one reservation makes one account.
+ * The reservation is consumed here, in the same transaction that counts the
+ * account (T128): one reservation makes one account, and two sign-ups racing
+ * for the project's last slot cannot both have it.
  *
  * @param {AuthBlockingEvent} event The account about to be created
  */
@@ -75,15 +74,29 @@ export async function admitAccount(event: AuthBlockingEvent): Promise<void> {
     );
   }
 
-  if (await accountLimitReached()) {
+  const outcome = await db.runTransaction(async (transaction) => {
+    // Read again inside the transaction: two creations for one address may
+    // both have found it.
+    if (!(await transaction.get(reservation)).exists) return "spent";
+    if (!(await takeAccountSlot(transaction, db))) return "full";
+    transaction.delete(reservation);
+    return "admitted";
+  });
+
+  if (outcome === "spent") {
+    throw new HttpsError(
+      "permission-denied",
+      `${REFUSAL.inviteRequired}: There is no account for this address. ` +
+        "Accounts are created from an invitation link."
+    );
+  }
+  if (outcome === "full") {
     throw new HttpsError(
       "resource-exhausted",
       `${REFUSAL.accountsFull}: This site is not taking new accounts right ` +
         "now."
     );
   }
-
-  await reservation.delete();
 }
 
 /** The deployed blocking trigger. */

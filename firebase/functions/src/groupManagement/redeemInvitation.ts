@@ -4,6 +4,7 @@ import {FieldValue, getFirestore} from "firebase-admin/firestore";
 import {ENFORCE_APP_CHECK} from "../shared/appCheck";
 import {rethrowHttpsError} from "../shared/httpsErrors";
 import {registrationTokenProblem} from "../shared/registrationToken";
+import {GROUP_FULL_MESSAGE, MAX_GROUP_MEMBERS} from "./groupLimits";
 
 interface RedeemInvitationData {
   groupId: string;
@@ -32,9 +33,10 @@ const USERNAME_MAX = 20;
  * used to write different group themes, and still do, so that moving the
  * write server-side changes nothing a member can see.
  *
- * Everything -- the token check, the username check and all five writes --
- * happens in one transaction, so two people racing for the same token or the
- * same name cannot both win.
+ * Everything -- the token check, the username check, the member count and
+ * all five writes -- happens in one transaction, so two people racing for the
+ * same token, the same name or a group's last place cannot both win. A group
+ * holds at most `MAX_GROUP_MEMBERS` (T128).
  */
 export const redeemInvitation = functions.onCall(
   {
@@ -82,13 +84,14 @@ export const redeemInvitation = functions.onCall(
 
     try {
       await db.runTransaction(async (transaction) => {
-        const [tokenDoc, groupDoc, userDoc, groupUserDoc, usernameDoc] =
+        const [tokenDoc, groupDoc, userDoc, groupUserDoc, usernameDoc, members] =
           await Promise.all([
             transaction.get(tokenRef),
             transaction.get(groupRef),
             transaction.get(userRef),
             transaction.get(groupUserRef),
             transaction.get(usernameRef),
+            transaction.get(groupRef.collection("users").limit(MAX_GROUP_MEMBERS)),
           ]);
 
         if (!tokenDoc.exists || !groupDoc.exists) {
@@ -127,6 +130,10 @@ export const redeemInvitation = functions.onCall(
             "already-exists",
             "You are already a member of this group."
           );
+        }
+
+        if (members.size >= MAX_GROUP_MEMBERS) {
+          throw new functions.HttpsError("resource-exhausted", GROUP_FULL_MESSAGE);
         }
 
         if (usernameDoc.exists && usernameDoc.data()?.userId !== uid) {
