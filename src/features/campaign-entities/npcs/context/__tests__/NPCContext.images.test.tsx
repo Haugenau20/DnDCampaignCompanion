@@ -16,6 +16,9 @@ const mockRecordReleased = jest.fn();
 const mockClearReleased = jest.fn();
 let mockNpcs: any[] = [];
 
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('features/user-management', () => ({
   // The provider's writes name the active group and campaign by full path (T082).
   useGroups: () => ({ activeGroupId: 'group-1' }),

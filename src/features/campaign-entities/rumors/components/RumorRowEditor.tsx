@@ -13,7 +13,8 @@ import {
 import StateLadder from 'shared/components/row-controls/StateLadder';
 import { formatNoteDate } from 'shared/utils/dateFormatter';
 import useCreatorName from 'shared/hooks/useCreatorName';
-import { Rumor, RumorStatus, SourceType } from '../types';
+import { Rumor, RumorNote, RumorStatus, SourceType } from '../types';
+import { useCampaignRecordNotes } from '../../shared/recordNotes';
 import {
   RUMOR_STATUS_OPTIONS,
   SOURCE_OPTIONS,
@@ -155,6 +156,9 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
   const titleRef = useRef<HTMLInputElement>(null);
   // Named as the rumour's attribution names it everywhere else (T124).
   const recordedBy = useCreatorName(rumor);
+  // Its notes: their own documents (T133), and the old array until the
+  // migration has moved it. Read only while the row is open.
+  const notes = useCampaignRecordNotes<RumorNote>('rumors', rumor);
 
   // A rumour the composer just created opens with the caret in the *title*.
   // This was the content field, back when the composer took a title and left
@@ -468,12 +472,12 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
           />
         </div>
 
-        {rumor.notes?.length ? (
+        {notes.length ? (
           <div className="flex flex-col gap-1.5">
             <FieldLabel>Notes</FieldLabel>
             <div className="flex flex-col gap-2">
-              {rumor.notes.map((note) => (
-                <div key={note.id} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
+              {notes.map((note) => (
+                <div key={note.noteId ?? note.id} className="flex gap-3 px-3 py-2.5 rounded-md bg-secondary">
                   {/* Formatted, from the one shared helper (item 10, T001). */}
                   <Typography
                     variant="body-sm"

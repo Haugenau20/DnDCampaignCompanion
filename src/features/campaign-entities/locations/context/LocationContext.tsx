@@ -15,6 +15,7 @@ import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution, modificationTimes } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
+import { addRecordNote, deleteRecordNotes } from '../../shared/recordNotes';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
@@ -105,15 +106,10 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       throw new Error('Location not found');
     }
 
-    // The notes alone, appended to the list the server holds (T083).
-    const dated = { ...note, date: toNoteDate() };
-    await writeRecordChange(
-      { updateData, updateDataAfterReading },
-      locationId,
-      (current) => ({ notes: [...(current.notes || []), dated] }),
-      'Location not found'
-    );
-  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, updateData, updateDataAfterReading]);
+    // A note of its own (T133), not one more entry in the record.
+    if (!locationsPath) throw new Error('No campaign selected');
+    await addRecordNote(locationsPath, locationId, { ...note, date: toNoteDate() });
+  }, [user, userProfile, activeGroupId, activeCampaignId, getLocationById, locationsPath]);
 
   // Update location status
   const updateLocationStatus = useCallback(async (locationId: string, status: LocationStatus): Promise<void> => {
@@ -300,6 +296,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await claimChildren(locationId, () => ({ parentId: grandparentId }));
 
       const discard = place.image ? releaseImage(place.image.path) : undefined;
+      // Its notes first (T133): a record's subcollection outlives the record.
+      if (locationsPath) await deleteRecordNotes(locationsPath, [locationId]);
       await deleteData(locationId);
       // After the document: a failure can then only orphan the file, which the
       // released record lets the daily sweep find.
@@ -343,14 +341,16 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // the only way to guarantee descendants are actually removed from the
     // database before their ancestors.
     for (const id of childrenIds) {
+      if (locationsPath) await deleteRecordNotes(locationsPath, [id]);
       await deleteData(id);
     }
+    if (locationsPath) await deleteRecordNotes(locationsPath, [locationId]);
     await deleteData(locationId);
 
     // Every deleted place's picture, once all the documents are gone.
     discards.forEach(discard => discard());
     await unlinkDeletedQuietly(recordPaths, 'location', [...childrenIds, locationId]);
-  }, [user, activeGroupId, activeCampaignId, deleteData, queryData, updateManyAfterReading, recordPaths]);
+  }, [user, activeGroupId, activeCampaignId, deleteData, queryData, updateManyAfterReading, recordPaths, locationsPath]);
 
   const deleteLocation = useCallback(
     (locationId: string, childStrategy: LocationChildStrategy = 'delete-subtree') =>

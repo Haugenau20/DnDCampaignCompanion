@@ -152,6 +152,8 @@ export function useFirestore() {
     decide: (read: (id: string) => Promise<(S & { id: string }) | undefined>) => Promise<{
       create: T;
       updates: Array<{ id: string; data: Partial<S> }>;
+      /** Notes to create in the same commit (T133); see `DocumentService`. */
+      notes?: Array<{ under: 'created' | { updated: string }; id: string; data: Record<string, unknown> }>;
     }>
   ): Promise<void> => {
     try {

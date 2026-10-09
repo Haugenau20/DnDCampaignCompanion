@@ -81,3 +81,10 @@ export function overlongField(limits: TextLimitTable, data: Record<string, unkno
   }
   return undefined;
 }
+
+/**
+ * A note on a person, a place or a rumour, now a document of its own (T133):
+ * a person's or place's note is `text`, a rumour's `content`, and its day and
+ * author are lines. `firestore.rules.prod` (`noteTextFits`) holds the same.
+ */
+export const NOTE_TEXT_LIMITS: TextLimitTable = { text, content: text, date: line, author: line };

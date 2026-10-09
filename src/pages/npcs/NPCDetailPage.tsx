@@ -16,7 +16,13 @@ import {
   npcIdsOfNpc,
   questIdsOfNpc,
   rumorIdsOfNpc,
+  useRecordNotes,
+  mergeRecordNotes,
+  editRecordNote,
+  deleteRecordNote,
 } from 'features/campaign-entities';
+import type { RecordNote } from 'features/campaign-entities';
+import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import type { NPC, NPCNote, NPCRelationship, NPCStatus } from 'features/campaign-entities';
 import type { RecordChange } from 'core/types/common';
 import { useUser, useGroups, useCampaigns } from 'features/user-management';
@@ -249,6 +255,12 @@ const NPCDetailPage: React.FC = () => {
   const { activeCampaignId } = useCampaigns();
 
   const npc = npcs.find((candidate) => candidate.id === npcId);
+
+  // The notes: their own documents (T133), and the record's old array until
+  // the migration has moved it.
+  const npcsPath = useCampaignCollectionPath('npcs');
+  const noteDocuments = useRecordNotes<NPCNote>(npcsPath, npc?.id);
+  const notes = useMemo(() => mergeRecordNotes(npc?.notes, noteDocuments), [npc?.notes, noteDocuments]);
 
   // `loading` folds into the gate's resolving state: `npcs` is empty while auth
   // and the campaign restore, and without this the page would claim "no NPC
@@ -560,16 +572,19 @@ const NPCDetailPage: React.FC = () => {
   };
 
   /**
-   * Both go through `save`, so the page re-reads what was written. The stored
-   * array is found in, not the sorted copy on screen: order is kept as written
-   * -- and it is the array the server holds (T083), so a note another player
-   * added meanwhile stays, and one they changed first is refused rather than
-   * guessed at (`NOTE_CHANGED_MESSAGE`).
+   * A note in its own document (T133) is changed there; one still in the
+   * record's old array goes through `save`, which searches the array the
+   * server holds (T083), so a note another player added meanwhile stays and
+   * one they changed first is refused rather than guessed at.
    */
-  const editNote = async (note: NPCNote, text: string) =>
-    save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
-  const deleteNote = async (note: NPCNote) =>
-    save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
+  const editNote = async (note: RecordNote<NPCNote>, text: string) =>
+    note.noteId && npcsPath && npc
+      ? editRecordNote(npcsPath, npc.id, note.noteId, 'text', note.text, text)
+      : save((current) => ({ notes: replaceNoteText(current.notes ?? [], note, text) }));
+  const deleteNote = async (note: RecordNote<NPCNote>) =>
+    note.noteId && npcsPath && npc
+      ? deleteRecordNote(npcsPath, npc.id, note.noteId)
+      : save((current) => ({ notes: removeNote(current.notes ?? [], note) }));
 
   const handleDelete = async () => {
     if (!npc) return;
@@ -1193,7 +1208,7 @@ const NPCDetailPage: React.FC = () => {
 
           {/* ---- Notes: the history, then somewhere to add to it ---- */}
           <EntityNotes
-            notes={npc.notes}
+            notes={notes}
             canEdit={gate.canAct}
             onAdd={addNote}
             onEdit={editNote}

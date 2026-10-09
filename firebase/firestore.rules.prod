@@ -433,6 +433,19 @@ service cloud.firestore {
               !request.resource.data.diff(resource.data).affectedKeys().hasAny([field]));
     }
 
+    // The records whose notes are documents of their own (T133).
+    function hasNotes(entityCollection) {
+      return entityCollection in ['npcs', 'locations', 'rumors'];
+    }
+
+    // A note's text: a person's or place's note is `text`, a rumour's
+    // `content`, each a text of 10,000; its day and author a line (T133).
+    function noteTextFits() {
+      let changed = changedKeys();
+      return fits(changed, 'text', 10000) && fits(changed, 'content', 10000) &&
+             fits(changed, 'date', 200) && fits(changed, 'author', 200);
+    }
+
     // The fields this write sets or changes: all of them for a new document.
     function changedKeys() {
       return resource == null ? request.resource.data.keys()
@@ -735,6 +748,20 @@ service cloud.firestore {
           // delete even their OWN entity while the UI showed them a Delete
           // button.
           allow delete: if isRecordType(entityCollection) && isGroupMember(groupId);
+        }
+
+        // A record's notes, each a document of its own (T133): a person's,
+        // a place's and a rumour's. Their text is capped one note at a time,
+        // which no rule could do inside the array they used to live in (F3,
+        // F4). Any member may write them, as any member may the record, and
+        // only under a record there is: after the write, so a new record's
+        // note can commit with it (a combined rumour's).
+        match /{entityCollection}/{entityId}/notes/{noteId} {
+          allow read: if hasNotes(entityCollection) && isGroupMember(groupId);
+          allow create, update: if hasNotes(entityCollection) && isGroupMember(groupId) &&
+                                 campaignOpen(groupId, campaignId) && noteTextFits() &&
+                                 existsAfter(/databases/$(database)/documents/groups/$(groupId)/campaigns/$(campaignId)/$(entityCollection)/$(entityId));
+          allow delete: if hasNotes(entityCollection) && isGroupMember(groupId);
         }
       }
     }

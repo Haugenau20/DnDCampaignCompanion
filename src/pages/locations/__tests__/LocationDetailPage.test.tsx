@@ -151,6 +151,8 @@ jest.mock('features/campaign-entities', () => {
     'features/campaign-entities/rumors/utils/rumor-title'
   );
   return {
+    // Notes are documents of their own (T133); see the mock.
+    ...require('@/test-utils/record-notes-mock').recordNotesMock(),
     rumorTitleText: actualRumorTitle.rumorTitleText,
     useLocations: () => ({
       locations: mockLocations,
@@ -717,6 +719,43 @@ describe('LocationDetailPage — edit in place (§7, item 9)', () => {
         ],
       })
     );
+  });
+
+  // T133: a note added since is a document of its own, shown with the old
+  // array's and changed where it lives; the location is not rewritten.
+  describe('a note in its own document', () => {
+    const notesModule = jest.requireMock('features/campaign-entities');
+    const PATH = 'groups/group-1/campaigns/campaign-1/locations';
+    beforeEach(() => {
+      notesModule.useRecordNotes.mockReturnValue([
+        { date: '2025-06-20', text: 'The eagles came.', noteId: 'n-7' },
+      ]);
+    });
+    afterEach(() => notesModule.useRecordNotes.mockReturnValue(undefined));
+
+    it('is read under this location and counted with the rest', () => {
+      renderPage();
+      expect(notesModule.useRecordNotes).toHaveBeenCalledWith(PATH, 'gondolin');
+      expect(screen.getByText('The eagles came.')).toBeInTheDocument();
+      expect(screen.getByText('3 · oldest first')).toBeInTheDocument();
+    });
+
+    it('is edited and deleted in its own document', async () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit the note from 20/06/2025' }));
+      fireEvent.change(screen.getByLabelText('Note from 20/06/2025'), { target: { value: 'The eagles came at last.' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save note' }));
+      await waitFor(() =>
+        expect(notesModule.editRecordNote).toHaveBeenCalledWith(
+          PATH, 'gondolin', 'n-7', 'text', 'The eagles came.', 'The eagles came at last.'
+        )
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Delete the note from 20/06/2025' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete note' }));
+      await waitFor(() => expect(notesModule.deleteRecordNote).toHaveBeenCalledWith(PATH, 'gondolin', 'n-7'));
+      expect(mockUpdateLocation).not.toHaveBeenCalled();
+    });
   });
 
   // T063: the location's notes are the NPC page's card, not a section of

@@ -11,6 +11,9 @@ import { resolveRecordChange } from '@/test-utils/update-after-reading';
 // and ConvertToQuestDialog unconditionally (gated on `open`), and the real
 // Dialog uses a portal that jsdom doesn't need to exercise for these tests.
 // ---------------------------------------------------------------------------
+// Notes are documents of their own (T133); see the mock.
+jest.mock('features/campaign-entities/shared/recordNotes', () => require('@/test-utils/record-notes-mock').recordNotesMock());
+
 jest.mock('../../../../../core/components/Dialog', () => {
   const MockDialog: React.FC<{
     open: boolean;

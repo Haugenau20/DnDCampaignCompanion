@@ -980,6 +980,90 @@ describe("a campaign holds the app's records, each with its name (T119)", () => 
   });
 });
 
+// T133: a person's, a place's and a rumour's notes are documents of their
+// own, `{record}/{id}/notes/{noteId}`, each capped alone (F3, F4).
+describe("a record's notes are documents of their own (T133)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+
+  beforeEach(() => env.withSecurityRulesDisabled(async (context) => {
+    await context.firestore().doc(`${C}/locations/bree`).set({name: "Bree", parentId: ""});
+    await context.firestore().doc(`${C}/rumors/r1`).set({title: "Smoke", content: ""});
+  }));
+
+  it.each([
+    ["an NPC's", "npcs/n1", {date: "2026-10-09", text: "Owes us a sword"}],
+    ["a location's", "locations/bree", {date: "2026-10-09", text: "The Prancing Pony"}],
+    ["a rumour's", "rumors/r1", {content: "Rangers about"}],
+  ])("control: a member adds, reads, edits and deletes %s note", async (_whose, record, note) => {
+    const db = as("frodo");
+    const path = `${C}/${record}/notes/x1`;
+    await assertSucceeds(db.doc(path).set(note));
+    await assertSucceeds(db.doc(path).get());
+    await assertSucceeds(db.collection(`${C}/${record}/notes`).get());
+    await assertSucceeds(db.doc(path).update({[Object.keys(note).pop()!]: "Changed"}));
+    await assertSucceeds(db.doc(path).delete());
+  });
+
+  it("shows a stranger nothing and takes nothing from one", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`${C}/npcs/n1/notes/x1`).set({text: "Owes us a sword"})
+    );
+    const db = as("sauron");
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).get());
+    await assertFails(db.collection(`${C}/npcs/n1/notes`).get());
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x2`).set({text: "Mine"}));
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).delete());
+  });
+
+  it("refuses notes under a record of a kind that keeps none", async () => {
+    await env.withSecurityRulesDisabled((context) =>
+      context.firestore().doc(`${C}/quests/q1`).set({title: "The ring"})
+    );
+    await assertFails(as("frodo").doc(`${C}/quests/q1/notes/x1`).set({text: "Junk"}));
+    await assertFails(as("frodo").doc(`${C}/anything/a1/notes/x1`).set({text: "Junk"}));
+  });
+
+  it("refuses a note under a record that does not exist", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/nobody/notes/x1`).set({text: "Junk"}));
+  });
+
+  it("takes a note on a record created in the same commit, as a combined rumour's is", async () => {
+    const db = as("frodo");
+    const batch = db.batch();
+    batch.set(db.doc(`${C}/rumors/combined`), {title: "Smoke and ash", content: "Both"});
+    batch.set(db.doc(`${C}/rumors/combined/notes/x1`), {content: "Combined from rumors: r1"});
+    await assertSucceeds(batch.commit());
+  });
+
+  it.each([
+    ["text", 10_000],
+    ["content", 10_000],
+    ["date", 200],
+    ["author", 200],
+  ])("a note's %s takes %d characters and refuses one more", async (field, limit) => {
+    const db = as("frodo");
+    const path = `${C}/npcs/n1/notes/x1`;
+    await assertFails(db.doc(path).set({[field]: "x".repeat(limit + 1)}));
+    await assertSucceeds(db.doc(path).set({[field]: "x".repeat(limit)}));
+    await assertFails(db.doc(path).update({[field]: "x".repeat(limit + 1)}));
+  });
+
+  it("refuses a note's text that is not text", async () => {
+    await assertFails(as("frodo").doc(`${C}/npcs/n1/notes/x1`).set({text: ["x".repeat(20_000)]}));
+  });
+
+  it("takes no note while the campaign is being deleted, but lets one be deleted", async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(`${C}/npcs/n1/notes/x1`).set({text: "Owes us a sword"});
+      await context.firestore().doc(C).update({deleting: true});
+    });
+    const db = as("frodo");
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x2`).set({text: "Late"}));
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).update({text: "Late"}));
+    await assertSucceeds(db.doc(`${C}/npcs/n1/notes/x1`).delete());
+  });
+});
+
 // T119 (F4): every text field of a record has a limit, the app's
 // `RECORD_TEXT_LIMITS` (src/core/constants/textLimits.ts). The app stops
 // there; the rules refuse a client that does not.

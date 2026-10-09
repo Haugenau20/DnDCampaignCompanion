@@ -20,8 +20,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T131 | Links: run the migration, then stop reading the old halves | S | blocked | Waits on the maintainer running `migrate-links.js` once the reading frontend is live |
-| medium | T132 | Attribution the rules can check: the migration, then the rules | M | open | Any member can still credit a record to someone else; the app's half is done, the rules' half waits on records carrying `createdAt` |
-| medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
+| medium | T132 | Attribution the rules can check: run the migration, then the rules | M | blocked | Any member can still credit a record to someone else; the rules wait on the maintainer running `migrate-records.js` |
+| medium | T133 | Notes: run the migration, then stop reading the old arrays | S | blocked | Waits on the maintainer running `migrate-records.js` once the frontend that reads both is live |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
@@ -429,8 +429,8 @@ nothing changes on screen before the migration.
   fields, if wanted, in a later merge.
 - **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
-### T132 — Attribution the rules can check: the migration, then the rules
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-09
+### T132 — Attribution the rules can check: run the migration, then the rules
+**Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
 
 Who created or changed a record is still built in the browser and believed by
 the rules: any member can credit a record to someone else (F5). The app's half
@@ -440,8 +440,12 @@ server's times first (`core/attribution`, `recordTimes`), and names are the
 authors' current ones from the group's members (`useMemberDirectory`), the
 stored name kept for someone who has left.
 
-- **Left**: the migration -- `createdAt` and `modifiedAt` from the old strings
-  on every existing record, one script with T133's, one pass -- then the rules:
+- **Blocked on the maintainer**: `firebase/functions/scripts/migrate-records.js`,
+  which gives every existing record `createdAt` and `modifiedAt` from the old
+  strings (else the document's creation) in the same pass as T133's notes;
+  first read-only, then `--apply --revert-file <file>` (its header has the
+  steps).
+- **Then** the rules:
   on create, `createdBy` and `modifiedBy` equal `request.auth.uid` and
   `createdAt` / `modifiedAt` equal `request.time`; on update, `createdBy` and
   `createdAt` unchanged and `modifiedBy` / `modifiedAt` the caller and now.
@@ -449,25 +453,32 @@ stored name kept for someone who has left.
   `dateAdded` → `createdAt` rename in `database-field-alignment.md` is done.
 - **Deploy order**: the rules only after the migration has run, in their own
   merge; a record without `createdAt` is otherwise refused its next edit.
-- **Notes inside records** keep their own dates until T133 makes them
-  documents of their own.
+- **Notes**, documents of their own now, carry the same times as any
+  document; the rules for them come with the records'.
 - **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
 
-### T133 — Notes on records as their own documents
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+### T133 — Notes: run the migration, then stop reading the old arrays
+**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
 
-`NPC.notes`, `Location.notes` and `Rumor.notes` are arrays inside the record;
-each note rewrites the whole record in a transaction and is sent again to every
-listener. Firestore refuses a document over 1 MiB, and then every write to that
-record fails, including edits that do not touch the notes (F3). Rules cannot
-look inside an array, so a note's size is bounded only by the app (F4).
+A person's, a place's and a rumour's notes are documents of their own,
+`{record}/{id}/notes/{noteId}`, each capped by the rules on its own and read
+only where it is shown (`features/campaign-entities/shared/recordNotes.ts`).
+The app still reads the record's old `notes` array beside them, and edits a
+note from the array in the array, so nothing changes on screen before the
+migration.
 
-- **Change**: `npcs/{id}/notes/{noteId}` and the like, read when the record is
-  opened, each note capped by the rules on its own. `deleteCampaign` must delete
-  them.
-- **With T132**: one script, one pass.
-- **Not these**: a player's private notes (`groups/{g}/users/{u}/notes`) are a
-  different feature (T111).
+- **Blocked on the maintainer**: once the frontend that reads both is live,
+  `firebase/functions/scripts/migrate-records.js` from `firebase/functions`,
+  first read-only, then `--apply --revert-file <file>` (its header has the
+  steps). Each record is one transaction; T132's times go in the same pass.
+- **Then**: a frontend that reads only the documents -- drop
+  `mergeRecordNotes` and the array branch of each page's note edit and delete
+  -- and the sample-data generators (`utils/__dev__/generators/contentGenerators/`),
+  which still write the arrays, rewritten to the documents. A rule refusing a
+  non-empty `notes` array on a record, in a later merge.
+- **Search** reads a rumour's notes from its array only. Only conversions and
+  combinations write a rumour's notes, so it loses little; if wanted, it reads
+  them where the rumour is opened instead.
 - **Source**: `data-model-review.md` change 5 (F3)
 
 ### T134 — Chapter text and the saga out of their documents

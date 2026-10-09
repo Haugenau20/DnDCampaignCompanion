@@ -1,7 +1,7 @@
 // src/features/campaign-entities/rumors/context/RumorContext.tsx - updating rumor context to use character names
 import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { Rumor, RumorStatus, RumorNote, RumorContextValue } from '../types';
-import { DomainData, IdentifiableContent, RecordChange, CreateAlongside } from 'core/types/common';
+import { DomainData, IdentifiableContent, RecordChange, CreateAlongside, ContentAttribution } from 'core/types/common';
 import { useRumorData } from '../hooks/useRumorData';
 import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { writeRecordChange } from '../../shared/writeRecordChange';
@@ -13,18 +13,25 @@ import { rumorParagraph } from '../utils/rumor-title';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 import { commitEntityWrites, EntityBatchWrite, MAX_BATCH_WRITES } from '../../shared/commitEntityWrites';
 import { locationIdsOfRumor } from '../../shared/links';
+import { addRecordNote, deleteRecordNotes } from '../../shared/recordNotes';
 
 const RumorContext = createContext<RumorContextValue | undefined>(undefined);
 
 /**
+ * Most rumours one conversion or combination can take. Each costs two writes,
+ * its mark and the note saying what happened (a document of its own since
+ * T133), beside the new record and, when combining, that record's own note.
+ */
+const MAX_RUMOURS_PER_COMMIT = Math.floor((MAX_BATCH_WRITES - 2) / 2);
+
+/**
  * Refuses a conversion or combination before anything is written when one
- * transaction could not hold it: the new record plus one update per rumour
- * (DATA-005). Checked after the commit instead, the new record was already
- * there and every retry made another.
+ * transaction could not hold it (DATA-005). Checked after the commit instead,
+ * the new record was already there and every retry made another.
  */
 const assertFitsOneCommit = (rumorCount: number): void => {
-  if (rumorCount + 1 > MAX_BATCH_WRITES) {
-    throw new Error(`One action can change at most ${MAX_BATCH_WRITES - 1} rumours at once.`);
+  if (rumorCount > MAX_RUMOURS_PER_COMMIT) {
+    throw new Error(`One action can change at most ${MAX_RUMOURS_PER_COMMIT} rumours at once.`);
   }
 };
 
@@ -146,23 +153,10 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Rumor not found');
     }
 
-    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
-    const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
-
-    const noteWithUser = {
-      ...note,
-      ...creationAttribution
-    };
-
-    // The notes alone, appended to the list the server holds (T083).
-    await writeRecordChange(
-      { updateData, updateDataAfterReading },
-      rumorId,
-      (current) => ({ notes: [...(current.notes ?? []), noteWithUser] }),
-      'Rumor not found',
-      modificationAttribution
-    );
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData, updateDataAfterReading]);
+    // A note of its own (T133), attributed by the write like any document.
+    if (!rumorsPath) throw new Error('No campaign selected');
+    await addRecordNote(rumorsPath, rumorId, { content: note.content });
+  }, [user, userProfile, getRumorById, rumorsPath]);
 
   // Ids issued during this session but not yet reflected in `rumors` (loaded
   // state). Two rumors can be created back-to-back within a single `act()` /
@@ -234,8 +228,10 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to delete rumors');
     }
 
+    // Its notes first (T133): a record's subcollection outlives the record.
+    if (rumorsPath) await deleteRecordNotes(rumorsPath, [rumorId]);
     await deleteData(rumorId);
-  }, [user, deleteData]);
+  }, [user, deleteData, rumorsPath]);
 
   /** Set the status of several rumours at once, in one batch. */
   const updateRumorsStatus = useCallback(async (rumorIds: string[], status: RumorStatus) => {
@@ -260,8 +256,9 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('User must be authenticated to delete rumors');
     }
 
+    if (rumorsPath) await deleteRecordNotes(rumorsPath, rumorIds);
     await commitRumorWrites(rumorIds.map(id => ({ type: 'delete' as const, id })));
-  }, [user, commitRumorWrites]);
+  }, [user, commitRumorWrites, rumorsPath]);
 
   // Combine multiple rumors into one
   const combineRumors = useCallback(async (rumorIds: string[], newRumorData: Partial<Rumor>) => {
@@ -280,10 +277,8 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Use the provided title or generate one
     const title = newRumorData.title || `Combined Rumor (${new Date().toLocaleDateString()})`;
 
-    // Computed once, so the new rumour's note and every original's note name
-    // one author and moment however often the transaction runs. The
-    // documents' own attribution is stamped by the write.
-    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+    // Fixed once, so a retried transaction writes the same notes, not more.
+    // Every document, the notes included, is attributed by the write.
     const combinedNoteId = crypto.randomUUID();
     const sourceNoteIds = new Map(rumorIds.map(id => [id, crypto.randomUUID()]));
 
@@ -304,7 +299,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         rumorsToMerge.flatMap(rumor => Array.isArray(rumor.relatedLocations) ? rumor.relatedLocations : [])
       )];
 
-      const create: Rumor = {
+      const create = {
         id: candidateId,
         title,
         content: combinedContent,
@@ -313,30 +308,26 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         sourceName: newRumorData.sourceName || 'Multiple Sources',
         relatedNPCs,
         relatedLocations,
-        notes: [{
-          id: combinedNoteId,
-          content: `Combined from rumors: ${rumorIds.join(', ')}`,
-          ...creationAttribution
-        }]
-      } as Rumor;
+        notes: []
+        // Attributed by the write, as every created document is.
+      } satisfies Omit<Rumor, keyof ContentAttribution>;
 
       // Each original is confirmed and linked to the new one. Only the
       // fields that change are written.
       const updates = rumorsToMerge.map(rumor => ({
         id: rumor.id,
-        data: {
-          status: 'confirmed' as RumorStatus,
-          notes: [
-            ...(Array.isArray(rumor.notes) ? rumor.notes : []),
-            {
-              id: sourceNoteIds.get(rumor.id)!,
-              content: `Combined into rumor: ${candidateId}`,
-              ...creationAttribution
-            }
-          ]
-        }
+        data: { status: 'confirmed' as RumorStatus }
       }));
-      return { create, updates };
+      // What happened, as notes of their own (T133), in the same commit.
+      const notes = [
+        { under: 'created' as const, id: combinedNoteId, data: { content: `Combined from rumors: ${rumorIds.join(', ')}` } },
+        ...rumorsToMerge.map(rumor => ({
+          under: { updated: rumor.id },
+          id: sourceNoteIds.get(rumor.id)!,
+          data: { content: `Combined into rumor: ${candidateId}` }
+        }))
+      ];
+      return { create, updates, notes };
     };
 
     // The new rumour and the marks commit together (DATA-005), under an id
@@ -346,11 +337,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       name: title,
       issuedIds: issuedIds.current,
       isLoaded: isRumorLoaded,
-      write: (candidateId) => createDocumentWithUpdates<Rumor, Rumor>(
+      write: (candidateId) => createDocumentWithUpdates<Omit<Rumor, keyof ContentAttribution>, Rumor>(
         rumorsPath, candidateId, rumorsPath, decide(candidateId)
       )
     });
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocumentWithUpdates, isRumorLoaded, rumorsPath]);
+  }, [user, userProfile, getRumorById, createDocumentWithUpdates, isRumorLoaded, rumorsPath]);
 
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
@@ -366,8 +357,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('One or more rumors not found');
     }
 
-    // Computed once, as in `combineRumors`.
-    const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
+    // Fixed once, as in `combineRumors`.
     const noteIds = new Map(rumorIds.map(id => [id, crypto.randomUUID()]));
 
     /**
@@ -381,17 +371,13 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         create: { ...questData, id: questId },
         updates: rumorsToConvert.map(rumor => ({
           id: rumor.id,
-          data: {
-            convertedToQuestId: questId,
-            notes: [
-              ...(Array.isArray(rumor.notes) ? rumor.notes : []),
-              {
-                id: noteIds.get(rumor.id)!,
-                content: `Converted to quest: ${questId}`,
-                ...creationAttribution
-              }
-            ]
-          }
+          data: { convertedToQuestId: questId }
+        })),
+        // What happened, as a note of its own on each rumour (T133).
+        notes: rumorsToConvert.map(rumor => ({
+          under: { updated: rumor.id },
+          id: noteIds.get(rumor.id)!,
+          data: { content: `Converted to quest: ${questId}` }
         }))
       };
     };
@@ -411,7 +397,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         questsPath, questId, rumorsPath, decide(questId)
       )
     });
-  }, [user, userProfile, activeGroupUserProfile, getRumorById, createDocumentWithUpdates, questsPath, rumorsPath]);
+  }, [user, userProfile, getRumorById, createDocumentWithUpdates, questsPath, rumorsPath]);
 
   const value: RumorContextValue = {
     rumors,
