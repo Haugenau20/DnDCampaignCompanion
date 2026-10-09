@@ -297,8 +297,8 @@ not, and `.dockerignore` keeps it out of the image.
 
 A sketch, to be designed when it is picked up:
 
-- **Counts:** groups and open founder links from aggregation queries, and accounts from T128's
-  counter document.
+- **Counts:** groups and open founder links from aggregation queries, and accounts from the sign-up
+  gate's count (`signUpCounters/accounts`).
 - **Health:** Cloud Monitoring's figures for the functions (errors, latency, calls), and a
   log-based metric for OpenAI refusing for lack of credit, which `isOutOfCredit`
   (`entityExtraction.ts:359`) already detects.

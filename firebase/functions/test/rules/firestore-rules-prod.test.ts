@@ -160,6 +160,20 @@ describe("the global-admin flag grants nothing (T119)", () => {
   });
 });
 
+// T128: a group holds at most five campaigns, which the rules cannot count,
+// so `createCampaign` creates them and no client does.
+describe("no client creates a campaign (T128)", () => {
+  it("refuses a member, an admin and a stranger alike", async () => {
+    await assertFails(as("frodo").doc(`groups/${G}/campaigns/c2`).set({name: "Rohan"}));
+    await assertFails(as("gandalf").doc(`groups/${G}/campaigns/c2`).set({name: "Rohan"}));
+    await assertFails(as("sauron").doc(`groups/${G}/campaigns/c2`).set({name: "Rohan"}));
+  });
+
+  it("still lets a member edit one", async () => {
+    await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1`).update({name: "There and back again"}));
+  });
+});
+
 // T119 (F4): `createGroup` writes a group with the Admin SDK (2026-07-29), and
 // no client has created one since. The rule still let any signed-in account
 // create group documents nobody is a member of, as many as it liked.
@@ -1035,12 +1049,12 @@ describe("a record's text has a limit (T119)", () => {
     await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: "x".repeat(20_001)}));
   });
 
-  it("caps a campaign's name and description, created or edited", async () => {
+  // Created only by `createCampaign` since T128, which checks both itself.
+  it("caps a campaign's name and description when it is edited", async () => {
     const db = as("frodo");
-    await assertFails(db.doc(`groups/${G}/campaigns/c2`).set({name: "x".repeat(201)}));
-    await assertFails(db.doc(`groups/${G}/campaigns/c2`).set({name: "Rohan", description: "x".repeat(10_001)}));
-    await assertSucceeds(db.doc(`groups/${G}/campaigns/c2`).set({name: "x".repeat(200), description: "x".repeat(10_000)}));
     await assertFails(db.doc(`groups/${G}/campaigns/c1`).update({name: "x".repeat(201)}));
+    await assertFails(db.doc(`groups/${G}/campaigns/c1`).update({description: "x".repeat(10_001)}));
+    await assertSucceeds(db.doc(`groups/${G}/campaigns/c1`).update({name: "x".repeat(200), description: "x".repeat(10_000)}));
   });
 
   it("caps a group's name and description when its admin edits them", async () => {

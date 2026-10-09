@@ -231,8 +231,9 @@ Every step adds and removes nothing, so the scripts and the console keep working
 ## Related
 
 - **T139** replaces the rest of CI's keys with the keyless sign-in this plan uses from the start.
-- **T128's caps** bound what founder links can cost.
-- **T127** makes a founder link lead somewhere.
+- **The caps** (10 members and 5 campaigns per group, 300 accounts) bound what founder links can
+  cost.
+- **A founder link leads somewhere**: account, group, first campaign, invitations.
 - **T138** decides whether the overview can show traffic.
 - **Two items worth filing when step 4a is picked up:**
   - storing only hashes of invitation tokens
