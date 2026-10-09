@@ -195,12 +195,12 @@ const LocationDetailPage: React.FC = () => {
   const parentName = ancestors.length ? ancestors[ancestors.length - 1].name : undefined;
 
   /**
-   * The people linked to this place, resolved to records: its own list, and
-   * anyone whose old record names it until the migration has run (T131).
-   * The two used to be shown apart, the second as "recorded as being here",
-   * because they disagreed; a link is one thing now, stored once.
+   * The people linked to this place, resolved to records: its own list
+   * (T131). A person's own record once named a place too, and the two were
+   * shown apart, the second as "recorded as being here", because they
+   * disagreed; a link is one thing now, stored once.
    */
-  const personIds = useMemo(() => (location ? npcIdsOfLocation(location, npcs) : []), [location, npcs]);
+  const personIds = useMemo(() => (location ? npcIdsOfLocation(location) : []), [location]);
   const peopleHere = useMemo(
     () =>
       personIds
@@ -330,7 +330,6 @@ const LocationDetailPage: React.FC = () => {
       parentId: location.id,
       features: [],
       connectedNPCs: [],
-      relatedQuests: [],
       notes: [],
       tags: [],
     }, {

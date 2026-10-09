@@ -151,12 +151,13 @@ describe('NPCDirectory', () => {
   // users saw "mines-of-moria" where the Locations page says "Mines of Moria".
   // -------------------------------------------------------------------------
   describe('location headings', () => {
-    const moriaNpc = makeNPC({ id: 'npc-m', name: 'Balin', locationId: 'mines-of-moria', location: 'mines-of-moria' });
+    // A place lists its people (T131).
+    const moriaNpc = makeNPC({ id: 'npc-m', name: 'Balin', location: 'mines-of-moria' });
 
     beforeEach(() => {
       mockLocations = [
-        { id: 'mines-of-moria', name: 'Mines of Moria' },
-        { id: 'rivendell', name: 'Rivendell' },
+        { id: 'mines-of-moria', name: 'Mines of Moria', connectedNPCs: ['npc-m'] },
+        { id: 'rivendell', name: 'Rivendell', connectedNPCs: ['npc-r1', 'npc-r2'] },
       ];
     });
 
@@ -172,14 +173,25 @@ describe('NPCDirectory', () => {
 
     // The free text is the name when each was written; the group is the place.
     test('groups NPCs at one place together, whatever name each was written with', () => {
-      const byName = makeNPC({ id: 'npc-r1', name: 'Arwen', locationId: 'rivendell', location: 'Rivendell' });
-      const byOldName = makeNPC({ id: 'npc-r2', name: 'Elrond', locationId: 'rivendell', location: 'Imladris' });
+      const byName = makeNPC({ id: 'npc-r1', name: 'Arwen', location: 'Rivendell' });
+      const byOldName = makeNPC({ id: 'npc-r2', name: 'Elrond', location: 'Imladris' });
       render(<NPCDirectory npcs={[byName, byOldName]} />);
 
       expect(screen.getAllByRole('heading', { name: 'Rivendell' })).toHaveLength(1);
       expect(screen.queryByRole('heading', { name: 'Imladris' })).not.toBeInTheDocument();
       expect(screen.getByText('Arwen')).toBeInTheDocument();
       expect(screen.getByText('Elrond')).toBeInTheDocument();
+    });
+
+    test('puts a person in several places under the first', () => {
+      mockLocations = [
+        { id: 'bree', name: 'Bree', connectedNPCs: ['npc-s'] },
+        { id: 'rivendell', name: 'Rivendell', connectedNPCs: ['npc-s'] },
+      ];
+      render(<NPCDirectory npcs={[makeNPC({ id: 'npc-s', name: 'Strider' })]} />);
+
+      expect(screen.getByRole('heading', { name: 'Bree' })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Rivendell' })).not.toBeInTheDocument();
     });
 
     test('leaves an unresolvable location visible as itself rather than prettified', () => {

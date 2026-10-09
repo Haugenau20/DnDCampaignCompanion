@@ -78,7 +78,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
         { name: 'The Shire', description: 'Where the ring has been kept hidden for decades' },
         { name: 'Rivendell', description: 'Where the Council will decide the ring\'s fate' }
       ],
-      relatedNPCIds: ['frodo', 'bilbo', 'gandalf'],
+      relatedNPCIds: ['frodo', 'bilbo', 'gandalf', 'sauron', 'gollum', 'samwise'],
       complications: ['The Nazgûl are hunting for the ring', 'The ring corrupts its bearer over time'],
       rewards: ['Knowledge of the ring\'s true nature', 'Understanding the threat to Middle-earth'],
       location: 'The Shire',
@@ -120,7 +120,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Rivendell', description: 'The location of the Council' },
         { name: 'Mordor', description: 'The only place where the Ring can be destroyed' }
       ],
-      relatedNPCIds: ['frodo', 'elrond', 'gandalf', 'gimli'],
+      relatedNPCIds: ['frodo', 'elrond', 'gandalf', 'gimli', 'aragorn', 'legolas', 'boromir'],
       complications: ['Disagreements between races', 'The corruption of the Ring affects the Council'],
       rewards: ['Formation of the Fellowship of the Ring', 'A plan to destroy the Ring'],
       location: 'Rivendell',
@@ -204,7 +204,7 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Mordor', description: 'The dark land ruled by Sauron' },
         { name: 'Mount Doom', description: 'The volcano where the Ring must be destroyed' }
       ],
-      relatedNPCIds: ['frodo', 'sauron', 'gollum'],
+      relatedNPCIds: ['frodo', 'sauron', 'gollum', 'aragorn', 'legolas', 'samwise', 'galadriel', 'boromir'],
       complications: ['The Ring\'s corruption grows stronger near Mordor', 'Sauron\'s forces patrol the land', 'Gollum\'s trustworthiness is questionable'],
       rewards: ['The destruction of the One Ring', 'The downfall of Sauron', 'Freedom for Middle-earth'],
       location: 'Mordor',
@@ -244,9 +244,10 @@ const getLOTRQuests = (dmUid: string, formattedDate: string) => {
       leads: ['The Ents of Fangorn Forest might be persuaded to help'],
       keyLocations: [
         { name: 'Isengard', description: 'Saruman\'s fortress and base of operations' },
-        { name: 'Orthanc', description: 'The tower at the center of Isengard where Saruman resides' }
+        { name: 'Orthanc', description: 'The tower at the center of Isengard where Saruman resides' },
+        { name: 'Edoras', description: '', locationId: 'edoras' }
       ],
-      relatedNPCIds: ['gandalf', 'saruman'],
+      relatedNPCIds: ['gandalf', 'saruman', 'theoden'],
       complications: ['Saruman\'s voice is unnaturally persuasive', 'The Uruk-hai are stronger than ordinary orcs'],
       rewards: ['Weakening of Sauron\'s alliance', 'Recovery of lost knowledge from Orthanc'],
       location: 'Isengard',
@@ -292,9 +293,12 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
       leads: ['Travel east toward the Misty Mountains'],
       keyLocations: [
         { name: 'Bag End', description: 'Bilbo\'s home where the company assembles' },
-        { name: 'The Trollshaws', description: 'Where the company encounters three trolls' }
+        { name: 'The Trollshaws', description: 'Where the company encounters three trolls', locationId: 'trollshaws' },
+        { name: 'Hobbiton', description: '', locationId: 'hobbiton' },
+        { name: 'Beorn\'s Hall', description: '', locationId: 'beorns-hall' },
+        { name: 'Rhosgobel', description: '', locationId: 'rhosgobel' }
       ],
-      relatedNPCIds: ['bilbo', 'gandalf', 'thorin'],
+      relatedNPCIds: ['bilbo', 'gandalf', 'thorin', 'beorn', 'radagast'],
       complications: ['Bilbo\'s inexperience', 'Hostile lands', 'The company\'s skepticism of Bilbo'],
       rewards: ['Finding trolls\' treasure', 'Acquiring Sting and other treasures'],
       location: 'Bag End',
@@ -420,7 +424,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Secret door', description: 'Hidden entrance on the western side of the mountain' },
         { name: 'Great hall', description: 'The main hall of Erebor where Smaug may be' }
       ],
-      relatedNPCIds: ['bilbo', 'thorin', 'smaug'],
+      relatedNPCIds: ['bilbo', 'thorin', 'smaug', 'gandalf', 'balin'],
       complications: ['Limited time to find the door', 'The threat of waking Smaug', 'Thorin\'s growing obsession with the Arkenstone'],
       rewards: ['Access to Erebor', 'Potential recovery of the Arkenstone', 'First steps to reclaiming the kingdom'],
       location: 'Erebor (Lonely Mountain)',
@@ -462,7 +466,7 @@ const getHobbitQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Treasury', description: 'The vast hall where Smaug sleeps on his hoard' },
         { name: 'Lake-town', description: 'The town on the Long Lake that may be in danger' }
       ],
-      relatedNPCIds: ['bilbo', 'smaug', 'bard'],
+      relatedNPCIds: ['bilbo', 'smaug', 'bard', 'thorin'],
       complications: ['Smaug\'s intelligence', 'The risk to Lake-town', 'The sheer power of the dragon'],
       rewards: ['Freedom from the dragon', 'Access to the treasure', 'Restoration of Erebor'],
       location: 'Erebor (Lonely Mountain)',
@@ -594,7 +598,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Doriath', description: 'Woodland realm of King Thingol' },
         { name: 'Angband', description: 'Fortress of Morgoth where the Silmarils are kept' }
       ],
-      relatedNPCIds: ['beren', 'luthien', 'morgoth'],
+      relatedNPCIds: ['beren', 'luthien', 'morgoth', 'thingol'],
       complications: ['The seemingly impossible task', 'The guard dog Carcharoth', 'The power of Morgoth'],
       rewards: ['A Silmaril', 'The union of Beren and Lúthien', 'A blow against Morgoth'],
       location: 'Beleriand',
@@ -678,7 +682,7 @@ const getSilmarillionQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Angband', description: 'Fortress of Morgoth, the final objective' },
         { name: 'Beleriand', description: 'The land that will sink beneath the sea in the cataclysm' }
       ],
-      relatedNPCIds: ['eonwe', 'morgoth', 'ancalagon'],
+      relatedNPCIds: ['eonwe', 'morgoth', 'ancalagon', 'melkor'],
       complications: ['The sheer scale of the battle', 'The unleashing of the winged dragons', 'The breaking of Beleriand'],
       rewards: ['The defeat of Morgoth', 'Recovery of the remaining Silmarils', 'The dawn of a new age'],
       location: 'Beleriand',
@@ -724,9 +728,11 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       leads: ['The trolls may be part of a larger pattern of evil creatures moving south'],
       keyLocations: [
         { name: 'Weather Hills', description: 'Where troll sightings have increased' },
-        { name: 'Ranger Refuge', description: 'Hidden outpost used by the Rangers' }
+        { name: 'Ranger Refuge', description: 'Hidden outpost used by the Rangers', locationId: 'ranger-refuge' },
+        { name: 'Bree', description: '', locationId: 'bree' },
+        { name: 'Weathertop (Amon Sûl)', description: '', locationId: 'weathertop' }
       ],
-      relatedNPCIds: ['aragorn-young', 'halbarad'],
+      relatedNPCIds: ['aragorn-young', 'halbarad', 'trolls'],
       complications: ['The vast area to patrol', 'Limited Rangers to cover all threats', 'Keeping their identity secret'],
       rewards: ['Safety for the northern settlements', 'Preventing a larger incursion', 'Gathering intelligence on enemy movements'],
       location: 'Arnor (Former Kingdom)',
@@ -768,7 +774,7 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
         { name: 'Bounds of the Shire', description: 'The borders the Rangers patrol' },
         { name: 'Bree', description: 'Town where information can be gathered' }
       ],
-      relatedNPCIds: ['aragorn-young', 'butterbur'],
+      relatedNPCIds: ['aragorn-young', 'butterbur', 'halbarad'],
       complications: ['Maintaining secrecy', 'The hobbits\' obliviousness to danger', 'Limited resources'],
       rewards: ['Continued peace in the Shire', 'Keeping the hobbits safe', 'Fulfilling an ancient duty'],
       location: 'Eriador',
@@ -808,7 +814,9 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       leads: ['Gollum may have been heading toward Mordor'],
       keyLocations: [
         { name: 'Dead Marshes', description: 'Where Gollum may be hiding' },
-        { name: 'Mirkwood', description: 'Where Gollum should be delivered if captured' }
+        { name: 'Mirkwood', description: 'Where Gollum should be delivered if captured' },
+        { name: 'Bree', description: '', locationId: 'bree' },
+        { name: 'Ranger\'s Refuge', description: '', locationId: 'ranger-refuge' }
       ],
       relatedNPCIds: ['aragorn-young', 'gandalf', 'gollum'],
       complications: ['Gollum\'s cunning and evasiveness', 'The need to take him alive', 'The vast area to search'],
@@ -892,9 +900,10 @@ const getDunedainQuests = (dmUid: string, formattedDate: string) => {
       leads: ['The recovered items will help preserve the legacy for a future restoration'],
       keyLocations: [
         { name: 'Annúminas', description: 'Ruined capital of Arnor by Lake Evendim' },
-        { name: 'Ranger Refuge', description: 'Where recovered artifacts can be safely stored' }
+        { name: 'Ranger Refuge', description: 'Where recovered artifacts can be safely stored' },
+        { name: 'Rivendell', description: '', locationId: 'rivendell' }
       ],
-      relatedNPCIds: ['aragorn-young', 'elder-ranger'],
+      relatedNPCIds: ['aragorn-young', 'elder-ranger', 'elrond'],
       complications: ['Dangerous ruins', 'Brigands who may have claimed the area', 'The fragility of ancient artifacts'],
       rewards: ['Preservation of the Dúnedain heritage', 'Recovery of powerful artifacts', 'Knowledge that may aid in future restoration'],
       location: 'Arnor (Former Kingdom)',

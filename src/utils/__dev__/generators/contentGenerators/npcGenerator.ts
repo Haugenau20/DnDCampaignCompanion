@@ -57,7 +57,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit',
       occupation: 'Adventurer',
       location: 'The Shire',
-      locationId: 'the-shire',
       relationship: 'friendly' as NPCRelationship,
       description: 'A hobbit from the Shire chosen to bear the One Ring on the journey to Mount Doom.',
       appearance: 'Small stature with curly brown hair and bright eyes.',
@@ -65,8 +64,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Nephew and adopted heir of Bilbo Baggins, who found the One Ring.',
       connections: {
         relatedNPCs: ['bilbo', 'gandalf', 'gollum'],
-        affiliations: ['The Fellowship of the Ring'],
-        relatedQuests: ['the-one-ring', 'destroy-the-ring']
+        affiliations: ['The Fellowship of the Ring']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Bearer of the One Ring and central character of the quest.' }
@@ -86,7 +84,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit',
       occupation: 'Retired Adventurer',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'An elderly hobbit who found the One Ring and kept it for many years before passing it to Frodo.',
       appearance: 'Elderly hobbit with white hair, showing signs of unnaturally slow aging.',
@@ -94,8 +91,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Former adventurer who journeyed to the Lonely Mountain with dwarves.',
       connections: {
         relatedNPCs: ['frodo', 'gandalf'],
-        affiliations: ['The Shire', 'Rivendell'],
-        relatedQuests: ['the-one-ring']
+        affiliations: ['The Shire', 'Rivendell']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Found the One Ring in Gollum\'s cave during his adventure with the dwarves.' }
@@ -115,7 +111,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Half-elven',
       occupation: 'Ruler, Healer, Loremaster',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'Ancient half-elven lord of Rivendell and keeper of one of the three elven rings.',
       appearance: 'Tall with long dark hair, ageless face, and eyes that reflect his ancient wisdom.',
@@ -123,8 +118,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Eärendil, brother of Elros (first king of Númenor), fought in the Last Alliance against Sauron.',
       connections: {
         relatedNPCs: ['gandalf'],
-        affiliations: ['Rivendell', 'White Council'],
-        relatedQuests: ['council-of-elrond']
+        affiliations: ['Rivendell', 'White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Hosted the Council that decided the fate of the One Ring.' }
@@ -144,7 +138,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Maia (Wizard)',
       occupation: 'Wizard, Advisor',
       location: 'Mines of Moria',
-      locationId: 'mines-of-moria',
       relationship: 'friendly' as NPCRelationship,
       description: 'A wise and powerful wizard sent to Middle-earth to oppose Sauron.',
       appearance: 'Elderly man with long grey beard and hair, penetrating eyes, and a tall pointed hat.',
@@ -152,8 +145,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the five wizards sent to Middle-earth, secretly a Maia spirit.',
       connections: {
         relatedNPCs: ['frodo', 'bilbo', 'elrond', 'saruman', 'balrog'],
-        affiliations: ['The Fellowship of the Ring', 'White Council'],
-        relatedQuests: ['the-one-ring', 'council-of-elrond', 'escape-from-moria']
+        affiliations: ['The Fellowship of the Ring', 'White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Fell in battle with the Balrog but will return transformed.' }
@@ -173,7 +165,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human (Dúnedain)',
       occupation: 'Ranger, Leader',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'The heir of Isildur and rightful king of Gondor, who has lived in exile as a Ranger of the North.',
       appearance: 'Tall, dark-haired man with grey eyes, weather-worn clothes, and noble bearing.',
@@ -181,8 +172,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Raised in Rivendell as Estel, his true identity was concealed for his safety until he came of age.',
       connections: {
         relatedNPCs: ['elrond', 'gandalf', 'arwen'],
-        affiliations: ['The Fellowship of the Ring', 'Rangers of the North', 'Gondor'],
-        relatedQuests: ['council-of-elrond', 'destroy-the-ring']
+        affiliations: ['The Fellowship of the Ring', 'Rangers of the North', 'Gondor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Carries the shards of Narsil, the sword that cut the Ring from Sauron\'s hand.' }
@@ -202,7 +192,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Dwarf',
       occupation: 'Warrior',
       location: 'Mines of Moria',
-      locationId: 'mines-of-moria',
       relationship: 'friendly' as NPCRelationship,
       description: 'A brave dwarf warrior and member of the Fellowship of the Ring.',
       appearance: 'Stout with a long red beard, carrying a battle axe and wearing dwarf mail.',
@@ -210,8 +199,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Glóin, one of Bilbo\'s companions on the journey to Erebor.',
       connections: {
         relatedNPCs: ['legolas', 'aragorn'],
-        affiliations: ['The Fellowship of the Ring', 'Erebor'],
-        relatedQuests: ['council-of-elrond', 'escape-from-moria']
+        affiliations: ['The Fellowship of the Ring', 'Erebor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Became a close friend of Legolas, breaking the traditional enmity between dwarves and elves.' }
@@ -231,7 +219,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Maia (Wizard)',
       occupation: 'Wizard, Betrayer',
       location: 'Isengard',
-      locationId: 'isengard',
       relationship: 'hostile' as NPCRelationship,
       description: 'Once the head of the White Council, now corrupted and allied with Sauron.',
       appearance: 'Tall, elderly man with white hair and beard, wearing white robes.',
@@ -239,8 +226,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Leader of the wizards who fell to corruption through his studies of the enemy.',
       connections: {
         relatedNPCs: ['gandalf', 'sauron'],
-        affiliations: ['Isengard', 'Former White Council'],
-        relatedQuests: ['defeat-saruman']
+        affiliations: ['Isengard', 'Former White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Building an army of Uruk-hai to serve his and Sauron\'s purposes.' }
@@ -260,7 +246,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Balrog (Demon)',
       occupation: 'Ancient Evil',
       location: 'Mines of Moria',
-      locationId: 'mines-of-moria',
       relationship: 'hostile' as NPCRelationship,
       description: 'An ancient demon of shadow and flame awakened by the dwarves of Moria.',
       appearance: 'Massive creature of shadow and flame with burning eyes and a fiery whip.',
@@ -268,8 +253,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'A servant of Morgoth from the First Age who hid in the depths of the earth after his master\'s defeat.',
       connections: {
         relatedNPCs: ['gandalf'],
-        affiliations: ['Servants of Morgoth'],
-        relatedQuests: ['escape-from-moria']
+        affiliations: ['Servants of Morgoth']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Fought Gandalf on the Bridge of Khazad-dûm, causing both to fall into the abyss.' }
@@ -289,7 +273,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Maia',
       occupation: 'Dark Lord',
       location: 'Mordor',
-      locationId: 'mordor',
       relationship: 'hostile' as NPCRelationship,
       description: 'The creator of the One Ring and the primary antagonist seeking to dominate Middle-earth.',
       appearance: 'Currently exists as a lidless eye wreathed in flame atop Barad-dûr.',
@@ -297,8 +280,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Once a servant of Morgoth, rose to power in the Second Age and created the Rings of Power.',
       connections: {
         relatedNPCs: ['saruman', 'gollum'],
-        affiliations: ['Mordor', 'Forces of Darkness'],
-        relatedQuests: ['the-one-ring', 'destroy-the-ring']
+        affiliations: ['Mordor', 'Forces of Darkness']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'His power and fate are bound to the One Ring.' }
@@ -318,7 +300,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit (Corrupted)',
       occupation: 'Ring-seeker',
       location: 'Mordor',
-      locationId: 'mordor',
       relationship: 'neutral' as NPCRelationship,
       description: 'A pitiful creature corrupted by the One Ring, which he possessed for centuries.',
       appearance: 'Emaciated, pale, with large luminous eyes and little hair.',
@@ -326,8 +307,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Once a Stoor hobbit named Sméagol who found the Ring and was corrupted by it over centuries.',
       connections: {
         relatedNPCs: ['frodo', 'sauron'],
-        affiliations: ['None'],
-        relatedQuests: ['the-one-ring', 'destroy-the-ring']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Follows the Ring-bearer out of obsession with "his precious."' }
@@ -347,7 +327,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Sindar)',
       occupation: 'Warrior, Archer',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'An elven prince from Mirkwood and member of the Fellowship of the Ring.',
       appearance: 'Tall, fair-haired elf with keen eyesight, carrying a bow and long knives.',
@@ -355,8 +334,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of King Thranduil of the Woodland Realm, sent to Rivendell to deliver news of Gollum\'s escape.',
       connections: {
         relatedNPCs: ['gimli', 'aragorn'],
-        affiliations: ['The Fellowship of the Ring', 'Woodland Realm'],
-        relatedQuests: ['council-of-elrond', 'destroy-the-ring']
+        affiliations: ['The Fellowship of the Ring', 'Woodland Realm']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Forms an unlikely friendship with Gimli the dwarf, breaking centuries of mistrust between their peoples.' }
@@ -376,7 +354,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Half-elven)',
       occupation: 'Princess of Rivendell',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'Daughter of Elrond and love of Aragorn, who chose mortality to be with him.',
       appearance: 'Beautiful with long dark hair and grey eyes, bearing the Evenstar pendant.',
@@ -384,8 +361,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Granddaughter of Galadriel, she has the choice of elven immortality or mortal life.',
       connections: {
         relatedNPCs: ['elrond', 'aragorn', 'galadriel'],
-        affiliations: ['Rivendell'],
-        relatedQuests: []
+        affiliations: ['Rivendell']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Gave the Evenstar pendant to Aragorn as a token of her love and faith.' }
@@ -405,7 +381,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit',
       occupation: 'Gardener, Companion',
       location: 'The Shire',
-      locationId: 'the-shire',
       relationship: 'friendly' as NPCRelationship,
       description: 'Frodo\'s loyal gardener and companion on the quest to destroy the Ring.',
       appearance: 'Stocky hobbit with sandy hair and a plain, honest face.',
@@ -413,8 +388,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of the Gaffer, a gardener for the Baggins family in Hobbiton.',
       connections: {
         relatedNPCs: ['frodo', 'gollum'],
-        affiliations: ['The Fellowship of the Ring'],
-        relatedQuests: ['the-one-ring', 'destroy-the-ring']
+        affiliations: ['The Fellowship of the Ring']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'His loyalty to Frodo never wavers, even in the darkest moments.' }
@@ -438,7 +412,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       // features/campaign-entities/locations/utils/location-display.ts). Keep as-is
       // to exercise the unresolved-reference fallback -- do not "fix" this one.
       location: 'Lothlórien',
-      locationId: 'lothlorien',
       relationship: 'friendly' as NPCRelationship,
       description: 'Ancient and powerful elven ruler who bears one of the Three Rings.',
       appearance: 'Tall with long golden hair, described as beautiful and terrible as the morning and the night.',
@@ -446,8 +419,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the eldest elves in Middle-earth, she came from Valinor in the First Age.',
       connections: {
         relatedNPCs: ['elrond', 'celeborn'],
-        affiliations: ['Lothlórien', 'White Council'],
-        relatedQuests: ['destroy-the-ring']
+        affiliations: ['Lothlórien', 'White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Possesses the Mirror of Galadriel, which shows things that were, things that are, and things that yet may be.' }
@@ -467,7 +439,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human',
       occupation: 'Warrior, Captain of Gondor',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'The eldest son of the Steward of Gondor and a member of the Fellowship of the Ring.',
       appearance: 'Tall, noble man with dark hair and the proud bearing of Gondor.',
@@ -475,8 +446,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Traveled to Rivendell seeking an answer to a prophetic dream about the One Ring and Isildur\'s Bane.',
       connections: {
         relatedNPCs: ['aragorn', 'frodo'],
-        affiliations: ['The Fellowship of the Ring', 'Gondor'],
-        relatedQuests: ['council-of-elrond', 'destroy-the-ring']
+        affiliations: ['The Fellowship of the Ring', 'Gondor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Increasingly tempted by the Ring, seeing it as a weapon that could save his people.' }
@@ -496,7 +466,6 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human',
       occupation: 'King',
       location: 'Edoras',
-      locationId: 'edoras',
       relationship: 'friendly' as NPCRelationship,
       description: 'The aging King of Rohan who falls under Saruman\'s influence but is later freed.',
       appearance: 'Elderly but still strong, with a proud bearing when not under Saruman\'s spell.',
@@ -504,8 +473,7 @@ const getLOTRNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Seventeenth King of Rohan, father to Théodred and uncle to Éomer and Éowyn.',
       connections: {
         relatedNPCs: ['gandalf', 'eomer', 'eowyn'],
-        affiliations: ['Rohan'],
-        relatedQuests: ['defeat-saruman']
+        affiliations: ['Rohan']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'His mind is poisoned by his advisor Gríma Wormtongue, who serves Saruman.' }
@@ -531,7 +499,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit',
       occupation: 'Adventurer',
       location: 'Bag End',
-      locationId: 'bag-end',
       relationship: 'friendly' as NPCRelationship,
       description: 'A respectable hobbit who is swept into an adventure by Gandalf and a company of dwarves.',
       appearance: 'Short with curly hair and a growing waistline.',
@@ -539,8 +506,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'A well-to-do hobbit from Bag End in the Shire.',
       connections: {
         relatedNPCs: ['gandalf', 'thorin'],
-        affiliations: ['Thorin\'s Company'],
-        relatedQuests: ['reclaim-erebor']
+        affiliations: ['Thorin\'s Company']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Finds the One Ring in Gollum\'s cave.' }
@@ -560,7 +526,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Maia (Wizard)',
       occupation: 'Wizard',
       location: 'Bag End',
-      locationId: 'bag-end',
       relationship: 'friendly' as NPCRelationship,
       description: 'A mysterious wizard who arranges Bilbo\'s adventure with the dwarves.',
       appearance: 'Tall with a gray beard, pointed hat, and staff.',
@@ -568,8 +533,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the five wizards sent to Middle-earth to oppose Sauron.',
       connections: {
         relatedNPCs: ['bilbo', 'thorin', 'radagast'],
-        affiliations: ['White Council'],
-        relatedQuests: ['unexpected-journey', 'reclaim-erebor']
+        affiliations: ['White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Provides Thorin with the map and key to the secret door of Erebor.' }
@@ -589,7 +553,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Dwarf',
       occupation: 'Exiled King',
       location: 'Bag End',
-      locationId: 'bag-end',
       relationship: 'friendly' as NPCRelationship,
       description: 'Leader of the company seeking to reclaim Erebor from the dragon Smaug.',
       appearance: 'Noble dwarf with a long beard and intense eyes.',
@@ -597,8 +560,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Grandson of Thrór, the last King Under the Mountain before Smaug came.',
       connections: {
         relatedNPCs: ['bilbo', 'gandalf', 'balin'],
-        affiliations: ['Thorin\'s Company', 'Erebor'],
-        relatedQuests: ['reclaim-erebor', 'slay-the-dragon']
+        affiliations: ['Thorin\'s Company', 'Erebor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Named "Oakenshield" after using an oak branch as a shield in battle against orcs.' }
@@ -618,7 +580,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Dragon',
       occupation: 'Usurper of Erebor',
       location: 'Erebor (Lonely Mountain)',
-      locationId: 'erebor',
       relationship: 'hostile' as NPCRelationship,
       description: 'A fire-drake from the north who seized the Lonely Mountain and its treasure.',
       appearance: 'Enormous red-gold dragon with armored scales and glowing eyes.',
@@ -626,8 +587,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Drawn to the wealth of Erebor, drove out the dwarves and established his hoard.',
       connections: {
         relatedNPCs: ['thorin', 'bilbo'],
-        affiliations: ['None'],
-        relatedQuests: ['reclaim-erebor', 'slay-the-dragon']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Has a single vulnerability - a bare patch on his left breast where a scale is missing.' }
@@ -647,7 +607,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit (corrupted)',
       occupation: 'Cave-dweller',
       location: 'Misty Mountains',
-      locationId: 'misty-mountains',
       relationship: 'hostile' as NPCRelationship,
       description: 'A wretched creature who lives in the depths of the Misty Mountains.',
       appearance: 'Pale, emaciated, with large eyes and few teeth.',
@@ -655,8 +614,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Once a hobbit named Sméagol who found the Ring and was corrupted by it.',
       connections: {
         relatedNPCs: ['bilbo'],
-        affiliations: ['None'],
-        relatedQuests: ['riddles-in-the-dark']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Refers to himself as "precious" and speaks with a distinctive hissing voice.' }
@@ -676,7 +634,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Dwarf',
       occupation: 'Warrior',
       location: 'Bag End',
-      locationId: 'bag-end',
       relationship: 'friendly' as NPCRelationship,
       description: 'A senior member of Thorin\'s company, known for his wisdom.',
       appearance: 'White-bearded dwarf with a red hood.',
@@ -684,8 +641,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'A respected dwarf who has known Thorin for many years.',
       connections: {
         relatedNPCs: ['thorin', 'dwalin'],
-        affiliations: ['Thorin\'s Company', 'Erebor'],
-        relatedQuests: ['reclaim-erebor']
+        affiliations: ['Thorin\'s Company', 'Erebor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'One of the more friendly dwarves toward Bilbo from the beginning.' }
@@ -705,7 +661,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Sindar)',
       occupation: 'King',
       location: 'Mirkwood',
-      locationId: 'mirkwood',
       relationship: 'neutral' as NPCRelationship,
       description: 'The king of the Woodland Realm in Mirkwood.',
       appearance: 'Tall, fair-haired elf with a crown of autumn leaves and berries.',
@@ -713,8 +668,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Ancient elf who has ruled the woodland realm for thousands of years.',
       connections: {
         relatedNPCs: ['legolas', 'thorin'],
-        affiliations: ['Woodland Realm'],
-        relatedQuests: ['escape-from-mirkwood']
+        affiliations: ['Woodland Realm']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Has a strained relationship with the dwarves due to past disputes.' }
@@ -733,10 +687,10 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       status: 'alive' as NPCStatus,
       race: 'Human',
       occupation: 'Bargeman',
-      // No locationId: Lake-town has no Location record in this campaign, on
-      // purpose. This is the legitimate "someone wrote a place that isn't a
-      // Location record" case the location/locationId contract exists to
-      // support, and it keeps Bard where the story puts him.
+      // No place lists him: Lake-town has no Location record in this
+      // campaign, on purpose. This is the legitimate "someone wrote a place
+      // that isn't a Location record" case the free-text `location` exists
+      // to support, and it keeps Bard where the story puts him.
       location: 'Lake-town',
       relationship: 'friendly' as NPCRelationship,
       description: 'A grim-faced bargeman from Lake-town with exceptional skill as an archer.',
@@ -745,8 +699,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Descendant of Lord Girion of Dale, the city destroyed by Smaug.',
       connections: {
         relatedNPCs: ['thorin', 'smaug'],
-        affiliations: ['Lake-town'],
-        relatedQuests: ['slay-the-dragon']
+        affiliations: ['Lake-town']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Possesses the last black arrow capable of killing Smaug.' }
@@ -766,7 +719,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Skin-changer',
       occupation: 'Hermit',
       location: 'Beorn\'s Hall',
-      locationId: 'beorns-hall',
       relationship: 'neutral' as NPCRelationship,
       description: 'A reclusive man who can take the form of a great black bear.',
       appearance: 'Huge, black-haired man with massive arms and a thick beard.',
@@ -774,8 +726,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Lives alone in a wooden house between the Misty Mountains and Mirkwood.',
       connections: {
         relatedNPCs: ['gandalf', 'radagast'],
-        affiliations: ['None'],
-        relatedQuests: ['unexpected-journey']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Keeps many animals that serve him and can speak with them.' }
@@ -795,7 +746,6 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Maia (Wizard)',
       occupation: 'Wizard',
       location: 'Rhosgobel',
-      locationId: 'rhosgobel',
       relationship: 'friendly' as NPCRelationship,
       description: 'A wizard who focuses on nature and animals rather than the affairs of elves and men.',
       appearance: 'Disheveled wizard with brown robes, often with animals or bird droppings on him.',
@@ -803,8 +753,7 @@ const getHobbitNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the five wizards sent to Middle-earth, chosen by Yavanna for his love of growing things.',
       connections: {
         relatedNPCs: ['gandalf', 'saruman'],
-        affiliations: ['None'],
-        relatedQuests: ['unexpected-journey']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Can communicate with birds and uses them as messengers.' }
@@ -830,7 +779,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Noldor)',
       occupation: 'Craftsman, Leader',
       location: 'Valinor',
-      locationId: 'valinor',
       relationship: 'neutral' as NPCRelationship,
       description: 'The greatest craftsman of the Elves who created the Silmarils and led the rebellion of the Noldor.',
       appearance: 'Tall with dark hair and fiery eyes that reflect his spirit.',
@@ -838,8 +786,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Finwë and Míriel, his mother gave up her life-force in his birth.',
       connections: {
         relatedNPCs: ['fingolfin', 'melkor'],
-        affiliations: ['House of Finwë', 'Noldor'],
-        relatedQuests: ['oath-of-feanor']
+        affiliations: ['House of Finwë', 'Noldor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'His oath to recover the Silmarils drives much of the tragedy of the First Age.' }
@@ -859,7 +806,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Ainur (Vala)',
       occupation: 'Dark Lord',
       location: 'Angband',
-      locationId: 'angband',
       relationship: 'hostile' as NPCRelationship,
       description: 'The first Dark Lord and the primary antagonist of the First Age.',
       appearance: 'Tall and terrible, with burning hands from the Silmarils and a black iron crown.',
@@ -867,8 +813,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Originally the most powerful of the Ainur who rebelled against Eru Ilúvatar.',
       connections: {
         relatedNPCs: ['feanor', 'fingolfin', 'sauron'],
-        affiliations: ['Forces of Darkness'],
-        relatedQuests: ['war-of-wrath']
+        affiliations: ['Forces of Darkness']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Stole the Silmarils and set them in his Iron Crown.' }
@@ -888,7 +833,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Noldor)',
       occupation: 'King',
       location: 'Beleriand',
-      locationId: 'beleriand',
       relationship: 'friendly' as NPCRelationship,
       description: 'The second son of Finwë who became High King of the Noldor in Middle-earth.',
       appearance: 'Tall and valiant with the noble bearing of the Noldor.',
@@ -896,8 +840,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Led many of the Noldor across the Helcaraxë after being abandoned by Fëanor.',
       connections: {
         relatedNPCs: ['feanor', 'melkor'],
-        affiliations: ['House of Finwë', 'Noldor'],
-        relatedQuests: ['war-of-jewels']
+        affiliations: ['House of Finwë', 'Noldor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Challenged Morgoth to single combat at the gates of Angband.' }
@@ -917,7 +860,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human (Edain)',
       occupation: 'Adventurer',
       location: 'Beleriand',
-      locationId: 'beleriand',
       relationship: 'friendly' as NPCRelationship,
       description: 'A mortal man who fell in love with the elven princess Lúthien and quested for a Silmaril.',
       appearance: 'Dark-haired mortal man, later missing his right hand.',
@@ -925,8 +867,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Barahir, last survivor of his house after Morgoth\'s forces killed his father and companions.',
       connections: {
         relatedNPCs: ['luthien', 'thingol'],
-        affiliations: ['House of Bëor'],
-        relatedQuests: ['quest-for-silmaril']
+        affiliations: ['House of Bëor']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Lost his hand to Carcharoth while holding a Silmaril.' }
@@ -946,7 +887,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Half-Maia)',
       occupation: 'Princess',
       location: 'Doriath',
-      locationId: 'doriath',
       relationship: 'friendly' as NPCRelationship,
       description: 'Daughter of King Thingol and Melian the Maia, the most beautiful of all the Children of Ilúvatar.',
       appearance: 'Dark-haired and beautiful beyond description, often wearing a blue cloak.',
@@ -954,8 +894,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Princess of Doriath who fell in love with the mortal Beren.',
       connections: {
         relatedNPCs: ['beren', 'thingol', 'melian'],
-        affiliations: ['Doriath'],
-        relatedQuests: ['quest-for-silmaril']
+        affiliations: ['Doriath']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Used her enchantments to put Morgoth himself to sleep.' }
@@ -975,7 +914,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human (Edain)',
       occupation: 'Warrior',
       location: 'Beleriand',
-      locationId: 'beleriand',
       relationship: 'neutral' as NPCRelationship,
       description: 'A tragic hero whose life was cursed by Morgoth.',
       appearance: 'Tall and dark-haired, with a stern face and the black sword Gurthang.',
@@ -983,8 +921,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Húrin, sent to Doriath as a child after his father was captured by Morgoth.',
       connections: {
         relatedNPCs: ['beleg', 'glaurung'],
-        affiliations: ['House of Hador', 'Doriath', 'Nargothrond'],
-        relatedQuests: []
+        affiliations: ['House of Hador', 'Doriath', 'Nargothrond']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Unwittingly married his sister Nienor, leading to their tragic suicides.' }
@@ -1004,7 +941,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Noldor)',
       occupation: 'King',
       location: 'Gondolin',
-      locationId: 'gondolin',
       relationship: 'friendly' as NPCRelationship,
       description: 'Founder and ruler of the hidden city of Gondolin.',
       appearance: 'Tall and noble with the bearing of a great elven king.',
@@ -1012,8 +948,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Fingolfin who founded Gondolin based on a vision from Ulmo.',
       connections: {
         relatedNPCs: ['fingolfin', 'ecthelion', 'glorfindel'],
-        affiliations: ['House of Fingolfin', 'Gondolin'],
-        relatedQuests: ['fall-of-gondolin']
+        affiliations: ['House of Fingolfin', 'Gondolin']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Gondolin remained hidden for nearly 400 years before its fall.' }
@@ -1033,7 +968,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Noldor)',
       occupation: 'Warrior, Commander',
       location: 'Gondolin',
-      locationId: 'gondolin',
       relationship: 'friendly' as NPCRelationship,
       description: 'Lord of the House of the Fountain in Gondolin and slayer of Gothmog.',
       appearance: 'Tall elf wearing silver and diamonds, with a helmet adorned with a spike.',
@@ -1041,8 +975,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the great lords of Gondolin and commander of its guards.',
       connections: {
         relatedNPCs: ['turgon', 'glorfindel', 'gothmog'],
-        affiliations: ['Gondolin', 'House of the Fountain'],
-        relatedQuests: ['fall-of-gondolin']
+        affiliations: ['Gondolin', 'House of the Fountain']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Known for his silver flute and the music he would play at the fountains.' }
@@ -1062,7 +995,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Noldor)',
       occupation: 'Warrior, Lord',
       location: 'Gondolin',
-      locationId: 'gondolin',
       relationship: 'friendly' as NPCRelationship,
       description: 'Lord of the House of the Golden Flower in Gondolin.',
       appearance: 'Golden-haired elf of great stature and beauty.',
@@ -1070,8 +1002,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the lords of Gondolin who would later be reborn and sent back to Middle-earth.',
       connections: {
         relatedNPCs: ['turgon', 'ecthelion'],
-        affiliations: ['Gondolin', 'House of the Golden Flower'],
-        relatedQuests: ['fall-of-gondolin']
+        affiliations: ['Gondolin', 'House of the Golden Flower']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Slew a Balrog during the escape from Gondolin, though it cost him his life.' }
@@ -1091,7 +1022,6 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Elf (Sindar)',
       occupation: 'King',
       location: 'Doriath',
-      locationId: 'doriath',
       relationship: 'neutral' as NPCRelationship,
       description: 'King of the Sindar Elves who rules Doriath with his Maia wife Melian.',
       appearance: 'Tall with silver hair, the most noble-looking of all the Elves.',
@@ -1099,8 +1029,7 @@ const getSilmarillionNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the first Elves, who stayed behind in Middle-earth after meeting Melian.',
       connections: {
         relatedNPCs: ['melian', 'luthien', 'beren'],
-        affiliations: ['Doriath'],
-        relatedQuests: ['quest-for-silmaril']
+        affiliations: ['Doriath']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Demanded a Silmaril as bride-price for his daughter Lúthien\'s hand.' }
@@ -1126,7 +1055,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human (Dúnedain)',
       occupation: 'Ranger',
       location: 'Eriador',
-      locationId: 'eriador',
       relationship: 'friendly' as NPCRelationship,
       description: 'The heir of Isildur who protects the North as a Ranger before his destiny calls him to greater things.',
       appearance: 'Tall, dark-haired, with grey eyes and the noble bearing of his ancestors.',
@@ -1134,8 +1062,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Raised in Rivendell as Estel, learned his true identity at age 20.',
       connections: {
         relatedNPCs: ['elrond', 'halbarad'],
-        affiliations: ['Rangers of the North', 'Rivendell'],
-        relatedQuests: ['hunt-for-gollum']
+        affiliations: ['Rangers of the North', 'Rivendell']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Also known as Strider, one of many names he uses in his travels.' }
@@ -1155,7 +1082,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human (Dúnedain)',
       occupation: 'Ranger',
       location: 'Eriador',
-      locationId: 'eriador',
       relationship: 'friendly' as NPCRelationship,
       description: 'A trusted kinsman and lieutenant of Aragorn among the Dúnedain.',
       appearance: 'Weather-worn ranger with the typical dark hair and grey eyes of the Dúnedain.',
@@ -1163,8 +1089,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Descended from the Dúnedain of Arnor and a distant kinsman of Aragorn.',
       connections: {
         relatedNPCs: ['aragorn-young', 'elder-ranger'],
-        affiliations: ['Rangers of the North'],
-        relatedQuests: ['protect-the-north', 'protect-the-shire']
+        affiliations: ['Rangers of the North']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'One of Aragorn\'s most trusted companions.' }
@@ -1184,7 +1109,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Half-elven',
       occupation: 'Ruler, Healer, Loremaster',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'The half-elven lord who fostered Aragorn in his youth and taught him his heritage.',
       appearance: 'Ageless, with long dark hair and eyes that reflect ancient wisdom.',
@@ -1192,8 +1116,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Son of Eärendil who chose the fate of the Elves while his brother chose mortality.',
       connections: {
         relatedNPCs: ['aragorn-young', 'arwen'],
-        affiliations: ['Rivendell', 'White Council'],
-        relatedQuests: ['lost-heritage']
+        affiliations: ['Rivendell', 'White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Raised Aragorn as "Estel" (Hope) in Rivendell, concealing his true identity until he came of age.' }
@@ -1213,7 +1136,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Half-elven',
       occupation: 'Princess of Rivendell',
       location: 'Rivendell',
-      locationId: 'rivendell',
       relationship: 'friendly' as NPCRelationship,
       description: 'The beautiful daughter of Elrond who falls in love with Aragorn.',
       appearance: 'Strikingly beautiful with long dark hair and grey eyes, resembling Lúthien Tinúviel.',
@@ -1221,8 +1143,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Granddaughter of Galadriel, who has the choice between mortality and immortality.',
       connections: {
         relatedNPCs: ['elrond', 'aragorn-young'],
-        affiliations: ['Rivendell'],
-        relatedQuests: []
+        affiliations: ['Rivendell']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Met Aragorn in the woods of Rivendell when he was 20 years old and mistook her for Lúthien.' }
@@ -1242,7 +1163,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Maia (Wizard)',
       occupation: 'Wizard',
       location: 'Eriador',
-      locationId: 'eriador',
       relationship: 'friendly' as NPCRelationship,
       description: 'A wise wizard who travels Middle-earth opposing the forces of evil.',
       appearance: 'Elderly man with a long grey beard, pointed hat, and staff.',
@@ -1250,8 +1170,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'One of the five Istari sent to Middle-earth to aid against Sauron.',
       connections: {
         relatedNPCs: ['aragorn-young', 'elrond'],
-        affiliations: ['White Council'],
-        relatedQuests: ['hunt-for-gollum']
+        affiliations: ['White Council']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Works closely with Aragorn and the Rangers on matters concerning the growing darkness.' }
@@ -1271,7 +1190,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Undead',
       occupation: 'Tomb Guardians',
       location: 'Eriador',
-      locationId: 'eriador',
       relationship: 'hostile' as NPCRelationship,
       description: 'Evil spirits that inhabit the ancient burial mounds of the Barrow-downs.',
       appearance: 'Ghostly figures with cold hands and glowing eyes, sometimes appearing as corpse-like forms.',
@@ -1279,8 +1197,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Spirits sent by the Witch-king of Angmar to haunt the tombs of the ancient kings of Arnor.',
       connections: {
         relatedNPCs: ['witch-king'],
-        affiliations: ['Servants of Angmar'],
-        relatedQuests: ['barrow-downs-haunting']
+        affiliations: ['Servants of Angmar']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'They entice travelers into their barrows, where they intend to kill them and make them one of their own.' }
@@ -1300,7 +1217,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Hobbit (Corrupted)',
       occupation: 'Wanderer',
       location: 'Eriador',
-      locationId: 'eriador',
       relationship: 'hostile' as NPCRelationship,
       description: 'A corrupted creature who once possessed the One Ring and is hunted by the Rangers.',
       appearance: 'Emaciated, pale creature with large, luminous eyes and few teeth.',
@@ -1308,8 +1224,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Once a Stoor hobbit named Sméagol who found the Ring and was corrupted by it.',
       connections: {
         relatedNPCs: ['aragorn-young'],
-        affiliations: ['None'],
-        relatedQuests: ['hunt-for-gollum']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'A challenging quarry who is both pitiable and dangerous.' }
@@ -1329,7 +1244,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Troll',
       occupation: 'Predators',
       location: 'Weathertop (Amon Sûl)',
-      locationId: 'weathertop',
       relationship: 'hostile' as NPCRelationship,
       description: 'Large, brutish creatures that have begun venturing from their mountain homes.',
       appearance: 'Massive, stone-like skin, with great strength and limited intelligence.',
@@ -1337,8 +1251,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Created by Morgoth in mockery of Ents, they turn to stone in sunlight.',
       connections: {
         relatedNPCs: [],
-        affiliations: ['None'],
-        relatedQuests: ['protect-the-north']
+        affiliations: ['None']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Unusually active in the Weather Hills, suggesting something may be driving them from their usual territories.' }
@@ -1358,7 +1271,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human (Dúnedain)',
       occupation: 'Ranger, Keeper of Lore',
       location: 'Ranger\'s Refuge',
-      locationId: 'ranger-refuge',
       relationship: 'friendly' as NPCRelationship,
       description: 'An older Ranger who keeps the history and traditions of the Dúnedain.',
       appearance: 'Grey-haired but still strong, with the weathered face of one who has spent decades in the wild.',
@@ -1366,8 +1278,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'Aragorn\'s maternal grandfather who has served as a Ranger for most of his life.',
       connections: {
         relatedNPCs: ['aragorn-young', 'halbarad'],
-        affiliations: ['Rangers of the North'],
-        relatedQuests: ['lost-heritage']
+        affiliations: ['Rangers of the North']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Remembers the days when the Rangers were more numerous and the threat of Angmar was still fresh.' }
@@ -1387,7 +1298,6 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       race: 'Human',
       occupation: 'Innkeeper',
       location: 'Bree',
-      locationId: 'bree',
       relationship: 'friendly' as NPCRelationship,
       description: 'The good-natured but forgetful innkeeper of The Prancing Pony in Bree.',
       appearance: 'Portly man with a red face, often wiping his hands on his apron.',
@@ -1395,8 +1305,7 @@ const getDunedainNPCs = (dmUid: string, formattedDate: string) => {
       background: 'From a long line of innkeepers who have run The Prancing Pony for generations.',
       connections: {
         relatedNPCs: ['aragorn-young'],
-        affiliations: ['Bree'],
-        relatedQuests: ['protect-the-shire']
+        affiliations: ['Bree']
       },
       notes: [
         { date: toNoteDate(new Date(formattedDate)), text: 'Doesn\'t know Aragorn\'s true identity but recognizes him as the Ranger called "Strider."' }

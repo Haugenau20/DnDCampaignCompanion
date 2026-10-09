@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T131 | Links: run the migration, then stop reading the old halves | S | blocked | Waits on the maintainer running `migrate-links.js` once the reading frontend is live |
 | medium | T132 | Attribution the rules can check: run the migration, then the rules | M | blocked | Any member can still credit a record to someone else; the rules wait on the maintainer running `migrate-records.js` |
 | medium | T133 | Notes: run the migration, then stop reading the old arrays | S | blocked | Waits on the maintainer running `migrate-records.js` once the frontend that reads both is live |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
@@ -33,6 +32,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
+| low | T131 | Links: a rule refusing the old halves | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
 | low | T134 | The saga in sections; run the chapter migration | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
 | low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
@@ -404,24 +404,21 @@ the script rewrites; a later frontend drops the old shape; only then, in its own
 merge, a rule refuses it. The review's read-only production checks (campaign
 sizes, how often a link's two halves disagree) go into each change's audit.
 
-### T131 — Links: run the migration, then stop reading the old halves
+### T131 — Links: a rule refusing the old halves
 **Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
 
-Every link has one owner field now, written from either page and read on both
-(`features/campaign-entities/shared/links.ts` has the table; decided by the
-maintainer 2026-10-08). The app still reads each old second half too, so
-nothing changes on screen before the migration.
+Every link has one owner field (`features/campaign-entities/shared/links.ts`
+has the table). Production was migrated, and the app neither reads nor writes
+the old second halves -- `NPC.connections.relatedQuests`, `NPC.locationId`,
+`Location.relatedQuests` -- except that a person's `locationId` naming a
+deleted place is still shown as one (#1412). Nothing stops a client writing
+them again.
 
-- **Blocked on the maintainer**: once the frontend that reads both halves is
-  live, `firebase/functions/scripts/migrate-links.js` from `firebase/functions`,
-  first read-only, then `--apply --revert-file <file>` (its header has the
-  steps). Each campaign is one transaction.
-- **Then**: a frontend that reads only the owners -- drop the old halves from
-  `links.ts` and their clearing from `linkActions.ts` and `unlinkDeleted.ts`
-  -- and the sample-data generators (`utils/__dev__/generators/`), which still
-  write `NPC.locationId`, `NPC.connections.relatedQuests` and
-  `Location.relatedQuests`, rewritten to the owners. A rule refusing the old
-  fields, if wanted, in a later merge.
+- **Blocked**: until the frontend that stops writing them is live; the one
+  before it still clears them and writes `relatedQuests: []` on a new record.
+- **Then**: rules refusing a non-empty value, or a change to one, in any of
+  the three; existing records keep theirs (empty lists, and the dangling
+  ids). Whether it is worth a rule is the maintainer's call.
 - **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
 ### T132 — Attribution the rules can check: run the migration, then the rules

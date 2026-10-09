@@ -1,7 +1,8 @@
 // src/features/campaign-entities/shared/__tests__/links.test.ts
 //
-// T131: every link has one owner field, and both sides read it -- plus the
-// old second half, until the migration has merged it into the owner.
+// T131: every link has one owner field, and both sides read it. The old
+// second halves were merged into the owners in production and are read by
+// nothing: a value left in one links nothing.
 import {
   locationIdsOfNpc,
   locationIdsOfRumor,
@@ -34,20 +35,17 @@ describe('person ↔ quest, owned by the quest', () => {
   const frodo = npc('frodo', { connections: { relatedNPCs: [], affiliations: [], relatedQuests: ['old-quest'] } });
   const quests = [quest('ring', { relatedNPCIds: ['frodo'] }), quest('old-quest'), quest('other')];
 
-  it('gives a person the quests that name them, and their old list', () => {
-    expect(questIdsOfNpc(frodo, quests)).toEqual(['ring', 'old-quest']);
+  it('gives a person the quests that name them, not their old list', () => {
+    expect(questIdsOfNpc(frodo, quests)).toEqual(['ring']);
   });
 
-  it('gives a quest its own list, and the people whose old list names it', () => {
-    expect(npcIdsOfQuest(quests[1], [frodo])).toEqual(['frodo']);
-    expect(npcIdsOfQuest(quests[0], [frodo])).toEqual(['frodo']);
+  it('gives a quest its own list, not the people whose old list names it', () => {
+    expect(npcIdsOfQuest(quests[1])).toEqual([]);
+    expect(npcIdsOfQuest(quests[0])).toEqual(['frodo']);
   });
 
-  it('names a link held on both halves once', () => {
-    const both = npc('sam', { connections: { relatedNPCs: [], affiliations: [], relatedQuests: ['ring'] } });
-    const ring = quest('ring', { relatedNPCIds: ['sam'] });
-    expect(npcIdsOfQuest(ring, [both])).toEqual(['sam']);
-    expect(questIdsOfNpc(both, [ring])).toEqual(['ring']);
+  it('names a person listed twice once', () => {
+    expect(npcIdsOfQuest(quest('ring', { relatedNPCIds: ['sam', 'sam'] }))).toEqual(['sam']);
   });
 });
 
@@ -58,12 +56,9 @@ describe('person ↔ place, owned by the place', () => {
     expect(locationIdsOfNpc(npc('strider'), places)).toEqual(['bree', 'rivendell']);
   });
 
-  it("counts a person's old single place too", () => {
-    expect(locationIdsOfNpc(npc('butterbur', { locationId: 'bree' }), places)).toEqual(['bree']);
-    expect(npcIdsOfLocation(places[0], [npc('strider'), npc('butterbur', { locationId: 'bree' })])).toEqual([
-      'strider',
-      'butterbur',
-    ]);
+  it("does not count a person's old single place", () => {
+    expect(locationIdsOfNpc(npc('butterbur', { locationId: 'bree' }), places)).toEqual([]);
+    expect(npcIdsOfLocation(places[0])).toEqual(['strider']);
   });
 });
 
@@ -77,9 +72,9 @@ describe('place ↔ quest, owned by the quest', () => {
     expect(questNamesLocation(quest('d', { keyLocations: [{ name: 'Erebor', locationId: 'dale' }] }), erebor)).toBe(false);
   });
 
-  it("gives a place the quests that name it, and its old list", () => {
+  it("gives a place the quests that name it, not its old list", () => {
     const quests = [quest('a', { locationId: 'erebor' }), quest('old-quest'), quest('z')];
-    expect(questIdsOfLocation(erebor, quests)).toEqual(['a', 'old-quest']);
+    expect(questIdsOfLocation(erebor, quests)).toEqual(['a']);
   });
 });
 

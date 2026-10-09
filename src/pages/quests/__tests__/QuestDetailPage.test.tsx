@@ -114,11 +114,12 @@ const NEW_QUEST = {
 
 let mockQuests: any[] = [QUEST];
 let mockNPCs: any[] = [
-  { id: 'thorin', name: 'Thorin Oakenshield', occupation: 'King under the Mountain', locationId: 'erebor' },
-  { id: 'smaug', name: 'Smaug', occupation: 'The Terrible', locationId: 'erebor' },
+  { id: 'thorin', name: 'Thorin Oakenshield', occupation: 'King under the Mountain' },
+  { id: 'smaug', name: 'Smaug', occupation: 'The Terrible' },
 ];
+// The place lists its people (T131).
 let mockLocations: any[] = [
-  { id: 'erebor', name: 'Erebor', type: 'landmark', status: 'known', relatedQuests: ['reclaim-erebor'] },
+  { id: 'erebor', name: 'Erebor', type: 'landmark', status: 'known', connectedNPCs: ['thorin', 'smaug'] },
 ];
 let mockRumors: any[] = [
   { id: 'r-1', title: "Signs of Smaug's activity", status: 'confirmed', convertedToQuestId: 'reclaim-erebor' },
@@ -499,12 +500,24 @@ describe('who is in it', () => {
 // What points here — derived, read-only
 // ---------------------------------------------------------------------------
 describe('what points here', () => {
-  it('lists the rumour it came from, the location that references it and the note that mentions it', () => {
+  it('lists the rumour it came from and the note that mentions it', () => {
     renderPage();
     const points = section('What points here');
     expect(within(points).getByText("Signs of Smaug's activity")).toBeInTheDocument();
-    expect(within(points).getByText('Erebor')).toBeInTheDocument();
     expect(within(points).getByText('Session 14 notes')).toBeInTheDocument();
+  });
+
+  // T131: a place's old quest list is read by nothing; the quest names its
+  // places itself.
+  it("does not list a place whose old quest list names it", () => {
+    const saved = mockLocations;
+    mockLocations = [{ ...saved[0], relatedQuests: ['reclaim-erebor'] }];
+    try {
+      renderPage();
+      expect(within(section('What points here')).queryByText('Erebor')).not.toBeInTheDocument();
+    } finally {
+      mockLocations = saved;
+    }
   });
 
   it('says "false" for a false rumour, not "disproved" (maintainer, 2026-10-03)', () => {
@@ -654,12 +667,12 @@ describe('places inside this quest', () => {
         expect.objectContaining({
           name: 'Secret door',
           parentId: 'erebor',
-          // T131: the quest owns the link, through the place it keeps.
-          relatedQuests: [],
         }),
         expect.anything()
       )
     );
+    // T131: the quest owns the link, through the place it keeps.
+    expect(mockCreateLocation.mock.calls[0][0]).not.toHaveProperty('relatedQuests');
     await waitFor(() => expect(mockNavigateToPage).toHaveBeenCalledWith('/locations/secret-door'));
   });
 
@@ -961,7 +974,6 @@ describe('the record card', () => {
 
     const losses = within(screen.getByRole('dialog')).getByRole('list');
     expect(within(losses).getByText(/Signs of Smaug's activity/)).toBeInTheDocument();
-    expect(within(losses).getByText(/Erebor — location, points at this quest/)).toBeInTheDocument();
     expect(within(losses).getByText(/2 people are attached to it/)).toBeInTheDocument();
     expect(mockDeleteQuest).not.toHaveBeenCalled();
   });

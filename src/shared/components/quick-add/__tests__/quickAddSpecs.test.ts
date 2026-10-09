@@ -79,10 +79,10 @@ describe("quickAddSpecs", () => {
       expect(doc.description).toBe("Exiled king under the mountain");
       expect(doc.status).toBe("alive");
       expect(doc.relationship).toBe("unknown");
+      // No `relatedQuests`: a quest owns that link (T131).
       expect(doc.connections).toEqual({
         relatedNPCs: [],
         affiliations: [],
-        relatedQuests: [],
       });
       expect(doc.notes).toEqual([]);
     });

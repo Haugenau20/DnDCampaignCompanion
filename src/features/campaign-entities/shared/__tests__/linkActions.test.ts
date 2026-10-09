@@ -49,16 +49,13 @@ describe('person ↔ quest', () => {
     }
   });
 
-  it("removes it from the quest, and from the person's old list where it is", async () => {
+  it("removes it from the quest, and leaves the person's old list alone", async () => {
     const { unlink, writes } = setup({
       npcs: [npc('frodo', { relatedQuests: ['ring', 'other'] })],
       quests: [{ id: 'ring', relatedNPCIds: ['frodo'] }],
     });
     await unlink({ kind: 'npc', id: 'frodo' }, { kind: 'quest', id: 'ring' });
-    expect(writes).toEqual([
-      ['quest', 'ring', { relatedNPCIds: [] }],
-      ['npc', 'frodo', { connections: { relatedNPCs: [], affiliations: [], relatedQuests: ['other'] } }],
-    ]);
+    expect(writes).toEqual([['quest', 'ring', { relatedNPCIds: [] }]]);
   });
 });
 
@@ -69,17 +66,11 @@ describe('person ↔ place', () => {
     expect(writes).toEqual([['location', 'rivendell', { connectedNPCs: ['strider'] }]]);
   });
 
-  it("clears only the person's old single place when that is all that holds it", async () => {
+  it('removes the person from the place that lists them, and leaves the person alone', async () => {
     const { unlink, writes } = setup({
-      npcs: [npc('butterbur', {}, { locationId: 'bree', location: 'Bree' })],
-      locations: [{ id: 'bree', connectedNPCs: [] }],
+      npcs: [npc('strider', {}, { locationId: 'bree', location: 'Bree' })],
+      locations: [{ id: 'bree', connectedNPCs: ['strider', 'nob'] }],
     });
-    await unlink({ kind: 'location', id: 'bree' }, { kind: 'npc', id: 'butterbur' });
-    expect(writes).toEqual([['npc', 'butterbur', { locationId: '', location: '' }]]);
-  });
-
-  it('removes the person from the place that lists them', async () => {
-    const { unlink, writes } = setup({ npcs: [npc('strider')], locations: [{ id: 'bree', connectedNPCs: ['strider', 'nob'] }] });
     await unlink({ kind: 'npc', id: 'strider' }, { kind: 'location', id: 'bree' });
     expect(writes).toEqual([['location', 'bree', { connectedNPCs: ['nob'] }]]);
   });
@@ -102,7 +93,7 @@ describe('place ↔ quest', () => {
     ]);
   });
 
-  it('removes every way the quest names the place, and the old half', async () => {
+  it("removes every way the quest names the place, and leaves the place's old list alone", async () => {
     const { unlink, writes } = setup({
       locations: [{ ...erebor, relatedQuests: ['q'] }],
       quests: [{ id: 'q', locationId: 'erebor', keyLocations: [{ name: 'erebor' }, { name: 'Dale', description: 'x' }] }],
@@ -110,8 +101,13 @@ describe('place ↔ quest', () => {
     await unlink({ kind: 'quest', id: 'q' }, { kind: 'location', id: 'erebor' });
     expect(writes).toEqual([
       ['quest', 'q', { locationId: '', location: '', keyLocations: [{ name: 'Dale', description: 'x' }] }],
-      ['location', 'erebor', { relatedQuests: [] }],
     ]);
+  });
+
+  it('writes nothing to a quest that does not name the place', async () => {
+    const { unlink, writes } = setup({ locations: [erebor], quests: [{ id: 'q', locationId: 'dale' }] });
+    await unlink({ kind: 'quest', id: 'q' }, { kind: 'location', id: 'erebor' });
+    expect(writes).toEqual([]);
   });
 });
 

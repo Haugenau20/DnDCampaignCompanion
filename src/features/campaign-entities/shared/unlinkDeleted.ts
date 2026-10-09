@@ -32,10 +32,10 @@ const minus = (list: readonly string[] | undefined, ids: ReadonlySet<string>) =>
 const holds = (list: readonly string[] | undefined, ids: ReadonlySet<string>) =>
   (list ?? []).some((id) => ids.has(id));
 
-/** The `connections` map with one list stripped, the others as they are. */
-const stripConnections = (npc: NPC, list: 'relatedNPCs' | 'relatedQuests', ids: ReadonlySet<string>): Partial<NPC> | null =>
-  holds(npc.connections?.[list], ids)
-    ? { connections: { ...npc.connections, [list]: minus(npc.connections?.[list], ids) } }
+/** The `connections` map with its people stripped, the other lists as they are. */
+const stripConnections = (npc: NPC, ids: ReadonlySet<string>): Partial<NPC> | null =>
+  holds(npc.connections?.relatedNPCs, ids)
+    ? { connections: { ...npc.connections, relatedNPCs: minus(npc.connections?.relatedNPCs, ids) } }
     : null;
 
 /**
@@ -84,24 +84,13 @@ function cleanupsFor(kind: DeletedKind, paths: CampaignRecordPaths): Cleanup<NPC
         {
           collection: paths.npcs,
           find: [{ field: 'connections.relatedNPCs', operator: 'array-contains' }],
-          strip: (npc, ids) => stripConnections(npc as NPC, 'relatedNPCs', ids),
+          strip: (npc, ids) => stripConnections(npc as NPC, ids),
         },
       ];
     case 'quest':
-      // The quest owned its links; only the old halves elsewhere name it.
-      return [
-        {
-          collection: paths.npcs,
-          find: [{ field: 'connections.relatedQuests', operator: 'array-contains' }],
-          strip: (npc, ids) => stripConnections(npc as NPC, 'relatedQuests', ids),
-        },
-        {
-          collection: paths.locations,
-          find: [{ field: 'relatedQuests', operator: 'array-contains' }],
-          strip: (location, ids) => holds((location as Location).relatedQuests, ids)
-            ? { relatedQuests: minus((location as Location).relatedQuests, ids) } : null,
-        },
-      ];
+      // The quest owned its links, and they went with it: no list elsewhere
+      // names a quest.
+      return [];
     case 'location':
       return [
         {

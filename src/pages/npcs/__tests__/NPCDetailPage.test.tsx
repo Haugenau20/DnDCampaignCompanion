@@ -101,9 +101,8 @@ const fullNPC = {
   relationship: "friendly",
   race: "Maia",
   occupation: "Wizard",
-  // Stored as every save writes it: the id, and the name when it was written.
-  // An older name, so a page that printed the free text would be caught.
-  locationId: "mines-of-moria",
+  // The place lists them (`MORIA` below, T131); the free text is an older
+  // name, so a page that printed it instead would be caught.
   location: "Moria",
   description: "A wandering wizard.",
   appearance: "Elderly man with a long grey beard and a tall pointed hat.",
@@ -112,7 +111,6 @@ const fullNPC = {
   connections: {
     relatedNPCs: ["npc-2", "npc-missing"],
     affiliations: ["The Fellowship", "Istari"],
-    relatedQuests: ["quest-1", "quest-missing"],
   },
   notes: [
     { date: "2025-05-31", text: "Rode to Isengard.", author: "Zendikarr" },
@@ -129,7 +127,7 @@ const bareNPC = {
   status: "unknown",
   relationship: "unknown",
   description: "",
-  connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
+  connections: { relatedNPCs: [], affiliations: [] },
   notes: [],
 };
 
@@ -146,14 +144,16 @@ const mockUpdateNPC = jest.fn().mockResolvedValue(undefined);
 const mockUpdateNPCNote = jest.fn().mockResolvedValue(undefined);
 const mockRefreshNPCs = jest.fn().mockResolvedValue(undefined);
 
-const mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
+/** Gandalf's place: it lists him, so it owns the link (T131). */
+const MORIA = { id: "mines-of-moria", name: "Mines of Moria", connectedNPCs: ["npc-1"] };
+let mockLocations: any[] = [MORIA];
 const mockDeleteNPC = jest.fn().mockResolvedValue(undefined);
 const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
 const mockUpdateQuest = jest.fn().mockResolvedValue(undefined);
 const mockUpdateLocation = jest.fn().mockResolvedValue(undefined);
 let mockRumors: any[] = [];
 let mockQuests: any[] = [
-  { id: "quest-1", title: "Destroy the Ring", status: "active" },
+  { id: "quest-1", title: "Destroy the Ring", status: "active", relatedNPCIds: ["npc-1"] },
   { id: "quest-2", title: "Find the Entwives", status: "active" },
 ];
 
@@ -359,8 +359,9 @@ describe("NPCDetailPage", () => {
       error: null,
     };
     mockRumors = [];
+    mockLocations = [MORIA];
     mockQuests = [
-      { id: "quest-1", title: "Destroy the Ring", status: "active" },
+      { id: "quest-1", title: "Destroy the Ring", status: "active", relatedNPCIds: ["npc-1"] },
       { id: "quest-2", title: "Find the Entwives", status: "active" },
     ];
     mockUpdateRumor.mockResolvedValue(undefined);
@@ -550,7 +551,7 @@ describe("NPCDetailPage", () => {
       expect(sigils[0]).toHaveStyle({ width: "56px", height: "56px" });
     });
 
-    it("resolves a stored location id to the location's name", () => {
+    it("names the place that lists them, not their free text", () => {
       renderPage();
       // Once in the breadcrumb, once in the relationships list -- the page
       // says where they are in both places it makes sense to look.
@@ -560,11 +561,14 @@ describe("NPCDetailPage", () => {
     it("leaves a location reference that resolves to nothing visible as itself", () => {
       // #1412: a dangling reference must stay visible rather than be
       // prettified into a location that does not exist.
+      // A person's old place that was deleted, left by the migration (T131),
+      // and no place that lists them.
       mockNPCDataReturn = {
         npcs: [{ ...fullNPC, locationId: "lothlorien", location: "" }],
         loading: false,
         error: null,
       };
+      mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
       renderPage();
       expect(screen.getAllByText("lothlorien").length).toBeGreaterThan(0);
     });
@@ -1710,10 +1714,11 @@ describe("NPCDetailPage", () => {
     // one adds the person to that list and replaces nothing.
     it("adds the person to the place's own list, which owns the link", async () => {
       mockNPCDataReturn = {
-        npcs: [{ ...fullNPC, locationId: undefined, location: "Bree" }],
+        npcs: [{ ...fullNPC, location: "Bree" }],
         loading: false,
         error: null,
       };
+      mockLocations = [{ id: "mines-of-moria", name: "Mines of Moria" }];
       renderPage();
       openTray();
       fireEvent.click(
@@ -1754,7 +1759,7 @@ describe("NPCDetailPage", () => {
         within(screen.getByRole("listbox")).getByRole("option", { name: new RegExp(name) });
 
       it("attaches the quest without touching the place that shares its id", async () => {
-        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        setNPC(fullNPC);
         mockQuests = [
           ...mockQuests,
           { id: "mines-of-moria", title: "Clear the Mines", status: "active" },
@@ -1776,25 +1781,25 @@ describe("NPCDetailPage", () => {
       });
 
       it("detaches the quest and keeps the person who shares its id", async () => {
-        setNPC({
-          ...fullNPC,
-          connections: { ...fullNPC.connections, relatedQuests: ["npc-2"] },
-        });
-        mockQuests = [{ id: "npc-2", title: "Saruman's Treachery", status: "active" }];
+        setNPC(fullNPC);
+        mockQuests = [{ id: "npc-2", title: "Saruman's Treachery", status: "active", relatedNPCIds: ["npc-1"] }];
         renderPage();
         openTray();
 
         fireEvent.click(option("Saruman's Treachery"));
 
-        await waitFor(() => expect(mockUpdateNPC).toHaveBeenCalled());
-        const [npcId, written] = mockUpdateNPC.mock.calls[0];
-        expect(npcId).toBe("npc-1");
-        expect(written.connections.relatedQuests).toEqual([]);
-        expect(written.connections.relatedNPCs).toEqual(["npc-2", "npc-missing"]);
+        // T131: cleared on the quest, which owns the link; Saruman stays.
+        await waitFor(() =>
+          expect(mockUpdateQuest).toHaveBeenCalledWith(
+            "npc-2",
+            expect.objectContaining({ relatedNPCIds: [] })
+          )
+        );
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
       });
 
       it("detaches the rumour and keeps the place that shares its id", async () => {
-        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        setNPC(fullNPC);
         mockRumors = [
           {
             id: "mines-of-moria",
@@ -1818,7 +1823,7 @@ describe("NPCDetailPage", () => {
       });
 
       it("detaches the place and keeps the rumour that shares its id", async () => {
-        setNPC({ ...fullNPC, locationId: "mines-of-moria" });
+        setNPC(fullNPC);
         mockRumors = [
           {
             id: "mines-of-moria",
@@ -1832,13 +1837,15 @@ describe("NPCDetailPage", () => {
 
         fireEvent.click(option("Mines of Moria"));
 
+        // T131: cleared on the place, which owns the link.
         await waitFor(() =>
-          expect(mockUpdateNPC).toHaveBeenCalledWith(
-            "npc-1",
-            expect.objectContaining({ locationId: "", location: "" })
+          expect(mockUpdateLocation).toHaveBeenCalledWith(
+            "mines-of-moria",
+            expect.objectContaining({ connectedNPCs: [] })
           )
         );
         expect(mockUpdateRumor).not.toHaveBeenCalled();
+        expect(mockUpdateNPC).not.toHaveBeenCalled();
       });
     });
   });

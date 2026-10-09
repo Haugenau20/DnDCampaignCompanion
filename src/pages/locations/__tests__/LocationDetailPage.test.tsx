@@ -85,7 +85,6 @@ const place = (id: string, name: string, extra: any = {}) => ({
   description: `About ${name}`,
   features: [],
   connectedNPCs: [],
-  relatedQuests: [],
   notes: [],
   tags: [],
   createdByUsername: 'DungeonMaster',
@@ -900,17 +899,16 @@ describe('LocationDetailPage — what points here', () => {
     expect(screen.queryByText('rumour, disproved')).not.toBeInTheDocument();
   });
 
-  // T131: a link is stored once now, and both sides show it. Until the
-  // migration has run, a person whose old record names this place is one of
-  // the people here -- no longer set apart as a disagreement, which there can
-  // no longer be.
-  it('counts an NPC whose old record names this place among the people here', () => {
+  // T131: a link is stored once, on the place, and both sides show it. A
+  // person's old single place was merged into the place's list in production
+  // and is read by nothing.
+  it("does not count an NPC whose old record alone names this place", () => {
     mockNPCs = [
       { id: 'npc-1', name: 'Turgon', title: 'King of Gondolin' },
       { id: 'npc-2', name: 'Glorfindel', locationId: 'gondolin' },
     ];
     renderPage();
-    expect(screen.getByText('Glorfindel')).toBeInTheDocument();
+    expect(screen.queryByText('Glorfindel')).not.toBeInTheDocument();
     expect(screen.queryByText('person, recorded as being here')).not.toBeInTheDocument();
   });
 });

@@ -10,9 +10,9 @@ import {
   useQuests,
   useRumors,
   useLocations,
-  resolveLocationName,
   createLinkActions,
   locationIdsOfNpc,
+  resolveLocationName,
   npcIdsOfNpc,
   questIdsOfNpc,
   rumorIdsOfNpc,
@@ -180,7 +180,7 @@ const PROSE_BLOCKS: {
 
 /** The kinds of thing an NPC can be connected to, in the order they are shown. */
 /** An NPC with no `connections` stored yet. */
-const NO_CONNECTIONS = { relatedNPCs: [], affiliations: [], relatedQuests: [] };
+const NO_CONNECTIONS = { relatedNPCs: [], affiliations: [] };
 
 const RELATION_GROUPS = [
   { kind: 'people', label: 'People' },

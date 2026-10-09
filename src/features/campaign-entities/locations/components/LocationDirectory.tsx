@@ -97,25 +97,25 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [expandedLocations, setExpandedLocations] = useState<Set<string>>(new Set());
 
-  const { npcs, getNPCById } = useNPCs();
+  const { getNPCById } = useNPCs();
   const { quests, getQuestById } = useQuests();
 
   /**
-   * Each place's people and quests, linked from either side (T131): a quest
-   * stores its places now, and a person's old `locationId` counts until the
-   * migration has run. Counted as stored, as the row always counted them;
-   * the summary below resolves each to its record.
+   * Each place's people and quests, linked from either side (T131): the
+   * place lists its people, and a quest stores its places. Counted as
+   * stored, as the row always counted them; the summary below resolves each
+   * to its record.
    */
   const linked = useMemo(() => {
     const byPlace = new Map<string, { npcIds: string[]; questIds: string[] }>();
     for (const location of locations) {
       byPlace.set(location.id, {
-        npcIds: npcIdsOfLocation(location, npcs),
+        npcIds: npcIdsOfLocation(location),
         questIds: questIdsOfLocation(location, quests),
       });
     }
     return byPlace;
-  }, [locations, npcs, quests]);
+  }, [locations, quests]);
   const { updateLocationStatus, updateLocationsStatus, deleteLocations } = useLocations();
   /** Selection mode for the batch actions (T017). */
   const selection = useSelection();

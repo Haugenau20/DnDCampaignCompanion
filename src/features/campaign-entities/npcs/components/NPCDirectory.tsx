@@ -253,15 +253,29 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
     });
   }, [npcs, searchQuery, statusFilter, relationshipFilter]);
 
-  // Group NPCs by location for display.
-  //
-  // Grouping on a stored id verbatim printed slugs as headings --
-  // "mines-of-moria" where the Locations page says "Mines of Moria" (#1412).
-  // `resolveLocationName` gives the place `npc.locationId` names, else the
-  // free text as written; see the contract on `NPC.location`.
+  // Each person's first place: the first place, in the places' order, whose
+  // list names them (T131), as their own page shows it. One pass over the
+  // places rather than one per person.
+  const firstPlaceOf = useMemo(() => {
+    const first = new Map<string, string>();
+    for (const location of locations) {
+      for (const npcId of location.connectedNPCs ?? []) {
+        if (!first.has(npcId)) first.set(npcId, location.name);
+      }
+    }
+    return first;
+  }, [locations]);
+
+  // Group NPCs by location for display: their first place, else what their
+  // own record says, as `resolveLocationName` reads it -- the free text, or a
+  // reference to a place since deleted, visible as one (#1412; see the
+  // contract on `NPC.location`). Grouping on a stored id verbatim printed
+  // slugs as headings -- "mines-of-moria" where the Locations page says
+  // "Mines of Moria".
   const groupedNPCs = useMemo(() => {
     return filteredNPCs.reduce((acc, npc) => {
       const location =
+        firstPlaceOf.get(npc.id) ??
         resolveLocationName({ locationId: npc.locationId, location: npc.location }, locationIndex) ??
         'Location unknown';
       if (!acc[location]) {
@@ -270,7 +284,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
       acc[location].push(npc);
       return acc;
     }, {} as Record<string, NPC[]>);
-  }, [filteredNPCs, locationIndex]);
+  }, [filteredNPCs, firstPlaceOf, locationIndex]);
 
   if (isLoading) {
     return <RosterSkeleton label="Loading NPCs" />;

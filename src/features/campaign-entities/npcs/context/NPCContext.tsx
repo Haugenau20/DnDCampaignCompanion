@@ -13,8 +13,6 @@ import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { addRecordNote, deleteRecordNotes } from '../../shared/recordNotes';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
-import { referencesLocation } from '../../locations/utils/location-display';
-import { Location } from '../../locations/types';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 const NPCContext = createContext<NPCContextValue | undefined>(undefined);
@@ -55,19 +53,6 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Get NPC by ID
   const getNPCById = useCallback((id: string) => {
     return npcs.find(npc => npc.id === id);
-  }, [npcs]);
-
-  // Get NPCs by quest
-  const getNPCsByQuest = useCallback((questId: string) => {
-    return npcs.filter(npc => 
-      npc.connections.relatedQuests.includes(questId)
-    );
-  }, [npcs]);
-
-  // Get NPCs by location: those whose `locationId` names it. Free text in
-  // `location` names no record; see the contract on `NPC.location`.
-  const getNPCsByLocation = useCallback((location: Location) => {
-    return npcs.filter(npc => referencesLocation(npc, location));
   }, [npcs]);
 
   // Get NPCs by relationship
@@ -252,8 +237,6 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // The read alone: a rejected write must not take the page down (T085).
     loadError: error || null,
     getNPCById,
-    getNPCsByQuest,
-    getNPCsByLocation,
     getNPCsByRelationship,
     updateNPCNote,
     updateNPCRelationship,

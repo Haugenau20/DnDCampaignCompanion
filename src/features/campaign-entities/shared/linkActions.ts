@@ -35,7 +35,7 @@ function ordered(a: LinkEnd, b: LinkEnd): [LinkEnd, LinkEnd] {
   return rank[a.kind] <= rank[b.kind] ? [a, b] : [b, a];
 }
 
-const NO_CONNECTIONS: NPCConnections = { relatedNPCs: [], affiliations: [], relatedQuests: [] };
+const NO_CONNECTIONS: NPCConnections = { relatedNPCs: [], affiliations: [] };
 
 const add = (ids: readonly string[] | undefined, id: string) => Array.from(new Set([...(ids ?? []), id]));
 const without = (ids: readonly string[] | undefined, id: string) => (ids ?? []).filter((existing) => existing !== id);
@@ -56,13 +56,10 @@ const changeConnections =
  *
  * Every link is written to its owner (`links.ts` has the table), so adding a
  * quest on a person's page and adding the person on the quest's page store
- * the same thing. Removing a link clears the owner and, where the record
- * still carries one, the old second half too: otherwise the link would stay
- * on screen, read from the half nobody writes any more.
+ * the same thing, and removing it clears the same field.
  *
  * Each write is worked out from the record the server holds (T083), so a
- * link another player added a moment ago survives this one. A link that
- * spans two records may take two writes; the owner is always written first.
+ * link another player added a moment ago survives this one.
  */
 export function createLinkActions({
   npcs,
@@ -132,28 +129,12 @@ export function createLinkActions({
         }
         return;
       }
-      case 'npc-quest': {
-        const npc = npcOf(first.id);
+      case 'npc-quest':
         await updateQuest(second.id, (current) => ({ relatedNPCIds: without(current.relatedNPCIds, first.id) }));
-        if (npc?.connections?.relatedQuests?.includes(second.id)) {
-          await updateNPC(first.id, changeConnections('relatedQuests', (ids) => without(ids, second.id)));
-        }
         return;
-      }
-      case 'npc-location': {
-        const npc = npcOf(first.id);
-        const location = locationOf(second.id);
-        // Only the old half holds it when the person names the place and the
-        // place does not list them; then the place is left alone.
-        const oldHalfOnly = npc?.locationId === second.id && !location?.connectedNPCs?.includes(first.id);
-        if (!oldHalfOnly) {
-          await updateLocation(second.id, (current) => ({ connectedNPCs: without(current.connectedNPCs, first.id) }));
-        }
-        if (npc?.locationId === second.id) {
-          await updateNPC(first.id, { locationId: '', location: '' });
-        }
+      case 'npc-location':
+        await updateLocation(second.id, (current) => ({ connectedNPCs: without(current.connectedNPCs, first.id) }));
         return;
-      }
       case 'npc-rumor':
         await updateRumor(second.id, (current) => ({ relatedNPCs: without(current.relatedNPCs, first.id) }));
         return;
@@ -161,15 +142,11 @@ export function createLinkActions({
         const location = locationOf(second.id);
         const quest = questOf(first.id);
         if (!location) return;
-        if (!quest || questNamesLocation(quest, location)) {
-          await updateQuest(first.id, (current): Partial<Quest> => ({
-            ...(current.locationId === location.id ? { locationId: '', location: '' } : {}),
-            keyLocations: (current.keyLocations ?? []).filter((place) => !keyPlaceIsLocation(place, location)),
-          }));
-        }
-        if (location.relatedQuests?.includes(first.id)) {
-          await updateLocation(second.id, (current: Location) => ({ relatedQuests: without(current.relatedQuests, first.id) }));
-        }
+        if (quest && !questNamesLocation(quest, location)) return;
+        await updateQuest(first.id, (current): Partial<Quest> => ({
+          ...(current.locationId === location.id ? { locationId: '', location: '' } : {}),
+          keyLocations: (current.keyLocations ?? []).filter((place) => !keyPlaceIsLocation(place, location)),
+        }));
         return;
       }
       case 'location-rumor':
