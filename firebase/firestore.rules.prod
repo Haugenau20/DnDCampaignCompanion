@@ -484,14 +484,14 @@ service cloud.firestore {
       return fits(changed, 'name', 200) && fits(changed, 'description', 10000);
     }
 
-    // Global user profiles - strict email protection
+    // Global user profiles
     match /users/{userId} {
-      // Users can ONLY read their own complete profile (including email)
+      // Only its holder reads a profile. Until T140 any signed-in account
+      // could read one that had no `email`, with its groups, its extraction
+      // counters and allowance; no reader needed that, since every app read
+      // of `users/{uid}` is the signed-in person's own. What other members
+      // see is the group profile, `groups/{g}/users/{uid}`.
       allow read: if isSignedIn() && request.auth.uid == userId;
-
-      // Everyone else cannot see emails
-      allow read: if isSignedIn() && request.auth.uid != userId &&
-                   !("email" in resource.data);
 
       // No client create. This used to be `request.auth.uid == userId` and
       // nothing more, so a fresh account could create its profile with

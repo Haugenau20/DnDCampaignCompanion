@@ -28,7 +28,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T128 | Caps on members, campaigns and accounts | M | open | Bounds what one founder link can cost; the 20-account cap cannot hold 30 groups |
 | medium | T127 | A founder's first run | M | open | A founder link opens nothing yet: there is no path from it to a first campaign |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
-| low | T140 | Any signed-in account can read a profile that has no email | S | open | Every real sign-in gives an email, so likely no profile is exposed; unverified in production |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 and 2 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
@@ -135,26 +134,6 @@ with a real measurement id (`core/services/firebase/config/firebaseConfig.ts:13`
 - **Catch**: drop it, or keep it and say so (with consent, if it sets cookies),
   is the maintainer's call, and T137 asks for traffic metrics.
 - **Source**: found while filing T137, 2026-10-08
-
-### T140 — Any signed-in account can read a profile that has no email
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-08
-
-`users/{uid}` is readable by every signed-in account when it has no `email`
-field (`firestore.rules.prod:493`). Such a profile shows its groups, its
-extraction counters and (with T137) its `extractionAllowance` to anyone who
-knows the uid, and every group member's uid is in the group's member list.
-
-- **Where**: `redeemInvitation.ts:149` writes `email` only when the token has
-  one; `createGroup.ts:198` always writes it (a missing one fails that write).
-- **No reader needs it**: every app read of `users/{uid}` is the signed-in
-  person's own (`UserService.ts:42`, `GroupService.ts:99`, `AuthService.ts:421`).
-  Whether the rule ever had a caller is unchecked.
-- **Unverified**: whether any production profile lacks `email`. Magic link and
-  Google both give one; device sign-in's custom tokens were not checked.
-- **Catch**: none found; drop the rule and add a test in
-  `firestore-rules-prod.test.ts` (its seeded profiles have no email, so a
-  stranger's read succeeds there today).
-- **Source**: found while writing T137 step 1's rules tests, 2026-10-08
 
 ---
 
