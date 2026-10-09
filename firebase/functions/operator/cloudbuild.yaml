@@ -1,0 +1,16 @@
+# Builds the operator image (T137; design, "The container"; security
+# architecture, section 8). Submitted by the operator deploy workflow
+# (implementation plan, step 5) from `firebase/functions`, as
+# `operator-builder@`, which can write to one Artifact Registry repository and
+# its own logs and nothing else. The deploy then names the image by digest.
+#
+#   gcloud builds submit firebase/functions --config firebase/functions/operator/cloudbuild.yaml \
+#     --substitutions _IMAGE=europe-west1-docker.pkg.dev/PROJECT/operator/operator:SHA
+steps:
+  # gcr.io/cloud-builders/docker, pinned by digest.
+  - name: gcr.io/cloud-builders/docker@sha256:f772ab459889c67835bd959c2b9e9351f2c0752c4f989710ecda20c229f0733e
+    args: ["build", "--file", "operator/Dockerfile", "--tag", "${_IMAGE}", "."]
+images:
+  - "${_IMAGE}"
+options:
+  logging: CLOUD_LOGGING_ONLY

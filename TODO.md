@@ -26,7 +26,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
-| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 and 2 of 8 done |
+| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 to 3 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
@@ -294,7 +294,7 @@ The maintainer asks whether the site should have an "about us" page.
 - **Source**: todo.txt, 2026-10-08
 
 ### T137 — An operator page: founder links, extraction limits, metrics
-**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-08
+**Type** feature · **Size** L · **Status** open · **Verified** 2026-10-09
 
 One web page for operator work, usable from a phone: issue and revoke founder
 links, and set one person's extraction allowance (their own, since they pay for
@@ -310,7 +310,11 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
   limits; the old `customLimit` (daily only) and `isUnlimited` still apply
   where no allowance does, until step 7 retires them. The operator actions
   exist in `functions/src/operator/`, exported by nothing; founder links now
-  record `issuedBy` and share a budget of 10 a day with the script.
+  record `issuedBy` and share a budget of 10 a day with the script. Step 3:
+  the service (`functions/src/operator/http/`) runs locally with
+  `npm run operator:dev` in `firebase/functions` (port 4700, against the dev
+  emulators), behind the same identity check it will run with under IAP; its
+  container files (`firebase/functions/operator/`) are first built in step 5.
 - **Step 0** (maintainer): the project moves into a `muninn.quest`
   organization (Cloud Identity Free, decided 2026-10-08), so IAP uses Google's
   own OAuth client; then the operator account, in that organization. The
@@ -318,7 +322,7 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
   the super admin and the operator account both sign in with passkeys
   (2026-10-09). Waiting for two hardware keys; then the strict 2-Step
   Verification, then the move.
-- **Next**: step 3, the service run locally.
+- **Next**: step 4a, the setup script and its runbook.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
 ---

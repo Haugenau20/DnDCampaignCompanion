@@ -15,8 +15,13 @@ export const E2E = {
   firestorePort: 18080,
   functionsPort: 15001,
   appPort: 4300,
+  /** The operator page's dev server (T137), not the dev one's 4700. */
+  operatorPort: 4701,
   get appUrl(): string {
     return `http://${this.host}:${this.appPort}`;
+  },
+  get operatorUrl(): string {
+    return `http://${this.host}:${this.operatorPort}`;
   },
   get authUrl(): string {
     return `http://${this.host}:${this.authPort}`;

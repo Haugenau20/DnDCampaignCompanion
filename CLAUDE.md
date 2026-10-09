@@ -173,6 +173,11 @@ The reason is recorded in that file.
   (`auditLocationIds.test.ts`, `migrateLocationIds.test.ts`, `accountDeletion.test.ts`,
   `deleteAccountScript.test.ts`, `founderInvitations.test.ts`, `issueFounderInvitationScript.test.ts`);
   run one against the dev emulators with `--emulator` after a change.
+- **The operator page** (T137, `src/operator/`) — its own Cloud Run service behind IAP, never a
+  function: `test/operator/notPublic.test.ts` holds `src/index.ts` clear of it. `npm run
+  operator:dev` runs the real server on 4700 against the dev emulators, signing an IAP identity
+  in-process (`src/operator/dev.ts`, which the image never holds). `test/operator/http.test.ts`
+  walks the route table, so a route added there is covered by the identity, CSRF and header tests.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.
@@ -229,7 +234,8 @@ it as the `e2e` job. Things that differ from the dev setup on purpose:
   (`e2e/support/test.ts`); journeys import `test` from there, not from `@playwright/test`.
 - `sign-in.setup.ts` signs in through the Auth emulator's outbox and saves the browser (IndexedDB
   included), which every other journey starts from. The Functions emulator runs too (port 15001;
-  `test:e2e` builds `firebase/functions` first), for the founder journey (`founder.spec.ts`). No
+  `test:e2e` builds `firebase/functions` first), for the founder journey (`founder.spec.ts`); and
+  the operator page's dev server on 4701 (project `operator`, `operator.spec.ts`). No
   Storage emulator yet: a journey that needs one adds it to `firebase.e2e.json` and the `--only` list.
 
 **A defect found in a browser check lands with a journey that replays it** (maintainer,
