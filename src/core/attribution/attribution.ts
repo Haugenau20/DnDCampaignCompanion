@@ -1,6 +1,7 @@
 // src/core/attribution/attribution.ts
 
-import type { ContentAttribution } from "../types/common";
+import { serverTimestamp, type FieldValue } from "firebase/firestore";
+import type { ContentAttribution, ServerTimeSentinel, StoredTime } from "../types/common";
 import { getUserName, getActiveCharacterName } from "../utils/user-utils";
 
 /**
@@ -74,4 +75,57 @@ export function buildModificationAttribution(
     modifiedByCharacterName: getActiveCharacterName(src.activeGroupUserProfile),
     dateModified: new Date().toISOString(),
   };
+}
+
+/**
+ * The server-clock times a new top-level record carries (T132): `createdAt`
+ * and `modifiedAt`, as `serverTimestamp()`, which the server sets to the
+ * moment the write commits -- the same value its rules see as
+ * `request.time`, and no browser's clock.
+ *
+ * Only for a record's own fields: Firestore refuses a sentinel inside an
+ * array, so a note inside a record keeps the times its builder gives it.
+ */
+export function creationTimes(): { createdAt: FieldValue; modifiedAt: FieldValue } {
+  return { createdAt: serverTimestamp(), modifiedAt: serverTimestamp() };
+}
+
+/** The server-clock time an edit to a top-level record carries (T132). */
+export function modificationTimes(): { modifiedAt: FieldValue } {
+  return { modifiedAt: serverTimestamp() };
+}
+
+/** A stored time: a server timestamp, an ISO or `YYYY-MM-DD` string, or a Date. */
+type AnyTime = StoredTime | ServerTimeSentinel | string | Date | null | undefined;
+
+/**
+ * A stored time as a Date, or null when there is none or it cannot be read.
+ *
+ * @param value The stored time
+ */
+export function toTime(value: AnyTime): Date | null {
+  if (!value) return null;
+  let date: Date;
+  if (value instanceof Date) date = value;
+  else if (typeof value === "string") date = new Date(value);
+  // A write's own sentinel, read back before the server replaced it, has no date.
+  else if ("toDate" in value && typeof value.toDate === "function") date = value.toDate();
+  else return null;
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * When a record was created and last modified (T132): the server's times
+ * where it has them, else the client-written strings every older record
+ * carries -- and a write still pending, whose server time is null, falls
+ * back to the string written beside it.
+ *
+ * @param item The record's attribution
+ */
+export function recordTimes(
+  item: Partial<Pick<ContentAttribution, "createdAt" | "modifiedAt" | "dateAdded" | "dateModified">> | null | undefined,
+): { created: Date | null; modified: Date | null } {
+  const created = toTime(item?.createdAt) ?? toTime(item?.dateAdded);
+  const modified = toTime(item?.modifiedAt) ?? toTime(item?.dateModified) ?? created;
+  return { created, modified };
 }

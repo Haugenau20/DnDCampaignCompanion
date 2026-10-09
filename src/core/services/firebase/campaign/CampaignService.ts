@@ -4,7 +4,8 @@ import {
     doc,
     getDocs,
     updateDoc,
-    getCountFromServer
+    getCountFromServer,
+    serverTimestamp
   } from 'firebase/firestore';
   import { httpsCallable } from 'firebase/functions';
   import BaseFirebaseService from '../core/BaseFirebaseService';
@@ -193,7 +194,9 @@ import {
         await updateDoc(campaignRef, {
           ...data,
           modifiedBy: userId,
-          dateModified: new Date()
+          dateModified: new Date(),
+          // The server's clock, as every record's edits now carry (T132).
+          modifiedAt: serverTimestamp()
         });
       } catch (error) {
         console.error(`CampaignService: Error updating campaign ${campaignId}:`, error);

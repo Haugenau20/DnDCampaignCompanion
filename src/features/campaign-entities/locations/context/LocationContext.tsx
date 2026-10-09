@@ -12,7 +12,7 @@ import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPat
 import { toNoteDate } from 'shared/utils/dateFormatter';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
-import { buildModificationAttribution } from 'core/attribution';
+import { buildModificationAttribution, modificationTimes } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
@@ -145,7 +145,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     await commitEntityWrites<Location>(locationsPath, 'locations', locationIds.map(id => ({
       type: 'update' as const,
       id,
-      data: { status, ...modificationAttribution }
+      data: { status, ...modificationAttribution, ...modificationTimes() }
     })));
   }, [user, activeGroupUserProfile, activeGroupId, activeCampaignId, getLocationById, locationsPath]);
 

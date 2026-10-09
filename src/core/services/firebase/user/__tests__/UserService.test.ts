@@ -25,6 +25,7 @@ const mockGetFunctions = jest.fn((...args: any[]) =>
 );
 
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),
@@ -73,6 +74,7 @@ describe('UserService', () => {
 
     // Re-apply mocks after resetModules
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => ({})),
       initializeFirestore: jest.fn(() => ({})),
       memoryLocalCache: jest.fn(),

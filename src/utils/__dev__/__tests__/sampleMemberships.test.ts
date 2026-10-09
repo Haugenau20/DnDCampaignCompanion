@@ -5,6 +5,7 @@
 // in group 1 (for role changes and the last-admin guard).
 
 jest.mock("firebase/firestore", () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   doc: jest.fn((_db: unknown, ...path: string[]) => path.join("/")),
   setDoc: jest.fn(() => Promise.resolve()),
 }));

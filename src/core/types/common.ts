@@ -26,6 +26,31 @@ export interface ContentAttribution {
   modifiedByCharacterName?: string | null;
   /** Date item was last modified (optional) */
   dateModified?: string;
+
+  /**
+   * When the item was created, by the server's clock (T132). Written beside
+   * `dateAdded` until every record carries it; read through `recordTimes`,
+   * which falls back to `dateAdded`. Null while a write is pending.
+   */
+  createdAt?: StoredTime | ServerTimeSentinel | null;
+  /** When the item was last modified, by the server's clock (T132). */
+  modifiedAt?: StoredTime | ServerTimeSentinel | null;
+}
+
+/**
+ * A server timestamp as the SDK hands it back (`Timestamp`), recognised by
+ * shape so `core` needs no SDK type: anything with `toDate()`.
+ */
+export interface StoredTime {
+  toDate: () => Date;
+}
+
+/**
+ * What a write carries in place of a server time: `serverTimestamp()`, which
+ * the server replaces as it commits. Matched by shape, as `StoredTime` is.
+ */
+export interface ServerTimeSentinel {
+  isEqual(other: unknown): boolean;
 }
 
 /**

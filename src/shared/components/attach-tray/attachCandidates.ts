@@ -1,4 +1,5 @@
 // src/shared/components/attach-tray/attachCandidates.ts
+import { recordTimes } from "core/attribution";
 import { rumorTitleText } from "shared/utils/rumor-name";
 
 /** The entity collections the tray can offer. */
@@ -88,15 +89,12 @@ const line = (...parts: Array<string | undefined | null>): string =>
 /**
  * When the record was last touched, as a sortable number.
  *
- * `dateModified` wins over `dateAdded`: editing a record is the touch that
+ * The last edit wins over the creation (the server's times where a record
+ * has them, else its old strings; T132): editing a record is the touch that
  * makes it likely to be what this session is about. A record carrying neither,
  * or an unparseable value, sorts last rather than disappearing.
  */
-const touchedAt = (record: any): number => {
-  const raw = record?.dateModified || record?.dateAdded;
-  const value = raw ? Date.parse(raw) : NaN;
-  return Number.isNaN(value) ? 0 : value;
-};
+const touchedAt = (record: any): number => recordTimes(record).modified?.getTime() ?? 0;
 
 /**
  * Turn the collections into one browsable, ordered list.

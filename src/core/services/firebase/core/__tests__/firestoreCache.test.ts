@@ -29,6 +29,7 @@ const mockClearIndexedDbPersistence = jest.fn((_db: unknown) => Promise.resolve(
 const mockTerminate = jest.fn((_db: unknown) => Promise.resolve());
 
 jest.mock("firebase/firestore", () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   initializeFirestore: (app: unknown, settings: unknown) => mockInitializeFirestore(app, settings),
   persistentLocalCache: (settings: unknown) => mockPersistentLocalCache(settings),
   persistentMultipleTabManager: () => mockPersistentMultipleTabManager(),

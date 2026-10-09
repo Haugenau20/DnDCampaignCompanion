@@ -45,6 +45,7 @@ const mockBatchObj = {
 };
 
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),
@@ -136,6 +137,7 @@ describe('DocumentService', () => {
     jest.resetModules();
 
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => ({})),
       initializeFirestore: jest.fn(() => ({})),
       memoryLocalCache: jest.fn(),
@@ -409,6 +411,7 @@ describe('DocumentService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),
@@ -521,6 +524,10 @@ describe('DocumentService', () => {
       expect(data.modifiedByCharacterName).toBe('Frodo');
       expectIso8601String(data.dateModified);
       expect(data.dateModified).toBe(data.dateAdded);
+
+      // T132: and the server's clock, which the rules can check as request.time.
+      expect(data.createdAt).toBe('SERVER_TIMESTAMP');
+      expect(data.modifiedAt).toBe('SERVER_TIMESTAMP');
     });
 
     test('should null both character-name fields when the profile has no activeCharacterId', async () => {

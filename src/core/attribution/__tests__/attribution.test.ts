@@ -1,6 +1,6 @@
 // src/core/attribution/__tests__/attribution.test.ts
 
-import { buildCreationAttribution, buildModificationAttribution } from "../attribution";
+import { buildCreationAttribution, buildModificationAttribution, recordTimes, toTime } from "../attribution";
 
 describe("attribution", () => {
   const uid = "user-123";
@@ -149,5 +149,34 @@ describe("attribution", () => {
 
       expect(new Date(result.dateModified as string).toISOString()).toBe(result.dateModified);
     });
+  });
+});
+
+// T132: records carry the server's times beside the old client-written
+// strings; readers take the server's where they can.
+describe("recordTimes", () => {
+  const at = (iso: string) => ({ toDate: () => new Date(iso) });
+
+  it("takes the server's times over the strings", () => {
+    const times = recordTimes({
+      createdAt: at("2026-10-01T10:00:00Z"),
+      modifiedAt: at("2026-10-02T10:00:00Z"),
+      dateAdded: "2020-01-01T00:00:00Z",
+      dateModified: "2020-01-02T00:00:00Z",
+    });
+    expect(times.created?.toISOString()).toBe("2026-10-01T10:00:00.000Z");
+    expect(times.modified?.toISOString()).toBe("2026-10-02T10:00:00.000Z");
+  });
+
+  it("falls back to the strings, and a never-edited record to its creation", () => {
+    const times = recordTimes({ dateAdded: "2020-01-01T00:00:00Z" });
+    expect(times.created?.toISOString()).toBe("2020-01-01T00:00:00.000Z");
+    expect(times.modified).toEqual(times.created);
+  });
+
+  it("reads a pending server time, or an unreadable string, as none", () => {
+    expect(toTime({ isEqual: () => false })).toBeNull();
+    expect(toTime("not a date")).toBeNull();
+    expect(recordTimes(null)).toEqual({ created: null, modified: null });
   });
 });

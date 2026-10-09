@@ -8,7 +8,7 @@ import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
-import { buildModificationAttribution } from 'core/attribution';
+import { buildModificationAttribution, modificationTimes } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
@@ -209,7 +209,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await commitEntityWrites<NPC>(npcsPath, 'NPCs', npcIds.map(id => ({
       type: 'update' as const,
       id,
-      data: { status, ...modificationAttribution }
+      data: { status, ...modificationAttribution, ...modificationTimes() }
     })));
   }, [hasRequiredContext, user, userProfile, activeGroupUserProfile, getNPCById, npcsPath]);
 

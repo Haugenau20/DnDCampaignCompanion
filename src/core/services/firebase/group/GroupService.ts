@@ -4,7 +4,9 @@ import {
     doc, 
     getDoc, 
     getDocs, 
-    updateDoc
+    onSnapshot,
+    updateDoc,
+    type Unsubscribe
   } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
 import ServiceRegistry from '../core/ServiceRegistry';
@@ -119,6 +121,29 @@ import { httpsCallable } from 'firebase/functions';
       return groups;
     }
   
+    /**
+     * Follow the profiles of a group's members (T132): who they are called
+     * and which characters they play, for crediting what they wrote under the
+     * names they have now. Each profile's `id` is its document id -- the uid
+     * -- and goes last, so a stored field can never stand in for it (SEC-002).
+     *
+     * @param groupId The group
+     * @param onNext Receives every member's profile, on every change
+     * @param onError Receives a listener failure; the listener is closed after it
+     * @returns Function that closes the listener
+     */
+    public subscribeToGroupProfiles(
+      groupId: string,
+      onNext: (profiles: Array<Record<string, any> & { id: string }>) => void,
+      onError: (error: Error) => void
+    ): Unsubscribe {
+      return onSnapshot(
+        collection(this.db, 'groups', groupId, 'users'),
+        (snapshot) => onNext(snapshot.docs.map((profile) => ({ ...profile.data(), id: profile.id }))),
+        onError
+      );
+    }
+
     /**
      * Get all users in a specific group (admin only)
      * @param groupId ID of the group to get users for

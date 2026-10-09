@@ -8,7 +8,7 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useCampaigns, useGroups, useFirestore } from 'features/user-management';
 import firebaseServices from 'core/services/firebase';
-import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
+import { buildCreationAttribution, buildModificationAttribution, creationTimes, modificationTimes } from 'core/attribution';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
 
 interface StoryContextState {
@@ -526,7 +526,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         data: {
           ...fields,
           order: place,
-          ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile })
+          ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+          ...modificationTimes()
         }
       }
     ]);
@@ -567,7 +568,8 @@ export const StoryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           ...chapterData,
           id: chapterId,
           order: newOrder,
-          ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile })
+          ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile }),
+          ...creationTimes()
         }
       }
     ]);

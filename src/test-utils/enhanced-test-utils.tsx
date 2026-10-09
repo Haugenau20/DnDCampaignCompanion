@@ -46,6 +46,7 @@ jest.mock('firebase/app', () => ({
   getApp: jest.fn(() => ({}))
 }));
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),

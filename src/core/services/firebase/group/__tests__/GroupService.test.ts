@@ -37,6 +37,7 @@ const mockUserServiceInstance = {
 };
 
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),
@@ -127,6 +128,7 @@ describe('GroupService', () => {
     }));
 
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => ({})),
       initializeFirestore: jest.fn(() => ({})),
       memoryLocalCache: jest.fn(),
@@ -191,6 +193,7 @@ describe('GroupService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),
@@ -359,6 +362,7 @@ describe('GroupService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),

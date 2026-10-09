@@ -28,6 +28,7 @@ jest.mock('firebase/auth', () => ({
 }));
 
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => mockDb),
   initializeFirestore: jest.fn(() => mockDb),
   memoryLocalCache: jest.fn(),
@@ -75,6 +76,7 @@ describe('BaseFirebaseService', () => {
       onAuthStateChanged: jest.fn(() => jest.fn()),
     }));
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => mockDb),
       initializeFirestore: jest.fn(() => mockDb),
       memoryLocalCache: jest.fn(() => 'memory cache'),
@@ -317,6 +319,7 @@ describe('BaseFirebaseService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => mockDb),
         initializeFirestore: jest.fn(() => mockDb),
         memoryLocalCache: jest.fn(),
@@ -365,6 +368,7 @@ describe('BaseFirebaseService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => mockDb),
         initializeFirestore: jest.fn(() => mockDb),
         memoryLocalCache: jest.fn(),

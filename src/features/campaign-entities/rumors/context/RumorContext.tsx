@@ -7,7 +7,7 @@ import { useFirebaseData } from 'shared/hooks/useFirebaseData';
 import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useFirestore } from 'features/user-management';
-import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
+import { buildCreationAttribution, buildModificationAttribution, modificationTimes } from 'core/attribution';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { rumorParagraph } from '../utils/rumor-title';
 import { createListenerDemandContext, useListenerDemand, ListReaderOptions } from 'shared/hooks/useListenerDemand';
@@ -132,7 +132,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
-    await updateData(rumorId, { status, ...modificationAttribution });
+    await updateData(rumorId, { status, ...modificationAttribution, ...modificationTimes() });
   }, [user, userProfile, activeGroupUserProfile, getRumorById, updateData]);
 
   // Update rumor note
@@ -250,7 +250,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await commitRumorWrites(rumorIds.map(id => ({
       type: 'update' as const,
       id,
-      data: { status, ...modificationAttribution }
+      data: { status, ...modificationAttribution, ...modificationTimes() }
     })));
   }, [user, userProfile, activeGroupUserProfile, getRumorById, commitRumorWrites]);
 

@@ -33,6 +33,7 @@ const mockUserServiceInstance = {
 };
 
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),
@@ -120,6 +121,7 @@ describe('CampaignService', () => {
     }));
 
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => ({})),
       initializeFirestore: jest.fn(() => ({})),
       memoryLocalCache: jest.fn(),
@@ -183,6 +185,7 @@ describe('CampaignService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),
@@ -290,6 +293,7 @@ describe('CampaignService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),
@@ -465,6 +469,7 @@ describe('CampaignService', () => {
         connectAuthEmulator: jest.fn(),
       }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),

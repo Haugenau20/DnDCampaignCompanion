@@ -85,6 +85,13 @@ jest.mock('shared/utils/attribution-utils', () => ({
 }));
 
 jest.mock('core/services/firebase', () => ({ default: {} }));
+// T132: authors are credited from the group's members; with no directory,
+// the names stored with each rumour apply.
+jest.mock('shared/hooks/useMemberDirectory', () => ({
+  __esModule: true,
+  useMemberDirectory: () => undefined,
+  default: () => undefined,
+}));
 
 const mockNavigateToPage = jest.fn();
 const mockCreatePath = jest.fn(

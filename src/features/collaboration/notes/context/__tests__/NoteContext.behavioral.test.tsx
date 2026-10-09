@@ -35,6 +35,7 @@ jest.mock('react-router-dom', () => ({
 
 // `where` is observable, so a test can see what the read was constrained to.
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   where: (field: string, op: string, value: unknown) => ({ field, op, value })
 }));
 

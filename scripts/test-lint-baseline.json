@@ -115,7 +115,6 @@
   "src/pages/story/__tests__/ChapterEditPage.test.tsx": 2,
   "src/pages/story/__tests__/SagaEditPage.test.tsx": 22,
   "src/pages/story/__tests__/StoryViewTabs.test.tsx": 7,
-  "src/shared/components/__tests__/AttributionInfo.test.tsx": 3,
   "src/shared/components/__tests__/Breadcrumb.test.tsx": 3,
   "src/shared/components/__tests__/ContactForm.test.tsx": 2,
   "src/shared/components/__tests__/DeleteConfirmationDialog.test.tsx": 5,
