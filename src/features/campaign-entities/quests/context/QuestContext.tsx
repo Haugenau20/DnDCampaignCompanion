@@ -8,7 +8,7 @@ import { writeRecordChange } from '../../shared/writeRecordChange';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
 import { useAuth, useUser, useGroups, useCampaigns } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
-import { buildModificationAttribution } from 'core/attribution';
+import { buildModificationAttribution, modificationTimes } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
 import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { keyPlaceIsLocation, referencesLocation } from '../../locations/utils/location-display';
@@ -335,7 +335,8 @@ export const QuestProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       data: {
         status,
         ...(status === 'completed' && { dateCompleted: modificationAttribution.dateModified }),
-        ...modificationAttribution
+        ...modificationAttribution,
+        ...modificationTimes()
       }
     })));
   }, [user, userProfile, activeGroupUserProfile, activeGroupId, activeCampaignId, getQuestById, questsPath]);

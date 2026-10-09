@@ -1,4 +1,5 @@
 // pages/story/StoryPage.tsx
+import { useMemberDirectory } from 'shared/hooks/useMemberDirectory';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -114,9 +115,11 @@ const StoryPage: React.FC = () => {
     };
   }, [currentChapter, chapters]);
 
+  // Credited by the names the authors have now (T132).
+  const directory = useMemberDirectory();
   const byline = useMemo(
-    () => (currentChapter ? deriveChapterByline(currentChapter) : undefined),
-    [currentChapter]
+    () => (currentChapter ? deriveChapterByline(currentChapter, directory) : undefined),
+    [currentChapter, directory]
   );
 
   /**

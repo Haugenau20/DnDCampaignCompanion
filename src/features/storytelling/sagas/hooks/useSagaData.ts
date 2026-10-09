@@ -5,7 +5,7 @@ import { useFirestore } from 'features/user-management';
 import { useAuth, useGroups, useCampaigns, useUser } from 'features/user-management';
 import { useCampaignContextStatus } from 'shared/hooks/useCampaignContextStatus';
 import { useCampaignCollectionPath } from 'shared/hooks/useCampaignCollectionPath';
-import { buildCreationAttribution, buildModificationAttribution } from 'core/attribution';
+import { buildCreationAttribution, buildModificationAttribution, creationTimes, modificationTimes } from 'core/attribution';
 
 /**
  * Hook for managing saga data fetching and state with proper group/campaign context
@@ -115,10 +115,12 @@ export const useSagaData = () => {
             ...existing,
             ...sagaData,
             ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+            ...modificationTimes(),
           }
         : {
             ...sagaData,
             ...buildCreationAttribution({ uid: user.uid, activeGroupUserProfile }),
+            ...creationTimes(),
           };
 
       await setDocument(sagaPath, 'sagaData', fullSagaData);
@@ -163,6 +165,7 @@ export const useSagaData = () => {
       const fullUpdates: Partial<SagaData> = {
         ...updates,
         ...buildModificationAttribution({ uid: user.uid, activeGroupUserProfile }),
+        ...modificationTimes(),
       };
 
       await updateDocument(sagaPath, 'sagaData', fullUpdates);

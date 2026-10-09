@@ -39,6 +39,7 @@ beforeEach(() => {
   mockGetDoc.mockResolvedValue(profileSnapshot('Aragorn'));
 
   jest.doMock('firebase/firestore', () => ({
+    serverTimestamp: () => 'SERVER_TIMESTAMP',
     getFirestore: jest.fn(() => ({})),
     initializeFirestore: jest.fn(() => ({})),
     memoryLocalCache: jest.fn(),

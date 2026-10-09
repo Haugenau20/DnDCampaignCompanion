@@ -1,13 +1,13 @@
 // pages/HomePage.tsx
-import React, { useState, useEffect } from 'react';
-import { useGroups } from 'features/user-management';
+import { recordTimes } from 'core/attribution';
+import React from 'react';
 import { useStory } from 'features/storytelling';
 import { useQuests } from 'features/campaign-entities';
 import { useRumors } from 'features/campaign-entities';
 import { useNPCs } from 'features/campaign-entities';
 import { useLocations } from 'features/campaign-entities';
-import firebaseServices from 'core/services/firebase';
-import { determineAttributionActor, fetchAttributionUsernames } from 'shared/utils/attribution-utils';
+import { lastActorName } from 'shared/utils/author-name';
+import { useMemberDirectory } from 'shared/hooks/useMemberDirectory';
 import { usePageGate, GatedContent } from 'shared/components/gated';
 import PageShell from 'shared/components/page-shell/PageShell';
 import SignedOutHome from 'pages/home/SignedOutHome';
@@ -31,91 +31,30 @@ const HomePage: React.FC = () => {
   const { rumors, isLoading: rumorsLoading } = useRumors();
   const { npcs, isLoading: npcsLoading } = useNPCs();
   const { locations, isLoading: locationsLoading } = useLocations();
-  const { activeGroupId } = useGroups();
   
-  // State to store the mapping of UIDs to usernames
-  const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
-  
-  // Load usernames for all UIDs that need username lookup
-useEffect(() => {
-  const loadUsernames = async () => {
-    if (!activeGroupId) return;
-    
-    const uniqueUids = new Set<string>();
-    
-    // Process items by type to collect all UIDs
-    // Quests
-    quests.forEach(quest => {
-      if (quest.modifiedBy) uniqueUids.add(quest.modifiedBy);
-      if (quest.createdBy) uniqueUids.add(quest.createdBy);
-    });
-    
-    // NPCs
-    npcs.forEach(npc => {
-      if (npc.modifiedBy) uniqueUids.add(npc.modifiedBy);
-      if (npc.createdBy) uniqueUids.add(npc.createdBy);
-    });
-    
-    // Rumors
-    rumors.forEach(rumor => {
-      if (rumor.modifiedBy) uniqueUids.add(rumor.modifiedBy);
-      if (rumor.createdBy) uniqueUids.add(rumor.createdBy);
-    });
-    
-    // Locations
-    locations.forEach(location => {
-      if (location.modifiedBy) uniqueUids.add(location.modifiedBy);
-      if (location.createdBy) uniqueUids.add(location.createdBy);
-    });
-    
-    // Story Chapters
-    chapters.forEach(chapter => {
-      if (chapter.modifiedBy) uniqueUids.add(chapter.modifiedBy);
-      if (chapter.createdBy) uniqueUids.add(chapter.createdBy);
-    });
-    
-    // Load usernames and character names for collected UIDs
-    if (uniqueUids.size === 0) return;
-    
-    try {
-      const userMapping = await fetchAttributionUsernames(
-        activeGroupId,
-        Array.from(uniqueUids),
-        firebaseServices
-      );
-      
-      setUsernameMap(userMapping);
-    } catch (error) {
-      console.error('Error loading attribution usernames:', error);
-    }
-  };
-  
-  loadUsernames();
-}, [activeGroupId, quests, rumors, npcs, locations, chapters]);
-  
+  // Who touched each record last, by the name they have now (T132): the
+  // group's members, followed live, rather than a fetch of every uid named.
+  const directory = useMemberDirectory();
+
   // Create combined recent activity from all content types
   const activities = React.useMemo(() => {
-    /**
-     * Helper function to determine the actor name with priority order.
-     * Inside the memo so the memo's own `usernameMap` dependency covers it.
-     * @param item Content item with potential actor fields
-     * @returns The actor name based on priority order
-     */
-    const determineActor = (item: any): string =>
-      determineAttributionActor(item, usernameMap);
+    /** Who touched a record last, by the name they have now. */
+    const determineActor = (item: Parameters<typeof lastActorName>[0]): string =>
+      lastActorName(item, directory);
 
     const allActivities: Activity[] = [];
     
     // Add chapters
     chapters.forEach(chapter => {
-      if (chapter.dateModified || chapter.dateAdded) {
+      const touched = recordTimes(chapter).modified;
+      if (touched) {
         allActivities.push({
           id: chapter.id,
           type: 'chapter',
           title: chapter.title,
           description: chapter.summary || chapter.content.substring(0, 100) + '...',
           actor: determineActor(chapter),
-          timestamp: new Date(chapter.dateModified || chapter.dateAdded),
+          timestamp: touched,
           link: `/story/chapters/${chapter.id}`
         });
       }
@@ -123,14 +62,15 @@ useEffect(() => {
     
     // Add quests
     quests.forEach(quest => {
-      if (quest.dateModified || quest.dateAdded) {
+      const touched = recordTimes(quest).modified;
+      if (touched) {
         allActivities.push({
           id: quest.id,
           type: 'quest',
           title: quest.title,
           description: quest.description,
           actor: determineActor(quest),
-          timestamp: new Date(quest.dateModified || quest.dateAdded),
+          timestamp: touched,
           link: `/quests/${quest.id}`
         });
       }
@@ -138,14 +78,15 @@ useEffect(() => {
 
     // Add rumors
     rumors.forEach(rumor => {
-      if (rumor.dateModified || rumor.dateAdded) {
+      const touched = recordTimes(rumor).modified;
+      if (touched) {
         allActivities.push({
           id: rumor.id,
           type: 'rumor',
           title: rumorTitleText(rumor),
           description: rumor.content.substring(0, 100) + '...',
           actor: determineActor(rumor),
-          timestamp: new Date(rumor.dateModified || rumor.dateAdded),
+          timestamp: touched,
           link: `/rumors?highlight=${rumor.id}`
         });
       }
@@ -153,14 +94,15 @@ useEffect(() => {
 
     // Add NPCs
     npcs.forEach(npc => {
-      if (npc.dateModified || npc.dateAdded) {
+      const touched = recordTimes(npc).modified;
+      if (touched) {
         allActivities.push({
           id: npc.id,
           type: 'npc',
           title: npc.name,
           description: npc.description.substring(0, 100) + '...',
           actor: determineActor(npc),
-          timestamp: new Date(npc.dateModified || npc.dateAdded),
+          timestamp: touched,
           link: `/npcs?highlight=${npc.id}`
         });
       }
@@ -168,14 +110,15 @@ useEffect(() => {
 
     // Add locations
     locations.forEach(location => {
-      if ('dateModified' in location && (location.dateModified || location.dateAdded)) {
+      const touched = recordTimes(location).modified;
+      if (touched) {
         allActivities.push({
           id: location.id,
           type: 'location',
           title: location.name,
           description: location.description.substring(0, 100) + '...',
           actor: determineActor(location),
-          timestamp: new Date(location.dateModified || location.dateAdded),
+          timestamp: touched,
           link: `/locations?highlight=${location.id}`
         });
       }
@@ -183,7 +126,7 @@ useEffect(() => {
     
     // Sort by timestamp (newest first)
     return allActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [chapters, quests, rumors, npcs, locations, usernameMap]);
+  }, [chapters, quests, rumors, npcs, locations, directory]);
   
   // Use common layout data hook to process and prepare data
   const layoutData = useLayoutData({

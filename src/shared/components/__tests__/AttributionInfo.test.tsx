@@ -1,250 +1,95 @@
-﻿// src/components/shared/__tests__/AttributionInfo.test.tsx
-
+// src/shared/components/__tests__/AttributionInfo.test.tsx
+//
+// Who added a record and who last changed it, and when. T132 (maintainer,
+// 2026-10-08): names are the authors' current ones, from the group's members,
+// and the server's times win over the client-written strings. Rewritten from
+// the version that tested a per-uid username fetch, which the member
+// directory replaced; the creator, modifier and same-event rules carry over.
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import AttributionInfo from '../AttributionInfo';
 
-// ---------------------------------------------------------------------------
-// Mock firebase context
-// ---------------------------------------------------------------------------
-jest.mock('@/features/user-management', () => ({
-  useFirebase: jest.fn(),
+let mockDirectory: Map<string, { username?: string; characters?: Array<{ id: string; name: string }> }> | undefined;
+jest.mock('../../hooks/useMemberDirectory', () => ({
+  __esModule: true,
+  useMemberDirectory: () => mockDirectory,
+  default: () => mockDirectory,
 }));
 
-const { useFirebase } = require('@/features/user-management');
+const at = (iso: string) => ({ toDate: () => new Date(iso) });
 
-// ---------------------------------------------------------------------------
-// Mock attribution-utils
-// ---------------------------------------------------------------------------
-jest.mock('../../utils/attribution-utils', () => ({
-  determineAttributionActor: jest.fn(),
-  fetchAttributionUsernames: jest.fn(),
-}));
-
-const { determineAttributionActor, fetchAttributionUsernames } =
-  require('../../utils/attribution-utils');
-
-// ---------------------------------------------------------------------------
-// Mock firebase services
-// ---------------------------------------------------------------------------
-jest.mock('core/services/firebase', () => ({
-  default: {},
-}));
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function makeItem(overrides = {}) {
+function makeItem(overrides: Record<string, unknown> = {}) {
   return {
-    createdByUsername: 'TestUser',
-    createdBy: 'uid-test',
+    createdBy: 'uid-1',
+    createdByUsername: 'Wren',
     dateAdded: '2024-01-15T10:00:00.000Z',
-    modifiedByUsername: undefined,
-    modifiedBy: undefined,
-    dateModified: undefined,
-    createdByCharacterId: null,
-    createdByCharacterName: null,
-    modifiedByCharacterId: null,
-    modifiedByCharacterName: null,
     ...overrides,
   };
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('AttributionInfo', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    // By default the active group is set
-    (useFirebase as jest.Mock).mockReturnValue({ activeGroupId: 'group-1' });
-    // By default fetchAttributionUsernames resolves to an empty map
-    (fetchAttributionUsernames as jest.Mock).mockResolvedValue({});
-    // determineAttributionActor returns based on item fields
-    (determineAttributionActor as jest.Mock).mockImplementation((item: any) => {
-      return item.createdByCharacterName || item.createdByUsername || '';
-    });
+    mockDirectory = new Map([
+      ['uid-1', { username: 'Wren', characters: [{ id: 'c-1', name: 'Ilse the Bold' }] }],
+      ['uid-2', { username: 'Corvin' }],
+    ]);
   });
 
-  // -------------------------------------------------------------------------
-  // Renders nothing with no attribution data
-  // -------------------------------------------------------------------------
-  describe('no attribution data', () => {
-    test('should render nothing when no attribution data is present', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValue('');
-      const { container } = render(<AttributionInfo item={{}} />);
-      // Component returns null → container has an empty div wrapper
-      expect(container.firstChild).toBeNull();
-    });
-
-    test('should render nothing when both creator and modifier resolve to empty', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValue('');
-      const item = makeItem({ createdByUsername: undefined, createdBy: undefined });
-      const { container } = render(<AttributionInfo item={item} />);
-      expect(container.firstChild).toBeNull();
-    });
+  test('renders nothing when nothing names an author', () => {
+    const { container } = render(<AttributionInfo item={{}} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
-  // -------------------------------------------------------------------------
-  // Creator attribution
-  // -------------------------------------------------------------------------
-  describe('creator attribution', () => {
-    test('should display "Added by" with creator username and date', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValueOnce('TestUser').mockReturnValueOnce('');
-      const item = makeItem({ dateAdded: '2024-01-15T10:00:00.000Z' });
-      render(<AttributionInfo item={item} />);
-      expect(screen.getByText(/Added by TestUser/)).toBeInTheDocument();
-    });
-
-    test('should format the creation date in the text', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValueOnce('TestUser').mockReturnValueOnce('');
-      const item = makeItem({ dateAdded: '2024-01-15T10:00:00.000Z' });
-      render(<AttributionInfo item={item} />);
-      // Date format: en-uk = dd/mm/yyyy
-      expect(screen.getByText(/15\/01\/2024/)).toBeInTheDocument();
-    });
-
-    test('should not render creator section when dateAdded is missing', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValueOnce('TestUser').mockReturnValueOnce('');
-      const item = makeItem({ dateAdded: undefined });
-      render(<AttributionInfo item={item} />);
-      expect(screen.queryByText(/Added by/)).not.toBeInTheDocument();
-    });
-
-    test('should display character name when createdByCharacterName is set', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValueOnce('Aragorn').mockReturnValueOnce('');
-      const item = makeItem({
-        createdByCharacterName: 'Aragorn',
-        dateAdded: '2024-01-15T10:00:00.000Z',
-      });
-      render(<AttributionInfo item={item} />);
-      expect(screen.getByText(/Added by Aragorn/)).toBeInTheDocument();
-    });
+  test('says who added it and on which day', () => {
+    render(<AttributionInfo item={makeItem()} />);
+    expect(screen.getByText('Added by Wren on 15/01/2024')).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------------------
-  // Modifier attribution
-  // -------------------------------------------------------------------------
-  describe('modifier attribution', () => {
-    test('should display "Modified by" when modifier differs from creator and later date', () => {
-      (determineAttributionActor as jest.Mock)
-        .mockReturnValueOnce('TestUser')   // creator
-        .mockReturnValueOnce('Editor');    // modifier
-      const item = makeItem({
-        dateAdded: '2024-01-15T10:00:00.000Z',
-        modifiedByUsername: 'Editor',
-        modifiedBy: 'uid-editor',
-        dateModified: '2024-06-20T10:00:00.000Z', // clearly later
-      });
-      render(<AttributionInfo item={item} />);
-      expect(screen.getByText(/Modified by Editor/)).toBeInTheDocument();
-    });
-
-    test('should not display modifier section when dateModified is missing', () => {
-      (determineAttributionActor as jest.Mock)
-        .mockReturnValueOnce('TestUser')
-        .mockReturnValueOnce('Editor');
-      const item = makeItem({
-        modifiedByUsername: 'Editor',
-        dateModified: undefined,
-      });
-      render(<AttributionInfo item={item} />);
-      expect(screen.queryByText(/Modified by/)).not.toBeInTheDocument();
-    });
-
-    test('should not display modifier when same user modifies within 1 second of creation', () => {
-      (determineAttributionActor as jest.Mock)
-        .mockReturnValueOnce('TestUser')
-        .mockReturnValueOnce('TestUser'); // same actor
-      const dateAdded = '2024-01-15T10:00:00.000Z';
-      const dateModified = '2024-01-15T10:00:00.500Z'; // 500ms later — within buffer
-      const item = makeItem({
-        dateAdded,
-        modifiedByUsername: 'TestUser',
-        dateModified,
-      });
-      render(<AttributionInfo item={item} />);
-      expect(screen.queryByText(/Modified by/)).not.toBeInTheDocument();
-    });
+  test('names the character it was written as, by the name it has now', () => {
+    render(<AttributionInfo item={makeItem({ createdByCharacterId: 'c-1', createdByCharacterName: 'Ilse Varn' })} />);
+    expect(screen.getByText(/Added by Ilse the Bold/)).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------------------
-  // Username lookup fallback
-  // -------------------------------------------------------------------------
-  describe('username lookup fallback', () => {
-    test('should call fetchAttributionUsernames when createdBy is set without username', async () => {
-      (determineAttributionActor as jest.Mock).mockReturnValue('FetchedUser');
-      (fetchAttributionUsernames as jest.Mock).mockResolvedValue({ 'uid-test': 'FetchedUser' });
-      const item = makeItem({
-        createdBy: 'uid-test',
-        createdByUsername: undefined,
-        createdByCharacterName: undefined,
-        dateAdded: '2024-01-15T10:00:00.000Z',
-      });
-      render(<AttributionInfo item={item} />);
-      await waitFor(() => {
-        expect(fetchAttributionUsernames).toHaveBeenCalledWith(
-          'group-1',
-          expect.arrayContaining(['uid-test']),
-          expect.anything()
-        );
-      });
-    });
-
-    test('should NOT call fetchAttributionUsernames when createdByUsername is already available', async () => {
-      (determineAttributionActor as jest.Mock).mockReturnValue('TestUser');
-      const item = makeItem({
-        createdByUsername: 'TestUser',
-        dateAdded: '2024-01-15T10:00:00.000Z',
-      });
-      render(<AttributionInfo item={item} />);
-      // Wait a tick to allow any effects to run
-      await waitFor(() => {
-        expect(fetchAttributionUsernames).not.toHaveBeenCalled();
-      });
-    });
-
-    test('should NOT call fetchAttributionUsernames when no activeGroupId', async () => {
-      (useFirebase as jest.Mock).mockReturnValue({ activeGroupId: null });
-      (determineAttributionActor as jest.Mock).mockReturnValue('');
-      const item = makeItem({
-        createdBy: 'uid-test',
-        createdByUsername: undefined,
-      });
-      render(<AttributionInfo item={item} />);
-      await waitFor(() => {
-        expect(fetchAttributionUsernames).not.toHaveBeenCalled();
-      });
-    });
+  test('names a member by their username now, not the one stored', () => {
+    render(<AttributionInfo item={makeItem({ createdBy: 'uid-2', createdByUsername: 'Old Name' })} />);
+    expect(screen.getByText(/Added by Corvin/)).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------------------
-  // Prop variations
-  // -------------------------------------------------------------------------
-  describe('prop variations', () => {
-    test('should handle item with only createdBy (no username) without crashing', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValue('');
-      const item = { createdBy: 'uid-only' };
-      expect(() => render(<AttributionInfo item={item} />)).not.toThrow();
-    });
+  test('credits someone who has left by the name stored with the record', () => {
+    render(<AttributionInfo item={makeItem({ createdBy: 'uid-left', createdByUsername: 'Mara' })} />);
+    expect(screen.getByText(/Added by Mara/)).toBeInTheDocument();
+  });
 
-    test('should handle an empty item object without crashing', () => {
-      (determineAttributionActor as jest.Mock).mockReturnValue('');
-      expect(() => render(<AttributionInfo item={{}} />)).not.toThrow();
-    });
+  test("takes the server's time over the client-written one", () => {
+    render(<AttributionInfo item={makeItem({ createdAt: at('2024-03-02T09:00:00.000Z') })} />);
+    expect(screen.getByText('Added by Wren on 02/03/2024')).toBeInTheDocument();
+  });
 
-    test('should handle item with both character and username attribution', () => {
-      // character name takes priority per determineAttributionActor
-      (determineAttributionActor as jest.Mock).mockReturnValueOnce('Frodo Baggins').mockReturnValueOnce('');
-      const item = makeItem({
-        createdByCharacterName: 'Frodo Baggins',
-        createdByUsername: 'frodobaggins',
-        dateAdded: '2024-01-15T10:00:00.000Z',
-      });
-      render(<AttributionInfo item={item} />);
-      expect(screen.getByText(/Added by Frodo Baggins/)).toBeInTheDocument();
-    });
+  test('says who changed it when someone else did', () => {
+    render(
+      <AttributionInfo
+        item={makeItem({ modifiedBy: 'uid-2', modifiedByUsername: 'Corvin', dateModified: '2024-02-01T10:00:00.000Z' })}
+      />
+    );
+    expect(screen.getByText('Modified by Corvin on 01/02/2024')).toBeInTheDocument();
+  });
+
+  test('says nothing of a change when the record has none', () => {
+    render(<AttributionInfo item={makeItem()} />);
+    expect(screen.queryByText(/Modified by/)).not.toBeInTheDocument();
+  });
+
+  test('treats the same author within a second of creating it as one event', () => {
+    render(
+      <AttributionInfo
+        item={makeItem({ modifiedBy: 'uid-1', modifiedByUsername: 'Wren', dateModified: '2024-01-15T10:00:00.500Z' })}
+      />
+    );
+    expect(screen.queryByText(/Modified by/)).not.toBeInTheDocument();
+  });
+
+  test('ignores a server time still pending, using the string written beside it', () => {
+    render(<AttributionInfo item={makeItem({ createdAt: { isEqual: () => false } })} />);
+    expect(screen.getByText('Added by Wren on 15/01/2024')).toBeInTheDocument();
   });
 });

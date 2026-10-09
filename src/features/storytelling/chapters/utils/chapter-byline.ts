@@ -1,4 +1,6 @@
 // src/features/storytelling/chapters/utils/chapter-byline.ts
+import { authorName, creatorRef, modifierRef, type MemberDirectory } from 'shared/utils/author-name';
+import { recordTimes } from 'core/attribution';
 import type { ContentAttribution } from 'core/types/common';
 
 /** What the reader's eyebrow and byline say about who wrote a chapter, and when. */
@@ -20,31 +22,27 @@ export interface ChapterByline {
  */
 const SAME_EVENT_MS = 1000;
 
-/** Parse a stored ISO date, or undefined when it is missing or unreadable. */
-function parseDate(value?: string): Date | undefined {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
 /**
  * Derive the reader's byline from a chapter's attribution fields.
  *
- * Names prefer the character the player was playing at the time, then their
+ * Names are the authors' current ones when `directory` is given (T132), else
+ * the ones stored with the chapter; either way the character comes before the
  * username — the order `determineAttributionActor` uses — but creator and
  * editor are kept apart: that helper answers "who touched this last", and a
  * byline needs both.
  */
 export function deriveChapterByline(
-  attribution: Partial<ContentAttribution>
+  attribution: Partial<ContentAttribution>,
+  directory?: MemberDirectory
 ): ChapterByline {
-  const recordedBy =
-    attribution.createdByCharacterName || attribution.createdByUsername || undefined;
-  const editor =
-    attribution.modifiedByCharacterName || attribution.modifiedByUsername || undefined;
+  // The authors' current names where the group's members are known (T132).
+  const recordedBy = authorName(creatorRef(attribution), directory) || undefined;
+  const editor = authorName(modifierRef(attribution), directory) || undefined;
 
-  const added = parseDate(attribution.dateAdded);
-  const modified = parseDate(attribution.dateModified);
+  // The server's times where the chapter has them, else its old strings (T132).
+  const times = recordTimes(attribution);
+  const added = times.created ?? undefined;
+  const modified = attribution.modifiedAt || attribution.dateModified ? times.modified ?? undefined : undefined;
 
   const wasEdited =
     !!editor &&

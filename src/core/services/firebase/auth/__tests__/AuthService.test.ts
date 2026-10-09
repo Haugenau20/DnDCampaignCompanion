@@ -55,6 +55,7 @@ const mockDoc = jest.fn((_db: any, ...segs: string[]) => ({ path: segs.join('/')
 jest.mock('firebase/auth', () => mockFirebaseAuthModule());
 
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),
@@ -136,6 +137,7 @@ describe('AuthService', () => {
     // Re-apply mocks after resetModules
     jest.doMock('firebase/auth', () => mockFirebaseAuthModule());
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => ({})),
       initializeFirestore: jest.fn(() => ({})),
       memoryLocalCache: jest.fn(),

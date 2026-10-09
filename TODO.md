@@ -20,7 +20,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
 | medium | T131 | Links: run the migration, then stop reading the old halves | S | blocked | Waits on the maintainer running `migrate-links.js` once the reading frontend is live |
-| medium | T132 | Attribution and times stamped where the rules can check them | M | open | Any member can credit a record to someone else today; do with T133 so records are rewritten once |
+| medium | T132 | Attribution the rules can check: the migration, then the rules | M | open | Any member can still credit a record to someone else; the app's half is done, the rules' half waits on records carrying `createdAt` |
 | medium | T133 | Notes on records as their own documents | M | open | A record's notes grow until Firestore's 1 MiB refuses every write to it |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
@@ -429,29 +429,28 @@ nothing changes on screen before the migration.
   fields, if wanted, in a later merge.
 - **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
-### T132 — Attribution and times stamped where the rules can check them
-**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-08
+### T132 — Attribution the rules can check: the migration, then the rules
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-09
 
-Who created or changed a record, and when, is built in the browser
-(`core/attribution/attribution.ts`) and no rule checks it: any member can
-credit a record to someone else, or rewrite who made it (F5). Times are stored
-three ways, two of them from the client's clock (F6).
+Who created or changed a record is still built in the browser and believed by
+the rules: any member can credit a record to someone else (F5). The app's half
+is done: every record write stamps `createdAt` / `modifiedAt` with the server's
+clock beside the old `dateAdded` / `dateModified` strings, readers take the
+server's times first (`core/attribution`, `recordTimes`), and names are the
+authors' current ones from the group's members (`useMemberDirectory`), the
+stored name kept for someone who has left.
 
-- **Rules**: on create, `createdBy` and `modifiedBy` equal `request.auth.uid`;
-  on update, `createdBy` and the creation time are unchanged and `modifiedBy`
-  is the caller. Times become server timestamps checked as `request.time`;
-  `YYYY-MM-DD` stays only where a calendar day is meant. `dateAdded` becomes
-  `createdAt` in the same rewrite
-  (`docs/architecture/migration/database-field-alignment.md`).
-- **Decided (maintainer, 2026-10-08): names are the author's current ones.**
-  Shown names are looked up from `createdBy` and `createdByCharacterId` (already
-  written), so renames carry through; the stored name stays only as the fallback
-  for an author who has left the group. One read of the group's profiles serves
-  every name on a page (at most 10 members, `groupManagement/groupLimits.ts`). `useCreatorName` and
-  `AttributionInfo` change with it.
-- **With T133**: both rewrite every record; one script, one pass.
-- **Deploy order**: the frontend that writes server timestamps ships before the
-  rule that requires them.
+- **Left**: the migration -- `createdAt` and `modifiedAt` from the old strings
+  on every existing record, one script with T133's, one pass -- then the rules:
+  on create, `createdBy` and `modifiedBy` equal `request.auth.uid` and
+  `createdAt` / `modifiedAt` equal `request.time`; on update, `createdBy` and
+  `createdAt` unchanged and `modifiedBy` / `modifiedAt` the caller and now.
+  Then a frontend that stops writing `dateAdded` / `dateModified`, and the
+  `dateAdded` → `createdAt` rename in `database-field-alignment.md` is done.
+- **Deploy order**: the rules only after the migration has run, in their own
+  merge; a record without `createdAt` is otherwise refused its next edit.
+- **Notes inside records** keep their own dates until T133 makes them
+  documents of their own.
 - **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
 
 ### T133 — Notes on records as their own documents

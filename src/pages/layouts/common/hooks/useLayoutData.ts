@@ -1,4 +1,5 @@
 // components/features/layouts/common/hooks/useLayoutData.ts
+import { recordTimes } from 'core/attribution';
 import { useMemo, useState, useEffect } from 'react';
 import type { Activity } from 'pages/layouts/common/types';
 import type { Chapter } from 'features/storytelling';
@@ -58,13 +59,9 @@ export const useLayoutData = ({
         return firstChapter.order - secondChapter.order;
       }
       
-      // Use dateModified if available, otherwise fall back to dateAdded
-      const firstDateString = firstChapter.dateModified || firstChapter.dateAdded;
-      const secondDateString = secondChapter.dateModified || secondChapter.dateAdded;
-      
-      // Convert string dates to numeric timestamps for comparison
-      const firstDate = firstDateString ? new Date(firstDateString).getTime() : 0;
-      const secondDate = secondDateString ? new Date(secondDateString).getTime() : 0;
+      // When each was last touched: the server's time, else the old string (T132).
+      const firstDate = recordTimes(firstChapter).modified?.getTime() ?? 0;
+      const secondDate = recordTimes(secondChapter).modified?.getTime() ?? 0;
       
       return firstDate - secondDate;
     });
@@ -91,8 +88,8 @@ export const useLayoutData = ({
         return firstPriority - secondPriority;
       }
       
-      const firstDate = firstRumor.dateAdded ? new Date(firstRumor.dateAdded).getTime() : 0;
-      const secondDate = secondRumor.dateAdded ? new Date(secondRumor.dateAdded).getTime() : 0;
+      const firstDate = recordTimes(firstRumor).created?.getTime() ?? 0;
+      const secondDate = recordTimes(secondRumor).created?.getTime() ?? 0;
       
       return secondDate - firstDate;
     });

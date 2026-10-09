@@ -28,6 +28,7 @@ jest.mock('firebase/auth', () => ({
 }));
 jest.mock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
 jest.mock('firebase/firestore', () => ({
+  serverTimestamp: () => 'SERVER_TIMESTAMP',
   getFirestore: jest.fn(() => ({})),
   initializeFirestore: jest.fn(() => ({})),
   memoryLocalCache: jest.fn(),
@@ -131,6 +132,7 @@ describe('EntityExtractionService', () => {
     }));
     jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
     jest.doMock('firebase/firestore', () => ({
+      serverTimestamp: () => 'SERVER_TIMESTAMP',
       getFirestore: jest.fn(() => ({})),
       initializeFirestore: jest.fn(() => ({})),
       memoryLocalCache: jest.fn(),
@@ -272,6 +274,7 @@ describe('EntityExtractionService', () => {
       jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
       jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),
@@ -479,6 +482,7 @@ describe('EntityExtractionService', () => {
       jest.doMock('firebase/app', () => ({ initializeApp: jest.fn(() => ({})) }));
       jest.doMock('firebase/analytics', () => ({ getAnalytics: jest.fn(() => ({})) }));
       jest.doMock('firebase/firestore', () => ({
+        serverTimestamp: () => 'SERVER_TIMESTAMP',
         getFirestore: jest.fn(() => ({})),
         initializeFirestore: jest.fn(() => ({})),
         memoryLocalCache: jest.fn(),

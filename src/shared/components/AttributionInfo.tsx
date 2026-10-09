@@ -1,115 +1,60 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Typography from 'core/components/Typography';
 import { Scroll, Edit } from 'lucide-react';
-import { determineAttributionActor, fetchAttributionUsernames } from '../utils/attribution-utils';
-import { useFirebase } from 'features/user-management';
-import firebaseServices from 'core/services/firebase';
+import { recordTimes } from 'core/attribution';
+import type { ContentAttribution } from 'core/types/common';
+import { useMemberDirectory } from '../hooks/useMemberDirectory';
+import { authorName, creatorRef, modifierRef } from '../utils/author-name';
 
 interface AttributionInfoProps {
   /** Complete item object containing attribution data */
-  item: {
-    // Basic attribution fields
-    createdByUsername?: string;
-    createdBy?: string;
-    dateAdded?: string;
-    modifiedByUsername?: string;
-    modifiedBy?: string;
-    dateModified?: string;
-    // Character-specific attribution fields
-    createdByCharacterId?: string | null;
-    createdByCharacterName?: string | null;
-    modifiedByCharacterId?: string | null;
-    modifiedByCharacterName?: string | null;
-  };
+  item: Partial<ContentAttribution>;
 }
 
+/** Creation stamps the editor too, at the same moment; within this it is one event. */
+const SAME_EVENT_MS = 1000;
+
 /**
- * Component that displays attribution information (creator and modifier)
- * Uses standardized attribution prioritization logic
+ * Who added a record and who last changed it, and when.
+ *
+ * Names are the authors' current ones (T132): the character they wrote as,
+ * else their username, looked up in the group's members -- so a renamed
+ * character is renamed here too. The name stored with the record is used
+ * only for someone who has left the group. Times are the server's where the
+ * record has them, else the strings every older record carries.
  */
-const AttributionInfo: React.FC<AttributionInfoProps> = ({
-  item
-}) => {
-  // Access Firebase context for current group
-  const { activeGroupId } = useFirebase();
-  
-  // State to store username/character mapping
-  const [usernameMap, setUsernameMap] = useState<Record<string, string>>({});
-  
-  // Fetch usernames when component mounts - only as fallback
-  useEffect(() => {
-    const loadUsernames = async () => {
-      if (!activeGroupId) return;
-      
-      // Only fetch usernames if we don't already have character names
-      const uidsToLookup: string[] = [];
-      
-      if (item.createdBy && !item.createdByUsername && !item.createdByCharacterName) {
-        uidsToLookup.push(item.createdBy);
-      }
-      
-      if (item.modifiedBy && !item.modifiedByUsername && !item.modifiedByCharacterName) {
-        uidsToLookup.push(item.modifiedBy);
-      }
-      
-      if (uidsToLookup.length > 0) {
-        try {
-          const userMapping = await fetchAttributionUsernames(
-            activeGroupId, 
-            uidsToLookup, 
-            firebaseServices
-          );
-          
-          setUsernameMap(userMapping);
-        } catch (err) {
-          console.error('Error fetching attribution usernames:', err);
-        }
-      }
-    };
-    
-    loadUsernames();
-  }, [item.createdBy, item.modifiedBy, activeGroupId, item.createdByUsername, item.createdByCharacterName, item.modifiedByUsername, item.modifiedByCharacterName]);
-  
-  // Get attribution actors using priority logic
-  const effectiveCreator = determineAttributionActor({
-    createdByUsername: item.createdByUsername,
-    createdBy: item.createdBy,
-    createdByCharacterName: item.createdByCharacterName
-  }, usernameMap);
-  
-  const effectiveModifier = determineAttributionActor({
-    modifiedByUsername: item.modifiedByUsername,
-    modifiedBy: item.modifiedBy,
-    modifiedByCharacterName: item.modifiedByCharacterName
-  }, usernameMap);
+const AttributionInfo: React.FC<AttributionInfoProps> = ({ item }) => {
+  const directory = useMemberDirectory();
+  const creator = authorName(creatorRef(item), directory);
+  const modifier = authorName(modifierRef(item), directory);
+  const { created, modified } = recordTimes(item);
+  const wasModified = Boolean(item.modifiedAt || item.dateModified);
 
-  // If no attribution information is available, don't render anything
-  if (!effectiveCreator && !effectiveModifier) return null;
+  if (!creator && !modifier) return null;
 
-  // Only show modifier info if it's different from creator or if modified later
-  const showModifiedInfo = effectiveModifier && 
-    item.dateModified && 
-    (effectiveModifier !== effectiveCreator || 
-    new Date(item.dateModified).getTime() > new Date(item.dateAdded || '').getTime() + 1000);
+  // Only a change by someone else, or a real while later, is worth a line.
+  const showModifiedInfo =
+    Boolean(modifier) &&
+    wasModified &&
+    modified !== null &&
+    (modifier !== creator || !created || modified.getTime() > created.getTime() + SAME_EVENT_MS);
 
   return (
     <div className="space-y-1">
-      {/* Creator attribution */}
-      {effectiveCreator && item.dateAdded && (
+      {creator && created && (
         <div className="flex items-center gap-2 mt-1">
           <Scroll size={14} className="typography-secondary" />
           <Typography variant="body-sm" color="secondary">
-            Added by {effectiveCreator} on {new Date(item.dateAdded).toLocaleDateString('en-uk')}
+            Added by {creator} on {created.toLocaleDateString('en-uk')}
           </Typography>
         </div>
       )}
 
-      {/* Modifier attribution */}
-      {showModifiedInfo && item.dateModified && (
+      {showModifiedInfo && modified && (
         <div className="flex items-center gap-2 mt-1">
           <Edit size={14} className="typography-secondary" />
           <Typography variant="body-sm" color="secondary">
-            Modified by {effectiveModifier} on {new Date(item.dateModified).toLocaleDateString('en-uk')}
+            Modified by {modifier} on {modified.toLocaleDateString('en-uk')}
           </Typography>
         </div>
       )}

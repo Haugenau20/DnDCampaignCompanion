@@ -1,8 +1,10 @@
 // src/features/storytelling/chapters/utils/chapter-order.ts
+import { recordTimes } from 'core/attribution';
 import type { Chapter } from '../types';
 
 /**
- * Reading order: by `order`, then the chapter written first, then the id
+ * Reading order: by `order`, then the chapter written first (by the server's
+ * time where it has one, else its old string; T132), then the id
  * (T088, DATA-007).
  *
  * Two chapters can share an `order`: every structural change decides from the
@@ -14,7 +16,7 @@ import type { Chapter } from '../types';
  */
 const compareChapters = (a: Chapter, b: Chapter): number =>
   a.order - b.order ||
-  String(a.dateAdded ?? '').localeCompare(String(b.dateAdded ?? '')) ||
+  (recordTimes(a).created?.getTime() ?? 0) - (recordTimes(b).created?.getTime() ?? 0) ||
   a.id.localeCompare(b.id);
 
 /**

@@ -20,8 +20,12 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import BaseFirebaseService from '../core/BaseFirebaseService';
-import { ContentAttribution } from '../../../types/common';
-import { buildCreationAttribution, buildModificationAttribution } from '../../../attribution';
+import {
+  buildCreationAttribution,
+  buildModificationAttribution,
+  creationTimes,
+  modificationTimes,
+} from '../../../attribution';
 import { DocumentAlreadyExistsError } from './DocumentAlreadyExistsError';
 import { createDocumentIfAbsent } from './createDocumentIfAbsent';
 import { assertTextFits } from './TextTooLongError';
@@ -132,11 +136,12 @@ class DocumentService extends BaseFirebaseService {
 
   /**
    * Get attribution metadata for document creation
-   * Includes the active character information at creation time
+   * Includes the active character information at creation time, and the
+   * server-clock `createdAt` and `modifiedAt` (T132)
    * @param groupId The group the document is written in
    * @returns Attribution metadata object
    */
-  private async getCreationAttribution(groupId: string): Promise<Partial<ContentAttribution>> {
+  private async getCreationAttribution(groupId: string): Promise<DocumentData> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
@@ -150,7 +155,10 @@ class DocumentService extends BaseFirebaseService {
         throw new Error('User profile not found');
       }
 
-      return buildCreationAttribution({ uid: userId, activeGroupUserProfile: userProfile });
+      return {
+        ...buildCreationAttribution({ uid: userId, activeGroupUserProfile: userProfile }),
+        ...creationTimes(),
+      };
     } catch (error) {
       console.error('Error getting attribution metadata:', error);
       throw error;
@@ -159,11 +167,12 @@ class DocumentService extends BaseFirebaseService {
   
   /**
    * Get attribution metadata for document modification
-   * Includes the active character information at modification time
+   * Includes the active character information at modification time, and the
+   * server-clock `modifiedAt` (T132)
    * @param groupId The group the document is written in
    * @returns Attribution metadata object
    */
-  private async getModificationAttribution(groupId: string): Promise<Partial<ContentAttribution>> {
+  private async getModificationAttribution(groupId: string): Promise<DocumentData> {
     const userId = this.getCurrentUser()?.uid;
     if (!userId) {
       throw new Error('Not authenticated');
@@ -177,7 +186,10 @@ class DocumentService extends BaseFirebaseService {
         throw new Error('User profile not found');
       }
 
-      return buildModificationAttribution({ uid: userId, activeGroupUserProfile: userProfile });
+      return {
+        ...buildModificationAttribution({ uid: userId, activeGroupUserProfile: userProfile }),
+        ...modificationTimes(),
+      };
     } catch (error) {
       console.error('Error getting modification attribution:', error);
       throw error;

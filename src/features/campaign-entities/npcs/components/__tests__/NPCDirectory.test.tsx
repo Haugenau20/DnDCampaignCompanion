@@ -4,7 +4,6 @@ import React from 'react';
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import NPCDirectory from '../NPCDirectory';
 import { NPC, NPCStatus, NPCRelationship } from 'features/campaign-entities/npcs/types';
-import { fetchAttributionUsernames } from 'shared/utils/attribution-utils';
 
 // ---------------------------------------------------------------------------
 // Mock all context dependencies used by NPCDirectory and the roster rows it renders
@@ -44,6 +43,14 @@ jest.mock('shared/utils/attribution-utils', () => ({
   fetchAttributionUsernames: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('core/services/firebase', () => ({ default: {} }));
+// T132: authors are credited by the names they have now, from the group's
+// members; with no directory (undefined), the stored names apply.
+let mockDirectory: Map<string, { username?: string; characters?: Array<{ id: string; name: string }> }> | undefined;
+jest.mock('shared/hooks/useMemberDirectory', () => ({
+  __esModule: true,
+  useMemberDirectory: () => mockDirectory,
+  default: () => mockDirectory,
+}));
 
 // ---------------------------------------------------------------------------
 // Hook setup helpers
@@ -130,6 +137,7 @@ const rolf = makeNPC({ id: 'npc-3', name: 'Rolf', location: 'Silverkeep', status
 
 describe('NPCDirectory', () => {
   beforeEach(() => {
+    mockDirectory = undefined;
     jest.clearAllMocks();
     mockLocations = [];
     setupMocks();
@@ -366,12 +374,25 @@ describe('NPCDirectory', () => {
     });
 
     test('looks the author up when the NPC stores no name for them', async () => {
-      (fetchAttributionUsernames as jest.Mock).mockResolvedValueOnce({ 'user-1': 'Wren' });
+      mockDirectory = new Map([['user-1', { username: 'Wren' }]]);
       const npc = makeNPC({ id: 'npc-l', name: 'Old Tam', createdByUsername: undefined });
       render(<NPCDirectory npcs={[npc]} />);
       fireEvent.click(screen.getByRole('button', { name: /Expand Old Tam/ }));
 
       expect(await screen.findByText('Wren')).toBeInTheDocument();
+    });
+
+    // T132: a renamed character is renamed on everything they recorded.
+    test("credits the character by the name it has now", () => {
+      mockDirectory = new Map([['user-1', { username: 'Wren', characters: [{ id: 'c-1', name: 'Ilse the Bold' }] }]]);
+      const npc = makeNPC({
+        id: 'npc-r', name: 'Tobiah', createdByCharacterId: 'c-1', createdByCharacterName: 'Ilse Varn',
+      });
+      render(<NPCDirectory npcs={[npc]} />);
+      fireEvent.click(screen.getByRole('button', { name: /Expand Tobiah/ }));
+
+      expect(screen.getByText('Ilse the Bold')).toBeInTheDocument();
+      expect(screen.queryByText('Ilse Varn')).not.toBeInTheDocument();
     });
 
     test('collapses again on a second activation', () => {

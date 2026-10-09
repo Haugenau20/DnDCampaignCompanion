@@ -1,100 +1,61 @@
 // src/shared/hooks/__tests__/useCreatorName.test.tsx
-import { renderHook, waitFor } from "@testing-library/react";
+//
+// T132 (maintainer, 2026-10-08): an author is credited by the name they have
+// now, looked up in the group's members; the name stored with the record is
+// the fallback for someone who has left. Rewritten from the version that
+// tested a per-uid profile fetch, which the member directory replaced.
+import { renderHook } from "@testing-library/react";
 import useCreatorName from "../useCreatorName";
 
-const mockGetProfile = jest.fn();
-
-jest.mock("features/user-management", () => ({
-  useFirebase: jest.fn(() => ({ activeGroupId: "group-1" })),
-}));
-
-jest.mock("core/services/firebase", () => ({
+let mockDirectory: Map<string, { username?: string; characters?: Array<{ id: string; name: string }> }> | undefined;
+jest.mock("../useMemberDirectory", () => ({
   __esModule: true,
-  default: {
-    user: { getCachedGroupUserProfile: (...args: unknown[]) => mockGetProfile(...args) },
-  },
+  useMemberDirectory: () => mockDirectory,
+  default: () => mockDirectory,
 }));
 
-const { useFirebase } = jest.requireMock("features/user-management");
+const name = (item: Parameters<typeof useCreatorName>[0]) => renderHook(() => useCreatorName(item)).result.current;
 
 describe("useCreatorName", () => {
   beforeEach(() => {
-    mockGetProfile.mockReset();
-    (useFirebase as jest.Mock).mockReturnValue({ activeGroupId: "group-1" });
+    mockDirectory = new Map([
+      ["uid-1", { username: "Wren", characters: [{ id: "c-1", name: "Ilse the Bold" }] }],
+      ["uid-2", { username: "Corvin" }],
+    ]);
   });
 
-  it("names the character who was active when the record was written, over the username", () => {
-    const { result } = renderHook(() =>
-      useCreatorName({
-        createdBy: "uid-1",
-        createdByUsername: "Wren",
-        createdByCharacterName: "Ilse Varn",
-      })
+  it("names the character the record was written as, by the name it has now", () => {
+    expect(name({ createdBy: "uid-1", createdByCharacterId: "c-1", createdByCharacterName: "Ilse Varn" })).toBe(
+      "Ilse the Bold"
     );
-    expect(result.current).toBe("Ilse Varn");
-    expect(mockGetProfile).not.toHaveBeenCalled();
   });
 
-  it("falls back to the stored username when no character was active", () => {
-    const { result } = renderHook(() =>
-      useCreatorName({ createdBy: "uid-1", createdByUsername: "Wren", createdByCharacterName: null })
+  it("names a member by their username now when no character was active", () => {
+    expect(name({ createdBy: "uid-2", createdByUsername: "Old Name", createdByCharacterName: null })).toBe("Corvin");
+  });
+
+  it("keeps the stored character name for a character since retired", () => {
+    expect(name({ createdBy: "uid-1", createdByCharacterId: "c-gone", createdByCharacterName: "Ilse Varn" })).toBe(
+      "Ilse Varn"
     );
-    expect(result.current).toBe("Wren");
-    expect(mockGetProfile).not.toHaveBeenCalled();
   });
 
-  it("looks the author up by uid when the record stores no name", async () => {
-    mockGetProfile.mockResolvedValue({ username: "Wren" });
-    const { result } = renderHook(() => useCreatorName({ createdBy: "uid-1" }));
+  it("credits someone who has left the group by the name stored with the record", () => {
+    expect(name({ createdBy: "uid-left", createdByUsername: "Mara" })).toBe("Mara");
+  });
 
-    await waitFor(() => expect(result.current).toBe("Wren"));
-    expect(mockGetProfile).toHaveBeenCalledWith("group-1", "uid-1");
+  it("uses the stored names while the directory loads", () => {
+    mockDirectory = undefined;
+    expect(name({ createdBy: "uid-1", createdByCharacterId: "c-1", createdByCharacterName: "Ilse Varn" })).toBe(
+      "Ilse Varn"
+    );
   });
 
   it("ignores who last edited the record: it credits the creator", () => {
-    const record = {
-      createdBy: "uid-1",
-      createdByUsername: "Wren",
-      modifiedBy: "uid-2",
-      modifiedByUsername: "Corvin",
-      modifiedByCharacterName: "Sable",
-    };
-    const { result } = renderHook(() => useCreatorName(record));
-    expect(result.current).toBe("Wren");
+    expect(name({ createdBy: "uid-2", modifiedBy: "uid-1", modifiedByCharacterName: "Ilse" } as never)).toBe("Corvin");
   });
 
   it("names nobody when nothing identifies the author", () => {
-    const { result } = renderHook(() => useCreatorName({}));
-    expect(result.current).toBe("");
-    expect(mockGetProfile).not.toHaveBeenCalled();
-  });
-
-  it("names nobody when the author's profile has no username", async () => {
-    mockGetProfile.mockResolvedValue({ username: "" });
-    const { result } = renderHook(() => useCreatorName({ createdBy: "uid-1" }));
-
-    await waitFor(() => expect(mockGetProfile).toHaveBeenCalled());
-    expect(result.current).toBe("");
-  });
-
-  it("does not look anyone up outside a group", () => {
-    (useFirebase as jest.Mock).mockReturnValue({ activeGroupId: null });
-    const { result } = renderHook(() => useCreatorName({ createdBy: "uid-1" }));
-    expect(result.current).toBe("");
-    expect(mockGetProfile).not.toHaveBeenCalled();
-  });
-
-  it("does not show one record's looked-up author on another", async () => {
-    mockGetProfile.mockImplementation(async (_group: string, uid: string) =>
-      uid === "uid-1" ? { username: "Wren" } : new Promise(() => {})
-    );
-    const { result, rerender } = renderHook(
-      ({ createdBy }) => useCreatorName({ createdBy }),
-      { initialProps: { createdBy: "uid-1" } }
-    );
-    await waitFor(() => expect(result.current).toBe("Wren"));
-
-    rerender({ createdBy: "uid-2" });
-    expect(result.current).toBe("");
+    expect(name({})).toBe("");
   });
 });
