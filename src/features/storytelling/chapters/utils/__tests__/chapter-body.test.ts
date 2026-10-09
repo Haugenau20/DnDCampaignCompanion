@@ -1,8 +1,8 @@
 // src/features/storytelling/chapters/utils/__tests__/chapter-body.test.ts
 //
 // T134: a chapter's text is a document of its own, `chapters/{id}/body/text`.
-// While the chapter still holds its own copy -- written before, or by a browser
-// on the app before T134 -- that copy is the newest and wins.
+// The copy chapters before kept on themselves was moved there in production,
+// and text left on a chapter is read by nothing.
 import { act, renderHook } from '@testing-library/react';
 import {
   bodyDelete,
@@ -63,22 +63,17 @@ describe('the writes', () => {
 });
 
 describe('contentLengthOf', () => {
-  it("is the chapter's own text's length while it has one, else the length it stores", () => {
-    expect(contentLengthOf(chapter({ content: 'abc', contentLength: 99 }))).toBe(3);
+  it("is the length the chapter stores, whatever text is left on it", () => {
+    expect(contentLengthOf(chapter({ content: 'abc', contentLength: 99 }))).toBe(99);
     expect(contentLengthOf(chapter({ content: null, contentLength: 99 }))).toBe(99);
     expect(contentLengthOf(chapter())).toBe(0);
   });
 });
 
 describe('readChapterContent', () => {
-  it("reads the chapter's own copy without a round trip", async () => {
-    await expect(readChapterContent(CHAPTERS, chapter({ content: 'Old text' }))).resolves.toBe('Old text');
-    expect(mockGetCollectionFromServer).not.toHaveBeenCalled();
-  });
-
-  it('reads the body from the server otherwise', async () => {
+  it('reads the body from the server, not text left on the chapter', async () => {
     mockGetCollectionFromServer.mockResolvedValue([{ id: 'text', content: 'Speak friend' }]);
-    await expect(readChapterContent(CHAPTERS, chapter({ content: null }))).resolves.toBe('Speak friend');
+    await expect(readChapterContent(CHAPTERS, chapter({ content: 'Old text' }))).resolves.toBe('Speak friend');
     expect(mockGetCollectionFromServer).toHaveBeenCalledWith(`${CHAPTERS}/ch-1/body`);
   });
 
@@ -109,10 +104,11 @@ describe('useChapterContent', () => {
     expect(result.current).toBe('');
   });
 
-  it("takes the chapter's own copy, newer than any body, and reads no body", () => {
+  it("reads the body, not text left on the chapter", () => {
     const { result } = renderHook(() => useChapterContent(chapter({ content: 'Written by an older browser' })));
-    expect(result.current).toBe('Written by an older browser');
-    expect(mockListeners).toEqual([]);
+    expect(mockListeners).toHaveLength(1);
+    act(() => mockListeners[0].onNext([{ id: 'text', content: 'Speak friend' }]));
+    expect(result.current).toBe('Speak friend');
   });
 
   it("never shows another chapter's text, or another campaign's, while the next one loads", () => {

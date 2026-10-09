@@ -33,7 +33,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T131 | Links: a rule refusing the old halves | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
 | low | T133 | Notes: a rule refusing notes in a record's array | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
-| low | T134 | The saga in sections; run the chapter migration | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
+| low | T134 | The saga in sections | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
 | low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
@@ -464,26 +464,22 @@ client writing notes into the array again, where nothing would show them.
   a rumour. Existing records hold empty ones.
 - **Source**: `data-model-review.md` change 5 (F3)
 
-### T134 — The saga in sections; run the chapter migration
+### T134 — The saga in sections
 **Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
 
 A chapter's text is a document of its own, `chapters/{id}/body/text`, read
 where the chapter is opened (`features/storytelling/chapters/utils/chapter-body.ts`);
 the chapter keeps its title, place, summary and `contentLength`, and search
-reads the summary. A chapter written before keeps its text on the chapter,
-which the app reads and moves on its next save. The saga is still one
-document (`saga/sagaData`) that will reach 1 MiB (F3).
+reads the summary. Production's chapters were migrated, and the app reads
+only the body. The saga is still one document (`saga/sagaData`) that will
+reach 1 MiB (F3).
 
 - **Blocked on the maintainer -- the saga**: it becomes sections, as chapters
   already are, but how a player writes a sectioned saga is a design question:
   one editor per section, or one editor that splits on headings, and what the
   saga page shows while it reads them.
-- **Blocked on the maintainer -- the chapters**: `scripts/migrate-records.js`
-  moves the text in the same pass as T132's times and T133's notes, once the
-  frontend that reads both is live. **Then** a frontend that reads only the
-  body (drop `ownContentOf`), and the sample-data generators, which still
-  write `content` on the chapter, rewritten. A rule refusing text on a
-  chapter, in a later merge.
+- **The chapters' rule**, once the frontend that reads only the body is live:
+  refuse text in a chapter's `content` (saving sets it to `null`).
 - **Source**: `data-model-review.md` change 4
 
 ### T135 — The index file matches production

@@ -11,10 +11,11 @@ import type { Chapter } from '../types';
  * index. The chapter keeps its title, place and summary, and `contentLength`
  * for the shelf; the text is read where a chapter is opened.
  *
- * A chapter written before -- or saved by a browser still on the app before
- * T134 -- holds its text as `content`, and that copy wins while it is there:
- * saving the text to its own document sets the chapter's to `null`, so text
- * on the chapter is always the newest. `scripts/migrate-records.js` moves it.
+ * Chapters written before held their text as `content`;
+ * `scripts/migrate-records.js` moved it into the body in production, and the
+ * app reads only the body now. Saving the text still sets the chapter's
+ * `content` to `null`, so text a browser on the app from before T134 left
+ * there does not outlive the next save.
  */
 
 /** The body document's id, under the chapter's `body` collection. */
@@ -24,13 +25,8 @@ export const CHAPTER_BODY_ID = 'text';
 export const chapterBodyPathOf = (chaptersPath: string, chapterId: string): string =>
   `${chaptersPath}/${chapterId}/body`;
 
-/** The text stored on the chapter itself, if any (see above). */
-export const ownContentOf = (chapter: Pick<Chapter, 'content'>): string | undefined =>
-  typeof chapter.content === 'string' ? chapter.content : undefined;
-
 /** How long a chapter's text is, without reading it. */
-export const contentLengthOf = (chapter: Pick<Chapter, 'content' | 'contentLength'>): number =>
-  ownContentOf(chapter)?.length ?? chapter.contentLength ?? 0;
+export const contentLengthOf = (chapter: Pick<Chapter, 'contentLength'>): number => chapter.contentLength ?? 0;
 
 /**
  * A chapter's text, read from the server: for something that needs every
@@ -40,9 +36,7 @@ export const contentLengthOf = (chapter: Pick<Chapter, 'content' | 'contentLengt
  * @param chapter The chapter
  * @throws when the body cannot be read
  */
-export async function readChapterContent(chaptersPath: string, chapter: Chapter): Promise<string> {
-  const own = ownContentOf(chapter);
-  if (own !== undefined) return own;
+export async function readChapterContent(chaptersPath: string, chapter: Pick<Chapter, 'id'>): Promise<string> {
   const bodies = await firebaseServices.document.getCollectionFromServer<{ content?: string }>(
     chapterBodyPathOf(chaptersPath, chapter.id)
   );
