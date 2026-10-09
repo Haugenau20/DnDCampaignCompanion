@@ -25,12 +25,15 @@ test("an old note and a new one show together, and each is changed where it live
   await notes.getByRole("button", { name: `Edit the note from ${today}` }).click();
   await notes.getByLabel(`Note from ${today}`).fill("Wants it back by the new moon");
   await notes.getByRole("button", { name: "Save note" }).click();
+  // The editor closes once the save has landed; going on sooner would race it.
+  await expect(notes.getByRole("textbox", { name: `Note from ${today}` })).toHaveCount(0);
   await expect(notes.getByText("Wants it back by the new moon")).toBeVisible();
 
   // The old one, in the array: edited through the record.
   await notes.getByRole("button", { name: "Edit the note from 20/09/2026" }).click();
   await notes.getByLabel("Note from 20/09/2026").fill("Sold us a leaky boat, twice");
   await notes.getByRole("button", { name: "Save note" }).click();
+  await expect(notes.getByRole("textbox", { name: "Note from 20/09/2026" })).toHaveCount(0);
   await expect(notes.getByText("Sold us a leaky boat, twice")).toBeVisible();
 
   await page.reload();

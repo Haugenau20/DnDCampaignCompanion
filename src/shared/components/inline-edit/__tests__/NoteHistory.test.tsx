@@ -99,6 +99,25 @@ describe("NoteHistory", () => {
       expect(onSaved).toHaveBeenCalled();
     });
 
+    // Found in the T133 browser journey: a save landing after the player had
+    // opened another note's editor closed that one too.
+    it("leaves another note's editor open when a save lands after it was opened", async () => {
+      let land: () => void = () => undefined;
+      const onEdit = jest.fn(() => new Promise<void>((resolve) => { land = resolve; }));
+      renderHistory({ onEdit });
+      fireEvent.click(screen.getAllByRole("button", { name: /^Edit the note from / })[1]);
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "Rode to Orthanc." } });
+      fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+      await waitFor(() => expect(onEdit).toHaveBeenCalled());
+
+      fireEvent.click(screen.getByRole("button", { name: /^Edit the note from 02\/04\/2025/ }));
+      expect(screen.getByRole("textbox")).toHaveValue("An older note, no author recorded.");
+
+      land();
+      await waitFor(() => expect(onEdit.mock.results[0].value).resolves.toBeUndefined());
+      expect(screen.getByRole("textbox")).toHaveValue("An older note, no author recorded.");
+    });
+
     it("returns focus to the row's Edit button when the editor closes", async () => {
       renderHistory();
       fireEvent.click(screen.getAllByRole("button", { name: /^Edit the note from / })[0]);
