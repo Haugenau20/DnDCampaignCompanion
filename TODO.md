@@ -31,8 +31,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
 | low | T132 | Stop writing `dateAdded` / `dateModified` | M | open | The rules check the server's times now; the old strings are only clutter, and a browser before T132 still reads them |
-| low | T131 | Links: a rule refusing the old halves | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
-| low | T133 | Notes: a rule refusing notes in a record's array | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
 | low | T134 | The saga in sections | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
 | low | T135 | The index file matches production | S | blocked | Waits on the maintainer reading production's indexes; cheap once they have |
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
@@ -385,7 +383,7 @@ anyway. What is left:
 - **Source**: todo.txt, 2026-10-06; the site, sign-in, mail, redirect and repo
   moved 2026-10-07
 
-### Restructuring Firestore before the site scales (T131 to T136)
+### Restructuring Firestore before the site scales (T132 to T136)
 
 Decided by the maintainer on 2026-10-08: **R2**, Firestore restructured; the
 site stays on Firebase. Why, and the routes set aside, are in
@@ -403,23 +401,6 @@ field that moves or is renamed ships in steps: the frontend reads both shapes;
 the script rewrites; a later frontend drops the old shape; only then, in its own
 merge, a rule refuses it. The review's read-only production checks (campaign
 sizes, how often a link's two halves disagree) go into each change's audit.
-
-### T131 — Links: a rule refusing the old halves
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
-
-Every link has one owner field (`features/campaign-entities/shared/links.ts`
-has the table). Production was migrated, and the app neither reads nor writes
-the old second halves -- `NPC.connections.relatedQuests`, `NPC.locationId`,
-`Location.relatedQuests` -- except that a person's `locationId` naming a
-deleted place is still shown as one (#1412). Nothing stops a client writing
-them again.
-
-- **Blocked**: until the frontend that stops writing them is live; the one
-  before it still clears them and writes `relatedQuests: []` on a new record.
-- **Then**: rules refusing a non-empty value, or a change to one, in any of
-  the three; existing records keep theirs (empty lists, and the dangling
-  ids). Whether it is worth a rule is the maintainer's call.
-- **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
 ### T132 — Stop writing `dateAdded` / `dateModified`
 **Type** debt · **Size** M · **Status** open · **Verified** 2026-10-09
@@ -439,37 +420,20 @@ them every write still sets the old client-clock strings `dateAdded` /
   it a while after the reading frontend.
 - **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
 
-### T133 — Notes: a rule refusing notes in a record's array
-**Type** debt · **Size** S · **Status** blocked · **Verified** 2026-10-09
-
-A person's, a place's and a rumour's notes are documents of their own,
-`{record}/{id}/notes/{noteId}`, each capped by the rules on its own
-(`features/campaign-entities/shared/recordNotes.ts`). Production's arrays were
-moved into them, and the app reads only the documents; a new record still
-writes `notes: []`, for a browser on the app from before. Nothing stops a
-client writing notes into the array again, where nothing would show them.
-
-- **Blocked**: until the frontend that reads only the documents is live.
-- **Then**: a rule refusing a non-empty `notes` array on a person, a place or
-  a rumour. Existing records hold empty ones.
-- **Source**: `data-model-review.md` change 5 (F3)
-
 ### T134 — The saga in sections
 **Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
 
 A chapter's text is a document of its own, `chapters/{id}/body/text`, read
 where the chapter is opened (`features/storytelling/chapters/utils/chapter-body.ts`);
 the chapter keeps its title, place, summary and `contentLength`, and search
-reads the summary. Production's chapters were migrated, and the app reads
-only the body. The saga is still one document (`saga/sagaData`) that will
+reads the summary. Production's chapters were migrated, the app reads only
+the body, and the rules refuse text on the chapter. The saga is still one document (`saga/sagaData`) that will
 reach 1 MiB (F3).
 
 - **Blocked on the maintainer -- the saga**: it becomes sections, as chapters
   already are, but how a player writes a sectioned saga is a design question:
   one editor per section, or one editor that splits on headings, and what the
   saga page shows while it reads them.
-- **The chapters' rule**, once the frontend that reads only the body is live:
-  refuse text in a chapter's `content` (saving sets it to `null`).
 - **Source**: `data-model-review.md` change 4
 
 ### T135 — The index file matches production

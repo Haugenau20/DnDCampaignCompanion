@@ -520,6 +520,39 @@ service cloud.firestore {
       return entityCollection == 'chapters' && changedKeys().hasOnly(['order']);
     }
 
+    // Whether `field` is left as it was, or emptied: removed, `null`, `''` or
+    // `[]`. For the fields below, which nothing reads any more.
+    function keptOrEmptied(changed, field) {
+      let value = request.resource.data.get(field, null);
+      return !changed.hasAny([field]) || value == null || value == '' ||
+             (value is list && value.size() == 0);
+    }
+
+    // A person's old list of quests, inside `connections`: as it was, or empty.
+    function keepsOldQuestList() {
+      let after = request.resource.data.get('connections', {}).get('relatedQuests', []);
+      let before = resource == null ? [] : resource.data.get('connections', {}).get('relatedQuests', []);
+      return after == before || after == null || (after is list && after.size() == 0);
+    }
+
+    // The shapes records were moved out of, which nothing reads now: the old
+    // second half of a link (T131) -- a person's `locationId` and quest list,
+    // a place's quest list -- a record's notes array (T133), a chapter's own
+    // text (T134). Production was migrated; a value written there now, by a
+    // browser still on the app from before, would vanish from every page, so
+    // it is refused instead. The app writes them empty, and a value left as
+    // it was stays: a person's `locationId` naming a place since deleted.
+    function leavesOldShapesEmpty(entityCollection) {
+      let changed = changedKeys();
+      return (entityCollection != 'npcs' || (
+               keptOrEmptied(changed, 'locationId') && keptOrEmptied(changed, 'notes') &&
+               keepsOldQuestList())) &&
+             (entityCollection != 'locations' || (
+               keptOrEmptied(changed, 'relatedQuests') && keptOrEmptied(changed, 'notes'))) &&
+             (entityCollection != 'rumors' || keptOrEmptied(changed, 'notes')) &&
+             (entityCollection != 'chapters' || keptOrEmptied(changed, 'content'));
+    }
+
     // A campaign's or a group's name and description (T119), as `createGroup`
     // checks them for a new group.
     function namedTextFits() {
@@ -760,6 +793,7 @@ service cloud.firestore {
           // Only into a campaign that takes writes (T037, DATA-010).
           allow create: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
                          textFits(entityCollection) && stampsCreation() &&
+                         leavesOldShapesEmpty(entityCollection) &&
                          isGroupMember(groupId) && imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
                          locationFenceHolds(groupId, campaignId, entityCollection);
@@ -770,6 +804,7 @@ service cloud.firestore {
           allow update: if isRecordType(entityCollection) && keepsItsName(entityCollection) &&
                          textFits(entityCollection) &&
                          (stampsModification() || onlyRenumbersChapter(entityCollection)) &&
+                         leavesOldShapesEmpty(entityCollection) &&
                          isGroupMember(groupId) &&
                          imageLeased(groupId, 'image') &&
                          campaignOpen(groupId, campaignId) &&
