@@ -19,7 +19,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T132 | Attribution the rules can check: run the migration, then the rules | M | blocked | Any member can still credit a record to someone else; the rules wait on the maintainer running `migrate-records.js` |
 | medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
@@ -31,6 +30,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
 | low | T118 | Finish the move to `muninn.quest` | S | open | Everything runs on `muninn.quest`; left: Google's branding check, and two cosmetic leftovers |
+| low | T132 | Stop writing `dateAdded` / `dateModified` | M | open | The rules check the server's times now; the old strings are only clutter, and a browser before T132 still reads them |
 | low | T131 | Links: a rule refusing the old halves | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
 | low | T133 | Notes: a rule refusing notes in a record's array | S | blocked | Nothing writes them now; a rule only stops a client starting again, once this frontend is live |
 | low | T134 | The saga in sections | M | blocked | The saga is one document that will hit 1 MiB; how a sectioned saga is edited is the maintainer's call |
@@ -421,32 +421,22 @@ them again.
   ids). Whether it is worth a rule is the maintainer's call.
 - **Source**: `data-model-review.md` change 1 (F1); answered 2026-10-08
 
-### T132 — Attribution the rules can check: run the migration, then the rules
-**Type** debt · **Size** M · **Status** blocked · **Verified** 2026-10-09
+### T132 — Stop writing `dateAdded` / `dateModified`
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-09
 
-Who created or changed a record is still built in the browser and believed by
-the rules: any member can credit a record to someone else (F5). The app's half
-is done: every record write stamps `createdAt` / `modifiedAt` with the server's
-clock beside the old `dateAdded` / `dateModified` strings, readers take the
-server's times first (`core/attribution`, `recordTimes`), and names are the
-authors' current ones from the group's members (`useMemberDirectory`), the
-stored name kept for someone who has left.
+Every record and note write stamps `createdAt` / `modifiedAt` with the
+server's clock, and the rules check them and the writer's id
+(`stampsCreation`, `stampsModification` in `firestore.rules.prod`). Beside
+them every write still sets the old client-clock strings `dateAdded` /
+`dateModified`, which readers fall back to where a record has no server time
+(`core/attribution`, `recordTimes`).
 
-- **Blocked on the maintainer**: `firebase/functions/scripts/migrate-records.js`,
-  which gives every existing record `createdAt` and `modifiedAt` from the old
-  strings (else the document's creation) in the same pass as T133's notes;
-  first read-only, then `--apply --revert-file <file>` (its header has the
-  steps).
-- **Then** the rules:
-  on create, `createdBy` and `modifiedBy` equal `request.auth.uid` and
-  `createdAt` / `modifiedAt` equal `request.time`; on update, `createdBy` and
-  `createdAt` unchanged and `modifiedBy` / `modifiedAt` the caller and now.
-  Then a frontend that stops writing `dateAdded` / `dateModified`, and the
-  `dateAdded` → `createdAt` rename in `database-field-alignment.md` is done.
-- **Deploy order**: the rules only after the migration has run, in their own
-  merge; a record without `createdAt` is otherwise refused its next edit.
-- **Notes**, documents of their own now, carry the same times as any
-  document; the rules for them come with the records'.
+- **Change**: a frontend that writes the strings no more and reads only the
+  server's times, which completes the `dateAdded` → `createdAt` rename in
+  `database-field-alignment.md`. Records written before T132 have both, from
+  `migrate-records.js`.
+- **Catch**: a browser on an app from before T132 reads only the strings; ship
+  it a while after the reading frontend.
 - **Source**: `data-model-review.md` change 3 (F5, F6); answered 2026-10-08
 
 ### T133 — Notes: a rule refusing notes in a record's array

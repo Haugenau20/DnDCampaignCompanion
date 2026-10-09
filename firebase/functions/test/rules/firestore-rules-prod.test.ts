@@ -69,6 +69,13 @@ beforeEach(async () => {
 
 const as = (uid: string) => env.authenticatedContext(uid).firestore();
 
+/** The server's time of the write, as the app stamps it. */
+const now = () => firebase.firestore.FieldValue.serverTimestamp();
+/** A new record's or note's attribution, as the app's writes stamp it (T132). */
+const created = (uid: string) => ({createdBy: uid, modifiedBy: uid, createdAt: now(), modifiedAt: now()});
+/** An edit's attribution (T132). */
+const modified = (uid: string) => ({modifiedBy: uid, modifiedAt: now()});
+
 describe("joining a group (T052)", () => {
   it("control: a stranger cannot read a group's campaigns", async () => {
     await assertFails(as("sauron").doc(`groups/${G}/campaigns/c1/npcs/n1`).get());
@@ -330,7 +337,7 @@ describe("roles (T034)", () => {
 describe("what members still do from the client", () => {
   it("a member reads the group's campaigns and writes an NPC", async () => {
     await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n1`).get());
-    await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam"}));
+    await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam", ...created("frodo")}));
   });
 
   it("a member updates lastLogin, activeGroupId and preferences on their profile", async () => {
@@ -567,11 +574,11 @@ describe("an image path needs its upload's live entry (T084)", () => {
 
   it("a member points an NPC at a file whose upload is recorded", async () => {
     await assertSucceeds(record("frodo", npcFile()));
-    await assertSucceeds(as("frodo").doc(NPC).update({image: image(npcFile())}));
+    await assertSucceeds(as("frodo").doc(NPC).update({image: image(npcFile()), ...modified("frodo")}));
   });
 
   it("cannot point it at a file with no entry", async () => {
-    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile())}));
+    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile()), ...modified("frodo")}));
   });
 
   it("nor once the entry's lease is over, when the sweep may have deleted the file", async () => {
@@ -582,24 +589,24 @@ describe("an image path needs its upload's live entry (T084)", () => {
         createdAt: new Date(Date.now() - LEASE_MS - 60_000),
       });
     });
-    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile())}));
+    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile()), ...modified("frodo")}));
   });
 
   it("nor at a file other than the one the entry names", async () => {
     await assertSucceeds(record("frodo", `groups/${G}/crest/${ID}`));
-    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile())}));
+    await assertFails(as("frodo").doc(NPC).update({image: image(npcFile()), ...modified("frodo")}));
   });
 
   it("nor put back a picture that has since been replaced, whose entry is gone", async () => {
     await env.withSecurityRulesDisabled(async (context) => {
       await context.firestore().doc(NPC).update({image: image(npcFile())});
     });
-    await assertFails(as("frodo").doc(NPC).set({name: "Bilbo", image: image(OLD)}));
+    await assertFails(as("frodo").doc(NPC).set({name: "Bilbo", image: image(OLD), ...modified("frodo")}));
   });
 
   it("an edit that leaves the picture alone needs no entry, patch or whole record", async () => {
-    await assertSucceeds(as("frodo").doc(NPC).update({name: "Bilbo Baggins"}));
-    await assertSucceeds(as("frodo").doc(NPC).set({name: "Mr Baggins", image: image(OLD)}));
+    await assertSucceeds(as("frodo").doc(NPC).update({name: "Bilbo Baggins", ...modified("frodo")}));
+    await assertSucceeds(as("frodo").doc(NPC).set({name: "Mr Baggins", image: image(OLD), ...modified("frodo")}));
   });
 
   it("so does one on a legacy picture with no path", async () => {
@@ -607,23 +614,23 @@ describe("an image path needs its upload's live entry (T084)", () => {
     await env.withSecurityRulesDisabled(async (context) => {
       await context.firestore().doc(NPC).set({name: "Bilbo", image: legacy});
     });
-    await assertSucceeds(as("frodo").doc(NPC).set({name: "Mr Baggins", image: legacy}));
+    await assertSucceeds(as("frodo").doc(NPC).set({name: "Mr Baggins", image: legacy, ...modified("frodo")}));
   });
 
   it("removing the picture needs no entry", async () => {
-    await assertSucceeds(as("frodo").doc(NPC).update({image: null}));
+    await assertSucceeds(as("frodo").doc(NPC).update({image: null, ...modified("frodo")}));
     await env.withSecurityRulesDisabled(async (context) => {
       await context.firestore().doc(NPC).update({image: image(OLD)});
     });
-    await assertSucceeds(as("frodo").doc(NPC).update({image: firebase.firestore.FieldValue.delete()}));
+    await assertSucceeds(as("frodo").doc(NPC).update({image: firebase.firestore.FieldValue.delete(), ...modified("frodo")}));
   });
 
   it("holds for a location, created or updated", async () => {
     const place = `groups/${G}/campaigns/c1/locations/l1`;
     const file = `${place}/${ID}`;
-    await assertFails(as("frodo").doc(place).set({name: "Bag End", image: image(file)}));
+    await assertFails(as("frodo").doc(place).set({name: "Bag End", image: image(file), ...created("frodo")}));
     await assertSucceeds(record("frodo", file));
-    await assertSucceeds(as("frodo").doc(place).set({name: "Bag End", image: image(file)}));
+    await assertSucceeds(as("frodo").doc(place).set({name: "Bag End", image: image(file), ...created("frodo")}));
   });
 
   it("holds for a campaign's banner", async () => {
@@ -695,11 +702,11 @@ describe("turning rumours into a quest is one transaction (T088)", () => {
       const quest = db.doc(`${C}/quests/find-the-fire`);
       if ((await transaction.get(quest)).exists) throw new Error("taken");
       const rumours = await Promise.all(rumourIds.map((id) => transaction.get(db.doc(`${C}/rumors/${id}`))));
-      transaction.set(quest, {title: "Find the fire", createdBy: uid});
+      transaction.set(quest, {title: "Find the fire", ...created(uid)});
       rumours.forEach((rumour) => transaction.update(rumour.ref, {
         convertedToQuestId: "find-the-fire",
         notes: [...rumour.data()!.notes, {id: `converted-${rumour.id}`, content: "Converted to quest: find-the-fire"}],
-        modifiedBy: uid,
+        ...modified(uid),
       }));
     });
   };
@@ -760,8 +767,8 @@ describe("a campaign being deleted takes no writes (T037)", () => {
     await assertSucceeds(db.doc(NOTE).set(note));
     await assertSucceeds(db.doc(NOTE).update({content: "Strider"}));
     await assertSucceeds(db.doc(PROGRESS).set(place));
-    await assertSucceeds(db.doc(NPC).update({name: "Bilbo Baggins"}));
-    await assertSucceeds(db.doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam"}));
+    await assertSucceeds(db.doc(NPC).update({name: "Bilbo Baggins", ...modified("frodo")}));
+    await assertSucceeds(db.doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam", ...created("frodo")}));
   });
 
   describe.each([
@@ -784,8 +791,8 @@ describe("a campaign being deleted takes no writes (T037)", () => {
     });
 
     it("refuses new content and edits", async () => {
-      await assertFails(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam"}));
-      await assertFails(as("frodo").doc(NPC).update({name: "Bilbo Baggins"}));
+      await assertFails(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n2`).set({name: "Sam", ...created("frodo")}));
+      await assertFails(as("frodo").doc(NPC).update({name: "Bilbo Baggins", ...modified("frodo")}));
     });
 
     it("still lets the owner delete their note and progress, and a member delete content", async () => {
@@ -815,7 +822,7 @@ describe("a campaign being deleted takes no writes (T037)", () => {
     await markDeleting();
     await assertSucceeds(as("frodo").doc(`groups/${G}/users/frodo/notes/n3`)
       .set({...note, campaignId: "c2"}));
-    await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c2/npcs/n3`).set({name: "Eowyn"}));
+    await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c2/npcs/n3`).set({name: "Eowyn", ...created("frodo")}));
   });
 
   it("refuses a note that names no campaign", async () => {
@@ -868,40 +875,40 @@ describe("a location being deleted takes no new places (T088)", () => {
 
   it("control: an unmarked place takes a new place, a moved one and an edit", async () => {
     const db = as("frodo");
-    await assertSucceeds(db.doc(`${LOC}/fountain`).set(place("Fountain", "gondolin")));
-    await assertSucceeds(db.doc(`${LOC}/doriath`).update({parentId: "gondolin"}));
-    await assertSucceeds(db.doc(`${LOC}/gondolin`).update({name: "Ondolindë"}));
+    await assertSucceeds(db.doc(`${LOC}/fountain`).set({...place("Fountain", "gondolin"), ...created("frodo")}));
+    await assertSucceeds(db.doc(`${LOC}/doriath`).update({parentId: "gondolin", ...modified("frodo")}));
+    await assertSucceeds(db.doc(`${LOC}/gondolin`).update({name: "Ondolindë", ...modified("frodo")}));
   });
 
   it("lets a member mark a place, with either way of deleting it", async () => {
-    await assertSucceeds(as("frodo").doc(`${LOC}/gondolin`).update({deleting: "delete-subtree"}));
-    await assertSucceeds(as("frodo").doc(`${LOC}/doriath`).update({deleting: "promote-to-grandparent"}));
+    await assertSucceeds(as("frodo").doc(`${LOC}/gondolin`).update({deleting: "delete-subtree", ...modified("frodo")}));
+    await assertSucceeds(as("frodo").doc(`${LOC}/doriath`).update({deleting: "promote-to-grandparent", ...modified("frodo")}));
   });
 
   it("refuses any other mark, and a place created marked", async () => {
-    await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({deleting: true}));
-    await assertFails(as("frodo").doc(`${LOC}/fountain`).set({...place("Fountain"), deleting: "delete-subtree"}));
+    await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({deleting: true, ...modified("frodo")}));
+    await assertFails(as("frodo").doc(`${LOC}/fountain`).set({...place("Fountain"), deleting: "delete-subtree", ...created("frodo")}));
   });
 
   describe("once marked", () => {
     beforeEach(mark);
 
     it("refuses a new place inside it", async () => {
-      await assertFails(as("frodo").doc(`${LOC}/fountain`).set(place("Fountain", "gondolin")));
+      await assertFails(as("frodo").doc(`${LOC}/fountain`).set({...place("Fountain", "gondolin"), ...created("frodo")}));
     });
 
     it("refuses a place moved into it", async () => {
-      await assertFails(as("frodo").doc(`${LOC}/doriath`).update({parentId: "gondolin"}));
+      await assertFails(as("frodo").doc(`${LOC}/doriath`).update({parentId: "gondolin", ...modified("frodo")}));
     });
 
     it("refuses an edit to it, and clearing the mark", async () => {
-      await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({name: "Ondolindë"}));
-      await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({deleting: firebase.firestore.FieldValue.delete()}));
+      await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({name: "Ondolindë", ...modified("frodo")}));
+      await assertFails(as("frodo").doc(`${LOC}/gondolin`).update({deleting: firebase.firestore.FieldValue.delete(), ...modified("frodo")}));
     });
 
     it("still lets a place inside it move out, and edits to it, so its children can be kept", async () => {
-      await assertSucceeds(as("frodo").doc(`${LOC}/kings-square`).update({name: "Square of the King"}));
-      await assertSucceeds(as("frodo").doc(`${LOC}/kings-square`).update({parentId: "beleriand"}));
+      await assertSucceeds(as("frodo").doc(`${LOC}/kings-square`).update({name: "Square of the King", ...modified("frodo")}));
+      await assertSucceeds(as("frodo").doc(`${LOC}/kings-square`).update({parentId: "beleriand", ...modified("frodo")}));
     });
 
     it("still lets it be deleted", async () => {
@@ -909,8 +916,8 @@ describe("a location being deleted takes no new places (T088)", () => {
     });
 
     it("leaves other places, and other kinds of record, alone", async () => {
-      await assertSucceeds(as("frodo").doc(`${LOC}/fountain`).set(place("Fountain", "doriath")));
-      await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n1`).update({name: "Bilbo Baggins"}));
+      await assertSucceeds(as("frodo").doc(`${LOC}/fountain`).set({...place("Fountain", "doriath"), ...created("frodo")}));
+      await assertSucceeds(as("frodo").doc(`groups/${G}/campaigns/c1/npcs/n1`).update({name: "Bilbo Baggins", ...modified("frodo")}));
     });
   });
 });
@@ -923,13 +930,13 @@ describe("a campaign holds the app's records, each with its name (T119)", () => 
 
   it("control: each kind of record is created the way the app creates it", async () => {
     const db = as("frodo");
-    await assertSucceeds(db.doc(`${C}/npcs/sam`).set({name: "Sam"}));
-    await assertSucceeds(db.doc(`${C}/locations/bree`).set({name: "Bree", parentId: ""}));
-    await assertSucceeds(db.doc(`${C}/quests/the-ring`).set({title: "Destroy the ring"}));
+    await assertSucceeds(db.doc(`${C}/npcs/sam`).set({name: "Sam", ...created("frodo")}));
+    await assertSucceeds(db.doc(`${C}/locations/bree`).set({name: "Bree", parentId: "", ...created("frodo")}));
+    await assertSucceeds(db.doc(`${C}/quests/the-ring`).set({title: "Destroy the ring", ...created("frodo")}));
     // The header's "New rumour" starts a blank one (`useCreateRumor`).
-    await assertSucceeds(db.doc(`${C}/rumors/r1`).set({title: "", content: ""}));
-    await assertSucceeds(db.doc(`${C}/chapters/chapter-1`).set({title: "A long-expected party", order: 1}));
-    await assertSucceeds(db.doc(`${C}/saga/sagaData`).set({title: "The Campaign Saga", content: ""}));
+    await assertSucceeds(db.doc(`${C}/rumors/r1`).set({title: "", content: "", ...created("frodo")}));
+    await assertSucceeds(db.doc(`${C}/chapters/chapter-1`).set({title: "A long-expected party", order: 1, ...created("frodo")}));
+    await assertSucceeds(db.doc(`${C}/saga/sagaData`).set({title: "The Campaign Saga", content: "", ...created("frodo")}));
   });
 
   it("refuses a record of a kind the app does not have", async () => {
@@ -957,26 +964,26 @@ describe("a campaign holds the app's records, each with its name (T119)", () => 
     ["a chapter with no title", "chapters/chapter-1", {order: 1}],
     ["a saga with no title", "saga/sagaData", {content: "Once"}],
   ])("refuses %s", async (_what, path, data) => {
-    await assertFails(as("frodo").doc(`${C}/${path}`).set(data));
+    await assertFails(as("frodo").doc(`${C}/${path}`).set({...data, ...created("frodo")}));
   });
 
   it("refuses an edit that removes a record's name", async () => {
-    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({name: firebase.firestore.FieldValue.delete()}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({name: firebase.firestore.FieldValue.delete(), ...modified("frodo")}));
   });
 
   it("or turns it into something other than text", async () => {
-    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({name: {first: "Bilbo"}}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({name: {first: "Bilbo"}, ...modified("frodo")}));
   });
 
   it("or replaces the whole record without it", async () => {
-    await assertFails(as("frodo").doc(`${C}/npcs/n1`).set({description: "A hobbit"}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).set({description: "A hobbit", ...modified("frodo")}));
   });
 
   it("still lets a record written before, with no name, be edited", async () => {
     await env.withSecurityRulesDisabled((context) =>
       context.firestore().doc(`${C}/npcs/legacy`).set({description: "Old"})
     );
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/legacy`).update({description: "Older"}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/legacy`).update({description: "Older", ...modified("frodo")}));
   });
 });
 
@@ -997,10 +1004,10 @@ describe("a record's notes are documents of their own (T133)", () => {
   ])("control: a member adds, reads, edits and deletes %s note", async (_whose, record, note) => {
     const db = as("frodo");
     const path = `${C}/${record}/notes/x1`;
-    await assertSucceeds(db.doc(path).set(note));
+    await assertSucceeds(db.doc(path).set({...note, ...created("frodo")}));
     await assertSucceeds(db.doc(path).get());
     await assertSucceeds(db.collection(`${C}/${record}/notes`).get());
-    await assertSucceeds(db.doc(path).update({[Object.keys(note).pop()!]: "Changed"}));
+    await assertSucceeds(db.doc(path).update({[Object.keys(note).pop()!]: "Changed", ...modified("frodo")}));
     await assertSucceeds(db.doc(path).delete());
   });
 
@@ -1011,7 +1018,7 @@ describe("a record's notes are documents of their own (T133)", () => {
     const db = as("sauron");
     await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).get());
     await assertFails(db.collection(`${C}/npcs/n1/notes`).get());
-    await assertFails(db.doc(`${C}/npcs/n1/notes/x2`).set({text: "Mine"}));
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x2`).set({text: "Mine", ...created("sauron")}));
     await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).delete());
   });
 
@@ -1030,8 +1037,8 @@ describe("a record's notes are documents of their own (T133)", () => {
   it("takes a note on a record created in the same commit, as a combined rumour's is", async () => {
     const db = as("frodo");
     const batch = db.batch();
-    batch.set(db.doc(`${C}/rumors/combined`), {title: "Smoke and ash", content: "Both"});
-    batch.set(db.doc(`${C}/rumors/combined/notes/x1`), {content: "Combined from rumors: r1"});
+    batch.set(db.doc(`${C}/rumors/combined`), {title: "Smoke and ash", content: "Both", ...created("frodo")});
+    batch.set(db.doc(`${C}/rumors/combined/notes/x1`), {content: "Combined from rumors: r1", ...created("frodo")});
     await assertSucceeds(batch.commit());
   });
 
@@ -1043,13 +1050,13 @@ describe("a record's notes are documents of their own (T133)", () => {
   ])("a note's %s takes %d characters and refuses one more", async (field, limit) => {
     const db = as("frodo");
     const path = `${C}/npcs/n1/notes/x1`;
-    await assertFails(db.doc(path).set({[field]: "x".repeat(limit + 1)}));
-    await assertSucceeds(db.doc(path).set({[field]: "x".repeat(limit)}));
-    await assertFails(db.doc(path).update({[field]: "x".repeat(limit + 1)}));
+    await assertFails(db.doc(path).set({[field]: "x".repeat(limit + 1), ...created("frodo")}));
+    await assertSucceeds(db.doc(path).set({[field]: "x".repeat(limit), ...created("frodo")}));
+    await assertFails(db.doc(path).update({[field]: "x".repeat(limit + 1), ...modified("frodo")}));
   });
 
   it("refuses a note's text that is not text", async () => {
-    await assertFails(as("frodo").doc(`${C}/npcs/n1/notes/x1`).set({text: ["x".repeat(20_000)]}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1/notes/x1`).set({text: ["x".repeat(20_000)], ...created("frodo")}));
   });
 
   it("takes no note while the campaign is being deleted, but lets one be deleted", async () => {
@@ -1058,8 +1065,8 @@ describe("a record's notes are documents of their own (T133)", () => {
       await context.firestore().doc(C).update({deleting: true});
     });
     const db = as("frodo");
-    await assertFails(db.doc(`${C}/npcs/n1/notes/x2`).set({text: "Late"}));
-    await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).update({text: "Late"}));
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x2`).set({text: "Late", ...created("frodo")}));
+    await assertFails(db.doc(`${C}/npcs/n1/notes/x1`).update({text: "Late", ...modified("frodo")}));
     await assertSucceeds(db.doc(`${C}/npcs/n1/notes/x1`).delete());
   });
 });
@@ -1085,10 +1092,10 @@ describe("a chapter's text is a document of its own (T134)", () => {
   it("is written with a new chapter in one commit, and the chapter keeps no text", async () => {
     const db = as("frodo");
     const batch = db.batch();
-    batch.set(db.doc(`${C}/chapters/ch-2`), {title: "The shadow of the past", order: 2, contentLength: 5});
+    batch.set(db.doc(`${C}/chapters/ch-2`), {title: "The shadow of the past", order: 2, contentLength: 5, ...created("frodo")});
     batch.set(db.doc(`${C}/chapters/ch-2/body/text`), {content: "Gandalf"});
     await assertSucceeds(batch.commit());
-    await assertSucceeds(db.doc(`${C}/chapters/ch-1`).update({content: null, contentLength: 3}));
+    await assertSucceeds(db.doc(`${C}/chapters/ch-1`).update({content: null, contentLength: 3, ...modified("frodo")}));
   });
 
   it("shows a stranger nothing and takes nothing from one", async () => {
@@ -1169,32 +1176,32 @@ describe("a record's text has a limit (T119)", () => {
     ["saga", "content", 500_000],
   ])("%s.%s takes %d characters and refuses one more", async (collection, field, limit) => {
     const path = `${C}/${collection}/${id(collection)}`;
-    await assertFails(as("frodo").doc(path).set(record(collection, field, limit + 1)));
-    await assertSucceeds(as("frodo").doc(path).set(record(collection, field, limit)));
-    await assertFails(as("frodo").doc(path).update({[field]: "x".repeat(limit + 1)}));
+    await assertFails(as("frodo").doc(path).set({...record(collection, field, limit + 1), ...created("frodo")}));
+    await assertSucceeds(as("frodo").doc(path).set({...record(collection, field, limit), ...created("frodo")}));
+    await assertFails(as("frodo").doc(path).update({[field]: "x".repeat(limit + 1), ...modified("frodo")}));
   });
 
   it("counts as the app does: an emoji is two", async () => {
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/n2`).set({name: "😀".repeat(100)}));
-    await assertFails(as("frodo").doc(`${C}/npcs/n3`).set({name: "😀".repeat(100) + "x"}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n2`).set({name: "😀".repeat(100), ...created("frodo")}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n3`).set({name: "😀".repeat(100) + "x", ...created("frodo")}));
   });
 
   it("refuses text that is not text", async () => {
-    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: {page: "x".repeat(20_000)}}));
-    await assertFails(as("frodo").doc(`${C}/rumors/r1`).set({title: "Smoke", content: ["x".repeat(20_000)]}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: {page: "x".repeat(20_000)}, ...modified("frodo")}));
+    await assertFails(as("frodo").doc(`${C}/rumors/r1`).set({title: "Smoke", content: ["x".repeat(20_000)], ...created("frodo")}));
   });
 
   it("lets a field be cleared or removed", async () => {
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({description: null}));
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: firebase.firestore.FieldValue.delete()}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({description: null, ...modified("frodo")}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: firebase.firestore.FieldValue.delete(), ...modified("frodo")}));
   });
 
   it("still lets a record stored over a limit be edited, as long as the edit leaves that field", async () => {
     await env.withSecurityRulesDisabled((context) =>
       context.firestore().doc(`${C}/npcs/n1`).update({description: "x".repeat(20_000)})
     );
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: "Hobbit"}));
-    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: "x".repeat(20_001)}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({race: "Hobbit", ...modified("frodo")}));
+    await assertFails(as("frodo").doc(`${C}/npcs/n1`).update({description: "x".repeat(20_001), ...modified("frodo")}));
   });
 
   // Created only by `createCampaign` since T128, which checks both itself.
@@ -1213,6 +1220,83 @@ describe("a record's text has a limit (T119)", () => {
   });
 
   it("leaves the lists inside a record alone, which no rule can look into", async () => {
-    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({notes: [{id: "n", text: "x".repeat(20_000)}]}));
+    await assertSucceeds(as("frodo").doc(`${C}/npcs/n1`).update({notes: [{id: "n", text: "x".repeat(20_000)}], ...modified("frodo")}));
+  });
+});
+
+// T132 (F5, F6): who wrote a record or a note, and when, were built in the
+// browser and believed: any member could credit a record to someone else, or
+// rewrite who created one. The ids and the server's time are checked now.
+describe("a record says truly who wrote it, and when (T132)", () => {
+  const C = `groups/${G}/campaigns/c1`;
+  const NPC = `${C}/npcs/n1`;
+  const NOTE = `${NPC}/notes/x1`;
+
+  beforeEach(() => env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    const at = firebase.firestore.Timestamp.fromDate(new Date("2026-10-01T12:00:00Z"));
+    const byGandalf = {createdBy: "gandalf", modifiedBy: "gandalf", createdAt: at, modifiedAt: at};
+    await db.doc(NPC).set({name: "Bilbo", ...byGandalf});
+    await db.doc(NOTE).set({text: "Owes us a sword", ...byGandalf});
+    await db.doc(`${C}/chapters/ch-1`).set({title: "A long-expected party", order: 1, ...byGandalf});
+  }));
+
+  it("control: a member creates and edits a record and a note as themselves, now", async () => {
+    const db = as("frodo");
+    await assertSucceeds(db.doc(`${C}/npcs/sam`).set({name: "Sam", ...created("frodo")}));
+    await assertSucceeds(db.doc(NPC).update({name: "Bilbo Baggins", ...modified("frodo")}));
+    await assertSucceeds(db.doc(`${NPC}/notes/x2`).set({text: "Left the Shire", ...created("frodo")}));
+    await assertSucceeds(db.doc(NOTE).update({text: "Owes us two swords", ...modified("frodo")}));
+  });
+
+  it.each([
+    ["credited to someone else", {createdBy: "gandalf"}],
+    ["last changed by someone else", {modifiedBy: "gandalf"}],
+    ["dated by the browser's clock", {createdAt: new Date()}],
+    ["changed at the browser's time", {modifiedAt: new Date()}],
+  ])("refuses a new record %s", async (_what, forged) => {
+    await assertFails(as("frodo").doc(`${C}/npcs/sam`).set({name: "Sam", ...created("frodo"), ...forged}));
+  });
+
+  it.each(["createdBy", "modifiedBy", "createdAt", "modifiedAt"])("refuses a new record without %s", async (field) => {
+    const stamps: Record<string, unknown> = created("frodo");
+    delete stamps[field];
+    await assertFails(as("frodo").doc(`${C}/npcs/sam`).set({name: "Sam", ...stamps}));
+  });
+
+  it.each([
+    ["rewrites who created it", {createdBy: "frodo"}],
+    ["rewrites when it was created", {createdAt: now()}],
+    ["credits the change to someone else", {modifiedBy: "gandalf"}],
+    ["dates the change by the browser's clock", {modifiedAt: new Date()}],
+  ])("refuses an edit that %s", async (_what, forged) => {
+    await assertFails(as("frodo").doc(NPC).update({name: "Bilbo Baggins", ...modified("frodo"), ...forged}));
+  });
+
+  it("refuses an edit that does not say who made it, and when", async () => {
+    await assertFails(as("frodo").doc(NPC).update({name: "Bilbo Baggins"}));
+    await assertFails(as("frodo").doc(NPC).update({name: "Bilbo Baggins", modifiedBy: "frodo"}));
+  });
+
+  it("refuses a whole record rewritten without who created it", async () => {
+    await assertFails(as("frodo").doc(NPC).set({name: "Bilbo Baggins", ...modified("frodo")}));
+  });
+
+  it("holds for a note: created and edited as the writer, now", async () => {
+    const db = as("frodo");
+    await assertFails(db.doc(`${NPC}/notes/x2`).set({text: "Forged", ...created("frodo"), createdBy: "gandalf"}));
+    await assertFails(db.doc(NOTE).update({text: "Mine now", ...modified("frodo"), createdBy: "frodo"}));
+    await assertFails(db.doc(NOTE).update({text: "Unsigned"}));
+  });
+
+  // #1203: renumbering the chapters around a moved or deleted one changes
+  // each one's place alone, and keeps its author's attribution.
+  it("lets a chapter be renumbered without taking it over", async () => {
+    await assertSucceeds(as("frodo").doc(`${C}/chapters/ch-1`).update({order: 2}));
+  });
+
+  it("but not edited otherwise without saying who and when", async () => {
+    await assertFails(as("frodo").doc(`${C}/chapters/ch-1`).update({order: 2, title: "A party"}));
+    await assertFails(as("frodo").doc(NPC).update({order: 2}));
   });
 });
