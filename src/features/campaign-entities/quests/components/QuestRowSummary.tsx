@@ -10,6 +10,11 @@ import { QUEST_STATUS_OPTIONS } from '../utils/quest-presentation';
 
 export interface QuestRowSummaryProps {
   quest: Quest;
+  /**
+   * The quest's people, linked from either side (T131): the quest's own list
+   * and anyone whose old record names it. Its own list when not given.
+   */
+  personIds?: readonly string[];
   /** Resolve an NPC id to a name and a one-line description, or `null`. */
   npcFor: (npcId: string) => { name: string; line: string } | null;
   onToggleObjective: (objectiveId: string, completed: boolean) => Promise<unknown>;
@@ -55,13 +60,14 @@ const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  */
 export const QuestRowSummary: React.FC<QuestRowSummaryProps> = ({
   quest,
+  personIds,
   npcFor,
   onToggleObjective,
   onChangeStatus,
   onOpenNPC,
   onOpenQuest,
 }) => {
-  const relatedNPCIds = quest.relatedNPCIds ?? [];
+  const relatedNPCIds = personIds ?? quest.relatedNPCIds ?? [];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6 pt-4">

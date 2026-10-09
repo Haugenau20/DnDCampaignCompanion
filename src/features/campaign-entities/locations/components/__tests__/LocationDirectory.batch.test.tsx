@@ -23,10 +23,10 @@ jest.mock('shared/context/NavigationContext', () => ({
 }));
 
 jest.mock('../../../npcs/context/NPCContext', () => ({
-  useNPCs: () => ({ getNPCById: jest.fn(() => undefined) }),
+  useNPCs: () => ({ npcs: [], getNPCById: jest.fn(() => undefined) }),
 }));
 jest.mock('../../../quests/context/QuestContext', () => ({
-  useQuests: () => ({ getQuestById: jest.fn(() => undefined) }),
+  useQuests: () => ({ quests: [], getQuestById: jest.fn(() => undefined) }),
 }));
 
 jest.mock('../../context/LocationContext', () => ({

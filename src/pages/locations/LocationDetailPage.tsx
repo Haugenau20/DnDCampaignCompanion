@@ -13,7 +13,10 @@ import {
   useNPCs,
   useQuests,
   useRumors,
-  referencesLocation,
+  createLinkActions,
+  npcIdsOfLocation,
+  questIdsOfLocation,
+  rumorIdsOfLocation,
   WhereThisSits,
   DeleteLocationDialog,
   buildLocationIndex,
@@ -144,9 +147,9 @@ const LocationDetailPage: React.FC = () => {
     createLocation,
   } = useLocations();
   const locationsPath = useCampaignCollectionPath('locations');
-  const { npcs } = useNPCs();
-  const { quests } = useQuests();
-  const { rumors } = useRumors();
+  const { npcs, updateNPC } = useNPCs();
+  const { quests, updateQuest } = useQuests();
+  const { rumors, updateRumor } = useRumors();
 
   const location = locations.find((candidate) => candidate.id === locationId);
 
@@ -184,28 +187,49 @@ const LocationDetailPage: React.FC = () => {
   );
   const parentName = ancestors.length ? ancestors[ancestors.length - 1].name : undefined;
 
-  /** The NPCs recorded as being here, resolved to records. */
-  const peopleHere = useMemo(() => {
-    if (!location) return [];
-    const ids = location.connectedNPCs ?? [];
-    return ids
-      .map((id) => npcs.find((npc) => npc.id === id))
-      .filter((npc): npc is NonNullable<typeof npc> => Boolean(npc));
-  }, [location, npcs]);
+  /**
+   * The people linked to this place, resolved to records: its own list, and
+   * anyone whose old record names it until the migration has run (T131).
+   * The two used to be shown apart, the second as "recorded as being here",
+   * because they disagreed; a link is one thing now, stored once.
+   */
+  const personIds = useMemo(() => (location ? npcIdsOfLocation(location, npcs) : []), [location, npcs]);
+  const peopleHere = useMemo(
+    () =>
+      personIds
+        .map((id) => npcs.find((npc) => npc.id === id))
+        .filter((npc): npc is NonNullable<typeof npc> => Boolean(npc)),
+    [personIds, npcs]
+  );
+
+  const questIds = useMemo(() => (location ? questIdsOfLocation(location, quests) : []), [location, quests]);
+  const rumorIds = useMemo(() => (location ? rumorIdsOfLocation(location, rumors ?? []) : []), [location, rumors]);
+
+  /** Adds and removes links, each in the field that owns it (T131). */
+  const links = createLinkActions({
+    npcs,
+    quests,
+    locations,
+    updateNPC,
+    updateQuest,
+    updateLocation,
+    updateRumor,
+  });
+  const here = location ? { kind: 'location' as const, id: location.id } : null;
 
   /**
-   * What points here -- the one list §3 says a *row* can never hold without
-   * becoming a card again.
-   *
-   * Read-only on purpose: these are other records' references to this one, and
-   * the place to change a quest's location is the quest.
+   * The quests and rumours linked to this place -- the one list §3 says a
+   * *row* can never hold without becoming a card again. Linked from either
+   * side (T131): a quest stores its places, a rumour the places it concerns,
+   * and this page adds and removes them as well as listing them.
    */
   const inbound = useMemo<InboundLink[]>(() => {
     if (!location) return [];
     const out: InboundLink[] = [];
 
-    quests
-      .filter((quest) => referencesLocation(quest, location))
+    questIds
+      .map((id) => quests.find((quest) => quest.id === id))
+      .filter((quest): quest is NonNullable<typeof quest> => Boolean(quest))
       .forEach((quest) =>
         out.push({
           key: `quest-${quest.id}`,
@@ -216,12 +240,9 @@ const LocationDetailPage: React.FC = () => {
         })
       );
 
-    (rumors ?? [])
-      .filter(
-        (rumor) =>
-          referencesLocation(rumor, location) ||
-          rumor.relatedLocations?.includes(location.id)
-      )
+    rumorIds
+      .map((id) => (rumors ?? []).find((rumor) => rumor.id === id))
+      .filter((rumor): rumor is NonNullable<typeof rumor> => Boolean(rumor))
       .forEach((rumor) =>
         out.push({
           key: `rumor-${rumor.id}`,
@@ -232,27 +253,8 @@ const LocationDetailPage: React.FC = () => {
         })
       );
 
-    // An NPC whose own record says they are here, but who is not in this
-    // location's list. The two directions are stored separately and disagree
-    // often enough that hiding one of them would be hiding the disagreement.
-    npcs
-      .filter(
-        (npc) =>
-          referencesLocation(npc, location) &&
-          !(location.connectedNPCs ?? []).includes(npc.id)
-      )
-      .forEach((npc) =>
-        out.push({
-          key: `npc-${npc.id}`,
-          id: npc.id,
-          name: npc.name,
-          detail: 'person, recorded as being here',
-          href: `/npcs/${npc.id}`,
-        })
-      );
-
     return out;
-  }, [location, quests, rumors, npcs]);
+  }, [location, questIds, quests, rumorIds, rumors]);
 
   // Nothing is patched locally after a write: the page shows the listener's
   // copy, which carries both this write and any other player's (T032). That
@@ -563,13 +565,7 @@ const LocationDetailPage: React.FC = () => {
                           <button
                             type="button"
                             aria-label={`Remove ${npc.name} from ${location.name}`}
-                            onClick={() =>
-                              void save((current) => ({
-                                connectedNPCs: (current.connectedNPCs ?? []).filter(
-                                  (id) => id !== npc.id
-                                ),
-                              }))
-                            }
+                            onClick={() => here && void links.unlink(here, { kind: 'npc', id: npc.id })}
                             className="button-ghost rounded-full p-1 shrink-0"
                           >
                             <X size={14} aria-hidden="true" />
@@ -589,35 +585,26 @@ const LocationDetailPage: React.FC = () => {
                     // effect was that the tray then offered "Attach" beside
                     // someone who was already attached. `15-5` gave the tray a
                     // way to say both things at once.
-                    attached={attachRefs('npc', location.connectedNPCs ?? [])}
+                    attached={attachRefs('npc', personIds)}
                     showAttachedChips={false}
                     ariaLabel={`the people in ${location.name}`}
-                    onAttach={(id) =>
-                      void save((current) => ({
-                        connectedNPCs: Array.from(
-                          new Set([...(current.connectedNPCs ?? []), id])
-                        ),
-                      }))
-                    }
-                    onDetach={(id) =>
-                      void save((current) => ({
-                        connectedNPCs: (current.connectedNPCs ?? []).filter(
-                          (existing) => existing !== id
-                        ),
-                      }))
-                    }
+                    onAttach={(id) => here && void links.link(here, { kind: 'npc', id })}
+                    onDetach={(id) => here && void links.unlink(here, { kind: 'npc', id })}
                   />
                 )}
               </EntityPageSection>
 
-              {/* -------------------------- what points here ------------------------ */}
+              {/* ------------------------- quests and rumours ----------------------- */}
               <EntityPageSection
-                title="What points here"
+                title="Quests and rumours"
                 muted
+                count={inbound.length || undefined}
                 empty={
-                  <Typography variant="body-sm" color="muted" className="italic">
-                    Nothing points here yet
-                  </Typography>
+                  !canAct ? (
+                    <Typography variant="body-sm" color="muted" className="italic">
+                      No quest or rumour is linked here yet
+                    </Typography>
+                  ) : undefined
                 }
               >
                 {inbound.length ? (
@@ -646,6 +633,18 @@ const LocationDetailPage: React.FC = () => {
                     ))}
                   </ul>
                 ) : null}
+
+                {canAct && (
+                  <AttachTray
+                    kinds={['quest', 'rumor']}
+                    sources={{ npc: npcs, location: locations, quest: quests, rumor: rumors ?? [] }}
+                    attached={[...attachRefs('quest', questIds), ...attachRefs('rumor', rumorIds)]}
+                    showAttachedChips={false}
+                    ariaLabel={`the quests and rumours of ${location.name}`}
+                    onAttach={(id, kind) => here && void links.link(here, { kind, id })}
+                    onDetach={(id, kind) => here && void links.unlink(here, { kind, id })}
+                  />
+                )}
               </EntityPageSection>
 
               {/* -------------------------------- tags ------------------------------ */}

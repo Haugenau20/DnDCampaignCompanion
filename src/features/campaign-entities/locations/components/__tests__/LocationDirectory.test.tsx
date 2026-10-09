@@ -32,10 +32,10 @@ jest.mock('shared/context/NavigationContext', () => ({
 }));
 
 jest.mock('../../../npcs/context/NPCContext', () => ({
-  useNPCs: jest.fn(() => ({ getNPCById: jest.fn(() => undefined) })),
+  useNPCs: jest.fn(() => ({ npcs: [], getNPCById: jest.fn(() => undefined) })),
 }));
 jest.mock('../../../quests/context/QuestContext', () => ({
-  useQuests: jest.fn(() => ({ getQuestById: jest.fn(() => undefined) })),
+  useQuests: jest.fn(() => ({ quests: [], getQuestById: jest.fn(() => undefined) })),
 }));
 
 jest.mock('../../context/LocationContext', () => ({
@@ -76,8 +76,8 @@ function setupMocks(queryParams: Record<string, string> = {}) {
   (useLocations as jest.Mock).mockReturnValue({
     updateLocationStatus: mockUpdateLocationStatus,
   });
-  (useNPCs as jest.Mock).mockReturnValue({ getNPCById: jest.fn(() => undefined) });
-  (useQuests as jest.Mock).mockReturnValue({ getQuestById: jest.fn(() => undefined) });
+  (useNPCs as jest.Mock).mockReturnValue({ npcs: [], getNPCById: jest.fn(() => undefined) });
+  (useQuests as jest.Mock).mockReturnValue({ quests: [], getQuestById: jest.fn(() => undefined) });
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +169,7 @@ describe('LocationDirectory', () => {
 
     test('carries mark, name, type in words, knowledge step and what is inside', () => {
       (useNPCs as jest.Mock).mockReturnValue({
+        npcs: [],
         getNPCById: jest.fn(() => ({ id: 'npc-1', name: 'Aldric', relationship: 'friendly' })),
       });
       const parent = makeLocation('loc-1', 'Silverkeep', {
@@ -343,6 +344,7 @@ describe('LocationDirectory', () => {
 
     test('navigates to an NPC listed in the summary', () => {
       (useNPCs as jest.Mock).mockReturnValue({
+        npcs: [],
         getNPCById: jest.fn(() => ({ id: 'npc-1', name: 'Aldric', title: 'Guard' })),
       });
       render(
@@ -361,6 +363,7 @@ describe('LocationDirectory', () => {
 
     test('navigates to a quest listed in the summary, whose status is a word', () => {
       (useQuests as jest.Mock).mockReturnValue({
+        quests: [],
         getQuestById: jest.fn(() => ({ id: 'q-1', title: 'Find the Amulet', status: 'active' })),
       });
       render(

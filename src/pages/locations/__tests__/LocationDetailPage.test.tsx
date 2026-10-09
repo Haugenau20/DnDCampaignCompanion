@@ -116,6 +116,10 @@ const TREE = [
 
 let mockLocations: any[] = TREE;
 const mockUpdateLocation = jest.fn().mockResolvedValue(undefined);
+// T131: a link to a person, a quest or a rumour may be written on their side.
+const mockUpdateNPC = jest.fn().mockResolvedValue(undefined);
+const mockUpdateQuest = jest.fn().mockResolvedValue(undefined);
+const mockUpdateRumor = jest.fn().mockResolvedValue(undefined);
 const mockUpdateLocationNote = jest.fn().mockResolvedValue(undefined);
 const mockUpdateLocationStatus = jest.fn().mockResolvedValue(undefined);
 const mockMoveLocation = jest.fn().mockResolvedValue(undefined);
@@ -164,9 +168,25 @@ jest.mock('features/campaign-entities', () => {
       deleteLocation: mockDeleteLocation,
       createLocation: mockCreateLocation,
     }),
-    useNPCs: () => ({ npcs: mockNPCs }),
-    useQuests: () => ({ quests: mockQuests }),
-    useRumors: () => ({ rumors: mockRumors }),
+    useNPCs: () => ({
+      npcs: mockNPCs,
+      updateNPC: (id: string, change: any) =>
+        mockUpdateNPC(id, mockResolveChange(change, mockStoredRecords[id] ?? mockNPCs.find((n: any) => n.id === id))),
+    }),
+    useQuests: () => ({
+      quests: mockQuests,
+      updateQuest: (id: string, change: any) =>
+        mockUpdateQuest(id, mockResolveChange(change, mockStoredRecords[id] ?? mockQuests.find((q: any) => q.id === id))),
+    }),
+    useRumors: () => ({
+      rumors: mockRumors,
+      updateRumor: (id: string, change: any) =>
+        mockUpdateRumor(id, mockResolveChange(change, mockStoredRecords[id] ?? mockRumors.find((r: any) => r.id === id))),
+    }),
+    // The real link modules (T131): which field owns each link is the contract.
+    ...jest.requireActual('features/campaign-entities/shared/links'),
+    createLinkActions: jest.requireActual('features/campaign-entities/shared/linkActions').createLinkActions,
+
     // The real modules, not stubs: the page's contract is that it reuses the
     // one guarded set of walks rather than inventing its own.
     ...actualTree,
@@ -841,15 +861,18 @@ describe('LocationDetailPage — what points here', () => {
     expect(screen.queryByText('rumour, disproved')).not.toBeInTheDocument();
   });
 
-  it('shows an NPC whose own record says they are here but who is not listed here', () => {
-    // The two directions are stored separately and disagree often enough that
-    // hiding one of them would be hiding the disagreement.
+  // T131: a link is stored once now, and both sides show it. Until the
+  // migration has run, a person whose old record names this place is one of
+  // the people here -- no longer set apart as a disagreement, which there can
+  // no longer be.
+  it('counts an NPC whose old record names this place among the people here', () => {
     mockNPCs = [
       { id: 'npc-1', name: 'Turgon', title: 'King of Gondolin' },
       { id: 'npc-2', name: 'Glorfindel', locationId: 'gondolin' },
     ];
     renderPage();
-    expect(screen.getByText('person, recorded as being here')).toBeInTheDocument();
+    expect(screen.getByText('Glorfindel')).toBeInTheDocument();
+    expect(screen.queryByText('person, recorded as being here')).not.toBeInTheDocument();
   });
 });
 

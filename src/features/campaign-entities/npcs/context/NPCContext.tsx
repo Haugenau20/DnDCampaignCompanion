@@ -10,6 +10,7 @@ import { useAuth, useUser } from 'features/user-management';
 import { createWithUniqueEntityId } from 'core/utils/entity-id';
 import { buildModificationAttribution } from 'core/attribution';
 import { commitEntityWrites } from '../../shared/commitEntityWrites';
+import { unlinkDeletedQuietly, useCampaignRecordPaths } from '../../shared/unlinkDeleted';
 import { releaseImage } from 'shared/hooks/useImageAttachment';
 import { referencesLocation } from '../../locations/utils/location-display';
 import { Location } from '../../locations/types';
@@ -44,6 +45,7 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Writes name this render's campaign by full path, so one started here
   // lands here even if the player switches campaign before it runs (T082).
   const npcsPath = useCampaignCollectionPath('npcs');
+  const recordPaths = useCampaignRecordPaths();
   const { updateData, updateDataAfterReading, deleteData, addData, error: writeError } = useFirebaseData<NPC>({
     collection: npcsPath,
     autoFetch: false
@@ -182,7 +184,9 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // After the document: a failure can then only orphan the file, which the
     // released record lets the daily sweep find.
     discard?.();
-  }, [hasRequiredContext, user, getNPCById, deleteData]);
+    // And out of every list that named them (T131).
+    await unlinkDeletedQuietly(recordPaths, 'npc', [npcId]);
+  }, [hasRequiredContext, user, getNPCById, deleteData, recordPaths]);
 
   /**
    * Sets the status of several NPCs in one batch (T017): one round trip, and
@@ -226,7 +230,8 @@ export const NPCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await commitEntityWrites<NPC>(npcsPath, 'NPCs', npcIds.map(id => ({ type: 'delete' as const, id })));
     // After the documents: a failure can then only orphan files.
     discards.forEach(discard => discard());
-  }, [hasRequiredContext, user, getNPCById, npcsPath]);
+    await unlinkDeletedQuietly(recordPaths, 'npc', npcIds);
+  }, [hasRequiredContext, user, getNPCById, npcsPath, recordPaths]);
 
   const value: NPCContextValue = {
     npcs,
