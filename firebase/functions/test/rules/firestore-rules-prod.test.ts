@@ -170,6 +170,31 @@ describe("no client creates a group (T119)", () => {
   });
 });
 
+// T140: a profile without an `email` field was readable by every signed-in
+// account. The seeded profiles here have none, as `redeemInvitation` writes
+// when the sign-in token carries no email.
+describe("only its holder reads a profile (T140)", () => {
+  it("a member reads their own", async () => {
+    await assertSucceeds(as("frodo").doc("users/frodo").get());
+  });
+
+  it("another member of the same group does not", async () => {
+    await assertFails(as("gandalf").doc("users/frodo").get());
+  });
+
+  it("a stranger does not", async () => {
+    await assertFails(as("sauron").doc("users/frodo").get());
+  });
+
+  it("nor does anyone signed out", async () => {
+    await assertFails(env.unauthenticatedContext().firestore().doc("users/frodo").get());
+  });
+
+  it("a stranger cannot list the profiles", async () => {
+    await assertFails(as("sauron").collection("users").get());
+  });
+});
+
 describe("server-owned profile fields (T080)", () => {
   const usage = {isUnlimited: false, daily: {count: 10}, weekly: {count: 30}, monthly: {count: 100}};
 
