@@ -8,7 +8,7 @@
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-import { createFakeFirestore, readBarrier } from '@/test-utils/fake-firestore-transactions';
+import { createFakeFirestore } from '@/test-utils/fake-firestore-transactions';
 
 // The transactional store behind `runTransaction`; fresh for every test.
 let mockFirestoreStore = createFakeFirestore();
@@ -224,113 +224,59 @@ describe('CampaignService', () => {
       );
     });
 
-    test('should throw when user is not a member of the group', async () => {
-      mockGetGroupUserProfile.mockResolvedValueOnce(null);
-      const svc = CampaignService.getInstance();
-      await expect(svc.createCampaign('g1', 'My Campaign')).rejects.toThrow(
-        'You are not a member of this group'
-      );
-    });
-
-    test('should return campaign ID when creation succeeds (no duplicate)', async () => {
-      mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'member' });
-      mockUpdateGroupUserProfile.mockResolvedValueOnce(undefined);
+    // T128: the group's campaigns are counted by the `createCampaign`
+    // function, which also checks membership, picks the id and races safely
+    // (its suite: firebase/functions/test/createCampaign.test.ts). The
+    // browser-side creation these tests used to describe is gone.
+    test('creates the campaign through the Cloud Function, writing nothing itself', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: { success: true, campaignId: 'my-campaign' } });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
 
       const svc = CampaignService.getInstance();
-      const id = await svc.createCampaign('g1', 'My Campaign');
+      const id = await svc.createCampaign('g1', 'My Campaign', 'Smugglers');
+
       expect(id).toBe('my-campaign');
-      expect(mockFirestoreStore.read('groups/g1/campaigns/my-campaign')).toMatchObject({
-        name: 'My Campaign',
-        createdBy: 'campaign-user',
-      });
-    });
-
-    test('should append timestamp to campaign ID when a duplicate exists, leaving the existing campaign alone', async () => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date('2025-06-15T10:00:00.000Z'));
-      try {
-        mockFirestoreStore.seed('groups/g1/campaigns/my-campaign', { name: 'My Campaign', createdBy: 'someone' });
-        mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'member' });
-        mockUpdateGroupUserProfile.mockResolvedValueOnce(undefined);
-
-        const svc = CampaignService.getInstance();
-        const id = await svc.createCampaign('g1', 'My Campaign');
-        expect(id).toBe(`my-campaign-${Date.now()}`);
-        expect(mockFirestoreStore.read('groups/g1/campaigns/my-campaign')).toMatchObject({ createdBy: 'someone' });
-        expect(mockFirestoreStore.read(`groups/g1/campaigns/${id}`)).toMatchObject({ createdBy: 'campaign-user' });
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    test('refuses a name over 200 characters or a description over 10,000, creating nothing (T119)', async () => {
-      mockGetGroupUserProfile.mockResolvedValue({ userId: 'campaign-user', role: 'member' });
-      const svc = CampaignService.getInstance();
-      await expect(svc.createCampaign('g1', 'x'.repeat(201)))
-        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'name' });
-      await expect(svc.createCampaign('g1', 'Rohan', 'x'.repeat(10_001)))
-        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'description' });
+      expect(mockHttpsCallable).toHaveBeenCalledWith(expect.anything(), 'createCampaign');
+      expect(mockCallable).toHaveBeenCalledWith({ groupId: 'g1', name: 'My Campaign', description: 'Smugglers' });
       expect(mockFirestoreStore.paths()).toEqual([]);
+      expect(mockSetDoc).not.toHaveBeenCalled();
+    });
+
+    test('sends an empty description when there is none', async () => {
+      const mockCallable = jest.fn().mockResolvedValueOnce({ data: { success: true, campaignId: 'c' } });
+      mockHttpsCallable.mockReturnValueOnce(mockCallable);
+
+      await CampaignService.getInstance().createCampaign('g1', 'C');
+      expect(mockCallable).toHaveBeenCalledWith({ groupId: 'g1', name: 'C', description: '' });
     });
 
     test('should set the active campaign after creation', async () => {
-      mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'member' });
-      mockUpdateGroupUserProfile.mockResolvedValueOnce(undefined);
+      mockHttpsCallable.mockReturnValueOnce(
+        jest.fn().mockResolvedValueOnce({ data: { success: true, campaignId: 'campaign-name' } })
+      );
 
       const svc = CampaignService.getInstance();
       const id = await svc.createCampaign('g1', 'Campaign Name');
       expect(svc.getActiveCampaignId()).toBe(id);
     });
 
-    test('should generate slug-format campaign IDs from name', async () => {
-      mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'member' });
-      mockUpdateGroupUserProfile.mockResolvedValueOnce(undefined);
+    test("surfaces the function's refusal, such as a group with five campaigns", async () => {
+      mockHttpsCallable.mockReturnValueOnce(
+        jest.fn().mockRejectedValueOnce(new Error('This group has 5 campaigns, the most a group may have.'))
+      );
 
       const svc = CampaignService.getInstance();
-      const id = await svc.createCampaign('g1', 'The Dark Rising!');
-      expect(id).toBe('the-dark-rising');
+      await expect(svc.createCampaign('g1', 'One too many')).rejects.toThrow(/5 campaigns/);
+      expect(svc.getActiveCampaignId()).not.toBe('one-too-many');
     });
 
-    test('gives up, writing nothing, when every candidate id is taken', async () => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date('2025-06-15T10:00:00.000Z'));
-      try {
-        // With the clock frozen, every timestamped candidate is the same id.
-        mockFirestoreStore.seed('groups/g1/campaigns/my-campaign', { createdBy: 'someone' });
-        mockFirestoreStore.seed(`groups/g1/campaigns/my-campaign-${Date.now()}`, { createdBy: 'someone' });
-        mockGetGroupUserProfile.mockResolvedValueOnce({ userId: 'campaign-user', role: 'member' });
-
-        const svc = CampaignService.getInstance();
-        await expect(svc.createCampaign('g1', 'My Campaign')).rejects.toThrow(/free name/);
-        expect(mockFirestoreStore.paths()).toHaveLength(2);
-        expect(mockUpdateGroupUserProfile).not.toHaveBeenCalled();
-      } finally {
-        jest.useRealTimers();
-      }
-    });
-
-    // T081 (DATA-001). Two admins create a campaign of the same name at once,
-    // both reading the slug before either writes. As a read then a write, both
-    // took the slug and the second replaced the first campaign's metadata.
-    test('two simultaneous creates of one name make two campaigns', async () => {
-      const slugPath = 'groups/g1/campaigns/my-campaign';
-      mockFirestoreStore = createFakeFirestore({ afterRead: readBarrier(2, slugPath) });
-      mockGetDoc.mockImplementation((ref: any) => mockFirestoreStore.getDoc(ref));
-      mockSetDoc.mockImplementation((ref: any, data: any) => mockFirestoreStore.setDoc(ref, data));
-      mockGetGroupUserProfile.mockResolvedValue({ userId: 'campaign-user', role: 'admin' });
-      mockUpdateGroupUserProfile.mockResolvedValue(undefined);
-
+    test('refuses a name over 200 characters or a description over 10,000 before calling (T119)', async () => {
       const svc = CampaignService.getInstance();
-      const ids = await Promise.all([
-        svc.createCampaign('g1', 'My Campaign', 'first'),
-        svc.createCampaign('g1', 'My Campaign', 'second'),
-      ]);
-
-      expect(new Set(ids).size).toBe(2);
-      const descriptions = ids
-        .map((id) => mockFirestoreStore.read(`groups/g1/campaigns/${id}`)!.description)
-        .sort();
-      expect(descriptions).toEqual(['first', 'second']);
+      await expect(svc.createCampaign('g1', 'x'.repeat(201)))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'name' });
+      await expect(svc.createCampaign('g1', 'Rohan', 'x'.repeat(10_001)))
+        .rejects.toMatchObject({ name: 'TextTooLongError', field: 'description' });
+      expect(mockHttpsCallable).not.toHaveBeenCalled();
     });
   });
 

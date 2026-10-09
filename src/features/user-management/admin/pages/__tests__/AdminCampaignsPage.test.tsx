@@ -317,4 +317,29 @@ describe("AdminCampaignsPage", () => {
       expect(getCampaigns).not.toHaveBeenCalled();
     });
   });
+
+  // T128: a group holds at most five campaigns.
+  describe("a group with five campaigns", () => {
+    const FIVE = Array.from({ length: 5 }, (_, i) => ({
+      id: `c${i + 1}`,
+      name: `Campaign ${i + 1}`,
+      createdAt: new Date("2025-05-31"),
+      createdBy: "u1",
+    }));
+
+    test("says it has the most a group may have, and offers no new one", () => {
+      setup({ campaigns: FIVE as never });
+      for (const button of screen.getAllByRole("button", { name: /new campaign/i })) {
+        expect(button).toBeDisabled();
+      }
+      expect(screen.getByText(/the most a group may have/i)).toBeInTheDocument();
+      expect(screen.getByText("5 of 5")).toBeInTheDocument();
+    });
+
+    test("one short of five still offers a new one", () => {
+      setup({ campaigns: FIVE.slice(0, 4) as never });
+      expect(screen.getAllByRole("button", { name: /new campaign/i })[0]).toBeEnabled();
+      expect(screen.queryByText(/the most a group may have/i)).not.toBeInTheDocument();
+    });
+  });
 });

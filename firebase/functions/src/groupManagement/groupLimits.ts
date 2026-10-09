@@ -13,3 +13,11 @@ export const MAX_GROUP_MEMBERS = 10;
 export const GROUP_FULL_MESSAGE =
   `This group is full: it has ${MAX_GROUP_MEMBERS} members, the most a group ` +
   "may have.";
+
+/** The most campaigns one group may have; deleting one gives its place back. */
+export const MAX_GROUP_CAMPAIGNS = 5;
+
+/** What a group with every campaign place taken is told. */
+export const CAMPAIGNS_FULL_MESSAGE =
+  `This group has ${MAX_GROUP_CAMPAIGNS} campaigns, the most a group may ` +
+  "have. Delete one to start another.";
