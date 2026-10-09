@@ -29,10 +29,11 @@ export const FIXTURES = {
   /** Written before records stored their author's name: only the uid. */
   legacyNpc: { id: "old-tam", name: "Old Tam" },
   /**
-   * Written before T133: a note in the record's own array, which the app
-   * reads beside the notes' own documents until the migration moves it.
+   * A person with a note in its own document (T133), as the migration left
+   * every older note, and one stray note still in the record's old array,
+   * which nothing reads.
    */
-  notedNpc: { id: "brin-salt", name: "Brin Salt", arrayNote: "Sold us a leaky boat" },
+  notedNpc: { id: "brin-salt", name: "Brin Salt", note: "Sold us a leaky boat", strayNote: "Left in the array" },
   /**
    * Written before T134: its text on the chapter, which the app reads until
    * the migration moves it into the chapter's own body document.
@@ -211,7 +212,13 @@ export async function seed(): Promise<void> {
     relationship: "neutral",
     description: "Hires out boats in Kettleby.",
     connections: { relatedNPCs: [], affiliations: [], relatedQuests: [] },
-    notes: [{ date: "2026-09-20", text: notedNpc.arrayNote, author: player.character.name }],
+    notes: [{ date: "2026-09-19", text: notedNpc.strayNote, author: player.character.name }],
+  });
+  batch.set(db.doc(`${campaignPath}/npcs/${notedNpc.id}/notes/moved-1`), {
+    ...attribution,
+    date: "2026-09-20",
+    text: notedNpc.note,
+    author: player.character.name,
   });
 
   batch.set(db.doc(`${campaignPath}/chapters/${legacyChapter.id}`), {
