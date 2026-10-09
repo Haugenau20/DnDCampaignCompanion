@@ -390,9 +390,10 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
 - **Step 0** (maintainer): the project moves into a `muninn.quest`
   organization (Cloud Identity Free, decided 2026-10-08), so IAP uses Google's
   own OAuth client; then the operator account, in that organization. The
-  steps are in the plan's step 0. Under way: Cloud Identity Free is signed
-  up and `muninn.quest` verified (2026-10-08); the project has not moved,
-  and waits until the super admin's security keys are registered.
+  steps are in the plan's step 0. Under way: the organization exists, and
+  the super admin and the operator account both sign in with passkeys
+  (2026-10-09). Waiting for two hardware keys; then the strict 2-Step
+  Verification, then the move.
 - **Next**: step 3, the service run locally.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 

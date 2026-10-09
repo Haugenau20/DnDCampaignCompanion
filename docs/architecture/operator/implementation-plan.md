@@ -29,14 +29,38 @@ pipeline deploys to it.
 
 - **An organization for the project** (decided 2026-10-08: the project had none, and without one
   IAP needs a hand-made OAuth client). In this order:
-  1. Sign up for Cloud Identity Free with `muninn.quest`, creating its super admin. Give the super
-     admin a passkey and a backup key kept apart, and use it for nothing else.
-  2. Verify the domain with the DNS text record Google gives; the organization appears.
-  3. Move `dnd-campaign-companion` into it, following Google's guide for migrating a project into
-     an organization; the billing account stays linked to the project.
-  4. In the Admin console, create the operator account, used only for operator work. Sign it in
-     with a passkey or a security key, register a backup key kept somewhere else, and require
-     2-Step Verification for it, by security key only if Cloud Identity Free offers that.
+  1. ✅ Mail to the two accounts' `muninn.quest` addresses is forwarded to the maintainer (Porkbun
+     forwarding, 2026-10-08). Porkbun added its servers to the SPF record, which took it to 10 DNS
+     lookups, the most SPF allows; that include was removed, and forwarding works without it.
+  2. ✅ Cloud Identity Free signed up with `muninn.quest`, creating the super admin, used from its
+     own browser profile and for nothing else (2026-10-08).
+  3. ✅ Domain verified with a second `google-site-verification` TXT record; keep it, Google
+     re-checks it. The organization appeared once the super admin first opened the Cloud console
+     (2026-10-09).
+  4. ✅ The operator account created in the Admin console, with no admin role, signed in with a
+     passkey on the maintainer's phone (2026-10-09). Both accounts have 2-Step Verification; the
+     super admin a passkey on the maintainer's computer, as a bridge.
+  5. **Waiting for two hardware keys.** Register both on the super admin and one on the operator
+     account as its backup; then enforce 2-Step Verification with *Only security key or passkey*
+     (Cloud Identity Free offers it, checked 2026-10-09), remove the text-message method, turn
+     off *security codes*, review the super admin's account recovery (a recovery phone is a
+     SIM-swap path), and issue backup codes.
+  6. **Move `dnd-campaign-companion`** in, after 5; Google's guide for migrating a project into an
+     organization. The move cannot be undone without Google's support; the billing account stays.
+     - The mover needs `roles/resourcemanager.projectIamAdmin` on the project and Project Creator
+       on the organization. The super admin does it: the owner grants it the project role for the
+       move, and the organization's domain-wide Project Creator grant covers the rest.
+     - `resourcemanager.allowedImportSources` does not apply: it governs moves between
+       organizations, not into one from none.
+     - Straight after, override `iam.allowedPolicyMemberDomains` on the project to allow all
+       ([layer 1a](security-architecture.md#1a-the-organization)); the super admin grants itself
+       Organization Policy Administrator first. No deploy in between, so no merge to `main`.
+     - The first functions deploy afterwards shows whether the default-service-account policies
+       touch anything; each can be overridden on the project.
+  7. **Cleanup after the move:** remove the super admin's project role and the domain-wide Project
+     Creator and Billing Account Creator grants; remove the owner role of the contact form's Gmail
+     account (it is used for nothing else; billing is administered by the maintainer's own
+     account), then check the OAuth consent screen, whose support address is that account.
   [Security architecture](security-architecture.md#1-the-human-identity), layers 1 and 1a.
 - **The defaults** in the design's [decisions](design.md#decisions-with-defaults): keep or change.
 
@@ -130,8 +154,8 @@ owner's login, never by CI. Its header lists the steps, as the other operator sc
    - IAP's Data Access logs
    - the `operator-audit` bucket (400 days, unlocked) and its sink
    - the two log-based alerts, emailing the maintainer
-8. **Organization policies:** `iam.disableServiceAccountKeyCreation`, after confirming nothing
-   in use needs to create a key.
+8. **Organization policies:** `--check` confirms that the key policies are still enforced and that
+   the project's override of `iam.allowedPolicyMemberDomains` is in place (both from step 0).
 9. **Open questions it settles and writes down:**
    - whether `SECURE_KEY` is offered for the account's type
    - whether `roles/run.developer` can switch IAP off (if it can, the verification in step 5

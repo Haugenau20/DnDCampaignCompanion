@@ -74,10 +74,13 @@ editing any document stay outside it ([design](design.md#scope)).
   a passkey or a security key. The project moves into that organization (Cloud Identity Free;
   maintainer, 2026-10-08), so the account is the organization's own: its admin can require 2-Step
   Verification by security key only, and recovering it goes through the organization's super
-  admin, not Google's consumer recovery. Whether Cloud Identity Free offers the security-key-only
-  enforcement is checked in step 0.
+  admin, not Google's consumer recovery. Cloud Identity Free offers that enforcement, as *Only
+  security key or passkey* (checked 2026-10-09). The account signs in with a passkey in the
+  maintainer's phone's keychain, so the Apple ID it syncs through is part of the key, with a
+  hardware key as backup.
 - **The super admin is a second account, used for nothing else**: it can reset the operator's
-  sign-in, so it is guarded the same way, with a passkey and a backup key kept apart.
+  sign-in, so it is guarded more strictly: two hardware keys, one kept elsewhere, and its own
+  browser profile. It is rarely used, so convenience barely counts.
 - **It holds no role on the project** except IAP-secured Web App User
   (`roles/iap.httpsResourceAccessor`) on the operator service. Stealing it reaches the page and
   nothing else: not the console, not the data.
@@ -87,14 +90,23 @@ editing any document stay outside it ([design](design.md#scope)).
 
 The project sits in the `muninn.quest` organization (Cloud Identity Free). Besides the operator
 account and IAP's managed client, it allows policies that hold for the whole project whatever any
-owner does later:
+owner does later. The organization was created with Google's secure-by-default policies (26
+active, read 2026-10-09); the ones that matter here:
 
-- **`iam.disableServiceAccountKeyCreation`**: no new service-account key can be made. Keys that
-  exist keep working, so it can be set before T139 removes them.
-- **Not `iam.allowedPolicyMemberDomains`** as a blanket rule: it would refuse the `allUsers`
-  invoker the public callables need.
+- **No new service-account keys** (`iam.managed.disableServiceAccountKeyCreation`), no key
+  uploads (`iam.disableServiceAccountKeyUpload`), and a key found exposed is disabled
+  (`iam.serviceAccountKeyExposureResponse`): on from the start, nothing to set. Keys that exist
+  keep working until T139 removes them.
+- **Domain restricted sharing** (`iam.allowedPolicyMemberDomains`) is enforced on the
+  organization, allowing only its own accounts. It stays there, keeping outside accounts off the
+  organization's own roles. **The project overrides it to allow all**: as a blanket rule it would
+  refuse the `allUsers` invoker the public callables need, and, by Google's documentation, the
+  roles Google grants its own service agents automatically. Grants that exist survive the move.
+- **Default service accounts and Cloud Build** (`iam.automaticIamGrantsForDefaultServiceAccounts`
+  and three `cloudbuild.*` constraints) apply to accounts made later; the project's existing ones
+  are unchanged. **Uniform bucket-level access** applies to new buckets only.
 
-Step 4a's setup confirms each policy against the live project before setting it.
+Step 4a's `--check` confirms these against the live project.
 
 ### 2. Identity-Aware Proxy (B1; T1, T2, T3, T4)
 
@@ -283,8 +295,9 @@ Accepted, and named so they are not forgotten:
    Mitigated by the narrow code, its tests, the approval and the review. Unchanged from the
    functions, which have the same access.
 2. **Two human keys.** Everything rests on the operator account and on the organization's super
-   admin, which can reset it. Each has a passkey and a backup key kept apart, and their recovery
-   options are checked once a year.
+   admin, which can reset it. Each has a backup key kept apart, and their recovery options are
+   checked once a year. The operator's passkey syncs through the maintainer's Apple ID, so taking
+   over that account is a way to the passkey; the super admin's hardware keys sync nowhere.
 3. **An hour.** A session taken from the device works until re-authentication. The email per action
    makes it visible; every action it can take can be undone.
 4. **Founder tokens are document ids.** Anyone who can read Firestore (the console, the runtime
