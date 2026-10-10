@@ -598,6 +598,24 @@ appears as the boundary, never as the text on top of itself. `12-2b` adds this
 pairing to the borrowed-role verification so the illegal combination fails
 generation rather than review.
 
+### 5.7 The logo
+
+Added in version 11, on the maintainer's instruction (2026-10-10), for the
+site's mark: the rune ᛗ on a tile beside the name in the header and the
+sign-in band.
+
+| Token | Source | Light | Dark |
+|---|---|---|---|
+| `logo.bg` | dark `accent.base` | `#D69253` | `#D69253` |
+| `logo.on` | `surface.chrome.bg` | `#1B1611` | `#0A0704` |
+
+**One amber in both modes.** The mark only ever sits on chrome, which is
+near-black in both modes (§5.1), so it takes the accent solved for a dark
+ground in both. The light accent, `#8D4F00`, is solved for cream and would sink
+into the bar. `logo.on` is the glyph, in its own mode's chrome, so the rune
+reads as cut out of the tile. It clears AA on `logo.bg` in both modes and the
+generator verifies it as ink on a fill.
+
 ## 6. Non-colour cues
 
 Because nothing is encoded by colour alone (design language §2), and because

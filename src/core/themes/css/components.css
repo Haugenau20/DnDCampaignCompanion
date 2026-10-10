@@ -263,6 +263,15 @@
     font-family: var(--font-heading);
   }
 
+  /* The site's mark (`BrandMark`): the logo tile, and the rune on it. */
+  .brand-mark-tile {
+    fill: var(--logo-bg);
+  }
+
+  .brand-mark-glyph {
+    fill: var(--logo-on);
+  }
+
   /* The rune ᛗ as text (`RuneMark`). Its font is loaded with this one
      character only (index.html), so it never sets anything else. */
   .rune-mark {

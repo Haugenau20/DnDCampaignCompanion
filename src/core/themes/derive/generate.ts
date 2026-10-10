@@ -410,6 +410,13 @@ export const deriveTokens = (mode: ThemeName): ThemeTokens => {
     },
     entityPalette: [...primitives.entity],
     entityInk: primitives.entityInk,
+    // The mark sits on chrome, which is near-black in both modes (see
+    // `surface` above), so it takes the accent that was solved for a dark
+    // ground in both: the dark mode's. Its glyph is this mode's chrome.
+    logo: {
+      bg: mode === "dark" ? primitives.accent.base : derivePrimitives("dark").accent.base,
+      on: primitives.surface.chrome.bg,
+    },
   };
 
   assertAllConsumed();
@@ -567,6 +574,7 @@ export const findBorrowedRoleFailures = (
       tokens.action.secondary.bg,
     ],
     ["accent.on", tokens.accent.on, "accent.fill", tokens.accent.fill],
+    ["logo.on", tokens.logo.on, "logo.bg", tokens.logo.bg],
     [
       "outcome.failed.on",
       tokens.outcome.failed.on,
