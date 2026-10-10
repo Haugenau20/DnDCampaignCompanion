@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth, useCampaigns } from 'features/user-management';
+import type { AnalyticsPage } from 'core/services/firebase/analytics/analytics';
 
 /** The site's name, last in every tab title. */
 export const SITE_NAME = 'Muninn';
@@ -43,6 +44,27 @@ const SECTIONS: readonly Section[] = [
   { prefix: '/about', page: 'About', campaign: false },
 ];
 
+/** The section an address belongs to, if any. */
+const sectionFor = (pathname: string): Section | undefined =>
+  SECTIONS.find(({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+
+/**
+ * What Google Analytics is told about an address (T138): its section and
+ * nothing else. The address itself can hold a record's name, an invitation
+ * code or a sign-in link's code, and the tab title names the campaign.
+ *
+ * @param pathname - the address's path
+ */
+export const analyticsPageFor = (pathname: string): AnalyticsPage => {
+  if (pathname === '/') {
+    return { path: '/', title: 'Home' };
+  }
+  const section = sectionFor(pathname);
+  return section
+    ? { path: section.prefix, title: section.page }
+    : { path: '/other', title: 'Other' };
+};
+
 /**
  * The tab title for an address: `{Page} · {Campaign} · Muninn`, leaving out
  * whatever does not apply. "Quests · The Sunless Citadel · Muninn",
@@ -53,9 +75,7 @@ const SECTIONS: readonly Section[] = [
  * @param campaignName - the active campaign's name, if there is one
  */
 export const documentTitleFor = (pathname: string, campaignName?: string | null): string => {
-  const section = SECTIONS.find(
-    ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
+  const section = sectionFor(pathname);
   const isHome = pathname === '/';
   const namesCampaign = isHome || (section?.campaign ?? false);
 

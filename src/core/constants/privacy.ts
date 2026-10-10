@@ -20,14 +20,13 @@
  * BUMP THIS BY HAND whenever the wording changes, and add a PRIVACY_CHANGELOG
  * line saying what changed. Never derive it from Date.now().
  */
-export const PRIVACY_LAST_UPDATED = "2026-10-08";
+export const PRIVACY_LAST_UPDATED = "2026-10-10";
 
 /** What changed in the revision named by PRIVACY_LAST_UPDATED, newest first. */
 export const PRIVACY_CHANGELOG: readonly string[] = [
-  "If you ask to be remembered, the campaign records you have opened are now kept in your browser until you sign out.",
-  "If you don't, nothing of your campaigns stays in your browser after you close the page, and any copy an earlier remembered visit left is deleted.",
-  "Smart detection is now capped at 3 scans a day, 5 a week and 10 a month, down from 10, 30 and 100.",
-  "Accounts still come only from an invitation, which may now be one to start a group of your own.",
+  "Google Analytics now runs only if you say yes, and reports only which part of the site you visit. This page said there were no analytics, while the site ran them for everyone.",
+  "You can change your answer on this page; saying no deletes the analytics cookies.",
+  "The page now names Google's reCAPTCHA, which checks that requests come from this site.",
 ]
 
 /**
@@ -71,6 +70,21 @@ export const EXTRACTION_FACTS = {
   retention:
     "kept by OpenAI for up to 30 days for abuse monitoring and then deleted",
   transfer: "processed in the United States",
+} as const;
+
+/**
+ * The Google Analytics disclosure (T138). The cookie lifetime is also what the
+ * code sets (`core/services/firebase/analytics`), so the page cannot drift
+ * from it. The retention is a setting in the Google Analytics property, not in
+ * this repository: change both together.
+ */
+export const ANALYTICS_FACTS = {
+  provider: "Google Analytics",
+  /** `cookie_expires`, in days: 13 months, down from Google's two years. */
+  cookieLifetimeDays: 395,
+  cookieLifetime: "13 months",
+  /** The property's data retention (Admin, Data collection, Data retention). */
+  retention: "2 months",
 } as const;
 
 /** One row of the at-a-glance table. */
@@ -136,6 +150,13 @@ export const PRIVACY_TABLE_ROWS: readonly PrivacyTableRow[] = [
     highlighted: true,
   },
   {
+    id: "analytics",
+    what: "Which parts of the site you visit, if you allow analytics",
+    why: "To see which parts of the site are used",
+    where: "Google Analytics, which can process it in the United States",
+    howLong: `Visit-level data for ${ANALYTICS_FACTS.retention}; its cookies for ${ANALYTICS_FACTS.cookieLifetime}, or until you say no`,
+  },
+  {
     id: "messages",
     what: "Messages you send us, and any screenshot you attach",
     why: "To answer you",
@@ -161,6 +182,7 @@ export const PRIVACY_SECTIONS: readonly PrivacySection[] = [
   { id: "what-we-collect", label: "What we collect" },
   { id: "groups-and-sharing", label: "Groups and sharing" },
   { id: "entity-extraction", label: "Entity extraction" },
+  { id: "analytics", label: "Analytics" },
   { id: "device-storage", label: "On your device" },
   { id: "security", label: "Security" },
   { id: "retention", label: "Retention and deletion" },

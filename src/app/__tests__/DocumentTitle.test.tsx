@@ -5,7 +5,7 @@
 import React from "react";
 import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import DocumentTitle, { documentTitleFor } from "../DocumentTitle";
+import DocumentTitle, { analyticsPageFor, documentTitleFor } from "../DocumentTitle";
 
 jest.mock("@/features/user-management", () => ({
   useAuth: jest.fn(),
@@ -55,6 +55,28 @@ describe("documentTitleFor", () => {
 
   test("an address no section claims gets the bare title", () => {
     expect(documentTitleFor("/no/such/page", CAMPAIGN)).toBe("Muninn");
+  });
+});
+
+// T138: Google Analytics hears the section, never the address or the title.
+describe("analyticsPageFor", () => {
+  test("a record's page is reported as its section", () => {
+    expect(analyticsPageFor("/npcs/sildar-hallwinter")).toEqual({ path: "/npcs", title: "NPCs" });
+  });
+
+  test("the sign-in and invitation pages are reported by name alone", () => {
+    // Their codes travel in the query string, which this is never given:
+    // AnalyticsPageView passes the path only.
+    expect(analyticsPageFor("/join")).toEqual({ path: "/join", title: "Join" });
+    expect(analyticsPageFor("/auth/link")).toEqual({ path: "/auth/link", title: "Sign in" });
+  });
+
+  test("the home page is Home, never the campaign's name", () => {
+    expect(analyticsPageFor("/")).toEqual({ path: "/", title: "Home" });
+  });
+
+  test("an address no section claims is reported as Other", () => {
+    expect(analyticsPageFor("/the-sunless-citadel-secret")).toEqual({ path: "/other", title: "Other" });
   });
 });
 

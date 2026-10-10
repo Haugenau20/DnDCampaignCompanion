@@ -151,6 +151,12 @@ jest.mock("app/DocumentTitle", () => ({
   default: () => <div data-testid="document-title" />,
 }));
 
+// Tested on its own (app/__tests__/AnalyticsPageView.test.tsx).
+jest.mock("app/AnalyticsPageView", () => ({
+  __esModule: true,
+  default: () => <div data-testid="analytics-page-view" />,
+}));
+
 jest.mock("@/features/user-management/auth/components/SessionTimeoutWarning", () => ({
   __esModule: true,
   default: () => <div data-testid="session-timeout-warning" />,

@@ -19,7 +19,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 
 | Priority | ID | Item | Size | Status | Why this priority |
 |---|---|---|---|---|---|
-| medium | T138 | The site starts Google Analytics; the privacy page says it has none | S | open | A public privacy promise the code contradicts; whether events reach Google is unverified |
+| medium | T144 | Every page loads its fonts from Google | S | open | Each visit hands the visitor's address to Google before any consent, and the privacy page does not say so |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
@@ -116,21 +116,23 @@ documents agreed with each other and none of them agreed with the product.
 
 Bugs the behavioural suites find live in `docs/testing/bug-tracking/README.md`.
 
-### T138 — The site starts Google Analytics; the privacy page says it has none
-**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-08
+### T144 — Every page loads its fonts from Google
+**Type** bug · **Size** S · **Status** open · **Verified** 2026-10-10
 
-The privacy page promises "No analytics" (`pages/PrivacyPolicyPage.tsx:102`)
-and "no analytics ... no third-party scripts watching you read" (`:271`), but
-every page load calls `getAnalytics(app)` (`core/services/firebase/core/BaseFirebaseService.ts:80`)
-with a real measurement id (`core/services/firebase/config/firebaseConfig.ts:13`,
-`G-TX89XGGZE0` as the fallback). Nothing else reads `this.analytics`.
+`index.html` loads Archivo, Zilla Slab and the one Noto Sans Runic glyph from
+`fonts.googleapis.com` (`:32`, `:45`, `:49`), so every visit, signed in or
+not, asks Google's servers first and hands them the visitor's network address
+and browser. Nothing asks the visitor, and the privacy page names Google
+Analytics and reCAPTCHA but not this. Seen in the dev server's network log
+(both stylesheets, before any answer to the analytics question).
 
-- **Unverified**: whether page views reach Google Analytics from the live
-  site. Not observed; the live site's network tab or the GA property shows it.
-  No CSP in `firebase/firebase.json` would stop it.
-- **Catch**: drop it, or keep it and say so (with consent, if it sets cookies),
-  is the maintainer's call, and T137 asks for traffic metrics.
-- **Source**: found while filing T137, 2026-10-08
+- **Fix**: serve the fonts from the site itself (the `.woff2` files beside the
+  build, `@font-face` in `globals.css`), which removes the request rather than
+  disclosing it. Check the runic glyph still renders: it is subset to one
+  character by the `text=` parameter today.
+- **Why it matters**: a German court (LG München I, 2022) held exactly this
+  embedding, without consent, to breach the GDPR.
+- **Source**: found while making Google Analytics ask first, 2026-10-10
 
 ---
 

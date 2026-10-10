@@ -7,7 +7,6 @@ import {
   Firestore, connectFirestoreEmulator,
   doc, getDoc, DocumentData
 } from "firebase/firestore";
-import { getAnalytics, Analytics } from "firebase/analytics";
 import {
   getStorage, FirebaseStorage, connectStorageEmulator
 } from "firebase/storage";
@@ -23,6 +22,7 @@ import {
 import ServiceRegistry from "./ServiceRegistry";
 import { clearCacheOnSignOut, isRememberedSession, openFirestore } from "./firestoreCache";
 import { SESSION_INFO_KEY } from "../auth/sessionTimeout";
+import { attachAnalytics } from "../analytics/analytics";
 
 /**
  * Whether this browser holds a remembered session, reading `localStorage`
@@ -45,7 +45,6 @@ abstract class BaseFirebaseService {
   protected app: FirebaseApp;
   protected auth: Auth;
   protected db: Firestore;
-  protected analytics: Analytics;
   protected functions: Functions;
   protected storage: FirebaseStorage;
   
@@ -77,7 +76,6 @@ abstract class BaseFirebaseService {
       // A persistent cache only for a remembered session (T130).
       const persistCache = rememberedSession();
       const db = openFirestore(app, persistCache);
-      const analytics = getAnalytics(app);
       const functions = getFunctions(app, 'europe-west1');
       // From the default app: it is the one App Check is attached to
       // (src/index.tsx), and production Storage enforces App Check.
@@ -119,10 +117,12 @@ abstract class BaseFirebaseService {
       if (persistCache) {
         clearCacheOnSignOut(auth, db, () => window.location.reload());
       }
+
+      // Google Analytics only with the player's consent (T138).
+      attachAnalytics(app);
       
       this.registry.register("auth", auth);
       this.registry.register("db", db);
-      this.registry.register("analytics", analytics);
       this.registry.register("functions", functions);
       this.registry.register("storage", storage);
     }
@@ -131,7 +131,6 @@ abstract class BaseFirebaseService {
     this.app = this.registry.get("app");
     this.auth = this.registry.get("auth");
     this.db = this.registry.get("db");
-    this.analytics = this.registry.get("analytics");
     this.functions = this.registry.get("functions");
     this.storage = this.registry.get("storage");
   }

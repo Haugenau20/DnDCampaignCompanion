@@ -58,7 +58,7 @@
   "src/features/storytelling/stories/components/__tests__/ChapterReader.test.tsx": 11,
   "src/features/user-management/admin/pages/__tests__/AdminLayout.test.tsx": 1,
   "src/features/user-management/auth/components/__tests__/DevEmailLinkShortcut.test.tsx": 1,
-  "src/features/user-management/auth/components/__tests__/PrivacyNotice.test.tsx": 5,
+  "src/features/user-management/auth/components/__tests__/PrivacyNotice.test.tsx": 2,
   "src/features/user-management/auth/components/__tests__/SessionManager.test.tsx": 2,
   "src/features/user-management/auth/components/__tests__/SessionManager.theme-switch.test.tsx": 2,
   "src/features/user-management/auth/components/__tests__/SessionTimeoutWarning.test.tsx": 5,

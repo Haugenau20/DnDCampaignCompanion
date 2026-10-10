@@ -1,169 +1,101 @@
-﻿// src/components/features/auth/__tests__/PrivacyNotice.test.tsx
+// src/features/user-management/auth/components/__tests__/PrivacyNotice.test.tsx
 
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import PrivacyNotice from '../PrivacyNotice';
+import React from "react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import PrivacyNotice from "../PrivacyNotice";
 import { unnamedControlsIn } from "@/test-utils/accessible-names";
 import { formAccentsIn } from "@/test-utils/accent-budget";
+import {
+  ANALYTICS_CONSENT_KEY,
+  resetAnalyticsForTests,
+  setAnalyticsConsent,
+} from "@/core/services/firebase/analytics/analytics";
 
-// ---------------------------------------------------------------------------
-// Mock useNavigation hook
-// ---------------------------------------------------------------------------
+/**
+ * T138: the notice asks whether Google Analytics may run, and stays until the
+ * player answers.
+ */
+
 const mockNavigateToPage = jest.fn();
 
-jest.mock('@/shared/hooks/useNavigation', () => ({
-  useNavigation: jest.fn(),
+jest.mock("@/shared/hooks/useNavigation", () => ({
+  useNavigation: () => ({ navigateToPage: mockNavigateToPage }),
 }));
 
-const { useNavigation } = require('@/shared/hooks/useNavigation');
+const notice = () => screen.queryByRole("region", { name: "Privacy" });
 
-// ---------------------------------------------------------------------------
-// Mock Button and Typography core components
-// ---------------------------------------------------------------------------
-jest.mock('@/core/components/Button', () => {
-  const Button = ({ children, onClick, variant, size, startIcon, endIcon, ...rest }: any) => (
-    <button onClick={onClick} {...rest}>
-      {startIcon}
-      {children}
-      {endIcon}
-    </button>
-  );
-  return Button;
+beforeEach(() => {
+  jest.clearAllMocks();
+  localStorage.clear();
+  resetAnalyticsForTests();
 });
 
-jest.mock('@/core/components/Typography', () => {
-  const Typography = ({ children, variant, color, className }: any) => (
-    <span className={className}>{children}</span>
-  );
-  return Typography;
+afterEach(() => {
+  localStorage.clear();
 });
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function setupMocks() {
-  useNavigation.mockReturnValue({
-    navigateToPage: mockNavigateToPage,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('PrivacyNotice', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    setupMocks();
-    localStorage.clear();
-  });
-
-  afterEach(() => {
-    localStorage.clear();
-  });
-
-  // -------------------------------------------------------------------------
-  // Initial display
-  // -------------------------------------------------------------------------
-  describe('initial display', () => {
-    test('should render the notice when privacyNoticeSeen is not in localStorage', () => {
+describe("PrivacyNotice", () => {
+  describe("before the player answers", () => {
+    test("asks about Google Analytics", () => {
       render(<PrivacyNotice />);
-      expect(screen.getByText('Privacy Notice')).toBeInTheDocument();
+      expect(notice()).toBeInTheDocument();
+      expect(screen.getByText(/count visits with Google Analytics/)).toBeInTheDocument();
     });
 
-    test('should NOT render when privacyNoticeSeen is set in localStorage', () => {
-      localStorage.setItem('privacyNoticeSeen', 'true');
+    test("says what the session keeps", () => {
+      render(<PrivacyNotice />);
+      expect(screen.getByText(/ends after 24 hours of\s+inactivity/)).toBeInTheDocument();
+    });
+
+    test("shows again to a player who only dismissed the old notice", () => {
+      localStorage.setItem("privacyNoticeSeen", "true");
+      render(<PrivacyNotice />);
+      expect(notice()).toBeInTheDocument();
+    });
+
+    test("offers no way to close it without answering", () => {
+      render(<PrivacyNotice />);
+      expect(screen.getAllByRole("button").map((button) => button.textContent)).toEqual([
+        "Privacy policy",
+        "No thanks",
+        "Allow analytics",
+      ]);
+    });
+  });
+
+  describe("answering", () => {
+    test.each([
+      ["Allow analytics", "granted"],
+      ["No thanks", "denied"],
+    ])("%s records %s and hides the notice", (label, stored) => {
+      render(<PrivacyNotice />);
+      fireEvent.click(screen.getByRole("button", { name: label }));
+
+      expect(localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe(stored);
+      expect(notice()).not.toBeInTheDocument();
+    });
+
+    test("is not shown once the player has answered", () => {
+      localStorage.setItem(ANALYTICS_CONSENT_KEY, "denied");
       const { container } = render(<PrivacyNotice />);
-      expect(container.firstChild).toBeNull();
+      expect(container).toBeEmptyDOMElement();
     });
 
-    test('should display session timeout information text', () => {
+    test("hides when the player answers elsewhere, such as on the privacy page", () => {
       render(<PrivacyNotice />);
-      expect(screen.getByText(/tracks session activity/i)).toBeInTheDocument();
-    });
-
-    test('should show "Privacy Policy" link button', () => {
-      render(<PrivacyNotice />);
-      expect(screen.getByText(/privacy policy/i)).toBeInTheDocument();
-    });
-
-    test('should show "Got it" dismiss button', () => {
-      render(<PrivacyNotice />);
-      expect(screen.getByText(/got it/i)).toBeInTheDocument();
-    });
-
-    test('should show dismiss icon button with aria-label', () => {
-      render(<PrivacyNotice />);
-      expect(screen.getByLabelText('Dismiss privacy notice')).toBeInTheDocument();
+      act(() => setAnalyticsConsent("granted"));
+      expect(notice()).not.toBeInTheDocument();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Dismissal behavior
-  // -------------------------------------------------------------------------
-  describe('dismissal behavior', () => {
-    test('should hide the notice when "Got it" button is clicked', () => {
+  describe("the privacy policy link", () => {
+    test("opens the privacy page and leaves the question open", () => {
       render(<PrivacyNotice />);
-      fireEvent.click(screen.getByText(/got it/i));
-      expect(screen.queryByText('Privacy Notice')).not.toBeInTheDocument();
-    });
+      fireEvent.click(screen.getByRole("button", { name: /privacy policy/i }));
 
-    test('should set privacyNoticeSeen in localStorage when dismissed via "Got it"', () => {
-      render(<PrivacyNotice />);
-      fireEvent.click(screen.getByText(/got it/i));
-      expect(localStorage.getItem('privacyNoticeSeen')).toBe('true');
-    });
-
-    test('should hide the notice when the close icon button is clicked', () => {
-      render(<PrivacyNotice />);
-      fireEvent.click(screen.getByLabelText('Dismiss privacy notice'));
-      expect(screen.queryByText('Privacy Notice')).not.toBeInTheDocument();
-    });
-
-    test('should set privacyNoticeSeen in localStorage when dismissed via icon button', () => {
-      render(<PrivacyNotice />);
-      fireEvent.click(screen.getByLabelText('Dismiss privacy notice'));
-      expect(localStorage.getItem('privacyNoticeSeen')).toBe('true');
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Privacy Policy navigation
-  // -------------------------------------------------------------------------
-  describe('privacy policy navigation', () => {
-    test('should call navigateToPage with /privacy when Privacy Policy is clicked', () => {
-      render(<PrivacyNotice />);
-      fireEvent.click(screen.getByText(/privacy policy/i));
-      expect(mockNavigateToPage).toHaveBeenCalledWith('/privacy');
-    });
-
-    test('should keep the notice visible after clicking Privacy Policy', () => {
-      render(<PrivacyNotice />);
-      fireEvent.click(screen.getByText(/privacy policy/i));
-      // Notice should still be visible (not dismissed)
-      expect(screen.getByText('Privacy Notice')).toBeInTheDocument();
-    });
-
-    test('should NOT set privacyNoticeSeen in localStorage when Privacy Policy is clicked', () => {
-      render(<PrivacyNotice />);
-      fireEvent.click(screen.getByText(/privacy policy/i));
-      expect(localStorage.getItem('privacyNoticeSeen')).toBeNull();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // localStorage interaction
-  // -------------------------------------------------------------------------
-  describe('localStorage interaction', () => {
-    test('should only show once per session when dismissed and re-mounted', () => {
-      const { unmount } = render(<PrivacyNotice />);
-      fireEvent.click(screen.getByText(/got it/i));
-      unmount();
-
-      // Re-mount — notice should not appear because localStorage is set
-      const { container } = render(<PrivacyNotice />);
-      expect(container.firstChild).toBeNull();
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/privacy");
+      expect(notice()).toBeInTheDocument();
+      expect(localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBeNull();
     });
   });
 });
@@ -174,7 +106,6 @@ describe('PrivacyNotice', () => {
 // ---------------------------------------------------------------------------
 describe("PrivacyNotice — names and accents", () => {
   it("names every control", () => {
-    setupMocks();
     const { container } = render(<PrivacyNotice />);
 
     // Paired with a positive assertion so an empty list cannot mean "this
@@ -184,37 +115,35 @@ describe("PrivacyNotice — names and accents", () => {
     expect(unnamedControlsIn(container)).toEqual([]);
   });
 
-  it("spends no accent: acknowledging a notice writes no record", () => {
-    setupMocks();
+  it("spends no accent: neither answer writes campaign data, and they weigh the same", () => {
     const { container } = render(<PrivacyNotice />);
 
-    // "Got it" dismisses a banner. Nothing about the campaign changes, so
-    // nothing here earns the accent (D66).
+    // Saying no must be as easy as saying yes, so neither answer stands out
+    // (D66).
     expect(formAccentsIn(container)).toEqual([]);
   });
 });
 
-describe('PrivacyNotice with storage unavailable (T092)', () => {
+describe("PrivacyNotice with storage unavailable (T092)", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    setupMocks();
     const refuse = () => {
-      throw new DOMException('The operation is insecure.', 'SecurityError');
+      throw new DOMException("The operation is insecure.", "SecurityError");
     };
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(refuse);
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(refuse);
+    jest.spyOn(Storage.prototype, "getItem").mockImplementation(refuse);
+    jest.spyOn(Storage.prototype, "setItem").mockImplementation(refuse);
+    jest.spyOn(Storage.prototype, "removeItem").mockImplementation(refuse);
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  test('shows the notice, and "Got it" still dismisses it', () => {
+  test("shows the notice, and an answer still hides it", () => {
     render(<PrivacyNotice />);
-    expect(screen.getByText('Privacy Notice')).toBeInTheDocument();
+    expect(notice()).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText(/got it/i));
+    fireEvent.click(screen.getByRole("button", { name: "No thanks" }));
 
-    expect(screen.queryByText('Privacy Notice')).not.toBeInTheDocument();
+    expect(notice()).not.toBeInTheDocument();
   });
 });

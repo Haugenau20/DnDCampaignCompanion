@@ -1,81 +1,80 @@
-import React, { useState, useEffect } from 'react';
-import Button from 'core/components/Button';
-import Typography from 'core/components/Typography';
-import { X, ExternalLink } from 'lucide-react';
-import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from 'core/constants/time';
-import { useNavigation } from 'shared/hooks/useNavigation';
-import clsx from 'clsx';
-import { readLocalStorage, writeLocalStorage } from 'core/utils/local-storage';
+import React from "react";
+import Button from "core/components/Button";
+import Typography from "core/components/Typography";
+import { ExternalLink } from "lucide-react";
+import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
+import { ANALYTICS_FACTS } from "core/constants/privacy";
+import { useNavigation } from "shared/hooks/useNavigation";
+import { useAnalyticsConsent } from "shared/hooks/useAnalyticsConsent";
 
 /**
- * Simple notification to inform users about session activity tracking
- * and other privacy-related information
+ * Asks whether Google Analytics may run, beside what the session keeps
+ * (T138). Shown until the player answers; the answer can be changed later on
+ * the privacy page.
+ *
+ * The two answers carry equal weight on purpose: saying no must be as easy as
+ * saying yes, and neither writes campaign data, so neither earns the accent.
+ * There is no close button, because closing would not be an answer.
  */
 const PrivacyNotice: React.FC = () => {
-  const [showNotice, setShowNotice] = useState(false);
+  const [consent, setConsent] = useAnalyticsConsent();
   const { navigateToPage } = useNavigation();
-  
-  useEffect(() => {
-    // Check if user has already seen the notice
-    const hasSeenNotice = readLocalStorage('privacyNoticeSeen');
-    if (!hasSeenNotice) {
-      setShowNotice(true);
-    }
-  }, []);
-  
-  const handleDismiss = () => {
-    writeLocalStorage('privacyNoticeSeen', 'true');
-    setShowNotice(false);
-  };
-  
-  const handleViewPrivacyPolicy = () => {
-    navigateToPage('/privacy');
-    // Keep the notice visible until they explicitly dismiss it
-  };
-  
-  if (!showNotice) return null;
-  
+
+  if (consent !== null) return null;
+
   return (
-    <div className={clsx(
-      "fixed bottom-4 right-4 max-w-sm p-4 z-50",
-      `card`
-    )}>
-      <div className="flex justify-between items-start mb-2">
-        <Typography variant="h4">Privacy Notice</Typography>
-        <button 
-          onClick={handleDismiss} 
-          className={clsx(
-            "p-1 rounded-full transition-colors",
-            `button-ghost`
-          )}
-          aria-label="Dismiss privacy notice"
-        >
-          <X size={20} />
-        </button>
-      </div>
-      
-      <Typography variant="body-sm" color="secondary" className="mb-3">
-        This application tracks session activity to maintain your login state and security. 
-        Your session will expire after {INACTIVITY_TIMEOUT_TEXT} of inactivity, or 
-        after {REMEMBER_ME_TEXT} if "Remember me" is enabled. We also store login 
-        timestamps for security purposes.
+    <section
+      aria-labelledby="privacy-notice-title"
+      className="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-sm p-4 z-50 card"
+    >
+      <Typography id="privacy-notice-title" variant="h4" className="mb-2">
+        Privacy
       </Typography>
-      
-      <div className="flex justify-between">
-        <Button 
-          variant="link" 
-          size="sm" 
-          onClick={handleViewPrivacyPolicy}
+
+      <Typography variant="body-sm" color="secondary" className="mb-2">
+        May we count visits with {ANALYTICS_FACTS.provider}? It sets cookies
+        and tells Google which parts of the site are used, never what is in
+        your campaigns. Nothing is sent unless you say yes, and you can change
+        your mind on the privacy page.
+      </Typography>
+
+      <Typography variant="body-sm" color="secondary" className="mb-3">
+        Signing in keeps a session: it ends after {INACTIVITY_TIMEOUT_TEXT} of
+        inactivity, or after {REMEMBER_ME_TEXT} if you ask to be remembered.
+      </Typography>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button
+          variant="link"
+          size="sm"
+          className="min-h-[44px] sm:min-h-[32px]"
+          onClick={() => navigateToPage("/privacy")}
           endIcon={<ExternalLink size={14} />}
         >
-          Privacy Policy
+          Privacy policy
         </Button>
-        
-        <Button variant="outline" size="sm" onClick={handleDismiss}>
-          Got it
-        </Button>
+
+        {/* 44px targets on a phone, as elsewhere. */}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-[44px] sm:min-h-[32px]"
+            onClick={() => setConsent("denied")}
+          >
+            No thanks
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-[44px] sm:min-h-[32px]"
+            onClick={() => setConsent("granted")}
+          >
+            Allow analytics
+          </Button>
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 

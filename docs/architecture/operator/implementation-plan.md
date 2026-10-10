@@ -238,7 +238,8 @@ Every step adds and removes nothing, so the scripts and the console keep working
 - **The caps** (10 members and 5 campaigns per group, 300 accounts) bound what founder links can
   cost.
 - **A founder link leads somewhere**: account, group, first campaign, invitations.
-- **T138** decides whether the overview can show traffic.
+- **Traffic** in the overview can come from Google Analytics, kept with consent; it counts
+  only visitors who agreed.
 - **Two items worth filing when step 4a is picked up:**
   - storing only hashes of invitation tokens
   - the functions' service account ([residual risks](security-architecture.md#residual-risks) 4
