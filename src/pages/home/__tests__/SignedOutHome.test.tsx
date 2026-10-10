@@ -19,6 +19,12 @@ const renderHome = () =>
   );
 
 describe("SignedOutHome", () => {
+  // Strangers arrive here, so it is where the name is explained.
+  it("says where the name comes from", () => {
+    renderHome();
+    expect(screen.getByText("Muninn was Odin's raven of memory.")).toBeInTheDocument();
+  });
+
   it("leads with what the product is, as the page's h1", () => {
     renderHome();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(

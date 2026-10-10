@@ -31,7 +31,7 @@ const MAX_RUMOURS_PER_COMMIT = Math.floor((MAX_BATCH_WRITES - 2) / 2);
  */
 const assertFitsOneCommit = (rumorCount: number): void => {
   if (rumorCount > MAX_RUMOURS_PER_COMMIT) {
-    throw new Error(`One action can change at most ${MAX_RUMOURS_PER_COMMIT} rumours at once.`);
+    throw new Error(`One action can change at most ${MAX_RUMOURS_PER_COMMIT} rumors at once.`);
   }
 };
 
@@ -86,7 +86,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * action can never stop halfway through the selection.
    */
   const commitRumorWrites = useCallback(
-    (writes: EntityBatchWrite<Rumor>[]) => commitEntityWrites(rumorsPath, 'rumours', writes),
+    (writes: EntityBatchWrite<Rumor>[]) => commitEntityWrites(rumorsPath, 'rumors', writes),
     [rumorsPath]
   );
 

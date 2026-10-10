@@ -1593,7 +1593,7 @@ describe("NPCDetailPage", () => {
       expect(within(tray).getByText("People")).toBeInTheDocument();
       expect(within(tray).getByText("Places")).toBeInTheDocument();
       expect(within(tray).getByText("Quests")).toBeInTheDocument();
-      expect(within(tray).getByText("Rumours")).toBeInTheDocument();
+      expect(within(tray).getByText("Rumors")).toBeInTheDocument();
       // Browsing is the primary act: the filter is there, and nothing was
       // typed into it to get this list.
       expect(within(tray).getAllByRole("option").length).toBeGreaterThan(1);

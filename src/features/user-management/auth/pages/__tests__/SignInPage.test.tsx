@@ -45,6 +45,15 @@ describe("SignInPage", () => {
   // `Card.Header title="Sign In"`, so the page added nothing. Now the card is
   // gone and the page is the single title -- which is the actual requirement:
   // "Sign In" appears once in the DOM of `/signin`.
+  test("puts the mark beside the name at the top of the band", () => {
+    renderAt("/signin");
+    expect(screen.getByText("Muninn")).toBeInTheDocument();
+    const marks = screen
+      .getAllByRole("presentation", { hidden: true })
+      .filter((img) => img.getAttribute("src") === "/mark.svg");
+    expect(marks).toHaveLength(1);
+  });
+
   test("titles the page exactly once", () => {
     renderAt("/signin");
     const signInHeadings = screen
@@ -131,6 +140,18 @@ describe("SignInPage", () => {
     test("says nothing when there is no destination", () => {
       renderAt("/signin");
       expect(screen.queryByText(/you were heading to/i)).not.toBeInTheDocument();
+    });
+
+    // The slot is the band's one free line. Without a destination it says
+    // where the name comes from; a destination is worth more, and wins it.
+    test("says where the name comes from when there is no destination", () => {
+      renderAt("/signin");
+      expect(screen.getByText("Muninn was Odin's raven of memory.")).toBeInTheDocument();
+    });
+
+    test("gives the line up to a destination", () => {
+      renderAt("/signin?next=%2Flocations");
+      expect(screen.queryByText(/raven of memory/i)).not.toBeInTheDocument();
     });
 
     test("says nothing for a rejected destination", () => {

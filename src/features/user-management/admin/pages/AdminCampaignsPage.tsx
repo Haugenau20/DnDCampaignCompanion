@@ -332,7 +332,7 @@ const AdminCampaignsPage: React.FC = () => {
         onConfirm={handleConfirmDelete}
         itemType="campaign"
         itemName={pendingDelete?.name ?? ''}
-        message={`Delete “${pendingDelete?.name ?? ''}”? The campaign and everything recorded in it — its NPCs, locations, quests, rumours, chapters and saga, and every member's notes for it — is removed for all of ${groupName}. This cannot be undone.`}
+        message={`Delete “${pendingDelete?.name ?? ''}”? The campaign and everything recorded in it — its NPCs, locations, quests, rumors, chapters and saga, and every member's notes for it — is removed for all of ${groupName}. This cannot be undone.`}
       />
     </div>
   );

@@ -23,7 +23,15 @@ describe("NotFoundPage", () => {
   // state and a way onward -- not the header and footer around nothing.
   it("says the page does not exist", () => {
     renderAt("/npcs/fake/thing");
-    expect(screen.getByRole("heading", { name: "Page not found" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Muninn has no memory of this page" })
+    ).toBeInTheDocument();
+  });
+
+  // The site was once called "the Companion", and this page still said so.
+  it("names no old name", () => {
+    renderAt("/npcs/fake/thing");
+    expect(screen.queryByText(/companion/i)).not.toBeInTheDocument();
   });
 
   it("names the address that was asked for", () => {

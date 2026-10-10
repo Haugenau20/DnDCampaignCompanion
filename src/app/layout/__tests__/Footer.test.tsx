@@ -65,6 +65,11 @@ describe("Footer", () => {
       ).toBeInTheDocument();
     });
 
+    test("names the site's address after its name", () => {
+      render(<Footer />);
+      expect(screen.getByText(/© \d{4} Muninn · muninn\.quest/)).toBeInTheDocument();
+    });
+
     test("should render a Privacy Policy link", () => {
       render(<Footer />);
       expect(

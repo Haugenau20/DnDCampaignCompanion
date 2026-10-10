@@ -144,7 +144,7 @@ describe('LocationDirectory', () => {
   describe('empty state', () => {
     test('says what the collection is for, and offers the action that fills it', () => {
       render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText(/nowhere charted yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't been anywhere yet/i)).toBeInTheDocument();
       expect(screen.getByText(/regions, cities, dungeons/i)).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /add the first location/i })
@@ -743,7 +743,7 @@ describe('LocationDirectory', () => {
 
     test('the empty state still appears when there are genuinely no locations', () => {
       render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText(/nowhere charted yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't been anywhere yet/i)).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Unplaced' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Locations' })).not.toBeInTheDocument();
     });

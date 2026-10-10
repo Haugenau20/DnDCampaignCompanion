@@ -234,6 +234,11 @@ the unit. Re-check after any value tuning: changing a value changes ratios.
 Chrome copy is plain and short — the app does not perform. In-world text is
 whatever the players wrote; the design frames it and never editorialises it.
 
+Muninn may be named as the record's subject on low-frequency surfaces (empty
+states for a whole section, sign-in, signed-out home, 404, About). It never
+narrates, and it never appears in buttons, labels, nav, toasts, errors or
+filtered "no results" states.
+
 Attribution matters: entries are credited to the character who wrote them.
 That crediting is part of the visual identity, not a metadata afterthought —
 it is what makes the record feel collectively authored.

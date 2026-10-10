@@ -220,14 +220,14 @@ describe('RumorDirectory', () => {
   describe('empty state', () => {
     test('says what the collection is for, and leaves the composer to fill it', () => {
       render(<RumorDirectory rumors={[]} />);
-      expect(screen.getByText(/nothing heard yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't heard any rumors yet/i)).toBeInTheDocument();
       expect(screen.getByText(/overheard in a tavern/i)).toBeInTheDocument();
       // CHANGED DELIBERATELY in `15-7`: the empty state's action used to
       // navigate to `/rumors/create`. The composer is already on screen above
       // it, so the button would have sent someone away from the control they
       // were looking at.
       expect(
-        screen.queryByRole('button', { name: /add the first rumour/i })
+        screen.queryByRole('button', { name: /add the first rumor/i })
       ).not.toBeInTheDocument();
       expect(
         screen.getByLabelText('Heard something? Write it down here')
@@ -507,9 +507,9 @@ describe('RumorDirectory', () => {
     test('a collection emptied by a filter offers no create action', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
-      expect(screen.getByText(/no rumours match these filters/i)).toBeInTheDocument();
+      expect(screen.getByText(/no rumors match these filters/i)).toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: /add the first rumour/i })
+        screen.queryByRole('button', { name: /add the first rumor/i })
       ).not.toBeInTheDocument();
     });
   });
@@ -640,7 +640,7 @@ describe('RumorDirectory', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
       expect(mockDeleteRumor).not.toHaveBeenCalled();
-      expect(screen.getByText('Delete this rumour for everyone?')).toBeInTheDocument();
+      expect(screen.getByText('Delete this rumor for everyone?')).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Delete Dragon spotted' }));
       await waitFor(() => expect(mockDeleteRumor).toHaveBeenCalledWith('r1'));
@@ -666,7 +666,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing in the High Pass' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add rumor' }));
 
       // CHANGED DELIBERATELY in `15-9`. What the composer captures is the
       // **content** -- a title long enough to say something never fitted the
@@ -701,7 +701,7 @@ describe('RumorDirectory', () => {
       // A disabled button that says nothing is indistinguishable from one that
       // is not wired up -- which is exactly how this one was first read.
       render(<RumorDirectory rumors={[r1]} />);
-      const add = screen.getByRole('button', { name: 'Add rumour' });
+      const add = screen.getByRole('button', { name: 'Add rumor' });
       expect(add).toBeDisabled();
 
       // Said twice on purpose: a tooltip on the wrapper, because a disabled
@@ -721,7 +721,7 @@ describe('RumorDirectory', () => {
         target: { value: 'Orcs massing' },
       });
 
-      const add = screen.getByRole('button', { name: 'Add rumour' });
+      const add = screen.getByRole('button', { name: 'Add rumor' });
       expect(add).toBeEnabled();
       expect(add.parentElement).not.toHaveAttribute('title');
       expect(add).not.toHaveAttribute('aria-describedby');
@@ -732,7 +732,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add rumor' }));
 
       await waitFor(() =>
         expect(screen.getByRole('alert')).toHaveTextContent('Permission denied')
@@ -1152,7 +1152,7 @@ describe('RumorDirectory', () => {
       expect(
         screen.getByText('Traders say the goblin road is busy.')
       ).toBeInTheDocument();
-      expect(screen.queryByText('Untitled rumour')).not.toBeInTheDocument();
+      expect(screen.queryByText('Untitled rumor')).not.toBeInTheDocument();
     });
 
     test('caps a long first line so the row can actually render it', () => {
@@ -1189,7 +1189,7 @@ describe('RumorDirectory', () => {
       const empty = makeRumor({ id: 'empty', title: '', content: '' });
       render(<RumorDirectory rumors={[empty]} />);
 
-      const label = screen.getByText('Untitled rumour');
+      const label = screen.getByText('Untitled rumor');
       expect(label).toBeInTheDocument();
       // Muted, so it reads as unfinished rather than as a record somebody
       // decided to call "Untitled rumour".
@@ -1225,7 +1225,7 @@ describe('RumorDirectory', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() =>
         expect(screen.getByRole('alert')).toHaveTextContent(
-          'A rumour needs something written down.'
+          'A rumor needs something written down.'
         )
       );
       expect(mockUpdateRumor).not.toHaveBeenCalled();
@@ -1745,11 +1745,11 @@ describe('RumorDirectory — 15.3', () => {
   describe('large campaigns', () => {
     const many = (status: RumorStatus, count: number, prefix: string) =>
       Array.from({ length: count }, (_, i) =>
-        makeRumor({ id: `${prefix}-${i}`, title: `${prefix} rumour ${i}`, status })
+        makeRumor({ id: `${prefix}-${i}`, title: `${prefix} rumor ${i}`, status })
       );
     /** Rows on the page, folded ones included, by their expand control. */
     const rowsOf = (prefix: string) =>
-      screen.queryAllByRole('button', { name: new RegExp(`^(Expand|Collapse) ${prefix} rumour `), hidden: true }).length;
+      screen.queryAllByRole('button', { name: new RegExp(`^(Expand|Collapse) ${prefix} rumor `), hidden: true }).length;
 
     it('mounts one page of each group, and "Show more" adds a page to that group', () => {
       setupMocks();
@@ -1771,7 +1771,7 @@ describe('RumorDirectory — 15.3', () => {
         .getAllByRole('button', { name: /^False/ })
         .find((button) => button.hasAttribute('aria-expanded'));
       expect(heading).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByRole('button', { name: /^(Expand|Collapse) lie rumour 110$/ })).toBeVisible();
+      expect(screen.getByRole('button', { name: /^(Expand|Collapse) lie rumor 110$/ })).toBeVisible();
     });
   });
 });

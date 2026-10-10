@@ -178,7 +178,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     // No `writeHeading`: the profile has no separate create or edit route --
     // every card on it edits in place.
     blurb:
-      "Your account, the characters you post as, and how the Companion looks " +
+      "Your account, the characters you post as, and how Muninn looks " +
       "to you.",
     noun: "your profile",
     eyebrow: "Your account",

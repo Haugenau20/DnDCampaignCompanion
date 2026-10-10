@@ -52,7 +52,7 @@ test("a quest attached on a place's page lists the place among the quest's own",
 
   await page.goto(`/locations/${region.id}`);
   await expect(page.getByRole("heading", { level: 1, name: region.name })).toBeVisible();
-  await page.getByRole("button", { name: `Attach to the quests and rumours of ${region.name}` }).click();
+  await page.getByRole("button", { name: `Attach to the quests and rumors of ${region.name}` }).click();
   await page.getByRole("listbox").getByRole("option", { name: new RegExp(quest.title) }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: new RegExp(quest.title) })).toBeVisible();
@@ -64,7 +64,7 @@ test("a quest attached on a place's page lists the place among the quest's own",
   // Detached from the place's page, it leaves the quest's places, which
   // other journeys share.
   await page.goto(`/locations/${region.id}`);
-  await page.getByRole("button", { name: `Attach to the quests and rumours of ${region.name}` }).click();
+  await page.getByRole("button", { name: `Attach to the quests and rumors of ${region.name}` }).click();
   await page.getByRole("listbox").getByRole("option", { name: new RegExp(quest.title) }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: new RegExp(quest.title) })).toHaveCount(0);

@@ -60,7 +60,7 @@ const PrivacyPolicyPage: React.FC = () => {
   return (
     <PageShell
       title="Privacy"
-      subtitle="What the Companion keeps about you, why, and how to get rid of it."
+      subtitle="What Muninn keeps about you, why, and how to get rid of it."
       actions={<PrivacyLastUpdated />}
       maxWidth="max-w-5xl"
     >

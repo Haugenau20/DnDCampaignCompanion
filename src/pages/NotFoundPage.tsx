@@ -3,6 +3,7 @@ import React from "react";
 import { useLocation } from "react-router-dom";
 import Typography from "core/components/Typography";
 import Button from "core/components/Button";
+import { RuneMark } from "core/components/RuneMark";
 import { useNavigation } from "shared/hooks/useNavigation";
 
 /**
@@ -24,9 +25,10 @@ const NotFoundPage: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto py-16">
       <div className="card rounded-lg p-10 flex flex-col items-center text-center gap-3">
-        <Typography variant="h3" as="h1">Page not found</Typography>
-        <Typography color="secondary" className="max-w-md">
-          Nothing in the Companion lives at{" "}
+        <RuneMark size={40} className="typography-secondary opacity-50" />
+        <Typography variant="h3" as="h1">Muninn has no memory of this page</Typography>
+        <Typography color="secondary" className="max-w-[380px]">
+          Nothing lives at{" "}
           <code className="font-mono break-all">{pathname}</code>. The link may be
           mistyped, or the page may have moved.
         </Typography>

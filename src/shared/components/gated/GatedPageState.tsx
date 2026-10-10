@@ -182,7 +182,7 @@ const GatedPageState: React.FC<GatedPageStateProps> = ({
           <Typography variant="body-sm" color="secondary">
             {GATED_FOOTNOTE}{" "}
             <Link to="/" className="font-semibold primary">
-              See what the Companion does
+              See what the site does
             </Link>
           </Typography>
         </>

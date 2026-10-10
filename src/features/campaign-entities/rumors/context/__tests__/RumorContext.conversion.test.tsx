@@ -59,7 +59,7 @@ const note = (id: string): RumorNote => ({ id, content: `note ${id}` } as RumorN
 
 const rumor = (id: string, notes: RumorNote[] = []): Rumor => ({
   id,
-  title: `Rumour ${id}`,
+  title: `Rumor ${id}`,
   content: `Heard ${id}`,
   status: 'unconfirmed',
   sourceType: 'tavern',
@@ -209,8 +209,8 @@ describe('a selection one commit cannot hold is refused before anything is writt
     await renderContext();
     const ids = mockLoaded.map((r) => r.id);
 
-    await expect(context.convertToQuest(ids, { title: 'Too many' })).rejects.toThrow(/at most 249 rumours/);
-    await expect(context.combineRumors(ids, { title: 'Too many', content: 'x' })).rejects.toThrow(/at most 249 rumours/);
+    await expect(context.convertToQuest(ids, { title: 'Too many' })).rejects.toThrow(/at most 249 rumors/);
+    await expect(context.combineRumors(ids, { title: 'Too many', content: 'x' })).rejects.toThrow(/at most 249 rumors/);
     expect(mockCommit).not.toHaveBeenCalled();
   });
 

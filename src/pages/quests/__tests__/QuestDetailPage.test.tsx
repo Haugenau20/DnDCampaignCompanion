@@ -524,7 +524,7 @@ describe('what points here', () => {
     mockRumors = [{ ...mockRumors[0], status: 'false' }];
     renderPage();
     expect(
-      within(section('What points here')).getByText(/rumour, false/)
+      within(section('What points here')).getByText(/rumor, false/)
     ).toBeInTheDocument();
     mockRumors = [
       { id: 'r-1', title: "Signs of Smaug's activity", status: 'confirmed', convertedToQuestId: 'reclaim-erebor' },

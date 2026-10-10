@@ -35,7 +35,7 @@ const Footer: React.FC = () => {
         }
       >
         <p className="typography">
-          &copy; {new Date().getFullYear()} Muninn
+          &copy; {new Date().getFullYear()} Muninn · muninn.quest
         </p>
 
         <div className="flex items-center gap-4">

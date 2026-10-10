@@ -218,7 +218,7 @@ describe("AdminCampaignsPage", () => {
 
       const dialog = await screen.findByRole("dialog");
       expect(dialog).toHaveTextContent(/Curse of Strahd/);
-      expect(dialog).toHaveTextContent(/NPCs, locations, quests, rumours/i);
+      expect(dialog).toHaveTextContent(/NPCs, locations, quests, rumors/i);
       expect(dialog).toHaveTextContent(/every member's notes/i);
       expect(dialog).toHaveTextContent(/cannot be undone/i);
       expect(deleteCampaign).not.toHaveBeenCalled();

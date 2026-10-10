@@ -100,7 +100,7 @@ describe("GroupMembershipCard", () => {
 
     expect(screen.getByText("Gandalf")).toBeInTheDocument();
     expect(
-      screen.getByText(/new chapters, quests and rumours are credited to this name/i)
+      screen.getByText(/new chapters, quests and rumors are credited to this name/i)
     ).toBeInTheDocument();
   });
 

@@ -68,6 +68,6 @@ describe('rumorTitleText', () => {
 
   test('prints the untitled fallback when there is not', () => {
     expect(rumorTitleText({ title: '', content: '' })).toBe(UNTITLED_RUMOR);
-    expect(UNTITLED_RUMOR).toBe('Untitled rumour');
+    expect(UNTITLED_RUMOR).toBe('Untitled rumor');
   });
 });

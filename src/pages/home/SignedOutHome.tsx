@@ -46,7 +46,7 @@ const SignedOutHome: React.FC = () => {
             play. To get in, ask whoever set up your campaign for a join link.
           </Typography>
 
-          <div className="flex flex-wrap gap-3 mb-10">
+          <div className="flex flex-wrap gap-3 mb-6">
             <Link to="/signin" className={buttonClasses({ variant: "primary" })}>
               Sign in
             </Link>
@@ -54,6 +54,14 @@ const SignedOutHome: React.FC = () => {
               I have an invite link
             </Link>
           </div>
+
+          {/* The name, explained once, where strangers arrive, in the serif
+              italic of the in-world voice. */}
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-3.5 mb-10 border-t divider">
+            <span className="font-heading italic text-[15px] typography">
+              Muninn was Odin&apos;s raven of memory.
+            </span>
+          </p>
 
           <ul className="space-y-2" data-testid="product-lines">
             {PRODUCT_LINES.map((line) => (

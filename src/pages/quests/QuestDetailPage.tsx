@@ -270,7 +270,7 @@ const QuestDetailPage: React.FC = () => {
           key: `rumor-${rumor.id}`,
           id: rumor.id,
           name: rumorTitleText(rumor),
-          detail: `rumour, ${rumor.status} — became this quest`,
+          detail: `rumor, ${rumor.status} — became this quest`,
           href: `/rumors?highlight=${rumor.id}`,
         })
       );

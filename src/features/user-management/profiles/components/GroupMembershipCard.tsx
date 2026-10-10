@@ -45,7 +45,7 @@ const GroupMembershipCard: React.FC = () => {
               <Star size={16} className="accent" />
               <Typography>{activeCharacter.name}</Typography>
               <Typography variant="body-sm" color="muted">
-                — new chapters, quests and rumours are credited to this name
+                — new chapters, quests and rumors are credited to this name
               </Typography>
             </div>
           ) : (

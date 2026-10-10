@@ -680,7 +680,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
                   shown={rows.length}
                   total={group.rumors.length}
                   step={ROSTER_PAGE_SIZE}
-                  noun={`${group.title.toLowerCase()} rumours`}
+                  noun={`${group.title.toLowerCase()} rumors`}
                   onShowMore={() => paging.showMore(group.key, limit)}
                 />
               )}
@@ -689,7 +689,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
         })
       ) : initialRumors.length > 0 ? (
         <RosterEmpty
-          title="No rumours match these filters"
+          title="No rumors match these filters"
           message="Try a different search term, or clear the filters to see everything the party has heard."
         />
       ) : (
@@ -700,7 +700,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
           looking at (item 1, and the empty-campaign gate).
         */
         <RosterEmpty
-          title="Nothing heard yet"
+          title="Muninn hasn't heard any rumors yet"
           message="Overheard in a tavern, posted on a notice board, told by someone who may be lying — title it above and mark it confirmed when you find out."
         />
       )}
