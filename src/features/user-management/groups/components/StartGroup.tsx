@@ -214,7 +214,7 @@ const StartGroup: React.FC<StartGroupProps> = ({ founderToken }) => {
             </Typography>
             <Typography color="secondary" variant="body-sm">
               A campaign holds one story: its people, places, quests and
-              rumors. Your group can have several.
+              rumours. Your group can have several.
             </Typography>
           </div>
           <FirstCampaignForm

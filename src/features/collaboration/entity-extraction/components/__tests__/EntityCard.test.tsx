@@ -74,7 +74,7 @@ describe('EntityCard', () => {
 
     test('should render entity type as "Rumor" for rumor type', () => {
       render(<EntityCard entity={makeEntity({ type: 'rumor', text: 'Dark times ahead' })} noteId="note-1" />);
-      expect(screen.getByText(/Rumor/)).toBeInTheDocument();
+      expect(screen.getByText(/Rumour/)).toBeInTheDocument();
     });
 
     test('should render confidence percentage', () => {

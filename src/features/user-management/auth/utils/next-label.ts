@@ -13,7 +13,7 @@ const SECTION_LABELS: Record<string, string> = {
   quests: 'Quests',
   npcs: 'NPCs',
   locations: 'Locations',
-  rumors: 'Rumors',
+  rumors: 'Rumours',
   notes: 'Notes',
   profile: 'your profile',
   admin: 'group administration',

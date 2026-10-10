@@ -145,6 +145,7 @@ describe('LocationDirectory', () => {
     test('says what the collection is for, and offers the action that fills it', () => {
       render(<LocationDirectory locations={[]} />);
       expect(screen.getByText(/muninn hasn't been anywhere yet/i)).toBeInTheDocument();
+      expect(screen.getByText("ᛗ")).toHaveAttribute("aria-hidden", "true");
       expect(screen.getByText(/regions, cities, dungeons/i)).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /add the first location/i })
@@ -535,6 +536,7 @@ describe('LocationDirectory', () => {
       render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
       expect(screen.getByText(/no locations match these filters/i)).toBeInTheDocument();
+      expect(screen.queryByText("ᛗ")).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: /add the first location/i })
       ).not.toBeInTheDocument();

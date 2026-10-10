@@ -55,7 +55,7 @@ describe('rumorDisplayTitle', () => {
    * a note, there is no "New Rumor" placeholder to unpick.
    */
   test('an existing rumour keeps the title it was saved with', () => {
-    expect(rumorDisplayTitle({ title: 'New Rumor', content: 'anything' })).toBe('New Rumor');
+    expect(rumorDisplayTitle({ title: 'New Rumour', content: 'anything' })).toBe('New Rumour');
   });
 });
 
@@ -68,6 +68,6 @@ describe('rumorTitleText', () => {
 
   test('prints the untitled fallback when there is not', () => {
     expect(rumorTitleText({ title: '', content: '' })).toBe(UNTITLED_RUMOR);
-    expect(UNTITLED_RUMOR).toBe('Untitled rumor');
+    expect(UNTITLED_RUMOR).toBe('Untitled rumour');
   });
 });

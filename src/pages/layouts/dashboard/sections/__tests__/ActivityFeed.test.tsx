@@ -215,7 +215,7 @@ describe("ActivityFeed", () => {
       setupHook({ activities: [] });
     });
 
-    it.each(["All", "Story", "Quests", "NPCs", "Locations", "Rumors"])(
+    it.each(["All", "Story", "Quests", "NPCs", "Locations", "Rumours"])(
       "renders the %s filter as a visible control",
       (label) => {
         render(<ActivityFeed activities={[]} loading={false} />);

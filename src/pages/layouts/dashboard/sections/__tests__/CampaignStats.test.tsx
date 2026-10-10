@@ -107,7 +107,7 @@ describe("CampaignStats", () => {
       expect(screen.getByText("Chapters")).toBeInTheDocument();
       expect(screen.getByText("NPCs")).toBeInTheDocument();
       expect(screen.getByText("Locations")).toBeInTheDocument();
-      expect(screen.getByText("Rumors")).toBeInTheDocument();
+      expect(screen.getByText("Rumours")).toBeInTheDocument();
       // "Active Quests" and "Total Quests" were a breakdown of each other, now
       // stated once as a fraction.
       expect(screen.queryByText("Active Quests")).not.toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("CampaignStats", () => {
   describe("stat counts reflect prop values", () => {
     it("defaults every count to 0 with no props", () => {
       render(<CampaignStats />);
-      for (const label of ["Chapters", "NPCs", "Locations", "Rumors"]) {
+      for (const label of ["Chapters", "NPCs", "Locations", "Rumours"]) {
         expect(statButton(label)).toHaveTextContent("0");
       }
     });
@@ -139,13 +139,13 @@ describe("CampaignStats", () => {
       expect(statButton("Chapters")).toHaveTextContent("3");
       expect(statButton("NPCs")).toHaveTextContent("2");
       expect(statButton("Locations")).toHaveTextContent("1");
-      expect(statButton("Rumors")).toHaveTextContent("1");
+      expect(statButton("Rumours")).toHaveTextContent("1");
     });
 
     it("dims a zero count instead of hiding it", () => {
       render(<CampaignStats chapters={[makeChapter("c1")]} />);
       // An empty campaign is information; it just should not compete visually.
-      const rumorsValue = statButton("Rumors").querySelector("h4");
+      const rumorsValue = statButton("Rumours").querySelector("h4");
       expect(rumorsValue).toHaveTextContent("0");
       expect(rumorsValue?.className).toContain("opacity-40");
 
@@ -232,7 +232,7 @@ describe("CampaignStats", () => {
       ["Chapters", "/story/chapters"],
       ["NPCs", "/npcs"],
       ["Locations", "/locations"],
-      ["Rumors", "/rumors"],
+      ["Rumours", "/rumors"],
     ])("clicking %s navigates to %s", async (label, path) => {
       render(<CampaignStats />);
       await userEvent.click(statButton(label));

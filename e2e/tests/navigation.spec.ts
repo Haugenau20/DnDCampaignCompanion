@@ -6,7 +6,7 @@ test("the main navigation reaches every section of the campaign", async ({ page 
   const sections = [
     { name: "Story", path: "/story" },
     { name: "Quests", path: "/quests" },
-    { name: "Rumors", path: "/rumors" },
+    { name: "Rumours", path: "/rumors" },
     { name: "NPCs", path: "/npcs" },
     { name: "Locations", path: "/locations" },
     { name: "Notes", path: "/notes" },

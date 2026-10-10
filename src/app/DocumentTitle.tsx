@@ -29,7 +29,7 @@ interface Section {
 const SECTIONS: readonly Section[] = [
   { prefix: '/story', page: 'Story', campaign: true },
   { prefix: '/quests', page: 'Quests', campaign: true },
-  { prefix: '/rumors', page: 'Rumors', campaign: true },
+  { prefix: '/rumors', page: 'Rumours', campaign: true },
   { prefix: '/npcs', page: 'NPCs', campaign: true },
   { prefix: '/locations', page: 'Locations', campaign: true },
   { prefix: '/notes', page: 'Notes', campaign: true },

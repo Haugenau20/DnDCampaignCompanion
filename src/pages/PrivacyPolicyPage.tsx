@@ -171,7 +171,7 @@ const PrivacyPolicyPage: React.FC = () => {
             </Typography>
             <Typography>
               Everything you write in a campaign — chapters, quests, NPCs,
-              locations, rumors and your own notes — along with who wrote it and
+              locations, rumours and your own notes — along with who wrote it and
               when. That is the app; there is no version of it that does not
               store what you type into it.
             </Typography>

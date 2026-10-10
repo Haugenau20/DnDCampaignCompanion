@@ -99,7 +99,7 @@ const SignInPage: React.FC = () => {
             Sign in to see where your party has been.
           </Typography>
           <Typography className="hero-muted mt-4">
-            Locations, rumors, quests and notes, written by the people at the
+            Locations, rumours, quests and notes, written by the people at the
             table and kept between sessions.
           </Typography>
         </div>

@@ -101,7 +101,7 @@ describe("GATED_COPY", () => {
     // fifth here would be a promise the extractor cannot keep.
     const { blurb } = GATED_COPY.notes;
     expect(blurb).toMatch(/AI/);
-    ["NPCs", "locations", "quests", "rumors"].forEach((noun) => {
+    ["NPCs", "locations", "quests", "rumours"].forEach((noun) => {
       expect(blurb).toContain(noun);
     });
     expect(blurb).not.toMatch(/\bchapters?\b|\bsagas?\b/i);

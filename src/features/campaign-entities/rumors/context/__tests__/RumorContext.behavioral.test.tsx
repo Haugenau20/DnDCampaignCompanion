@@ -73,7 +73,7 @@ const RumorTestComponent = ({ onContextChange }: { onContextChange: (context: an
     onContextChange(rumorContext);
   }, [rumorContext, onContextChange]);
   
-  return <div data-testid="rumor-test">Rumor Context Test</div>;
+  return <div data-testid="rumor-test">Rumour Context Test</div>;
 };
 
 describe('RumorContext Behavioral Testing', () => {
@@ -185,8 +185,8 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       const rumorData: Omit<Rumor, 'id'> = {
-        title: 'Test Rumor',
-        content: 'A test rumor for authentication checking',
+        title: 'Test Rumour',
+        content: 'A test rumour for authentication checking',
         status: 'unconfirmed' as RumorStatus,
         sourceType: 'tavern' as SourceType,
         sourceName: 'Test Tavern',
@@ -200,7 +200,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject when not authenticated
       await expect(rumorContext.addRumor(rumorData)).rejects.toThrow(
-        'User must be authenticated to add rumors'
+        'User must be authenticated to add rumours'
       );
 
       expect(mockAddData).not.toHaveBeenCalled();
@@ -215,8 +215,8 @@ describe('RumorContext Behavioral Testing', () => {
 
       const rumor: Rumor = {
         id: 'test-rumor',
-        title: 'Test Rumor',
-        content: 'A test rumor',
+        title: 'Test Rumour',
+        content: 'A test rumour',
         status: 'unconfirmed' as RumorStatus,
         sourceType: 'tavern' as SourceType,
         sourceName: 'Test Tavern',
@@ -230,7 +230,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject when not authenticated
       await expect(rumorContext.updateRumor(rumor.id, { title: rumor.title })).rejects.toThrow(
-        'User must be authenticated to update rumors'
+        'User must be authenticated to update rumours'
       );
 
       expect(mockUpdateData).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject when not authenticated
       await expect(rumorContext.updateRumorStatus('test-id', 'confirmed')).rejects.toThrow(
-        'User must be authenticated to update rumor status'
+        'User must be authenticated to update rumour status'
       );
 
       expect(mockUpdateData).not.toHaveBeenCalled();
@@ -283,7 +283,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject when not authenticated
       await expect(rumorContext.deleteRumor('test-id')).rejects.toThrow(
-        'User must be authenticated to delete rumors'
+        'User must be authenticated to delete rumours'
       );
 
       expect(mockDeleteData).not.toHaveBeenCalled();
@@ -624,8 +624,8 @@ describe('RumorContext Behavioral Testing', () => {
       mockRumors = [
         {
           id: 'test-rumor',
-          title: 'Test Rumor',
-          content: 'A test rumor for updates',
+          title: 'Test Rumour',
+          content: 'A test rumour for updates',
           status: 'unconfirmed' as RumorStatus,
           sourceType: 'tavern' as SourceType,
           sourceName: 'Test Tavern',
@@ -676,8 +676,8 @@ describe('RumorContext Behavioral Testing', () => {
 
       await act(async () => {
         await rumorContext.updateRumor('test-rumor', {
-          title: 'Updated Rumor Title',
-          content: 'Updated rumor content'
+          title: 'Updated Rumour Title',
+          content: 'Updated rumour content'
         });
       });
 
@@ -685,8 +685,8 @@ describe('RumorContext Behavioral Testing', () => {
       expect(mockUpdateData).toHaveBeenCalledWith(
         'test-rumor',
         expect.objectContaining({
-          title: 'Updated Rumor Title',
-          content: 'Updated rumor content',
+          title: 'Updated Rumour Title',
+          content: 'Updated rumour content',
           modifiedBy: 'test-user',
           dateModified: expect.any(String)
         })
@@ -724,7 +724,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject status update for non-existent rumor
       await expect(rumorContext.updateRumorStatus('non-existent', 'confirmed')).rejects.toThrow(
-        'Rumor not found'
+        'Rumour not found'
       );
 
       expect(mockUpdateData).not.toHaveBeenCalled();
@@ -778,7 +778,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject note update for non-existent rumor
       await expect(rumorContext.updateRumorNote('non-existent', note)).rejects.toThrow(
-        'Rumor not found'
+        'Rumour not found'
       );
 
       expect(mockUpdateData).not.toHaveBeenCalled();
@@ -790,8 +790,8 @@ describe('RumorContext Behavioral Testing', () => {
       const mockRumors = [
         {
           id: 'test-rumor',
-          title: 'Test Rumor',
-          content: 'A test rumor for deletion',
+          title: 'Test Rumour',
+          content: 'A test rumour for deletion',
           status: 'unconfirmed' as RumorStatus,
           sourceType: 'tavern' as SourceType,
           sourceName: 'Test Tavern',
@@ -895,7 +895,7 @@ describe('RumorContext Behavioral Testing', () => {
 
       // BEHAVIOR: Should reject when some rumors don't exist
       await expect(rumorContext.combineRumors(['rumor-1', 'non-existent'], {})).rejects.toThrow(
-        'One or more rumors not found'
+        'One or more rumours not found'
       );
 
       expect(mockAddData).not.toHaveBeenCalled();
@@ -905,7 +905,7 @@ describe('RumorContext Behavioral Testing', () => {
   describe('Batch actions are one write (T032, PERF-06)', () => {
     const rumorWith = (id: string): Rumor => ({
       id,
-      title: `Rumor ${id}`,
+      title: `Rumour ${id}`,
       content: 'Heard in the tavern',
       status: 'unconfirmed' as RumorStatus,
       sourceType: 'tavern' as SourceType,
@@ -961,7 +961,7 @@ describe('RumorContext Behavioral Testing', () => {
       await waitFor(() => expect(rumorContext).toBeDefined());
 
       await expect(rumorContext.updateRumorsStatus(['r1', 'gone'], 'confirmed')).rejects.toThrow(
-        'One or more rumors not found'
+        'One or more rumours not found'
       );
       expect(mockBatchOperations).not.toHaveBeenCalled();
     });
@@ -991,8 +991,8 @@ describe('RumorContext Behavioral Testing', () => {
       const mockRumors: Rumor[] = [
         {
           id: 'rumor-to-convert',
-          title: 'Quest Worthy Rumor',
-          content: 'This rumor should become a quest',
+          title: 'Quest Worthy Rumour',
+          content: 'This rumour should become a quest',
           status: 'confirmed' as RumorStatus,
           sourceType: 'npc' as SourceType,
           sourceName: 'Quest Giver',
@@ -1032,7 +1032,7 @@ describe('RumorContext Behavioral Testing', () => {
         refreshRumors: mockRefreshRumors,
       });
 
-      mockCreateDocument = jest.fn().mockResolvedValue('investigate-dragon-rumors');
+      mockCreateDocument = jest.fn().mockResolvedValue('investigate-dragon-rumours');
       mockCommit = jest.fn().mockResolvedValue(undefined);
       mockUseFirestore.mockReturnValue({
         setDocument: mockSetDocument,
@@ -1054,14 +1054,14 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       const questData = {
-        title: 'Investigate Dragon Rumors',
+        title: 'Investigate Dragon Rumours',
         description: 'Look into the dragon sightings',
         status: 'active'
       };
 
       await act(async () => {
         const questId = await rumorContext.convertToQuest(['rumor-to-convert'], questData);
-        expect(questId).toBe('investigate-dragon-rumors');
+        expect(questId).toBe('investigate-dragon-rumours');
       });
 
       // BEHAVIOR: convertToQuest creates a brand new quest document, so it
@@ -1071,14 +1071,14 @@ describe('RumorContext Behavioral Testing', () => {
       expect(mockCommit).toHaveBeenCalledTimes(1);
       expect(mockCommit).toHaveBeenCalledWith(
         'groups/group-1/campaigns/campaign-1/quests',
-        'investigate-dragon-rumors',
+        'investigate-dragon-rumours',
         'groups/group-1/campaigns/campaign-1/rumors',
         expect.objectContaining({
           create: expect.objectContaining({
-            title: 'Investigate Dragon Rumors',
+            title: 'Investigate Dragon Rumours',
             description: 'Look into the dragon sightings',
             status: 'active',
-            id: 'investigate-dragon-rumors'
+            id: 'investigate-dragon-rumours'
           })
         })
       );
@@ -1101,7 +1101,7 @@ describe('RumorContext Behavioral Testing', () => {
       });
 
       await act(async () => {
-        await rumorContext.convertToQuest(['rumor-to-convert'], { title: 'Investigate Dragon Rumors' });
+        await rumorContext.convertToQuest(['rumor-to-convert'], { title: 'Investigate Dragon Rumours' });
       });
 
       // BEHAVIOR: Since T088 (DATA-005) the converted rumours are marked in
@@ -1112,13 +1112,13 @@ describe('RumorContext Behavioral Testing', () => {
       // the write like every document -- so the rumour is no longer rewritten.
       const { updates, notes } = mockCommit.mock.calls[0][3];
       expect(updates).toEqual([
-        { id: 'rumor-to-convert', data: { convertedToQuestId: 'investigate-dragon-rumors' } }
+        { id: 'rumor-to-convert', data: { convertedToQuestId: 'investigate-dragon-rumours' } }
       ]);
       expect(notes).toEqual([
         {
           under: { updated: 'rumor-to-convert' },
           id: expect.any(String),
-          data: { content: 'Converted to quest: investigate-dragon-rumors' }
+          data: { content: 'Converted to quest: investigate-dragon-rumours' }
         }
       ]);
     });

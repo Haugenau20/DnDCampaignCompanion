@@ -513,6 +513,7 @@ const NPCDirectory: React.FC<NPCDirectoryProps> = ({
         />
       ) : (
         <RosterEmpty
+          mark
           title="Muninn hasn't met anyone yet"
           message="Every person the party meets can live here — name, standing, where you found them, and what they told you."
           action={
