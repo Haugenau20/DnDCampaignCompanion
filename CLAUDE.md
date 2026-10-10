@@ -182,6 +182,8 @@ The reason is recorded in that file.
   operator:dev` runs the real server on 4700 against the dev emulators, signing an IAP identity
   in-process (`src/operator/dev.ts`, which the image never holds). `test/operator/http.test.ts`
   walks the route table, so a route added there is covered by the identity, CSRF and header tests.
+  Its Google Cloud side is `operator/infra/setup.sh` (runbook beside it), run by the maintainer as
+  owner; `--check` only reads, so it is safe to run against the live project.
 - **`test/rules/firestore-rules-prod.test.ts`** — loads `firestore.rules.prod` and acts as real users.
   `RULES_FILE=<path>` runs it against another revision — **that is the control**: run it against
   `git show HEAD:firebase/firestore.rules.prod` and the tests for whatever you closed must fail there.

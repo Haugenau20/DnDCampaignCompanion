@@ -1,0 +1,4 @@
+# Shell scripts run under bash, in Cloud Shell or Git Bash. Checked out with
+# CRLF on Windows, every line would end in a stray carriage return and bash
+# would refuse them.
+*.sh text eol=lf

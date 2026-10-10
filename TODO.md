@@ -22,8 +22,9 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T144 | Every page loads its fonts from Google | S | open | Each visit hands the visitor's address to Google before any consent, and the privacy page does not say so |
 | medium | T139 | CI signs in to Google Cloud with long-lived keys | M | open | A leaked key deploys code that reads every group, and a PR's dependencies run beside the Hosting key |
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
+| medium | T146 | The functions run as an Editor of the whole project | M | open | Any code deployed as a function, by CI's key (T139) or a poisoned dependency, reaches every resource in the project |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
-| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 to 3 of 8 done |
+| low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 to 4a done; 4b waits on step 0 |
 | low | T075 | The header is crowded | M | needs scoping | Waits on the maintainer: which truncation was meant, and how much room the header gets back |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
@@ -37,6 +38,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
 | low | T142 | One English in the site's copy, British | M | open | Later, not now (2026-10-10); few spellings differ today, dates follow the browser in places |
 | low | T143 | The About page's coffee link and photo | S | blocked | Both built and switched off; wait on a link and a picture from the maintainer |
+| low | T145 | Invitation tokens are stored as document ids | M | open | Whoever can read the collection holds working tokens: the console, the operator's runtime, a group's admins |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -302,7 +304,11 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
   the super admin and the operator account both sign in with passkeys
   (2026-10-09). Waiting for two hardware keys; then the strict 2-Step
   Verification, then the move.
-- **Next**: step 4a, the setup script and its runbook.
+- **Step 4a**: `firebase/functions/operator/infra/setup.sh` and its runbook
+  (`README.md` beside it). Its `--check` ran read-only against the live
+  project on 2026-10-10: everything missing, as expected before the move.
+- **Next**: step 4b, the maintainer running it, once step 0 is finished;
+  then step 5, the pipeline.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
 ### T143 — The About page's coffee link and photo
@@ -322,6 +328,54 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
   to name. A photo of the table needs the other players' say-so. The photo's
   alt text today is "Søren".
 - **Source**: maintainer, 2026-10-10, during the Muninn identity work
+
+### T145 — Invitation tokens are stored as document ids
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-10
+
+A link's token is the id of the document that admits it, so anyone who can
+read the collection can use every unspent link in it.
+
+- **Where**: founder links, `founderInvitations/{token}`
+  (`firebase/functions/src/signUp/founderInvitations.ts:99`); group
+  invitations, `groups/{g}/registrationTokens/{token}`, written by the browser
+  (`src/core/services/firebase/group/InvitationService.ts:65`) and listed by the
+  group's admins (`:126`; `firestore.rules.prod:704`, `list` for admins, `get`
+  for anyone who has the token).
+- **Who can read them**: the console, the operator page's runtime account
+  (security architecture, residual risk 4), the functions, and a group's
+  admins for their own group.
+- **Fix**: keep a SHA-256 of the token as the id and hash on redemption; the
+  link still carries the token itself.
+- **Catch**: group invitations are minted in the browser, so the hash must be
+  too, or minting moves into a function; and whatever lists invitations can no
+  longer show a link again once it is only a hash. Existing unspent links need
+  a migration or a cut-over.
+- **Source**: the operator page's plan, filed when step 4a was picked up, 2026-10-10
+
+### T146 — The functions run as an Editor of the whole project
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-10
+
+No function sets `serviceAccount` (`firebase/functions/src`), so all of them
+run as the default compute account, and that account holds `roles/editor` on
+the project, as does the App Engine default account (read from the project's
+IAM policy, 2026-10-10). Whatever code runs as a function can therefore change
+almost anything in the project, not only the Firestore and Auth the functions
+need.
+
+- **Why it matters**: the functions' deploy key (T139) and any poisoned
+  dependency in `firebase/functions` reach that far. The operator page's
+  security architecture names it as residual risk 5.
+- **Fix**: a service account of their own, with the roles the functions use
+  (Firestore, Auth admin for sign-up and account deletion, Storage for the
+  image sweeps, Secret Manager for the contact form and OpenAI keys, token
+  creation for device sign-in), set through `setGlobalOptions`; then take
+  Editor from the default accounts.
+- **Catch**: the exact list must come from the code and a deploy to a test, not
+  from memory; a missing role fails a function only when it is called. The
+  device sign-in grant (CLAUDE.md, Service Account Token Creator) moves with
+  it. Removing Editor from the defaults may touch other Google services that
+  rely on it; check before.
+- **Source**: the operator page's plan, filed when step 4a was picked up, 2026-10-10
 
 ---
 

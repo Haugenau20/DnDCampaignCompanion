@@ -202,8 +202,8 @@ confirmed against the live project in implementation step 4.
 ### 7. Audit
 
 - **Our record:** every action and every refusal is one structured line
-  ([design](design.md#audit)). A log sink routes these lines to their own bucket, `operator-audit`,
-  kept for 400 days. Its retention is **locked** after a 30-day trial, so nobody can delete an entry
+  ([design](design.md#audit)). A log sink routes these lines, and IAP's own log of the same
+  requests, to their own bucket, `operator-audit`, kept for 400 days. Its retention is **locked** after a 30-day trial, so nobody can delete an entry
   early, including the project's owner.
 - **Google's record:** IAP's Data Access logs, written whatever our code does.
 - **The documents:** `issuedBy`, `revokedBy`, `setAt`, for whoever reads them in the console.
@@ -244,7 +244,8 @@ confirmed against the live project in implementation step 4.
   - `roles/run.developer` on the operator service only: it rolls out revisions, but cannot change
     the service's IAM policy or create services
   - `roles/iam.serviceAccountUser` on `operator-runtime@` and `operator-builder@` only
-  - the right to submit a Cloud Build
+  - the right to submit a Cloud Build: Cloud Build Editor and Service Usage Consumer on the
+    project, and creating objects in the bucket builds are submitted through
 
   It holds nothing in IAP: it cannot change the access list or the re-authentication settings.
 - **The service exists before the first deploy.** The maintainer creates it, with IAP on, during
@@ -256,7 +257,9 @@ confirmed against the live project in implementation step 4.
 ### 10. Checking the configuration (T9)
 
 `operator-verify.yml` runs after every operator deploy and on a daily schedule, as
-`operator-verifier@`, which can read and change nothing else. It fails, and GitHub emails the
+`operator-verifier@`, which can read and change nothing else: its one role is a custom one,
+`operatorVerifier`, holding only the reads below, since no predefined role reads IAP's settings
+without also changing them. It fails, and GitHub emails the
 maintainer, unless all of these hold:
 
 1. **A request without sign-in is turned away.** An anonymous GET is redirected to Google's sign-in
@@ -301,12 +304,11 @@ Accepted, and named so they are not forgotten:
 3. **An hour.** A session taken from the device works until re-authentication. The email per action
    makes it visible; every action it can take can be undone.
 4. **Founder tokens are document ids.** Anyone who can read Firestore (the console, the runtime
-   account) can read them. Storing only a hash would close it, for invitations into groups too: a
-   separate item.
+   account) can read them. Storing only a hash would close it, for invitations into groups too:
+   T145.
 5. **The functions run as the default compute account.** No function sets `serviceAccount`
-   (`firebase/functions/src`). Whether that account holds the project-wide Editor role is
-   unverified; if it does, the functions' deploy key (T139) reaches far beyond Firestore.
-   A separate item.
+   (`firebase/functions/src`), and that account holds the project-wide Editor role (read
+   2026-10-10), so the functions' deploy key (T139) reaches far beyond Firestore: T146.
 6. **Google is a dependency.** If IAP fails, it fails closed: the page is down, and break-glass
    applies.
 

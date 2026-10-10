@@ -13,6 +13,7 @@ operator/dev.env
 
 # Not part of the service.
 test
+operator/infra
 scripts
 coverage
 *.log
