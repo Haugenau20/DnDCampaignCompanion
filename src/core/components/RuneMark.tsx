@@ -1,6 +1,7 @@
 // src/core/components/RuneMark.tsx
 import React from 'react';
 import clsx from 'clsx';
+import { BRAND_MARK_GLYPH } from './brandMarkGlyph';
 
 /** ᛗ, the runic M (mannaz): the mark of Muninn. */
 export const RUNE = 'ᛗ';
@@ -35,22 +36,25 @@ export interface BrandMarkProps {
 }
 
 /**
- * The amber square carrying the rune, beside the name wherever the brand
- * appears (the header, the sign-in band).
+ * The site's mark: the rune on an amber tile, beside the name wherever the
+ * brand appears (the header, the sign-in band).
  *
- * A file rather than a styled `RuneMark`: its amber is the dark theme's accent
- * in both themes, which no light-theme token holds, so it is written out in
- * `public/mark.svg` like the favicon's colours and checked against the token by
- * `theme-assets.test.ts`. The rune is cut out of the square, so the bar beneath
- * shows through it. `scripts/build-mark.js` writes the file.
+ * Painted from the theme's `logo` tokens: the tile is the same amber in both
+ * themes and the rune is the theme's chrome, so it reads as cut out of the
+ * tile. The rune is the favicon's heavier drawing, not the font's
+ * (`brandMarkGlyph.ts`, from `scripts/build-mark.js`).
  */
 export const BrandMark: React.FC<BrandMarkProps> = ({ size = 28, className }) => (
-  <img
-    src="/mark.svg"
-    alt=""
-    aria-hidden="true"
+  <svg
+    viewBox="0 0 28 28"
     width={size}
     height={size}
+    aria-hidden="true"
+    focusable="false"
+    data-testid="brand-mark"
     className={clsx('shrink-0 block', className)}
-  />
+  >
+    <rect width="28" height="28" rx="6" className="brand-mark-tile" />
+    <path d={BRAND_MARK_GLYPH} className="brand-mark-glyph" />
+  </svg>
 );
