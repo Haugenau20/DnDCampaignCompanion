@@ -307,8 +307,11 @@ describe("ChaptersPage", () => {
       renderPage();
 
       expect(
-        screen.getByRole("heading", { name: /no chapters recorded yet/i })
+        screen.getByRole("heading", { name: "Muninn hasn't heard the story yet" })
       ).toBeInTheDocument();
+      // The title is Muninn's line, so it carries the rune, as the
+      // directories' whole-collection empty states do.
+      expect(screen.getByText("ᛗ")).toHaveAttribute("aria-hidden", "true");
       // Deliberately not /new chapter/i: the page header renders a "New
       // Chapter" button whenever the visitor can act, so that matcher would
       // pass without the empty state offering anything at all.
@@ -494,9 +497,12 @@ describe("ChaptersPage", () => {
         target: { value: "nonexistent chapter title" },
       });
 
+      // A filtered list keeps its plain title and takes no rune: Muninn's
+      // voice is for a campaign with no chapters at all.
       expect(
-        screen.getByRole("heading", { name: /no chapters match/i })
+        screen.getByRole("heading", { name: "No chapters match this view" })
       ).toBeInTheDocument();
+      expect(screen.queryByText("ᛗ")).not.toBeInTheDocument();
       // Not /new chapter/i: the header's "New Chapter" button is present
       // whenever the visitor can act, so that matcher would fail for the wrong
       // reason. What must be absent is the empty state's own action.

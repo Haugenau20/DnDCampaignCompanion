@@ -9,9 +9,10 @@ import { displayTitle } from "../utils/note-title";
 import { useNotes } from "../context/NoteContext";
 import { useCreateNote } from "../hooks/useCreateNote";
 import { RosterSkeleton, RosterEmpty } from "core/components/Roster";
+import { RuneMark } from "core/components/RuneMark";
 import Select from "core/components/Select";
 import { useCampaigns } from "features/user-management";
-import { AlertCircle, Book, Plus, Search } from "lucide-react";
+import { AlertCircle, Plus, Search } from "lucide-react";
 import { clsx } from "clsx";
 
 /** Which slice of the campaign's notes the index is showing. */
@@ -129,9 +130,9 @@ const NotesList: React.FC = () => {
     return (
       <div className="notes-list">
         <div className="text-center py-10 px-6 border-2 border-dashed card-border rounded-lg">
-          <Book className="w-6 h-6 mx-auto mb-3 typography-secondary" />
+          <RuneMark size={26} className="block mx-auto mb-2 typography-secondary opacity-50" />
           <Typography variant="h4" className="mb-2">
-            No notes for this campaign
+            Nothing written down yet
           </Typography>
           <Typography color="secondary" className="mb-4">
             {activeCampaign ? (

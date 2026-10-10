@@ -123,13 +123,17 @@ describe('NotesList', () => {
     test('should show the no-campaign state', () => {
       setupMocks({ activeCampaignId: null });
       render(<NotesList />);
-      expect(screen.getByText(/no campaign selected/i)).toBeInTheDocument();
+      expect(screen.getByText('No campaign selected')).toBeInTheDocument();
+      expect(screen.queryByText('ᛗ')).not.toBeInTheDocument();
     });
 
     test('should show the empty state and let it create a note', () => {
       setupMocks({ notes: [] });
       render(<NotesList />);
-      expect(screen.getByText(/no notes for this campaign/i)).toBeInTheDocument();
+      // Notes are the player's own writing, so the title does not name
+      // Muninn; the rune still marks the empty collection, as RosterEmpty's does.
+      expect(screen.getByRole('heading', { name: 'Nothing written down yet' })).toBeInTheDocument();
+      expect(screen.getByText('ᛗ')).toHaveAttribute('aria-hidden', 'true');
 
       fireEvent.click(screen.getByRole('button', { name: /create note/i }));
       expect(mockCreateAndOpen).toHaveBeenCalled();
@@ -245,6 +249,20 @@ describe('NotesList', () => {
       fireEvent.click(pillNamed(/^Archived 1$/));
       expect(pillNamed(/^Archived 1$/)).toHaveAttribute('aria-pressed', 'true');
       expect(pillNamed(/^All 2$/)).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    test('should keep the plain no-results title, without the rune, when filters empty the list', () => {
+      setupMocks({ notes: [makeNote({ title: 'Wave Echo Cave' })] });
+      render(<NotesList />);
+
+      fireEvent.change(screen.getByPlaceholderText('Search note titles and text'), {
+        target: { value: 'nothing like this' },
+      });
+
+      expect(screen.getByRole('heading', { name: 'No notes match these filters' })).toBeInTheDocument();
+      expect(screen.queryByText('Nothing written down yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('ᛗ')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /create note/i })).not.toBeInTheDocument();
     });
 
     test('should keep counts live as the search narrows the pool', () => {
