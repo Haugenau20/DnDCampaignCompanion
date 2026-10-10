@@ -70,3 +70,39 @@ describe("the icons the page and manifest name", () => {
     expect(fs.existsSync(path.join(PUBLIC, file))).toBe(true);
   });
 });
+
+describe("the link preview", () => {
+  const html = read(path.join(ROOT, "index.html"));
+  const meta = (property: string): string | undefined =>
+    html.match(new RegExp(`<meta property="${property}" content="([^"]*)"`))?.[1];
+
+  // A chat app fetches the image from the live site, so the tag names it
+  // there; the file it names must be one this repo ships.
+  it("names a 1200x630 image that ships in public/", () => {
+    const image = meta("og:image");
+    expect(image).toBe("https://muninn.quest/og-image.png");
+    expect(fs.existsSync(path.join(PUBLIC, new URL(image as string).pathname))).toBe(true);
+    expect([meta("og:image:width"), meta("og:image:height")]).toEqual(["1200", "630"]);
+
+    const png = fs.readFileSync(path.join(PUBLIC, "og-image.png"));
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+  });
+
+  // The PNG cannot read the theme, so its generator writes the chrome out.
+  it("is drawn in the header's colours", () => {
+    const script = read(path.join(ROOT, "scripts", "build-og-image.js"));
+    const chrome = script.match(/const CHROME = (\{[^}]*\});/)?.[1];
+    expect(chrome).toBeDefined();
+    const literals = Object.fromEntries(
+      [...(chrome as string).matchAll(/(\w+): "(#[0-9A-Fa-f]{6})"/g)].map((m) => [m[1], m[2]])
+    );
+    const { bg, on, onMuted, border } = light.surface.chrome;
+    expect(literals).toEqual({ bg, on, onMuted, border });
+  });
+
+  it("draws the mark in the logo's colours", () => {
+    const script = read(path.join(ROOT, "scripts", "build-og-image.js"));
+    const logo = script.match(/const LOGO = \{ bg: "(#[0-9A-Fa-f]{6})", on: "(#[0-9A-Fa-f]{6})" \};/);
+    expect(logo?.slice(1)).toEqual([light.logo.bg, light.logo.on]);
+  });
+});
