@@ -58,7 +58,7 @@ const EntityCard: React.FC<EntityCardProps> = ({
       case "quest":
         return "Quest";
       case "rumor":
-        return "Rumor";
+        return "Rumour";
       default:
         return type;
     }

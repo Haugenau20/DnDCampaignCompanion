@@ -101,7 +101,7 @@ export function useNoteReferences(noteId: string): {
       ...build(npcs as any[], "npc", "Unnamed NPC"),
       ...build(locations as any[], "location", "Unnamed Location"),
       ...build(quests as any[], "quest", "Unnamed Quest"),
-      ...build(rumors as any[], "rumor", "Unnamed Rumor"),
+      ...build(rumors as any[], "rumor", "Unnamed Rumour"),
     ];
 
     return all.reduce<PotentialReference[]>((found, entity) => {
@@ -164,7 +164,7 @@ const NoteReferences: React.FC<NoteReferencesProps> = ({ noteId, onReferencesFou
       case "quest":
         return "Quest";
       case "rumor":
-        return "Rumor";
+        return "Rumour";
       default:
         return type;
     }

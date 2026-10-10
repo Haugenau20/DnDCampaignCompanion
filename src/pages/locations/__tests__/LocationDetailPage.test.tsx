@@ -859,7 +859,7 @@ describe('LocationDetailPage — what points here', () => {
     expect(screen.getByText('The Fall of Gondolin')).toBeInTheDocument();
     expect(screen.getByText('quest, active')).toBeInTheDocument();
     expect(screen.getByText('A hidden city')).toBeInTheDocument();
-    expect(screen.getByText('rumor, unconfirmed')).toBeInTheDocument();
+    expect(screen.getByText('rumour, unconfirmed')).toBeInTheDocument();
   });
 
   it('says "false" for a false rumour, not "disproved" (maintainer, 2026-10-03)', () => {
@@ -867,8 +867,8 @@ describe('LocationDetailPage — what points here', () => {
       { id: 'r-1', title: 'A hidden city', status: 'false', relatedLocations: ['gondolin'] },
     ];
     renderPage();
-    expect(screen.getByText('rumor, false')).toBeInTheDocument();
-    expect(screen.queryByText('rumor, disproved')).not.toBeInTheDocument();
+    expect(screen.getByText('rumour, false')).toBeInTheDocument();
+    expect(screen.queryByText('rumour, disproved')).not.toBeInTheDocument();
   });
 
   // T131: a link is stored once, on the place, and both sides show it. A

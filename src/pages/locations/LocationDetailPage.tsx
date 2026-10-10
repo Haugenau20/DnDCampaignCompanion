@@ -252,7 +252,7 @@ const LocationDetailPage: React.FC = () => {
           key: `rumor-${rumor.id}`,
           id: rumor.id,
           name: rumorTitleText(rumor),
-          detail: `rumor, ${rumor.status}`,
+          detail: `rumour, ${rumor.status}`,
           href: `/rumors?highlight=${rumor.id}`,
         })
       );
@@ -604,13 +604,13 @@ const LocationDetailPage: React.FC = () => {
 
               {/* ------------------------- quests and rumours ----------------------- */}
               <EntityPageSection
-                title="Quests and rumors"
+                title="Quests and rumours"
                 muted
                 count={inbound.length || undefined}
                 empty={
                   !canAct ? (
                     <Typography variant="body-sm" color="muted" className="italic">
-                      No quest or rumor is linked here yet
+                      No quest or rumour is linked here yet
                     </Typography>
                   ) : undefined
                 }
@@ -648,7 +648,7 @@ const LocationDetailPage: React.FC = () => {
                     sources={{ npc: npcs, location: locations, quest: quests, rumor: rumors ?? [] }}
                     attached={[...attachRefs('quest', questIds), ...attachRefs('rumor', rumorIds)]}
                     showAttachedChips={false}
-                    ariaLabel={`the quests and rumors of ${location.name}`}
+                    ariaLabel={`the quests and rumours of ${location.name}`}
                     onAttach={(id, kind) => here && void links.link(here, { kind, id })}
                     onDetach={(id, kind) => here && void links.unlink(here, { kind, id })}
                   />

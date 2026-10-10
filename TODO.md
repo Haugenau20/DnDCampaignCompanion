@@ -35,6 +35,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
+| low | T142 | One English in the site's copy, British | M | open | Later, not now (2026-10-10); few spellings differ today, dates follow the browser in places |
+| low | T143 | The About page's coffee link and photo | S | blocked | Both built and switched off; wait on a link and a picture from the maintainer |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -301,6 +303,24 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
 - **Next**: step 4a, the setup script and its runbook.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
 
+### T143 — The About page's coffee link and photo
+**Type** feature · **Size** S · **Status** blocked · **Verified** 2026-10-10
+
+`/about` has two parts built and switched off, so they are not forgotten: a
+"Buy me a coffee" button beside "View the code on GitHub", and a photo
+(140×168) beside "Who made it". Each is drawn once it has somewhere to point.
+
+- **Where**: `ABOUT_EXTRAS` in `src/pages/AboutPage.tsx:16` — set `coffeeUrl`
+  to the page's address and `photoSrc` to the picture's path; nothing else
+  changes. `AboutPage.test.tsx` pins both as off, so it moves with them.
+- **Blocked on** (maintainer): a coffee page to link to, and the photo
+  (the design suggests "you, or the table mid-session").
+- **Catch**: keep the coffee button a plain link. A provider's embedded
+  widget loads a third-party script, which the privacy page would then have
+  to name. A photo of the table needs the other players' say-so. The photo's
+  alt text today is "Søren".
+- **Source**: maintainer, 2026-10-10, during the Muninn identity work
+
 ---
 
 ## Tech debt and platform
@@ -489,6 +509,31 @@ for T137 step 0); it cannot send yet.
   subdomain, outside this budget. The privacy page names no processor for
   contact mail today (`PrivacyPolicyPage.tsx:318`), Gmail included.
 - **Source**: maintainer, 2026-10-08, during T137 step 0
+
+### T142 — One English in the site's copy, British
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-10
+
+The maintainer wants every word a player reads in one English, preferably
+British. "rumour" is done (#348, everywhere a player reads it; the `/rumors`
+path, collection names and identifiers keep "rumor"). Nothing else has been
+gone through. **Later, not now** (maintainer, 2026-10-10).
+
+- **Measured**: a census of string literals and JSX text in `src/` (tests
+  and `__dev__` excluded) for 25 common US/UK pairs found little: "Failed to
+  analyze note" (`CampaignLinksPanel.tsx:250`) and the rumour filter chip
+  "Traveler" (`RumorDirectory.tsx:95`; its stored value `traveler` must
+  stay), against "authorised", "colour", "grey" and "traveller" already
+  British. Words outside those pairs, and phrasing, were not checked.
+- **Dates**: 23 `toLocale*String` / `Intl.DateTimeFormat` calls. Some pin
+  British order (`chapter-byline.ts:56`, `PrivacyLastUpdated.tsx:15`, and
+  `'en-uk'` in `SagaPage.tsx:112` and `AttributionInfo.tsx:48`); the rest
+  follow the browser's locale, so an American browser shows month first.
+- **Also in scope**: `firebase/functions` (callable error messages), the
+  Firebase Auth email templates (console, outside the repo), `index.html`'s
+  meta description, and the operator page.
+- **Catch**: tests pin copy, so each change moves assertions with it; a
+  US spelling inside a key, a path or a stored value must stay.
+- **Source**: maintainer, 2026-10-10, during the Muninn identity work
 
 ---
 

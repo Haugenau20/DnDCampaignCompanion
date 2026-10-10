@@ -13,7 +13,7 @@ export const ATTACH_KIND_LABELS: Record<AttachKind, string> = {
   npc: "People",
   location: "Places",
   quest: "Quests",
-  rumor: "Rumors",
+  rumor: "Rumours",
 };
 
 /** Display order when a tray spans kinds. */
@@ -232,7 +232,7 @@ export const ATTACH_KIND_NEW_LABELS: Record<AttachKind, string> = {
   npc: "No such person yet — add one",
   location: "No such place yet — add one",
   quest: "No such quest yet — add one",
-  rumor: "No such rumor yet — add one",
+  rumor: "No such rumour yet — add one",
 };
 
 /** What an empty collection says, per kind. Designed, never a blank box (§8). */

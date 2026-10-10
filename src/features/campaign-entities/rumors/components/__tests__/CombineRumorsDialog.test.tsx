@@ -26,7 +26,7 @@ jest.mock('../../../../../core/components/Dialog', () => ({
 function makeRumor(id: string, overrides: Partial<Rumor> = {}): Rumor {
   return {
     id,
-    title: `Rumor ${id}`,
+    title: `Rumour ${id}`,
     content: `content-${id}`,
     status: 'unconfirmed',
     sourceType: 'tavern',
@@ -72,7 +72,7 @@ describe('CombineRumorsDialog', () => {
           onCombine={jest.fn()}
         />,
       );
-      expect(screen.getByRole('heading', { name: 'Combine Rumors' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Combine Rumours' })).toBeInTheDocument();
     });
 
     test('should render each selected rumor title', () => {
@@ -85,8 +85,8 @@ describe('CombineRumorsDialog', () => {
           onCombine={jest.fn()}
         />,
       );
-      expect(screen.getByText('Rumor r1')).toBeInTheDocument();
-      expect(screen.getByText('Rumor r2')).toBeInTheDocument();
+      expect(screen.getByText('Rumour r1')).toBeInTheDocument();
+      expect(screen.getByText('Rumour r2')).toBeInTheDocument();
     });
 
     test('should render the source name for each selected rumor', () => {
@@ -113,7 +113,7 @@ describe('CombineRumorsDialog', () => {
         />,
       );
       expect(screen.getByRole('button', { name: /Cancel/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Combine Rumors/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Combine Rumours/ })).toBeInTheDocument();
     });
   });
 
@@ -128,7 +128,7 @@ describe('CombineRumorsDialog', () => {
           onCombine={jest.fn()}
         />,
       );
-      const titleInput = screen.getByDisplayValue(/Combined Rumor/i);
+      const titleInput = screen.getByDisplayValue(/Combined Rumour/i);
       expect(titleInput).toBeInTheDocument();
     });
 
@@ -180,7 +180,7 @@ describe('CombineRumorsDialog', () => {
       );
       expect(screen.queryByText(/ID will be/i)).not.toBeInTheDocument();
 
-      const titleInput = screen.getByDisplayValue(/Combined Rumor/);
+      const titleInput = screen.getByDisplayValue(/Combined Rumour/);
       await userEvent.clear(titleInput);
       await userEvent.type(titleInput, 'Hello World!!');
       expect(screen.queryByText(/hello-world/i)).not.toBeInTheDocument();
@@ -204,9 +204,9 @@ describe('CombineRumorsDialog', () => {
         .filter((b) => b.querySelector('svg') && !b.textContent?.match(/Cancel|Combine/));
       // First removable X is for r1
       fireEvent.click(removeButtons[0]);
-      expect(screen.queryByText('Rumor r1')).not.toBeInTheDocument();
-      expect(screen.getByText('Rumor r2')).toBeInTheDocument();
-      expect(screen.getByText('Rumor r3')).toBeInTheDocument();
+      expect(screen.queryByText('Rumour r1')).not.toBeInTheDocument();
+      expect(screen.getByText('Rumour r2')).toBeInTheDocument();
+      expect(screen.getByText('Rumour r3')).toBeInTheDocument();
     });
 
     test('should disable remove buttons when exactly 2 selected', () => {
@@ -237,9 +237,9 @@ describe('CombineRumorsDialog', () => {
           onCombine={jest.fn()}
         />,
       );
-      const titleInput = screen.getByDisplayValue(/Combined Rumor/);
+      const titleInput = screen.getByDisplayValue(/Combined Rumour/);
       await userEvent.clear(titleInput);
-      fireEvent.click(screen.getByRole('button', { name: /Combine Rumors/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Combine Rumours/ }));
       await waitFor(() => {
         expect(screen.getByText('Title and content are required')).toBeInTheDocument();
       });
@@ -255,9 +255,9 @@ describe('CombineRumorsDialog', () => {
           onCombine={jest.fn()}
         />,
       );
-      const contentInput = screen.getByDisplayValue(/Rumor r1 \(from Source-r1\): a/);
+      const contentInput = screen.getByDisplayValue(/Rumour r1 \(from Source-r1\): a/);
       await userEvent.clear(contentInput);
-      fireEvent.click(screen.getByRole('button', { name: /Combine Rumors/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Combine Rumours/ }));
       await waitFor(() => {
         expect(screen.getByText('Title and content are required')).toBeInTheDocument();
       });
@@ -277,7 +277,7 @@ describe('CombineRumorsDialog', () => {
           onCombine={onCombine}
         />,
       );
-      fireEvent.click(screen.getByRole('button', { name: /Combine Rumors/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Combine Rumours/ }));
       await waitFor(() => {
         expect(onCombine).toHaveBeenCalledTimes(1);
       });
@@ -300,7 +300,7 @@ describe('CombineRumorsDialog', () => {
           onCombine={onCombine}
         />,
       );
-      fireEvent.click(screen.getByRole('button', { name: /Combine Rumors/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Combine Rumours/ }));
       await waitFor(() => {
         expect(screen.getByText('bad combine')).toBeInTheDocument();
       });

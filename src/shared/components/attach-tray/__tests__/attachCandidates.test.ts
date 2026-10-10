@@ -269,7 +269,7 @@ describe("attachCandidates", () => {
 
     it("groups them under the labels the NPC page already displays", () => {
       const groups = groupCandidates(buildCandidates(["npc", "location", "quest", "rumor"], sources()));
-      expect(groups.map((g) => g.label)).toEqual(["People", "Places", "Quests", "Rumors"]);
+      expect(groups.map((g) => g.label)).toEqual(["People", "Places", "Quests", "Rumours"]);
     });
 
     it("drops a group with nothing in it", () => {
@@ -282,7 +282,7 @@ describe("attachCandidates", () => {
         npc: "People",
         location: "Places",
         quest: "Quests",
-        rumor: "Rumors",
+        rumor: "Rumours",
       });
     });
   });
@@ -330,7 +330,7 @@ describe("attachCandidates", () => {
       expect(ATTACH_KIND_NEW_LABELS.npc).toBe("No such person yet — add one");
       expect(ATTACH_KIND_NEW_LABELS.location).toBe("No such place yet — add one");
       expect(ATTACH_KIND_NEW_LABELS.quest).toBe("No such quest yet — add one");
-      expect(ATTACH_KIND_NEW_LABELS.rumor).toBe("No such rumor yet — add one");
+      expect(ATTACH_KIND_NEW_LABELS.rumor).toBe("No such rumour yet — add one");
     });
 
     it("gives an empty collection something designed to say", () => {

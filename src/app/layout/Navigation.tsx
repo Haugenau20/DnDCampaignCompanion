@@ -30,7 +30,7 @@ export const navItems: NavItem[] = [
     icon: <Scroll className="w-5 h-5" />
   },
   {
-    label: 'Rumors',
+    label: 'Rumours',
     path: '/rumors',
     icon: <MessageSquare className="w-5 h-5" />
   },

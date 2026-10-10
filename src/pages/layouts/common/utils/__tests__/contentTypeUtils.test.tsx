@@ -89,7 +89,7 @@ describe('getContentTypeLabel', () => {
   });
 
   it('returns "Rumor" for type "rumor"', () => {
-    expect(getContentTypeLabel('rumor')).toBe('Rumor');
+    expect(getContentTypeLabel('rumor')).toBe('Rumour');
   });
 
   it('returns "Location" for type "location"', () => {

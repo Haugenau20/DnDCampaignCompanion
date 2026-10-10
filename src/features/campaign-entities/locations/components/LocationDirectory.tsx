@@ -440,6 +440,7 @@ const LocationDirectory: React.FC<LocationDirectoryProps> = ({
           />
         ) : (
           <RosterEmpty
+            mark
             title="Muninn hasn't been anywhere yet"
             message="Regions, cities, dungeons and the rooms inside them — each one can hold the notes, NPCs and quests you found there."
             action={

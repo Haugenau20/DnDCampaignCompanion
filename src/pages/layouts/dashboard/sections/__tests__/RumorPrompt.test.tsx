@@ -53,7 +53,7 @@ describe("RumorPrompt", () => {
 
   it("prompts when there are no rumors", () => {
     render(<RumorPrompt rumorCount={0} />);
-    expect(screen.getByText("No rumors yet")).toBeInTheDocument();
+    expect(screen.getByText("No rumours yet")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Tavern gossip is the cheapest way to seed a session. Add the first one."
@@ -72,7 +72,7 @@ describe("RumorPrompt", () => {
     // no longer exists. The composer sits at the top of the list itself, so
     // the prompt sends you to the list and the control is already there.
     render(<RumorPrompt rumorCount={0} />);
-    await userEvent.click(screen.getByRole("button", { name: "Add a rumor" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add a rumour" }));
     expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors");
   });
 

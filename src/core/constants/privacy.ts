@@ -116,7 +116,7 @@ export const PRIVACY_TABLE_ROWS: readonly PrivacyTableRow[] = [
   {
     id: "campaign-content",
     what: "Campaign content",
-    why: "Chapters, quests, NPCs, locations and rumors — the app itself",
+    why: "Chapters, quests, NPCs, locations and rumours — the app itself",
     where: "Firestore, visible to your group",
     howLong: "Stays with the group if you leave",
   },

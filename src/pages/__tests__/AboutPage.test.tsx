@@ -31,9 +31,10 @@ describe("AboutPage", () => {
     expect(screen.getByText("MOO-nin")).toBeInTheDocument();
   });
 
-  test("spells rumor one way, the app's", () => {
+  test("spells rumour one way, the app's", () => {
     renderPage();
-    expect(screen.queryByText(/rumour/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\brumors?\b/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/which rumour we'd already ruled out/)).toBeInTheDocument();
   });
 
   test("links to the code, in a new tab", () => {

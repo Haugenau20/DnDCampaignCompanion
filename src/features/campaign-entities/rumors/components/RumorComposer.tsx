@@ -79,7 +79,7 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
       // The typed text stays. Somebody heard something and said it out loud;
       // losing it to a failed write is the one unforgivable version of this.
       setState('failed');
-      setError(err instanceof Error ? err.message : 'Could not add the rumor. Your text is still here.');
+      setError(err instanceof Error ? err.message : 'Could not add the rumour. Your text is still here.');
     }
   };
 
@@ -118,7 +118,7 @@ export const RumorComposer: React.FC<RumorComposerProps> = ({ onAdd, className }
             onClick={() => void submit()}
             disabled={empty || state === 'adding'}
           >
-            {state === 'adding' ? 'Adding…' : 'Add rumor'}
+            {state === 'adding' ? 'Adding…' : 'Add rumour'}
           </Button>
         </span>
       </div>

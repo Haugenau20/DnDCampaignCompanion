@@ -449,7 +449,7 @@ describe("NPCDetailPage", () => {
       expect(screen.getByText("Places")).toBeInTheDocument();
       expect(screen.getByText("Affiliations")).toBeInTheDocument();
       expect(screen.getByText("Quests")).toBeInTheDocument();
-      expect(screen.getByText("Rumors")).toBeInTheDocument();
+      expect(screen.getByText("Rumours")).toBeInTheDocument();
     });
 
     it("keeps the per-row line only where the heading cannot say it", () => {
@@ -475,7 +475,7 @@ describe("NPCDetailPage", () => {
     it("shows no heading for a kind this NPC has none of", () => {
       mockRumors = [];
       renderPage();
-      expect(screen.queryByText("Rumors")).not.toBeInTheDocument();
+      expect(screen.queryByText("Rumours")).not.toBeInTheDocument();
     });
 
     it("does not dress a free-text affiliation up as somewhere to click", () => {
@@ -1593,7 +1593,7 @@ describe("NPCDetailPage", () => {
       expect(within(tray).getByText("People")).toBeInTheDocument();
       expect(within(tray).getByText("Places")).toBeInTheDocument();
       expect(within(tray).getByText("Quests")).toBeInTheDocument();
-      expect(within(tray).getByText("Rumors")).toBeInTheDocument();
+      expect(within(tray).getByText("Rumours")).toBeInTheDocument();
       // Browsing is the primary act: the filter is there, and nothing was
       // typed into it to get this list.
       expect(within(tray).getAllByRole("option").length).toBeGreaterThan(1);

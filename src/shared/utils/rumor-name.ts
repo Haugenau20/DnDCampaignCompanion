@@ -20,7 +20,7 @@ type NamedRumor = { title?: string | null; content?: string | null };
  * the caller, so an unnamed rumour reads as unfinished rather than as a
  * record called "Untitled rumour".
  */
-export const UNTITLED_RUMOR = 'Untitled rumor';
+export const UNTITLED_RUMOR = 'Untitled rumour';
 
 /**
  * The name a rumour shows in the list.

@@ -44,7 +44,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
       
       // Generate a default title based on the date
       const now = new Date().toLocaleDateString();
-      setTitle(`Combined Rumor (${now})`);
+      setTitle(`Combined Rumour (${now})`);
       
       // Combine content from all selected rumors
       const rumorsToMerge = rumorIds
@@ -67,7 +67,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
   // Handle form submission
   const handleSubmit = async () => {
     if (selectedRumorIds.length < 2) {
-      setError('Please select at least 2 rumors to combine');
+      setError('Please select at least 2 rumours to combine');
       return;
     }
 
@@ -88,7 +88,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
       
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to combine rumors');
+      setError(err instanceof Error ? err.message : 'Failed to combine rumours');
     } finally {
       setIsSubmitting(false);
     }
@@ -103,14 +103,14 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      title="Combine Rumors"
+      title="Combine Rumours"
       maxWidth="max-w-3xl"
     >
       <div className="space-y-6">
         {/* Selected Rumors */}
         <div>
           <Typography variant="h4" className="mb-3">
-            Selected Rumors
+            Selected Rumours
           </Typography>
           {selectedRumors.length > 0 ? (
             <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-lg card-content">
@@ -140,7 +140,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
             </div>
           ) : (
             <Typography color="secondary">
-              No rumors selected. Please select at least 2 rumors to combine.
+              No rumours selected. Please select at least 2 rumours to combine.
             </Typography>
           )}
         </div>
@@ -148,7 +148,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
         {/* Combined Rumor Form */}
         <div className="space-y-4">
           <Typography variant="h4">
-            Combined Rumor
+            Combined Rumour
           </Typography>
 
           <Input
@@ -208,7 +208,7 @@ const CombineRumorsDialog: React.FC<CombineRumorsDialogProps> = ({
             startIcon={<Layers />}
             isLoading={isSubmitting}
           >
-            Combine Rumors
+            Combine Rumours
           </Button>
         </div>
       </div>

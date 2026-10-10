@@ -6,6 +6,7 @@ import Button from './Button';
 import { AlertCircle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import clsx from 'clsx';
 import EntitySigil from './EntitySigil';
+import { RuneMark } from './RuneMark';
 
 /**
  * Shared roster primitives for the entity directories.
@@ -933,6 +934,11 @@ export interface RosterEmptyProps {
   message: string;
   /** The one action that fills it. Omitted when a filter is what emptied it. */
   action?: React.ReactNode;
+  /**
+   * Shows the rune ᛗ above the title. Only for a campaign with none of these
+   * at all, where the title is Muninn's line; never for a filtered list.
+   */
+  mark?: boolean;
 }
 
 /**
@@ -940,15 +946,18 @@ export interface RosterEmptyProps {
  *
  * This is where a returning user is most likely to read the product as
  * unfinished, so it says what the collection is for and offers the one action
- * that fills it. No icon: a large grey glyph is decoration on a surface whose
- * whole problem is that it has nothing to say yet.
+ * that fills it. No generic icon: a large grey glyph is decoration on a surface
+ * whose whole problem is that it has nothing to say yet. The one mark it takes
+ * is the site's own rune, small and faint, where the title is in Muninn's
+ * voice (`mark`; maintainer, 2026-10-10).
  *
  * A collection emptied by a *filter* passes no action -- the fix there is to
  * change the filter, and offering "Add an NPC" would answer a question nobody
  * asked.
  */
-export const RosterEmpty: React.FC<RosterEmptyProps> = ({ title, message, action }) => (
+export const RosterEmpty: React.FC<RosterEmptyProps> = ({ title, message, action, mark }) => (
   <div className={clsx('rounded-lg card px-6 py-12 text-center')}>
+    {mark && <RuneMark size={26} className="block mb-2 typography-secondary opacity-50" />}
     <Typography variant="h3" className="text-lg mb-1.5">
       {title}
     </Typography>

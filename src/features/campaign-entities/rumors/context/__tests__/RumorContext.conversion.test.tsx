@@ -59,7 +59,7 @@ const note = (id: string): RumorNote => ({ id, content: `note ${id}` } as RumorN
 
 const rumor = (id: string, notes: RumorNote[] = []): Rumor => ({
   id,
-  title: `Rumor ${id}`,
+  title: `Rumour ${id}`,
   content: `Heard ${id}`,
   status: 'unconfirmed',
   sourceType: 'tavern',
@@ -162,9 +162,9 @@ describe('the marks are worked out from the rumours as the server holds them', (
     const [, , , { updates, notes }] = mockCommit.mock.calls[0];
     expect(updates[1].data).not.toHaveProperty('notes');
     expect(notes.map((n: { under: unknown; data: RumorNote }) => [n.under, n.data.content])).toEqual([
-      ['created', 'Combined from rumors: a, b'],
-      [{ updated: 'a' }, 'Combined into rumor: smoke-and-ash'],
-      [{ updated: 'b' }, 'Combined into rumor: smoke-and-ash'],
+      ['created', 'Combined from rumours: a, b'],
+      [{ updated: 'a' }, 'Combined into rumour: smoke-and-ash'],
+      [{ updated: 'b' }, 'Combined into rumour: smoke-and-ash'],
     ]);
   });
 
@@ -185,10 +185,10 @@ describe('the marks are worked out from the rumours as the server holds them', (
     await renderContext();
 
     await expect(context.convertToQuest(['a', 'b'], { title: 'Find the fire' })).rejects.toThrow(
-      'One or more rumors not found'
+      'One or more rumours not found'
     );
     await expect(context.combineRumors(['a', 'b'], { title: 'Smoke and ash', content: 'Both' })).rejects.toThrow(
-      'One or more rumors not found'
+      'One or more rumours not found'
     );
     expect(mockCommit).not.toHaveBeenCalled();
   });
@@ -209,8 +209,8 @@ describe('a selection one commit cannot hold is refused before anything is writt
     await renderContext();
     const ids = mockLoaded.map((r) => r.id);
 
-    await expect(context.convertToQuest(ids, { title: 'Too many' })).rejects.toThrow(/at most 249 rumors/);
-    await expect(context.combineRumors(ids, { title: 'Too many', content: 'x' })).rejects.toThrow(/at most 249 rumors/);
+    await expect(context.convertToQuest(ids, { title: 'Too many' })).rejects.toThrow(/at most 249 rumours/);
+    await expect(context.combineRumors(ids, { title: 'Too many', content: 'x' })).rejects.toThrow(/at most 249 rumours/);
     expect(mockCommit).not.toHaveBeenCalled();
   });
 
