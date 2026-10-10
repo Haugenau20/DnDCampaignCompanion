@@ -144,8 +144,8 @@ function setupMocks(
 function makeRumor(overrides: Partial<Rumor> = {}): Rumor {
   return {
     id: `rumor-${Math.random().toString(36).slice(2)}`,
-    title: 'Test Rumor',
-    content: 'A test rumor about something.',
+    title: 'Test Rumour',
+    content: 'A test rumour about something.',
     status: 'unconfirmed' as RumorStatus,
     sourceType: 'tavern' as SourceType,
     sourceName: 'The Rusty Flagon',
@@ -185,7 +185,7 @@ const revealFalse = () =>
   fireEvent.click(screen.getByRole('button', { name: /^False/ }));
 
 /** The roster's search box. */
-const searchInput = () => screen.getByPlaceholderText(/search rumors/i);
+const searchInput = () => screen.getByPlaceholderText(/search rumours/i);
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -203,14 +203,14 @@ describe('RumorDirectory', () => {
   describe('loading state', () => {
     test('shows the rhythm of the rows that are coming, not a spinner', () => {
       const { container } = render(<RumorDirectory rumors={[]} isLoading={true} />);
-      expect(screen.getByRole('status', { name: /loading rumors/i })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /loading rumours/i })).toBeInTheDocument();
       expect(container.querySelectorAll('.section-loading').length).toBeGreaterThan(3);
       expect(container.querySelector('.animate-spin')).toBeNull();
     });
 
     test('should not render search box when isLoading is true', () => {
       render(<RumorDirectory rumors={[]} isLoading={true} />);
-      expect(screen.queryByPlaceholderText(/search rumors/i)).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/search rumours/i)).not.toBeInTheDocument();
     });
   });
 
@@ -220,14 +220,15 @@ describe('RumorDirectory', () => {
   describe('empty state', () => {
     test('says what the collection is for, and leaves the composer to fill it', () => {
       render(<RumorDirectory rumors={[]} />);
-      expect(screen.getByText(/muninn hasn't heard any rumors yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't heard any rumours yet/i)).toBeInTheDocument();
+      expect(screen.getByText("ᛗ")).toHaveAttribute("aria-hidden", "true");
       expect(screen.getByText(/overheard in a tavern/i)).toBeInTheDocument();
       // CHANGED DELIBERATELY in `15-7`: the empty state's action used to
       // navigate to `/rumors/create`. The composer is already on screen above
       // it, so the button would have sent someone away from the control they
       // were looking at.
       expect(
-        screen.queryByRole('button', { name: /add the first rumor/i })
+        screen.queryByRole('button', { name: /add the first rumour/i })
       ).not.toBeInTheDocument();
       expect(
         screen.getByLabelText('Heard something? Write it down here')
@@ -414,7 +415,7 @@ describe('RumorDirectory', () => {
       // acted on.
       const bare = makeRumor({
         id: 'bare',
-        title: 'Bare rumor',
+        title: 'Bare rumour',
         content: '',
         // CHANGED DELIBERATELY in `15-9`: this was `'other'`, which now means
         // "heard from none of the other four" -- a real answer somebody
@@ -426,7 +427,7 @@ describe('RumorDirectory', () => {
         relatedLocations: [],
       });
       render(<RumorDirectory rumors={[bare]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumor/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumour/ }));
 
       expect(screen.getByLabelText('What was heard')).toHaveValue('');
       expect(screen.queryByText('No details recorded')).not.toBeInTheDocument();
@@ -437,27 +438,27 @@ describe('RumorDirectory', () => {
     test('asks who exactly only once a source kind is chosen', () => {
       const bare = makeRumor({
         id: 'bare',
-        title: 'Bare rumor',
+        title: 'Bare rumour',
         sourceType: 'other',
         sourceName: '',
       });
       render(<RumorDirectory rumors={[bare]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumor/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumour/ }));
 
       fireEvent.click(screen.getByRole('button', { name: 'A traveller' }));
       expect(screen.getByLabelText('Who exactly')).toBeInTheDocument();
     });
 
     test('turns who exactly into an NPC picker when the kind is an NPC', () => {
-      const bare = makeRumor({ id: 'bare', title: 'Bare rumor', sourceType: 'other', sourceName: '' });
+      const bare = makeRumor({ id: 'bare', title: 'Bare rumour', sourceType: 'other', sourceName: '' });
       render(<RumorDirectory rumors={[bare]} />);
-      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumor/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Expand Bare rumour/ }));
 
       fireEvent.click(screen.getByRole('button', { name: 'An NPC' }));
       // A browse-first tray, not a text field: you attach the NPC you can see.
       expect(screen.queryByLabelText('Who exactly')).not.toBeInTheDocument();
       expect(
-        screen.getByRole('button', { name: /Attach to the source of Bare rumor/ })
+        screen.getByRole('button', { name: /Attach to the source of Bare rumour/ })
       ).toBeInTheDocument();
     });
 
@@ -483,12 +484,12 @@ describe('RumorDirectory', () => {
     });
 
     test('should filter rumors by content search', () => {
-      const r = makeRumor({ id: 'r-content', title: 'Alpha Rumor', content: 'A wizard appeared.' });
-      const r2b = makeRumor({ id: 'r-other', title: 'Beta Rumor', content: 'A knight left town.' });
+      const r = makeRumor({ id: 'r-content', title: 'Alpha Rumour', content: 'A wizard appeared.' });
+      const r2b = makeRumor({ id: 'r-other', title: 'Beta Rumour', content: 'A knight left town.' });
       render(<RumorDirectory rumors={[r, r2b]} />);
       fireEvent.change(searchInput(), { target: { value: 'wizard appeared' } });
-      expect(screen.getByText('Alpha Rumor')).toBeInTheDocument();
-      expect(screen.queryByText('Beta Rumor')).not.toBeInTheDocument();
+      expect(screen.getByText('Alpha Rumour')).toBeInTheDocument();
+      expect(screen.queryByText('Beta Rumour')).not.toBeInTheDocument();
     });
 
     test('should filter by source name', () => {
@@ -507,9 +508,10 @@ describe('RumorDirectory', () => {
     test('a collection emptied by a filter offers no create action', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
-      expect(screen.getByText(/no rumors match these filters/i)).toBeInTheDocument();
+      expect(screen.getByText(/no rumours match these filters/i)).toBeInTheDocument();
+      expect(screen.queryByText("ᛗ")).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: /add the first rumor/i })
+        screen.queryByRole('button', { name: /add the first rumour/i })
       ).not.toBeInTheDocument();
     });
   });
@@ -521,7 +523,7 @@ describe('RumorDirectory', () => {
     test('shows the total rumors gathered', () => {
       render(<RumorDirectory rumors={[rc, r2, r3]} />);
       expect(screen.getByText('3')).toBeInTheDocument();
-      expect(screen.getByText('rumors gathered')).toBeInTheDocument();
+      expect(screen.getByText('rumours gathered')).toBeInTheDocument();
     });
 
     test('breaks the total down by status, each labelled with a word', () => {
@@ -640,7 +642,7 @@ describe('RumorDirectory', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
       expect(mockDeleteRumor).not.toHaveBeenCalled();
-      expect(screen.getByText('Delete this rumor for everyone?')).toBeInTheDocument();
+      expect(screen.getByText('Delete this rumour for everyone?')).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: 'Delete Dragon spotted' }));
       await waitFor(() => expect(mockDeleteRumor).toHaveBeenCalledWith('r1'));
@@ -666,7 +668,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing in the High Pass' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Add rumor' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
 
       // CHANGED DELIBERATELY in `15-9`. What the composer captures is the
       // **content** -- a title long enough to say something never fitted the
@@ -701,7 +703,7 @@ describe('RumorDirectory', () => {
       // A disabled button that says nothing is indistinguishable from one that
       // is not wired up -- which is exactly how this one was first read.
       render(<RumorDirectory rumors={[r1]} />);
-      const add = screen.getByRole('button', { name: 'Add rumor' });
+      const add = screen.getByRole('button', { name: 'Add rumour' });
       expect(add).toBeDisabled();
 
       // Said twice on purpose: a tooltip on the wrapper, because a disabled
@@ -721,7 +723,7 @@ describe('RumorDirectory', () => {
         target: { value: 'Orcs massing' },
       });
 
-      const add = screen.getByRole('button', { name: 'Add rumor' });
+      const add = screen.getByRole('button', { name: 'Add rumour' });
       expect(add).toBeEnabled();
       expect(add.parentElement).not.toHaveAttribute('title');
       expect(add).not.toHaveAttribute('aria-describedby');
@@ -732,7 +734,7 @@ describe('RumorDirectory', () => {
       render(<RumorDirectory rumors={[r1]} />);
       const field = screen.getByLabelText('Heard something? Write it down here');
       fireEvent.change(field, { target: { value: 'Orcs massing' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Add rumor' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Add rumour' }));
 
       await waitFor(() =>
         expect(screen.getByRole('alert')).toHaveTextContent('Permission denied')
@@ -742,7 +744,7 @@ describe('RumorDirectory', () => {
 
     test('stands down in selection mode, where the rows are checkboxes', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       expect(
         screen.queryByLabelText('Heard something? Write it down here')
       ).not.toBeInTheDocument();
@@ -992,13 +994,13 @@ describe('RumorDirectory', () => {
   describe('selection mode', () => {
     test('shows a "Select Rumors" button, with no checkboxes until it is used', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
-      expect(screen.getByRole('button', { name: /select rumors/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /select rumours/i })).toBeInTheDocument();
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
     test('entering selection mode reveals one accessible checkbox per rumor', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
 
       expect(screen.getByRole('checkbox', { name: 'Select Dragon spotted' })).toBeInTheDocument();
       expect(screen.getByRole('checkbox', { name: 'Select Missing merchant' })).toBeInTheDocument();
@@ -1006,13 +1008,13 @@ describe('RumorDirectory', () => {
 
     test('toggles to "Exit Selection" once selection mode is active', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       expect(screen.getByRole('button', { name: /exit selection/i })).toBeInTheDocument();
     });
 
     test('checking a row does not expand it — the checkbox is outside the toggle button', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
 
       expect(
@@ -1022,43 +1024,43 @@ describe('RumorDirectory', () => {
 
     test('selecting rumors accumulates them and shows the batch actions bar', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
 
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
-      expect(screen.getByText(/1 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 rumours selected/i)).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Missing merchant' }));
-      expect(screen.getByText(/2 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 rumours selected/i)).toBeInTheDocument();
     });
 
     test('unchecking a rumor removes it from the batch', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
 
       const dragonCheckbox = screen.getByRole('checkbox', { name: 'Select Dragon spotted' });
       fireEvent.click(dragonCheckbox);
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Missing merchant' }));
-      expect(screen.getByText(/2 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 rumours selected/i)).toBeInTheDocument();
 
       fireEvent.click(dragonCheckbox);
-      expect(screen.getByText(/1 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 rumours selected/i)).toBeInTheDocument();
     });
 
     test('the batch actions bar only appears once selection mode is on and something is selected', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      expect(screen.queryByText(/rumors selected/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/rumours selected/i)).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       // Selection mode is on but nothing is checked yet — no bar.
-      expect(screen.queryByText(/rumors selected/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/rumours selected/i)).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
-      expect(screen.getByText(/1 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 rumours selected/i)).toBeInTheDocument();
     });
 
     test('exposes the batch status actions once a rumor is selected', () => {
       render(<RumorDirectory rumors={[r1]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
 
       expect(screen.getByRole('button', { name: /mark confirmed/i })).toBeInTheDocument();
@@ -1070,7 +1072,7 @@ describe('RumorDirectory', () => {
 
     test('running a batch status update writes the selection once and clears the selection on completion', async () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
 
       fireEvent.click(screen.getByRole('button', { name: /mark confirmed/i }));
@@ -1078,22 +1080,22 @@ describe('RumorDirectory', () => {
 
       // onComplete exits selection mode and clears the selection, so the
       // checkboxes and the batch bar both disappear.
-      await screen.findByRole('button', { name: /select rumors/i });
+      await screen.findByRole('button', { name: /select rumours/i });
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-      expect(screen.queryByText(/rumors selected/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/rumours selected/i)).not.toBeInTheDocument();
     });
 
     test('leaving selection mode via "Exit Selection" hides checkboxes and the batch bar', () => {
       render(<RumorDirectory rumors={[r1, r2]} />);
-      fireEvent.click(screen.getByRole('button', { name: /select rumors/i }));
+      fireEvent.click(screen.getByRole('button', { name: /select rumours/i }));
       fireEvent.click(screen.getByRole('checkbox', { name: 'Select Dragon spotted' }));
-      expect(screen.getByText(/1 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 rumours selected/i)).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole('button', { name: /exit selection/i }));
 
       expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-      expect(screen.queryByText(/rumors selected/i)).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /select rumors/i })).toBeInTheDocument();
+      expect(screen.queryByText(/rumours selected/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /select rumours/i })).toBeInTheDocument();
     });
   });
 
@@ -1152,7 +1154,7 @@ describe('RumorDirectory', () => {
       expect(
         screen.getByText('Traders say the goblin road is busy.')
       ).toBeInTheDocument();
-      expect(screen.queryByText('Untitled rumor')).not.toBeInTheDocument();
+      expect(screen.queryByText('Untitled rumour')).not.toBeInTheDocument();
     });
 
     test('caps a long first line so the row can actually render it', () => {
@@ -1189,7 +1191,7 @@ describe('RumorDirectory', () => {
       const empty = makeRumor({ id: 'empty', title: '', content: '' });
       render(<RumorDirectory rumors={[empty]} />);
 
-      const label = screen.getByText('Untitled rumor');
+      const label = screen.getByText('Untitled rumour');
       expect(label).toBeInTheDocument();
       // Muted, so it reads as unfinished rather than as a record somebody
       // decided to call "Untitled rumour".
@@ -1225,7 +1227,7 @@ describe('RumorDirectory', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() =>
         expect(screen.getByRole('alert')).toHaveTextContent(
-          'A rumor needs something written down.'
+          'A rumour needs something written down.'
         )
       );
       expect(mockUpdateRumor).not.toHaveBeenCalled();
@@ -1370,7 +1372,7 @@ describe('RumorDirectory', () => {
       expect(screen.getByRole('button', { name: '2 unconfirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '0 confirmed' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '0 false' })).toBeInTheDocument();
-      expect(screen.getByText('rumors gathered')).toBeInTheDocument();
+      expect(screen.getByText('rumours gathered')).toBeInTheDocument();
     });
 
     test('reads as unconfirmed rather than as its stored value', () => {
@@ -1745,11 +1747,11 @@ describe('RumorDirectory — 15.3', () => {
   describe('large campaigns', () => {
     const many = (status: RumorStatus, count: number, prefix: string) =>
       Array.from({ length: count }, (_, i) =>
-        makeRumor({ id: `${prefix}-${i}`, title: `${prefix} rumor ${i}`, status })
+        makeRumor({ id: `${prefix}-${i}`, title: `${prefix} rumour ${i}`, status })
       );
     /** Rows on the page, folded ones included, by their expand control. */
     const rowsOf = (prefix: string) =>
-      screen.queryAllByRole('button', { name: new RegExp(`^(Expand|Collapse) ${prefix} rumor `), hidden: true }).length;
+      screen.queryAllByRole('button', { name: new RegExp(`^(Expand|Collapse) ${prefix} rumour `), hidden: true }).length;
 
     it('mounts one page of each group, and "Show more" adds a page to that group', () => {
       setupMocks();
@@ -1771,7 +1773,7 @@ describe('RumorDirectory — 15.3', () => {
         .getAllByRole('button', { name: /^False/ })
         .find((button) => button.hasAttribute('aria-expanded'));
       expect(heading).toHaveAttribute('aria-expanded', 'true');
-      expect(screen.getByRole('button', { name: /^(Expand|Collapse) lie rumor 110$/ })).toBeVisible();
+      expect(screen.getByRole('button', { name: /^(Expand|Collapse) lie rumour 110$/ })).toBeVisible();
     });
   });
 });

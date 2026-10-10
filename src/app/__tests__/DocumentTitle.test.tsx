@@ -39,7 +39,7 @@ describe("documentTitleFor", () => {
   });
 
   test("a section with no campaign leaves the campaign out", () => {
-    expect(documentTitleFor("/rumors", undefined)).toBe("Rumors · Muninn");
+    expect(documentTitleFor("/rumors", undefined)).toBe("Rumours · Muninn");
   });
 
   test("pages outside a campaign never name one", () => {

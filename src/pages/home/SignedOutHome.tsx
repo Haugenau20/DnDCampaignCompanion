@@ -7,7 +7,7 @@ import { SIGNED_OUT_EXAMPLE } from "./signed-out-example";
 /** The three things the product does, said plainly. */
 const PRODUCT_LINES = [
   "A chapter log the whole group can add to, in play order",
-  "Quests with objectives, and rumors you can mark true or false",
+  "Quests with objectives, and rumours you can mark true or false",
   "Your own session notes — AI pulls out the NPCs, locations and quests it finds",
 ];
 
@@ -41,7 +41,7 @@ const SignedOutHome: React.FC = () => {
             className="mb-8"
             data-testid="home-blurb"
           >
-            Chapters, quests, NPCs, locations, rumors and your own notes —
+            Chapters, quests, NPCs, locations, rumours and your own notes —
             written by whoever is at the table, credited to the character they
             play. To get in, ask whoever set up your campaign for a join link.
           </Typography>

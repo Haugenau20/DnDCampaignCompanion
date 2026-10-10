@@ -185,7 +185,7 @@ const RELATION_GROUPS = [
   { kind: 'places', label: 'Places' },
   { kind: 'affiliations', label: 'Affiliations' },
   { kind: 'quests', label: 'Quests' },
-  { kind: 'rumors', label: 'Rumors' },
+  { kind: 'rumors', label: 'Rumours' },
 ] as const;
 
 type RelationKind = (typeof RELATION_GROUPS)[number]['kind'];

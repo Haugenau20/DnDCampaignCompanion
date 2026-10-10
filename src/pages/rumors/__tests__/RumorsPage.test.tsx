@@ -82,9 +82,9 @@ jest.mock("features/campaign-entities", () => ({
   RumorDirectory: (props: any) => (
     <div data-testid="rumor-directory">
       <span data-testid="rumor-directory-count">{props.rumors?.length}</span>
-      <span>{props.rumors?.length ?? 0} rumors gathered</span>
-      <input placeholder="Search rumors..." />
-      <button type="button">Select Rumors</button>
+      <span>{props.rumors?.length ?? 0} rumours gathered</span>
+      <input placeholder="Search rumours..." />
+      <button type="button">Select Rumours</button>
     </div>
   ),
 }));
@@ -144,7 +144,7 @@ describe("RumorsPage", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Rumors" })
+        screen.getByRole("heading", { level: 1, name: "Rumours" })
       ).toBeInTheDocument();
     });
 
@@ -163,7 +163,7 @@ describe("RumorsPage", () => {
       mockUser = null;
       renderPage();
       expect(
-        screen.queryByRole("button", { name: /add rumor/i })
+        screen.queryByRole("button", { name: /add rumour/i })
       ).not.toBeInTheDocument();
     });
 
@@ -201,12 +201,12 @@ describe("RumorsPage", () => {
     // in the signed-out test cannot be vacuously true.
     it("shows the rumor directory's controls once the gate is ready", () => {
       renderPage();
-      expect(screen.getByText(/rumors gathered/i)).toBeInTheDocument();
+      expect(screen.getByText(/rumours gathered/i)).toBeInTheDocument();
       expect(
-        screen.getByPlaceholderText("Search rumors...")
+        screen.getByPlaceholderText("Search rumours...")
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /select rumors/i })
+        screen.getByRole("button", { name: /select rumours/i })
       ).toBeInTheDocument();
     });
 
@@ -219,15 +219,15 @@ describe("RumorsPage", () => {
       mockUser = null;
       renderPage();
       expect(screen.queryByTestId("rumor-directory")).not.toBeInTheDocument();
-      expect(screen.queryByText(/rumors gathered/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/rumours gathered/i)).not.toBeInTheDocument();
       expect(
-        screen.queryByPlaceholderText("Search rumors...")
+        screen.queryByPlaceholderText("Search rumours...")
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /select rumors/i })
+        screen.queryByRole("button", { name: /select rumours/i })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /add rumor/i })
+        screen.queryByRole("button", { name: /add rumour/i })
       ).not.toBeInTheDocument();
     });
 
@@ -237,9 +237,9 @@ describe("RumorsPage", () => {
       mockRumorContext = { ...mockRumorContext, error: "Firebase error", loadError: "Firebase error" };
       renderPage();
       expect(
-        screen.queryByText("Error Loading Rumors. Sign in to view content.")
+        screen.queryByText("Error Loading Rumours. Sign in to view content.")
       ).not.toBeInTheDocument();
-      expect(screen.getByText(/couldn't load rumors/i)).toBeInTheDocument();
+      expect(screen.getByText(/couldn't load rumours/i)).toBeInTheDocument();
       expect(screen.getByText("Firebase error")).toBeInTheDocument();
       expect(
         screen.queryByTestId("rumor-directory")
@@ -268,7 +268,7 @@ describe("RumorsPage", () => {
     it("renders the page heading 'Rumors'", () => {
       renderPage();
       expect(
-        screen.getByRole("heading", { level: 1, name: "Rumors" })
+        screen.getByRole("heading", { level: 1, name: "Rumours" })
       ).toBeInTheDocument();
     });
 
@@ -295,7 +295,7 @@ describe("RumorsPage", () => {
       // the list -- and a header button that leaves for `/rumors/create`
       // would be the page contradicting the control directly below it.
       renderPage();
-      expect(screen.queryByText("Add Rumor")).not.toBeInTheDocument();
+      expect(screen.queryByText("Add Rumour")).not.toBeInTheDocument();
       expect(mockNavigateToPage).not.toHaveBeenCalledWith("/rumors/create");
     });
   });

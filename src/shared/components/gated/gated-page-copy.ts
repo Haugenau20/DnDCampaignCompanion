@@ -97,7 +97,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
   home: {
     heading: "Sign in to open your campaign",
     blurb:
-      "Chapters, quests, NPCs, locations, rumors and your own notes — " +
+      "Chapters, quests, NPCs, locations, rumours and your own notes — " +
       "everything your party has pieced together, in one place.",
     noun: "your campaign",
     requires: "campaign",
@@ -140,11 +140,11 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
   },
   rumors: {
     heading: "Sign in to hear what the realm is saying",
-    writeHeading: "Sign in to record a rumor",
+    writeHeading: "Sign in to record a rumour",
     blurb:
-      "Rumors are the leads a party picks up in taverns and on notice boards " +
+      "Rumours are the leads a party picks up in taverns and on notice boards " +
       "— some true, some not, all worth writing down.",
-    noun: "rumors",
+    noun: "rumours",
     requires: "campaign",
   },
   notes: {
@@ -157,7 +157,7 @@ export const GATED_COPY: Record<GatedPageKey, GatedPageCopy> = {
     // add a fifth here without adding it there first.
     blurb:
       "Write down what happened while it's fresh — then let AI read it back " +
-      "and pull out the NPCs, locations, quests and rumors, ready for the " +
+      "and pull out the NPCs, locations, quests and rumours, ready for the " +
       "party's records.",
     noun: "notes",
     // Was "group": the spec assumed a member with a group but no campaign

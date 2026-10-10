@@ -70,7 +70,7 @@ export function useCreateActions(): CreateAction[] {
       // sent to: it is written on arrival and its row opens in the list.
       // `15-1` deferred this because `RumorForm` demanded a third field a
       // two-field surface could not supply; `15-9` retired the form.
-      { id: "rumor", entityLabel: "Rumor", icon: MessageSquare, sectionPath: "/rumors", shortcut: "R", takesName: true, run: (name?: string) => createAndOpenRumor(name) },
+      { id: "rumor", entityLabel: "Rumour", icon: MessageSquare, sectionPath: "/rumors", shortcut: "R", takesName: true, run: (name?: string) => createAndOpenRumor(name) },
       { id: "quest", entityLabel: "Quest", icon: Scroll, sectionPath: "/quests", shortcut: "Q", takesName: true, run: quickAdd("quest") },
     ];
   }, [navigateToPage, createAndOpen, createAndOpenRumor, openQuickAdd]);

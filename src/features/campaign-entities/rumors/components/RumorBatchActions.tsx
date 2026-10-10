@@ -55,8 +55,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       
       onComplete?.();
     } catch (err) {
-      setActionError(`Failed to update rumor status: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('Failed to update rumor status:', err);
+      setActionError(`Failed to update rumour status: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Failed to update rumour status:', err);
     } finally {
       setIsProcessing(false);
     }
@@ -79,8 +79,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       setShowDeleteConfirmation(false);
       onComplete?.();
     } catch (err) {
-      setActionError(`Failed to delete rumors: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('Failed to delete rumors:', err);
+      setActionError(`Failed to delete rumours: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Failed to delete rumours:', err);
     } finally {
       setIsProcessing(false);
     }
@@ -97,8 +97,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       onComplete?.();
       return newRumorId;
     } catch (err) {
-      setActionError(`Failed to combine rumors: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('Failed to combine rumors:', err);
+      setActionError(`Failed to combine rumours: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Failed to combine rumours:', err);
       throw err;
     } finally {
       setIsProcessing(false);
@@ -120,8 +120,8 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
       navigateToPage(`/quests/${questId}`);
       return questId;
     } catch (err) {
-      setActionError(`Failed to convert rumors to quest: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      console.error('Failed to convert rumors to quest:', err);
+      setActionError(`Failed to convert rumours to quest: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Failed to convert rumours to quest:', err);
       throw err;
     } finally {
       setIsProcessing(false);
@@ -157,9 +157,9 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
             isOpen={showDeleteConfirmation}
             onClose={() => setShowDeleteConfirmation(false)}
             onConfirm={confirmDelete}
-            itemName={`${selectedRumors.size} rumors`}
-            itemType="Rumor"
-            message={`Are you sure you want to delete ${selectedRumors.size} rumors? This cannot be undone.`}
+            itemName={`${selectedRumors.size} rumours`}
+            itemType="Rumour"
+            message={`Are you sure you want to delete ${selectedRumors.size} rumours? This cannot be undone.`}
           />
         </>
     </>
@@ -167,7 +167,7 @@ const RumorBatchActions: React.FC<RumorBatchActionsProps> = ({
 
   return (
     <>
-      <RosterBatchBar label={`${selectedRumors.size} rumors selected`} error={actionError}>
+      <RosterBatchBar label={`${selectedRumors.size} rumours selected`} error={actionError}>
         <Button
           variant="ghost"
           size="sm"

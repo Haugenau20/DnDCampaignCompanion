@@ -42,7 +42,7 @@ describe("useCreateActions", () => {
   it("returns the six create actions in display order", () => {
     const { result } = renderHook(() => useCreateActions());
     expect(result.current.map((a) => a.entityLabel)).toEqual([
-      "Note", "Chapter", "NPC", "Location", "Rumor", "Quest",
+      "Note", "Chapter", "NPC", "Location", "Rumour", "Quest",
     ]);
   });
 

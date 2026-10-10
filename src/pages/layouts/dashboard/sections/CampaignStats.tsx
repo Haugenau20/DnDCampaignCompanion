@@ -101,7 +101,7 @@ const CampaignStats: React.FC<CampaignStatsProps> = ({
     { label: 'Chapters', value: chapters.length, path: '/story/chapters' },
     { label: 'NPCs', value: npcs.length, path: '/npcs' },
     { label: 'Locations', value: locations.length, path: '/locations' },
-    { label: 'Rumors', value: rumors.length, path: '/rumors' },
+    { label: 'Rumours', value: rumors.length, path: '/rumors' },
   ];
 
   if (loading) {

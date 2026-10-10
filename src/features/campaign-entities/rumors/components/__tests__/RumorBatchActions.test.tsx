@@ -82,7 +82,7 @@ const { useRumors } = require('../../context/RumorContext');
 function makeRumor(id: string): Rumor {
   return {
     id,
-    title: `Rumor ${id}`,
+    title: `Rumour ${id}`,
     content: 'content',
     status: 'unconfirmed',
     sourceType: 'tavern',
@@ -129,7 +129,7 @@ describe('RumorBatchActions', () => {
 
     test('should render selection count label', () => {
       render(<RumorBatchActions selectedRumors={new Set(['r1', 'r2'])} />);
-      expect(screen.getByText(/2 rumors selected/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 rumours selected/i)).toBeInTheDocument();
     });
 
     test('should render all 6 action buttons when at least one rumor is selected', () => {
@@ -193,7 +193,7 @@ describe('RumorBatchActions', () => {
       render(<RumorBatchActions selectedRumors={new Set(['r1'])} />);
       fireEvent.click(screen.getByText('Mark Confirmed'));
       await waitFor(() => {
-        expect(screen.getByText(/Failed to update rumor status: Network error/i)).toBeInTheDocument();
+        expect(screen.getByText(/Failed to update rumour status: Network error/i)).toBeInTheDocument();
       });
     });
   });
@@ -238,7 +238,7 @@ describe('RumorBatchActions', () => {
       fireEvent.click(screen.getByText('Combine'));
       fireEvent.click(screen.getByText('submit-combine'));
       await waitFor(() => {
-        expect(screen.getByText(/Failed to combine rumors: bad combine/i)).toBeInTheDocument();
+        expect(screen.getByText(/Failed to combine rumours: bad combine/i)).toBeInTheDocument();
       });
     });
   });
@@ -277,7 +277,7 @@ describe('RumorBatchActions', () => {
       fireEvent.click(screen.getByText('Convert to Quest'));
       fireEvent.click(screen.getByText('submit-convert'));
       await waitFor(() => {
-        expect(screen.getByText(/Failed to convert rumors to quest: bad convert/i)).toBeInTheDocument();
+        expect(screen.getByText(/Failed to convert rumours to quest: bad convert/i)).toBeInTheDocument();
       });
     });
   });
@@ -292,7 +292,7 @@ describe('RumorBatchActions', () => {
     test('should include rumor count in delete dialog itemName', () => {
       render(<RumorBatchActions selectedRumors={new Set(['r1', 'r2'])} />);
       fireEvent.click(screen.getByText('Delete'));
-      expect(screen.getByText('2 rumors')).toBeInTheDocument();
+      expect(screen.getByText('2 rumours')).toBeInTheDocument();
     });
 
     test('should close delete dialog when cancel clicked', () => {
@@ -325,7 +325,7 @@ describe('RumorBatchActions', () => {
       fireEvent.click(screen.getByText('Delete'));
       fireEvent.click(screen.getByText('confirm-delete'));
       await waitFor(() => {
-        expect(screen.getByText(/Failed to delete rumors: bad delete/i)).toBeInTheDocument();
+        expect(screen.getByText(/Failed to delete rumours: bad delete/i)).toBeInTheDocument();
       });
     });
   });

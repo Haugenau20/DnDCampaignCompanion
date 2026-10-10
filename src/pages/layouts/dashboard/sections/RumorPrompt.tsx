@@ -30,7 +30,7 @@ const RumorPrompt: React.FC<RumorPromptProps> = ({ rumorCount }) => {
       )}
       data-testid="rumor-prompt"
     >
-      <Typography variant="h4" className="text-base">No rumors yet</Typography>
+      <Typography variant="h4" className="text-base">No rumours yet</Typography>
       <Typography variant="body-sm" color="secondary" className="text-sm">
         Tavern gossip is the cheapest way to seed a session. Add the first one.
       </Typography>
@@ -42,7 +42,7 @@ const RumorPrompt: React.FC<RumorPromptProps> = ({ rumorCount }) => {
         // and `15-9` retired the form this used to open.
         onClick={() => navigateToPage('/rumors')}
       >
-        Add a rumor
+        Add a rumour
       </Button>
     </div>
   );

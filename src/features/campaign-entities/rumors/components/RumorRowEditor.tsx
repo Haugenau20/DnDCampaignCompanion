@@ -199,7 +199,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
     // its content. What cannot be saved is a rumour that says nothing at all,
     // which is the only state from which no row could be rendered.
     if (!current.title.trim() && !current.content.trim()) {
-      setError('A rumor needs something written down.');
+      setError('A rumour needs something written down.');
       setSaveState('failed');
       return;
     }
@@ -392,7 +392,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
             {confirmingDelete ? (
               <>
                 <Typography variant="body-sm" color="secondary">
-                  Delete this rumor for everyone?
+                  Delete this rumour for everyone?
                 </Typography>
                 <Button
                   variant="ghost"
@@ -405,7 +405,7 @@ export const RumorRowEditor: React.FC<RumorRowEditorProps> = ({
                     void onDelete()
                       .catch((err: unknown) =>
                         setError(
-                          err instanceof Error ? err.message : 'Could not delete this rumor.'
+                          err instanceof Error ? err.message : 'Could not delete this rumour.'
                         )
                       )
                       .finally(() => {
