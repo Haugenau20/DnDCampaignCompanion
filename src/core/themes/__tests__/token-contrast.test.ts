@@ -491,6 +491,7 @@ describe("every chromatic role against page, card and sunken at once", () => {
       ["action.primary.text", tokens.action.primary.text, tokens.action.primary.bg],
       ["action.secondary.text", tokens.action.secondary.text, tokens.action.secondary.bg],
       ["accent.on", tokens.accent.on, tokens.accent.fill],
+      ["logo.on", tokens.logo.on, tokens.logo.bg],
       ["outcome.failed.on", tokens.outcome.failed.on, tokens.outcome.failed.fill],
       ["danger.confirmText", tokens.danger.confirmText, tokens.danger.confirmBg],
     ];

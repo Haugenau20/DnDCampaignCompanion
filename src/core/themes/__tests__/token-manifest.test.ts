@@ -196,9 +196,9 @@ describe("tokens with no consumers yet are still enumerated", () => {
    * what makes the deletion visible here rather than only in the fixture.
    */
   test.each(THEMES)("%s defines the schema's leaves, less what has retired", (_name, tokens) => {
-    // 135 in the fixture, less the twelve names 12-3a and 12-3b delete:
+    // 141 in the fixture, less the twelve names 12-3a and 12-3b delete:
     // six `status.*`, three `color.*` and three `state.*`.
-    expect(Object.keys(flattenTokens(tokens)).length).toBe(127);
+    expect(Object.keys(flattenTokens(tokens)).length).toBe(129);
   });
 });
 

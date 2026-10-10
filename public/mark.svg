@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28">
-  <mask id="glyph">
-    <rect width="28" height="28" fill="white"/>
-    <path fill="black" d="M7.64 6.5L10.24 6.5L10.24 21.5L7.64 21.5ZM17.76 6.5L20.36 6.5L20.36 21.5L17.76 21.5ZM8.94 6.5L10.24 6.5L17.76 14.21L19.06 15.54L19.06 18.59L8.94 8.22ZM17.76 6.5L19.06 6.5L19.06 8.22L8.94 18.59L8.94 15.54L10.24 14.21Z"/>
-  </mask>
-  <rect width="28" height="28" rx="6" fill="#D69253" mask="url(#glyph)"/>
-</svg>

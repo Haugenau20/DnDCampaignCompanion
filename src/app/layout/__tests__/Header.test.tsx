@@ -223,9 +223,7 @@ describe("Header", () => {
     test("carries the mark inside the link home, silent to a screen reader", () => {
       render(<Header />);
       const link = screen.getByRole("link", { name: "Muninn, home" });
-      const mark = within(link).getByRole("presentation", { hidden: true });
-      expect(mark).toHaveAttribute("src", "/mark.svg");
-      expect(mark).toHaveAttribute("aria-hidden", "true");
+      expect(within(link).getByTestId("brand-mark")).toHaveAttribute("aria-hidden", "true");
     });
 
     // The link says where it goes, not only the site's name.
