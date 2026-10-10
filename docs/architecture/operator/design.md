@@ -303,7 +303,8 @@ A sketch, to be designed when it is picked up:
   log-based metric for OpenAI refusing for lack of credit, which `isOutOfCredit`
   (`entityExtraction.ts:359`) already detects.
 - **Access:** the runtime account gains `roles/monitoring.viewer`, read only, its one addition.
-- **Traffic:** waits on T138's decision about Analytics.
+- **Traffic:** from Google Analytics, which runs only for visitors who agreed to it (decided
+  2026-10-10), so it counts fewer visits than there are.
 
 ## Alternatives considered
 

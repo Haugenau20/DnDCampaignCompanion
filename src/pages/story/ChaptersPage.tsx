@@ -169,8 +169,9 @@ const ChaptersPage: React.FC = () => {
 
         {chapters.length === 0 ? (
           <RosterEmpty
-            title="No chapters recorded yet"
+            title="Muninn hasn't heard the story yet"
             message="Each session becomes a chapter here — what happened, who you met, and what it cost. The party reads them back between games."
+            mark
             action={
               gate.canAct ? (
                 <Button startIcon={<Plus className="w-4 h-4" />} onClick={handleCreateChapter}>

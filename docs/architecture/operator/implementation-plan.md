@@ -139,15 +139,21 @@ broken once and its tests failed. The journey is `e2e/tests/operator.spec.ts`.
 owner's login, never by CI. Its header lists the steps, as the other operator scripts' do, and
 `--check` only reports. It sets up, in order:
 
-1. **APIs:** Cloud Run, IAP, Cloud Build, Artifact Registry, Secret Manager, IAM Credentials.
+1. **APIs:** Cloud Run, IAP, Cloud Build, Artifact Registry, Secret Manager, IAM, IAM
+   Credentials, Security Token Service, Logging, Monitoring, Org Policy, Resource Manager.
 2. **Service accounts and roles:**
    - `operator-runtime@`, `operator-deployer@`, `operator-builder@` and `operator-verifier@`
    - each with exactly the roles in the [security architecture](security-architecture.md#6-the-runtime-identity-b3)
-   - the role names confirmed against the live project
-3. **Artifact Registry:** the `operator` repository, with a cleanup policy.
+   - the role names confirmed against Google's role list (2026-10-10). No predefined role reads
+     IAP's settings and access list without also changing them, so the verifier holds a custom
+     read-only role, `operatorVerifier`
+3. **Artifact Registry:** the `operator` repository, with a cleanup policy (the newest ten images
+   kept, others deleted after 30 days); and a bucket of its own for submitted build sources.
 4. **Secret Manager:** the CSRF key, readable by `operator-runtime@` only.
-5. **Workload Identity Federation:** the pool, and a GitHub provider with the attribute condition
-   on `repository_id`, `ref`, `workflow_ref` and `environment`.
+5. **Workload Identity Federation:** a pool per workflow, `operator-deploy` and `operator-verify`,
+   so one workflow's token can never act as the other's account; each a GitHub provider with the
+   attribute condition on `repository_id`, `ref` and `workflow_ref`, and the deploy's on
+   `environment` too.
 6. **The service:**
    - created from Google's placeholder image, with IAP on, the invoker check on, and the IAP
      service agent as the only invoker
@@ -156,19 +162,22 @@ owner's login, never by CI. Its header lists the steps, as the other operator sc
      own users
 7. **Audit:**
    - IAP's Data Access logs
-   - the `operator-audit` bucket (400 days, unlocked) and its sink
+   - the `operator-audit` bucket (400 days, unlocked) and its sink, which also carries IAP's own
+     log of the same requests
    - the two log-based alerts, emailing the maintainer
 8. **Organization policies:** `--check` confirms that the key policies are still enforced and that
    the project's override of `iam.allowedPolicyMemberDomains` is in place (both from step 0).
-9. **Open questions it settles and writes down:**
-   - whether `SECURE_KEY` is offered for the account's type
-   - whether `roles/run.developer` can switch IAP off (if it can, the verification in step 5
-     catches it and the service's own check still refuses)
-   - which roles a Cloud Build submission needs
+9. **Open questions:**
+   - whether `SECURE_KEY` is offered for the account's type: the run tries it, falls back to
+     `LOGIN`, and prints which it set
+   - whether `roles/run.developer` can switch IAP off: it holds `run.services.update`, so assume
+     it can; the verification in step 5 catches it and the service's own check still refuses
+   - which roles a Cloud Build submission needs: the script grants the fewest that should do,
+     and step 5's first build confirms them
 
 The runbook beside it says what to check after each part. The GitHub side is set up in the same
 step: the `operator` environment (the maintainer's approval, `main` only), and the variables
-`OPERATOR_SUBJECTS`, the provider and the account names.
+`OPERATOR_SUBJECTS`, the providers and the account names, which the script prints.
 
 ## Step 4b: running the setup (maintainer)
 
@@ -238,8 +247,7 @@ Every step adds and removes nothing, so the scripts and the console keep working
 - **The caps** (10 members and 5 campaigns per group, 300 accounts) bound what founder links can
   cost.
 - **A founder link leads somewhere**: account, group, first campaign, invitations.
-- **T138** decides whether the overview can show traffic.
-- **Two items worth filing when step 4a is picked up:**
-  - storing only hashes of invitation tokens
-  - the functions' service account ([residual risks](security-architecture.md#residual-risks) 4
-    and 5)
+- **Traffic** in the overview can come from Google Analytics, kept with consent; it counts
+  only visitors who agreed.
+- **T145** stores only hashes of invitation tokens, and **T146** gives the functions an account
+  of their own ([residual risks](security-architecture.md#residual-risks) 4 and 5).

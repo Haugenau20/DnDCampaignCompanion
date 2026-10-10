@@ -7,6 +7,7 @@ import {
   PRIVACY_SECTIONS,
   EXTRACTION_FACTS,
   IMAGE_STORAGE_REGION,
+  ANALYTICS_FACTS,
 } from "../privacy";
 
 describe("privacy constants", () => {
@@ -55,12 +56,25 @@ describe("privacy constants", () => {
     expect(serialised).not.toMatch(/@[\w.-]+\.\w+/);
   });
 
-  // Six since T021 added pictures; the category count is the requirement.
-  it("covers all six disclosed data categories, with extraction highlighted", () => {
-    expect(PRIVACY_TABLE_ROWS).toHaveLength(6);
+  // Six since T021 added pictures, seven since T138 disclosed analytics; the
+  // category count is the requirement.
+  it("covers all seven disclosed data categories, with extraction highlighted", () => {
+    expect(PRIVACY_TABLE_ROWS).toHaveLength(7);
     const highlighted = PRIVACY_TABLE_ROWS.filter((row) => row.highlighted);
     expect(highlighted).toHaveLength(1);
     expect(highlighted[0].where).toContain("OpenAI");
+  });
+
+  it("discloses analytics as optional, at Google, with the code's cookie lifetime (T138)", () => {
+    const analytics = PRIVACY_TABLE_ROWS.find((row) => row.id === "analytics");
+    expect(analytics).toBeDefined();
+    expect(analytics!.what).toMatch(/if you allow analytics/);
+    expect(analytics!.where).toContain("Google Analytics");
+    expect(analytics!.howLong).toContain(ANALYTICS_FACTS.cookieLifetime);
+    expect(analytics!.howLong).toContain(ANALYTICS_FACTS.retention);
+    // 13 months, as the words say: 395 days.
+    expect(ANALYTICS_FACTS.cookieLifetimeDays).toBe(395);
+    expect(ANALYTICS_FACTS.cookieLifetime).toBe("13 months");
   });
 
   it("discloses pictures as stored in the United States, visible to the group", () => {

@@ -40,3 +40,15 @@ export function writeLocalStorage(key: string, value: string): boolean {
     return false;
   }
 }
+
+/**
+ * Remove a stored value, best effort.
+ * @param key The storage key
+ */
+export function removeLocalStorage(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Storage is unavailable, so there is nothing stored to remove.
+  }
+}

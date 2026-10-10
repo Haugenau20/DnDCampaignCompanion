@@ -4,11 +4,16 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PrivacyPolicyPage from "../PrivacyPolicyPage";
 import {
+  ANALYTICS_CONSENT_KEY,
+  resetAnalyticsForTests,
+} from "core/services/firebase/analytics/analytics";
+import {
   PRIVACY_LAST_UPDATED,
   PRIVACY_SECTIONS,
   PRIVACY_CONTROLLER,
   PRIVACY_HOSTING_REGION,
   IMAGE_STORAGE_REGION,
+  ANALYTICS_FACTS,
 } from "core/constants/privacy";
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
 import { unnamedControlsIn } from "@/test-utils/accessible-names";
@@ -33,6 +38,8 @@ jest.mock("shared/context/NavigationContext", () => ({
 
 beforeEach(() => {
   mockNavigateToPage.mockClear();
+  localStorage.clear();
+  resetAnalyticsForTests();
 });
 
 describe("PrivacyPolicyPage — the date", () => {
@@ -246,7 +253,7 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     it("counts pictures among what leaves the EU", () => {
       const { container } = render(<PrivacyPolicyPage />);
       const section = container.querySelector("#legal-basis");
-      expect(section!.textContent).toMatch(/Three things reach outside the EU/);
+      expect(section!.textContent).toMatch(/Four things reach outside the EU/);
       expect(section!.textContent).toMatch(/pictures/i);
     });
   });
@@ -297,10 +304,68 @@ describe("PrivacyPolicyPage — content that must be there", () => {
     );
   });
 
-  it("claims no analytics and no advertising", () => {
-    const { container } = render(<PrivacyPolicyPage />);
-    expect(container.textContent).toMatch(/no analytics/i);
-    expect(container.textContent).toMatch(/no advertising/i);
+  // T138: the page claimed no analytics while the site ran them for everyone.
+  describe("analytics (T138)", () => {
+    it("no longer claims there are no analytics, and still none of advertising", () => {
+      render(<PrivacyPolicyPage />);
+      expect(screen.queryByText(/no analytics/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/No advertising, nothing sold/)).toBeInTheDocument();
+    });
+
+    it("names the provider, its cookies, their lifetime and the retention", () => {
+      render(<PrivacyPolicyPage />);
+      expect(screen.getByText(/counts visits: which/)).toHaveTextContent(ANALYTICS_FACTS.provider);
+      const cookies = screen.getByText(/To recognise a returning visitor/);
+      expect(cookies).toHaveTextContent(/_ga and one beginning _ga_/);
+      expect(cookies).toHaveTextContent(`last ${ANALYTICS_FACTS.cookieLifetime}`);
+      expect(cookies).toHaveTextContent(`data for ${ANALYTICS_FACTS.retention}`);
+      expect(cookies).toHaveTextContent(/installation id/);
+    });
+
+    it("says campaigns, addresses and titles are never sent", () => {
+      render(<PrivacyPolicyPage />);
+      expect(screen.getByText(/counts visits: which/)).toHaveTextContent(
+        /nothing of what is in your campaigns: not the page.s address and not its title/
+      );
+    });
+
+    it("rests it on consent and counts it among what leaves the EU", () => {
+      render(<PrivacyPolicyPage />);
+      expect(screen.getByText(/Google Analytics runs on your/)).toHaveTextContent(
+        /Google Analytics runs on your consent too/
+      );
+      expect(screen.getByText(/Four\s+things reach outside the EU/)).toHaveTextContent(
+        /Google Analytics, if you allow it/
+      );
+    });
+
+    it("shows analytics off before the player answers, and turns it on", async () => {
+      render(<PrivacyPolicyPage />);
+      const state = screen.getByText(/in this browser it is/);
+      expect(state).toHaveTextContent(/in this browser it is off/);
+
+      await userEvent.click(screen.getByRole("button", { name: "Allow analytics" }));
+
+      expect(localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe("granted");
+      expect(state).toHaveTextContent(/in this browser it is on/);
+    });
+
+    it("turns analytics off for a player who said yes", async () => {
+      localStorage.setItem(ANALYTICS_CONSENT_KEY, "granted");
+      render(<PrivacyPolicyPage />);
+
+      await userEvent.click(screen.getByRole("button", { name: "Turn analytics off" }));
+
+      expect(localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe("denied");
+      expect(screen.getByRole("button", { name: "Allow analytics" })).toBeInTheDocument();
+    });
+  });
+
+  it("names reCAPTCHA, which loads from Google on every page", () => {
+    render(<PrivacyPolicyPage />);
+    expect(screen.getByText(/reCAPTCHA checks that requests/)).toHaveTextContent(
+      /loads from Google on every page/
+    );
   });
 
   it("has dropped the claims nobody can stand behind", () => {
@@ -373,8 +438,9 @@ describe("PrivacyPolicyPage — names and accents", () => {
     const { container } = render(<PrivacyPolicyPage />);
 
     // Zero, not one. An accent marks the control that changes the record
-    // (D66); this page changes nothing, and its three card actions are links
-    // to elsewhere. A page with nothing to write has no accent to spend.
+    // (D66); this page changes no record. Two card actions are links to
+    // elsewhere, and the analytics answer is a setting in this browser, not
+    // campaign data.
     expect(formAccentsIn(container)).toEqual([]);
   });
 });

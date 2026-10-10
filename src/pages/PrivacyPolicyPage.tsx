@@ -1,11 +1,12 @@
 // src/pages/PrivacyPolicyPage.tsx
 import React from "react";
-import { Database, EyeOff, Trash2 } from "lucide-react";
+import { BarChart3, Database, Trash2 } from "lucide-react";
 import Typography from "core/components/Typography";
 import Card from "core/components/Card";
 import Button from "core/components/Button";
 import PageShell from "shared/components/page-shell/PageShell";
 import { useNavigation } from "shared/hooks/useNavigation";
+import { useAnalyticsConsent } from "shared/hooks/useAnalyticsConsent";
 import { INACTIVITY_TIMEOUT_TEXT, REMEMBER_ME_TEXT } from "core/constants/time";
 import {
   PRIVACY_CONTROLLER,
@@ -13,6 +14,7 @@ import {
   IMAGE_STORAGE_REGION,
   EXTRACTION_FACTS,
   OPENAI_DPA_ACCEPTED,
+  ANALYTICS_FACTS,
 } from "core/constants/privacy";
 import PrivacyLastUpdated from "./privacy/PrivacyLastUpdated";
 import PrivacyDataTable from "./privacy/PrivacyDataTable";
@@ -56,6 +58,8 @@ const Section: React.FC<{
  */
 const PrivacyPolicyPage: React.FC = () => {
   const { navigateToPage } = useNavigation();
+  const [analyticsConsent, setAnalyticsConsent] = useAnalyticsConsent();
+  const analyticsOn = analyticsConsent === "granted";
 
   return (
     <PageShell
@@ -93,16 +97,25 @@ const PrivacyPolicyPage: React.FC = () => {
         <Card>
           <Card.Content>
             <div className="flex items-center gap-2 mb-2">
-              <EyeOff className="w-4 h-4 primary" aria-hidden="true" />
+              <BarChart3 className="w-4 h-4 primary" aria-hidden="true" />
               <Typography variant="h3" className="text-base">
-                No tracking, no ads
+                No ads, analytics if you agree
               </Typography>
             </div>
             <Typography variant="body-sm" color="secondary">
-              No analytics, no advertising, nothing sold or shared with anyone
-              for their own purposes. Signing in and "remember me" are kept on
-              your own device.
+              No advertising, nothing sold or shared with anyone for their own
+              purposes. {ANALYTICS_FACTS.provider} counts visits only if you
+              say yes; in this browser it is{" "}
+              <strong>{analyticsOn ? "on" : "off"}</strong>.
             </Typography>
+            <Button
+              variant="link"
+              size="sm"
+              className="mt-2 px-0"
+              onClick={() => setAnalyticsConsent(analyticsOn ? "denied" : "granted")}
+            >
+              {analyticsOn ? "Turn analytics off" : "Allow analytics"}
+            </Button>
           </Card.Content>
         </Card>
 
@@ -196,9 +209,10 @@ const PrivacyPolicyPage: React.FC = () => {
               and delete it straight after.
             </Typography>
             <Typography>
-              Apart from your place in the story, we do not record which pages
-              you visit or what you click. Session activity is detected only to
-              decide whether you are still there.
+              Apart from your place in the story, and the parts of the site
+              you visit if you allow analytics (below), we do not record which
+              pages you visit or what you click. Session activity is detected
+              only to decide whether you are still there.
             </Typography>
           </Section>
 
@@ -262,15 +276,47 @@ const PrivacyPolicyPage: React.FC = () => {
             </Typography>
           </Section>
 
+          <Section id="analytics" title="Analytics">
+            <Typography>
+              If you say yes, {ANALYTICS_FACTS.provider} counts visits: which
+              part of the site each page belongs to (&quot;Quests&quot;, never
+              the quest), your browser, device and screen, your language, and
+              your rough location, which Google works out from your network
+              address. It is told nothing of what is in your campaigns: not
+              the page&apos;s address and not its title, which name records,
+              campaigns and the codes in sign-in and invitation links.
+            </Typography>
+            <Typography>
+              To recognise a returning visitor it sets two cookies,{" "}
+              <code>_ga</code> and one beginning <code>_ga_</code>, which last{" "}
+              {ANALYTICS_FACTS.cookieLifetime}, and Firebase keeps an
+              installation id in your browser. Google keeps the visit-level
+              data for {ANALYTICS_FACTS.retention}; the totals in its reports
+              stay. Google signals and ad personalisation are switched off, so
+              none of it is used to advertise to you.
+            </Typography>
+            <Typography>
+              Until you answer, and after you say no, it is not loaded at all.
+              You can change your answer in the card at the top of this page;
+              saying no deletes the cookies and the installation id from your
+              browser. It never runs on test copies of the site.
+            </Typography>
+          </Section>
+
           <Section id="device-storage" title="On your device">
             <Typography>
               Your session preferences — whether you asked to be remembered,
               which group you were last looking at, and the address you asked
               for a sign-in link at, until you open it — are kept on your own
-              device, in your browser, not on our servers. There are no
-              tracking cookies, because there is nothing tracking you: no
-              analytics, no advertising, and no third-party scripts watching
-              you read.
+              device, in your browser, not on our servers, and so is your
+              answer about analytics. Without a yes there are no tracking
+              cookies, and there is no advertising either way.
+            </Typography>
+            <Typography>
+              To keep automated abuse away from sign-in and our services,
+              Google&apos;s reCAPTCHA checks that requests come from this site
+              rather than from a script. It loads from Google on every page and
+              keeps a note in your browser.
             </Typography>
             <Typography>
               If you asked to be remembered, the campaign records you have
@@ -336,15 +382,20 @@ const PrivacyPolicyPage: React.FC = () => {
               <em>legitimate interest</em> in keeping accounts secure. Sending a
               note for entity extraction happens on your <em>consent</em>,
               expressed by pressing the button, and you can simply not press it.
+              {" "}{ANALYTICS_FACTS.provider} runs on your <em>consent</em> too,
+              given or refused when you first visit and changed at any time on
+              this page. reCAPTCHA rests on our legitimate interest in keeping
+              the service free of abuse.
             </Typography>
             <Typography>
-              Data is held in Google Firebase in {PRIVACY_HOSTING_REGION}. Three
+              Data is held in Google Firebase in {PRIVACY_HOSTING_REGION}. Four
               things reach outside the EU: entity extraction, described above;
               pictures, including a screenshot on its way to us, which are
               stored in {IMAGE_STORAGE_REGION} under
-              Google's data processing terms for Firebase; and Google's own
-              operation of the platform, which can involve support access from
-              other countries.
+              Google's data processing terms for Firebase;{" "}
+              {ANALYTICS_FACTS.provider}, if you allow it, which Google can
+              process in the United States; and Google's own operation of the
+              platform, which can involve support access from other countries.
             </Typography>
           </Section>
 

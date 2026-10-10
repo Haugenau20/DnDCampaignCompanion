@@ -28,8 +28,8 @@ let instances: FirebaseServices | null = null;
 /**
  * Construct every service and register it, in dependency order.
  *
- * Constructing the first service initializes the Firebase app itself — and
- * therefore calls getAnalytics() — via BaseFirebaseService. That is why this
+ * Constructing the first service initializes the Firebase app itself, via
+ * BaseFirebaseService. That is why this
  * must never run at module scope: any barrel with a transitive path to this
  * file would otherwise initialize Firebase on import and fail under jsdom.
  */

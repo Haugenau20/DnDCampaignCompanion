@@ -20,8 +20,8 @@ setup("a player signs in with a magic link and lands in their campaign", async (
   await page.goto(link.oobLink);
   await expect(page.getByRole("heading", { level: 1, name: campaign.name })).toBeVisible();
 
-  // Acknowledged once, as a player would; the saved state remembers it.
-  await page.getByRole("button", { name: "Got it" }).click();
+  // Answered once, as a player would; the saved state remembers it.
+  await page.getByRole("button", { name: "No thanks" }).click();
 
   await page.context().storageState({ path: SIGNED_IN_STATE, indexedDB: true });
 });
