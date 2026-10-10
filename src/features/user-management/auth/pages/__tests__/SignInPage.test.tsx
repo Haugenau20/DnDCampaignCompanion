@@ -48,10 +48,7 @@ describe("SignInPage", () => {
   test("puts the mark beside the name at the top of the band", () => {
     renderAt("/signin");
     expect(screen.getByText("Muninn")).toBeInTheDocument();
-    const marks = screen
-      .getAllByRole("presentation", { hidden: true })
-      .filter((img) => img.getAttribute("src") === "/mark.svg");
-    expect(marks).toHaveLength(1);
+    expect(screen.getByTestId("brand-mark")).toHaveAttribute("height", "24");
   });
 
   test("titles the page exactly once", () => {
