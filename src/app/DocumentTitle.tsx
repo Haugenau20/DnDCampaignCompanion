@@ -40,6 +40,7 @@ const SECTIONS: readonly Section[] = [
   { prefix: '/join', page: 'Join', campaign: false },
   { prefix: '/privacy', page: 'Privacy', campaign: false },
   { prefix: '/contact', page: 'Contact', campaign: false },
+  { prefix: '/about', page: 'About', campaign: false },
 ];
 
 /**

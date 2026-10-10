@@ -24,7 +24,6 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 to 3 of 8 done |
-| low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
 | low | T075 | The header is crowded | M | needs scoping | Waits on the maintainer: which truncation was meant, and how much room the header gets back |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
@@ -269,22 +268,6 @@ important**.
   sketches session templates and collaborative editing for notes (ideas only,
   nothing built).
 - **Source**: todo.txt, 2026-10-06
-
-### T122 — An "about" page
-**Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
-
-The maintainer asks whether the site should have an "about us" page.
-
-- **Measured**: no `/about` route (`app/App.tsx:220` has `/privacy` and
-  `/contact`; the footer, `app/layout/Footer.tsx`, links only those two). The
-  purpose is stated only on the signed-out home (`pages/home/SignedOutHome.tsx:44`).
-- **Questions before sizing**: who "us" is (one maintainer, a free site with no
-  income); what goes on it (why it exists, who runs it, how AI extraction uses
-  notes, the fan-content and trademark position from T075); whether it must be
-  readable without JavaScript.
-- **Related**: T118's Google branding check flagged "does not explain the
-  purpose" and "insufficient content", from a checker that runs no JavaScript.
-- **Source**: todo.txt, 2026-10-08
 
 ### T137 — An operator page: founder links, extraction limits, metrics
 **Type** feature · **Size** L · **Status** open · **Verified** 2026-10-09

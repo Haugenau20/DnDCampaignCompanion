@@ -46,6 +46,7 @@ describe("documentTitleFor", () => {
     expect(documentTitleFor("/profile", CAMPAIGN)).toBe("Profile · Muninn");
     expect(documentTitleFor("/admin/people", CAMPAIGN)).toBe("Admin · Muninn");
     expect(documentTitleFor("/privacy", CAMPAIGN)).toBe("Privacy · Muninn");
+    expect(documentTitleFor("/about", CAMPAIGN)).toBe("About · Muninn");
   });
 
   test("a prefix only matches a whole segment", () => {

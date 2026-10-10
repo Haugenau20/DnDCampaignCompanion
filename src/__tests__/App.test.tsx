@@ -223,6 +223,11 @@ jest.mock("../pages/ContactPage", () => ({
   default: () => <div data-testid="page-contact" />,
 }));
 
+jest.mock("../pages/AboutPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-about" />,
+}));
+
 jest.mock("../pages/NotFoundPage", () => ({
   __esModule: true,
   default: () => <div data-testid="page-not-found" />,
@@ -325,6 +330,7 @@ const EXPECTED_ROUTES = [
   "/notes/:noteId",
   "/privacy",
   "/contact",
+  "/about",
   "/profile",
   // Admin and auth are routes, not dialogs (design doc §1). `/admin` is the
   // layout route; its index redirects to `/admin/people` and declares no path.

@@ -1,10 +1,18 @@
 // app/layout/Footer.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 import { useNavigation } from 'shared/hooks/useNavigation';
 
+/** The footer's pages, in order. The one you are on is underlined. */
+const FOOTER_LINKS = [
+  { path: '/about', label: 'About' },
+  { path: '/privacy', label: 'Privacy Policy' },
+  { path: '/contact', label: 'Contact Us' },
+] as const;
+
 const Footer: React.FC = () => {
-  const { navigateToPage } = useNavigation();
+  const { navigateToPage, shouldHighlightPath } = useNavigation();
   
   return (
     /*
@@ -39,27 +47,26 @@ const Footer: React.FC = () => {
         </p>
 
         <div className="flex items-center gap-4">
-          <Link
-            to="/privacy"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateToPage('/privacy');
-            }}
-            className="hover:underline typography"
-          >
-            Privacy Policy
-          </Link>
-
-          <Link
-            to="/contact"
-            onClick={(e) => {
-              e.preventDefault();
-              navigateToPage('/contact');
-            }}
-            className="hover:underline typography"
-          >
-            Contact Us
-          </Link>
+          {FOOTER_LINKS.map(({ path, label }) => {
+            const isCurrent = shouldHighlightPath(path, true);
+            return (
+              <Link
+                key={path}
+                to={path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigateToPage(path);
+                }}
+                aria-current={isCurrent ? 'page' : undefined}
+                className={clsx(
+                  'hover:underline typography',
+                  isCurrent && 'underline underline-offset-[3px]'
+                )}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </footer>

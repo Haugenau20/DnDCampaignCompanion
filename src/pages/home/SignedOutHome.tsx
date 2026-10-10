@@ -55,12 +55,15 @@ const SignedOutHome: React.FC = () => {
             </Link>
           </div>
 
-          {/* The name, explained once, where strangers arrive, in the serif
-              italic of the in-world voice. */}
+          {/* The name, explained once, where strangers arrive. The serif
+              italic is the in-world voice; the link is the application's. */}
           <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-3.5 mb-10 border-t divider">
             <span className="font-heading italic text-[15px] typography">
               Muninn was Odin&apos;s raven of memory.
             </span>
+            <Link to="/about" className="text-sm primary underline underline-offset-[3px]">
+              About the name
+            </Link>
           </p>
 
           <ul className="space-y-2" data-testid="product-lines">

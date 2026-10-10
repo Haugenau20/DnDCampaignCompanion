@@ -23,6 +23,7 @@ describe("SignedOutHome", () => {
   it("says where the name comes from", () => {
     renderHome();
     expect(screen.getByText("Muninn was Odin's raven of memory.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "About the name" })).toHaveAttribute("href", "/about");
   });
 
   it("leads with what the product is, as the page's h1", () => {

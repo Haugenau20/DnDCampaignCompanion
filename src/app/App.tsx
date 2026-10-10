@@ -52,6 +52,7 @@ const NotesPage = lazyPage(() => import('pages/notes'), 'NotesPage');
 const NotePage = lazyPage(() => import('pages/notes'), 'NotePage');
 const PrivacyPolicyPage = lazyPage(() => import('pages/PrivacyPolicyPage'), 'default');
 const ContactPage = lazyPage(() => import('pages/ContactPage'), 'default');
+const AboutPage = lazyPage(() => import('pages/AboutPage'), 'default');
 const ProfilePage = lazyPage(() => import('pages/profile'), 'ProfilePage');
 const AdminLayout = lazyPage(
   () => import('features/user-management/admin/pages/AdminLayout'),
@@ -221,6 +222,7 @@ const App: React.FC = () => {
                                     />
                                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
                                     <Route path="/contact" element={<ContactPage />} />
+                                    <Route path="/about" element={<AboutPage />} />
                                     <Route path="/profile" element={<ProfilePage />} />
                                     {/* Admin and auth are places, not decisions
                                         taken about the page behind them, so they

@@ -1043,6 +1043,11 @@
     }
   }
 
+  /* The About page's rune behind its band: in the band's border tone, just off the ground. */
+  .about-watermark {
+    color: var(--surface-band-border);
+  }
+
   /* A heading on the band takes the band's ink. */
   .hero-band .typography-heading {
     color: var(--surface-band-on);
