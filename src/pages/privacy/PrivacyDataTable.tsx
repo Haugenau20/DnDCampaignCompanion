@@ -24,7 +24,7 @@ const expandSentinels = (value: string): string =>
   );
 
 /**
- * The at-a-glance table: what the Companion keeps, why, where it goes and for
+ * The at-a-glance table: what Muninn keeps, why, where it goes and for
  * how long.
  *
  * One semantic `<table>` serves both layouts. From `sm` up it is an ordinary
@@ -37,7 +37,7 @@ const PrivacyDataTable: React.FC = () => (
   <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
     <table className="w-full border-collapse text-left">
       <caption className="sr-only">
-        What the Companion keeps about you, why, where it goes and how long it
+        What Muninn keeps about you, why, where it goes and how long it
         stays
       </caption>
       <thead>

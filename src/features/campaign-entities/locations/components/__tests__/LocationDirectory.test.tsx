@@ -144,7 +144,8 @@ describe('LocationDirectory', () => {
   describe('empty state', () => {
     test('says what the collection is for, and offers the action that fills it', () => {
       render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText(/nowhere charted yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't been anywhere yet/i)).toBeInTheDocument();
+      expect(screen.getByText("ᛗ")).toHaveAttribute("aria-hidden", "true");
       expect(screen.getByText(/regions, cities, dungeons/i)).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /add the first location/i })
@@ -535,6 +536,7 @@ describe('LocationDirectory', () => {
       render(<LocationDirectory locations={[makeLocation('loc-1', 'Silverkeep')]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
       expect(screen.getByText(/no locations match these filters/i)).toBeInTheDocument();
+      expect(screen.queryByText("ᛗ")).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: /add the first location/i })
       ).not.toBeInTheDocument();
@@ -743,7 +745,7 @@ describe('LocationDirectory', () => {
 
     test('the empty state still appears when there are genuinely no locations', () => {
       render(<LocationDirectory locations={[]} />);
-      expect(screen.getByText(/nowhere charted yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't been anywhere yet/i)).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Unplaced' })).not.toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: 'Locations' })).not.toBeInTheDocument();
     });

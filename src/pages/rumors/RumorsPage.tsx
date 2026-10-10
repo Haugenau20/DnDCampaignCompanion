@@ -33,8 +33,8 @@ const RumorsPage: React.FC = () => {
 
   return (
     <PageShell
-      title="Rumors"
-      subtitle="Track and investigate rumors from across the realm"
+      title="Rumours"
+      subtitle="Track and investigate rumours from across the realm"
     >
       <GatedContent gate={gate}>
         <RumorDirectory rumors={rumors} isLoading={false} />

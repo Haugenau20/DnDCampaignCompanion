@@ -22,3 +22,16 @@ test("every icon the page and its manifest name is served as an image", async ({
   expect(linked, "icons linked from the page").not.toHaveLength(0);
   expect(named, "icons named by the manifest").not.toHaveLength(0);
 });
+
+/**
+ * The link preview names its picture on the live site; the built site must
+ * serve that same path as an image, not as the app's page.
+ */
+test("the link preview's picture is served as an image", async ({ page, request }) => {
+  await page.goto("/");
+  const image = await page.locator('meta[property="og:image"]').getAttribute("content");
+  expect(image, "og:image").toBeTruthy();
+  const response = await request.get(new URL(image as string).pathname);
+  expect(response.ok()).toBe(true);
+  expect(response.headers()["content-type"]).toBe("image/png");
+});

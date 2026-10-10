@@ -3,7 +3,7 @@
 // Header pulls in many contexts and feature components — mock aggressively.
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../Header";
 
@@ -217,6 +217,13 @@ describe("Header", () => {
       render(<Header />);
       const titleLink = screen.getByRole("link", { name: /Muninn/i });
       expect(titleLink).toBeInTheDocument();
+    });
+
+    // The rune mark and the name are one link home; the mark adds no words.
+    test("carries the mark inside the link home, silent to a screen reader", () => {
+      render(<Header />);
+      const link = screen.getByRole("link", { name: "Muninn, home" });
+      expect(within(link).getByTestId("brand-mark")).toHaveAttribute("aria-hidden", "true");
     });
 
     // The link says where it goes, not only the site's name.

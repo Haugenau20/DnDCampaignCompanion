@@ -2,6 +2,7 @@
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Typography from 'core/components/Typography';
+import { BrandMark } from 'core/components/RuneMark';
 import SignInForm from '../components/SignInForm';
 import PreviewSignInNotice from '../components/PreviewSignInNotice';
 import { isPreviewBuild } from 'core/constants/app';
@@ -80,9 +81,12 @@ const SignInPage: React.FC = () => {
         <SignInPlate />
         <div className="hero-signin-scrim" aria-hidden="true" />
 
-        <Typography variant="body-sm" className="font-heading text-lg">
-          Muninn
-        </Typography>
+        <div className="flex items-center gap-2.5">
+          <BrandMark size={24} />
+          <Typography variant="body-sm" className="font-heading text-lg">
+            Muninn
+          </Typography>
+        </div>
 
         <div className="max-w-md">
           <Typography
@@ -100,8 +104,9 @@ const SignInPage: React.FC = () => {
           </Typography>
         </div>
 
-        {/* Only when there is a destination worth naming. A path is not a
-            name, so an unrecognised one prints nothing at all. */}
+        {/* A destination worth naming wins the slot. A path is not a name,
+            so an unrecognised one is not named, and the slot says where the
+            site's name comes from instead. */}
         {label ? (
           <Typography variant="body-sm" className="hero-muted max-w-md">
             You were heading to{' '}
@@ -109,7 +114,9 @@ const SignInPage: React.FC = () => {
             there.
           </Typography>
         ) : (
-          <span aria-hidden="true" />
+          <Typography variant="body-sm" className="hero-muted font-heading italic text-sm">
+            Muninn was Odin&apos;s raven of memory.
+          </Typography>
         )}
       </aside>
 

@@ -235,7 +235,8 @@ describe('NPCDirectory', () => {
   describe('empty state', () => {
     test('says what the collection is for, and offers the action that fills it', () => {
       render(<NPCDirectory npcs={[]} />);
-      expect(screen.getByText(/no one recorded yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/muninn hasn't met anyone yet/i)).toBeInTheDocument();
+      expect(screen.getByText("ᛗ")).toHaveAttribute("aria-hidden", "true");
       expect(screen.getByText(/every person the party meets/i)).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: /add the first npc/i })
@@ -481,6 +482,7 @@ describe('NPCDirectory', () => {
       render(<NPCDirectory npcs={[aldric, mira]} />);
       fireEvent.change(searchInput(), { target: { value: 'zzznomatch' } });
       expect(screen.getByText(/no npcs match these filters/i)).toBeInTheDocument();
+      expect(screen.queryByText("ᛗ")).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: /add the first npc/i })
       ).not.toBeInTheDocument();

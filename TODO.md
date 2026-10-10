@@ -24,8 +24,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | medium | T141 | The site's contact address is a Gmail account | M | open | Players see a Gmail address on replies and on Google's consent screen; the maintainer wants it soon |
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 to 3 of 8 done |
-| low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
-| low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
+| low | T075 | The header is crowded | M | needs scoping | Waits on the maintainer: which truncation was meant, and how much room the header gets back |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -36,6 +35,8 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T136 | One membership document | L | open | Correct today; only removes a way for two copies to disagree |
 | low | T116 | `firebase-admin` 13 → 14 in the functions | M | blocked | 14 would not clear the last advisory (`uuid`, via Storage), and the functions' jest cannot load its ES-module dependencies |
 | low | T111 | Is it worth expanding the notes feature? | L | needs scoping | Kept for later, not now (2026-10-06) |
+| low | T142 | One English in the site's copy, British | M | open | Later, not now (2026-10-10); few spellings differ today, dates follow the browser in places |
+| low | T143 | The About page's coffee link and photo | S | blocked | Both built and switched off; wait on a link and a picture from the maintainer |
 
 The dormant `theme-contract` questions at the bottom are unranked on purpose.
 
@@ -216,23 +217,22 @@ The same email can keep the magic link for signing in on the device that opens i
   any of this, so it stays the fallback.
 - **Source**: maintainer, 2026-09-24
 
-### T075 — A logo for the header, and uncrowd it
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-07
+### T075 — The header is crowded
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-10
 
 The site is called **Muninn** (maintainer, 2026-10-07) and mentions D&D nowhere
 (decided 2026-10-03: "Dungeons & Dragons" and "D&D" are Wizards of the Coast
-trademarks, and the Fan Content Policy grants none). What is left is the
-crowded header the maintainer reported (busy, some text cut off), and whether
-a logo carries the name.
+trademarks, and the Fan Content Policy grants none). Its mark is the rune ᛗ
+beside the name (`public/mark.svg`, from `scripts/build-mark.js`). What is left
+is the crowded header the maintainer reported (busy, some text cut off).
 
-- **Where**: `src/app/layout/Header.tsx` — one row carries the name, the
-  context switcher, the inline nav (from `lg`), search and the account menu.
-  The name is one word at every width. The campaign/group name in the context
-  switcher truncates by design at `max-w-[9rem] md:max-w-[14rem]`
+- **Where**: `src/app/layout/Header.tsx` — one row carries the mark and the
+  name, the context switcher, the inline nav (from `lg`), search and the account
+  menu. Below 400px the mark stands without the name. The campaign/group name in
+  the context switcher truncates by design at `max-w-[9rem] md:max-w-[14rem]`
   (`ContextTrigger.tsx:51`). Which truncation the maintainer meant was **not**
   confirmed — that needs the running app.
-- **To decide** (maintainer): whether a logo carries the name, and how much
-  room the header gets back.
+- **To decide** (maintainer): how much room the header gets back.
 - **The name was checked** (maintainer, TMview, 2026-10-07): Muninn ApS, a
   Danish company, holds MUNINN in Denmark (`VA 2017 00834`, classes 9, 37, 42,
   45; `VA 2022 01645`, 9, 37, 42) and the EU (`018770043`, 9, 37, 42) for
@@ -244,10 +244,6 @@ a logo carries the name.
 - **Says D&D on purpose**: `entityExtraction.ts:454,499`, only in the prompt
   sent to OpenAI, which nobody sees. The "Dungeons" location filter
   (`LocationDirectory.tsx:54`) is the plain word, not the mark.
-- **Raised again** (todo.txt, 2026-10-08: "Create Logo for Muninn"). The
-  site's icon is a placeholder "M" until then (`public/favicon.svg`); the logo
-  replaces that SVG, and `scripts/build-icons.js` renders the PNGs and
-  `favicon.ico` from it.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03; the name chosen 2026-10-07
 
@@ -274,22 +270,6 @@ important**.
   sketches session templates and collaborative editing for notes (ideas only,
   nothing built).
 - **Source**: todo.txt, 2026-10-06
-
-### T122 — An "about" page
-**Type** feature · **Size** S · **Status** needs scoping · **Verified** 2026-10-08
-
-The maintainer asks whether the site should have an "about us" page.
-
-- **Measured**: no `/about` route (`app/App.tsx:220` has `/privacy` and
-  `/contact`; the footer, `app/layout/Footer.tsx`, links only those two). The
-  purpose is stated only on the signed-out home (`pages/home/SignedOutHome.tsx:44`).
-- **Questions before sizing**: who "us" is (one maintainer, a free site with no
-  income); what goes on it (why it exists, who runs it, how AI extraction uses
-  notes, the fan-content and trademark position from T075); whether it must be
-  readable without JavaScript.
-- **Related**: T118's Google branding check flagged "does not explain the
-  purpose" and "insufficient content", from a checker that runs no JavaScript.
-- **Source**: todo.txt, 2026-10-08
 
 ### T137 — An operator page: founder links, extraction limits, metrics
 **Type** feature · **Size** L · **Status** open · **Verified** 2026-10-09
@@ -322,6 +302,24 @@ OpenAI, or a player's who asks). Health and traffic figures are phase 2.
   Verification, then the move.
 - **Next**: step 4a, the setup script and its runbook.
 - **Source**: todo.txt, 2026-10-08 (two inbox items, combined)
+
+### T143 — The About page's coffee link and photo
+**Type** feature · **Size** S · **Status** blocked · **Verified** 2026-10-10
+
+`/about` has two parts built and switched off, so they are not forgotten: a
+"Buy me a coffee" button beside "View the code on GitHub", and a photo
+(140×168) beside "Who made it". Each is drawn once it has somewhere to point.
+
+- **Where**: `ABOUT_EXTRAS` in `src/pages/AboutPage.tsx:16` — set `coffeeUrl`
+  to the page's address and `photoSrc` to the picture's path; nothing else
+  changes. `AboutPage.test.tsx` pins both as off, so it moves with them.
+- **Blocked on** (maintainer): a coffee page to link to, and the photo
+  (the design suggests "you, or the table mid-session").
+- **Catch**: keep the coffee button a plain link. A provider's embedded
+  widget loads a third-party script, which the privacy page would then have
+  to name. A photo of the table needs the other players' say-so. The photo's
+  alt text today is "Søren".
+- **Source**: maintainer, 2026-10-10, during the Muninn identity work
 
 ---
 
@@ -511,6 +509,31 @@ for T137 step 0); it cannot send yet.
   subdomain, outside this budget. The privacy page names no processor for
   contact mail today (`PrivacyPolicyPage.tsx:318`), Gmail included.
 - **Source**: maintainer, 2026-10-08, during T137 step 0
+
+### T142 — One English in the site's copy, British
+**Type** debt · **Size** M · **Status** open · **Verified** 2026-10-10
+
+The maintainer wants every word a player reads in one English, preferably
+British. "rumour" is done (#348, everywhere a player reads it; the `/rumors`
+path, collection names and identifiers keep "rumor"). Nothing else has been
+gone through. **Later, not now** (maintainer, 2026-10-10).
+
+- **Measured**: a census of string literals and JSX text in `src/` (tests
+  and `__dev__` excluded) for 25 common US/UK pairs found little: "Failed to
+  analyze note" (`CampaignLinksPanel.tsx:250`) and the rumour filter chip
+  "Traveler" (`RumorDirectory.tsx:95`; its stored value `traveler` must
+  stay), against "authorised", "colour", "grey" and "traveller" already
+  British. Words outside those pairs, and phrasing, were not checked.
+- **Dates**: 23 `toLocale*String` / `Intl.DateTimeFormat` calls. Some pin
+  British order (`chapter-byline.ts:56`, `PrivacyLastUpdated.tsx:15`, and
+  `'en-uk'` in `SagaPage.tsx:112` and `AttributionInfo.tsx:48`); the rest
+  follow the browser's locale, so an American browser shows month first.
+- **Also in scope**: `firebase/functions` (callable error messages), the
+  Firebase Auth email templates (console, outside the repo), `index.html`'s
+  meta description, and the operator page.
+- **Catch**: tests pin copy, so each change moves assertions with it; a
+  US spelling inside a key, a path or a stored value must stay.
+- **Source**: maintainer, 2026-10-10, during the Muninn identity work
 
 ---
 

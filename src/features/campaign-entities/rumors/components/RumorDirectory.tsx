@@ -478,7 +478,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
   };
 
   if (isLoading) {
-    return <RosterSkeleton label="Loading rumors" />;
+    return <RosterSkeleton label="Loading rumours" />;
   }
 
   return (
@@ -486,7 +486,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
       {/* One status bar that also filters, replacing the "All Status" dropdown */}
       <RosterStatusBar
         total={initialRumors.length}
-        totalLabel="rumors gathered"
+        totalLabel="rumours gathered"
         segments={statusSegments}
         activeKey={statusFilter}
         onSelect={key => setStatusFilter(key as RumorStatus | 'all')}
@@ -494,7 +494,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
 
       {/* Search and source filter, on one row rather than three stacked dropdowns */}
       <RosterFilterBar
-        placeholder="Search rumors..."
+        placeholder="Search rumours..."
         value={searchQuery}
         onChange={setSearchQuery}
       >
@@ -510,7 +510,7 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
           size="sm"
           onClick={selection.toggleActive}
         >
-          {selection.active ? 'Exit Selection' : 'Select Rumors'}
+          {selection.active ? 'Exit Selection' : 'Select Rumours'}
         </Button>
       </RosterFilterBar>
 
@@ -700,7 +700,8 @@ const RumorDirectory: React.FC<RumorDirectoryProps> = ({
           looking at (item 1, and the empty-campaign gate).
         */
         <RosterEmpty
-          title="Nothing heard yet"
+          mark
+          title="Muninn hasn't heard any rumours yet"
           message="Overheard in a tavern, posted on a notice board, told by someone who may be lying — title it above and mark it confirmed when you find out."
         />
       )}

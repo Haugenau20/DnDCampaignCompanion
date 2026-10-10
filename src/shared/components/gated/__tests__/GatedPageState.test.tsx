@@ -86,7 +86,7 @@ describe("GatedPageState, signed out", () => {
     renderPanel();
     expect(screen.getByText(/new here/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /what the companion does/i })
+      screen.getByRole("link", { name: /what the site does/i })
     ).toHaveAttribute("href", "/");
   });
 

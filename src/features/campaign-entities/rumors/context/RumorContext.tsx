@@ -45,7 +45,7 @@ const readAll = async (
 ): Promise<Rumor[]> => {
   const current = await Promise.all(rumorIds.map(id => read(id)));
   if (current.some(rumor => !rumor)) {
-    throw new Error('One or more rumors not found');
+    throw new Error('One or more rumours not found');
   }
   return current as Rumor[];
 };
@@ -86,7 +86,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
    * action can never stop halfway through the selection.
    */
   const commitRumorWrites = useCallback(
-    (writes: EntityBatchWrite<Rumor>[]) => commitEntityWrites(rumorsPath, 'rumours', writes),
+    (writes: EntityBatchWrite<Rumor>[]) => commitEntityWrites(rumorsPath, 'rumors', writes),
     [rumorsPath]
   );
 
@@ -117,11 +117,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Update rumor status
   const updateRumorStatus = useCallback(async (rumorId: string, status: RumorStatus) => {
     if (!user || !userProfile) {
-      throw new Error('User must be authenticated to update rumor status');
+      throw new Error('User must be authenticated to update rumour status');
     }
 
     if (!getRumorById(rumorId)) {
-      throw new Error('Rumor not found');
+      throw new Error('Rumour not found');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
@@ -137,7 +137,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const rumor = getRumorById(rumorId);
     if (!rumor) {
-      throw new Error('Rumor not found');
+      throw new Error('Rumour not found');
     }
 
     // A note of its own (T133), attributed by the write like any document.
@@ -168,7 +168,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Add rumor
   const addRumor = useCallback(async (rumorData: DomainData<Rumor>, alongside?: CreateAlongside) => {
     if (!user || !userProfile) {
-      throw new Error('User must be authenticated to add rumors');
+      throw new Error('User must be authenticated to add rumours');
     }
 
     const creationAttribution = buildCreationAttribution({ uid: user.uid, activeGroupUserProfile });
@@ -199,20 +199,20 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Update an existing rumour: only what `change` names; see `RecordChange` (T083)
   const updateRumor = useCallback(async (rumorId: string, change: RecordChange<Rumor>) => {
     if (!user || !userProfile) {
-      throw new Error('User must be authenticated to update rumors');
+      throw new Error('User must be authenticated to update rumours');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
 
     await writeRecordChange(
-      { updateData, updateDataAfterReading }, rumorId, change, 'Rumor not found', modificationAttribution
+      { updateData, updateDataAfterReading }, rumorId, change, 'Rumour not found', modificationAttribution
     );
   }, [user, userProfile, activeGroupUserProfile, updateData, updateDataAfterReading]);
 
   // Delete rumor
   const deleteRumor = useCallback(async (rumorId: string) => {
     if (!user) {
-      throw new Error('User must be authenticated to delete rumors');
+      throw new Error('User must be authenticated to delete rumours');
     }
 
     // Its notes first (T133): a record's subcollection outlives the record.
@@ -223,10 +223,10 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /** Set the status of several rumours at once, in one batch. */
   const updateRumorsStatus = useCallback(async (rumorIds: string[], status: RumorStatus) => {
     if (!user || !userProfile) {
-      throw new Error('User must be authenticated to update rumor status');
+      throw new Error('User must be authenticated to update rumour status');
     }
     if (rumorIds.some(id => !getRumorById(id))) {
-      throw new Error('One or more rumors not found');
+      throw new Error('One or more rumours not found');
     }
 
     const modificationAttribution = buildModificationAttribution({ uid: user.uid, activeGroupUserProfile });
@@ -240,7 +240,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /** Delete several rumours at once, in one batch. */
   const deleteRumors = useCallback(async (rumorIds: string[]) => {
     if (!user) {
-      throw new Error('User must be authenticated to delete rumors');
+      throw new Error('User must be authenticated to delete rumours');
     }
 
     if (rumorsPath) await deleteRecordNotes(rumorsPath, rumorIds);
@@ -250,7 +250,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Combine multiple rumors into one
   const combineRumors = useCallback(async (rumorIds: string[], newRumorData: Partial<Rumor>) => {
     if (!user || !userProfile) {
-      throw new Error('User must be authenticated to combine rumors');
+      throw new Error('User must be authenticated to combine rumours');
     }
     if (rumorsPath === null) {
       throw new Error('No campaign selected');
@@ -258,11 +258,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     assertFitsOneCommit(rumorIds.length);
 
     if (rumorIds.some(id => !getRumorById(id))) {
-      throw new Error('One or more rumors not found');
+      throw new Error('One or more rumours not found');
     }
 
     // Use the provided title or generate one
-    const title = newRumorData.title || `Combined Rumor (${new Date().toLocaleDateString()})`;
+    const title = newRumorData.title || `Combined Rumour (${new Date().toLocaleDateString()})`;
 
     // Fixed once, so a retried transaction writes the same notes, not more.
     // Every document, the notes included, is attributed by the write.
@@ -307,11 +307,11 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }));
       // What happened, as notes of their own (T133), in the same commit.
       const notes = [
-        { under: 'created' as const, id: combinedNoteId, data: { content: `Combined from rumors: ${rumorIds.join(', ')}` } },
+        { under: 'created' as const, id: combinedNoteId, data: { content: `Combined from rumours: ${rumorIds.join(', ')}` } },
         ...rumorsToMerge.map(rumor => ({
           under: { updated: rumor.id },
           id: sourceNoteIds.get(rumor.id)!,
-          data: { content: `Combined into rumor: ${candidateId}` }
+          data: { content: `Combined into rumour: ${candidateId}` }
         }))
       ];
       return { create, updates, notes };
@@ -333,7 +333,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Convert rumors to quest
   const convertToQuest = useCallback(async (rumorIds: string[], questData: any) => {
     if (!user || !userProfile) {
-      throw new Error('User must be authenticated to convert rumors to quest');
+      throw new Error('User must be authenticated to convert rumours to quest');
     }
     if (questsPath === null || rumorsPath === null) {
       throw new Error('No campaign selected');
@@ -341,7 +341,7 @@ export const RumorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     assertFitsOneCommit(rumorIds.length);
 
     if (rumorIds.some(id => !getRumorById(id))) {
-      throw new Error('One or more rumors not found');
+      throw new Error('One or more rumours not found');
     }
 
     // Fixed once, as in `combineRumors`.

@@ -49,7 +49,7 @@ export function useCreateRumor(): { createAndOpen: (title?: string) => Promise<v
       });
       navigateToPage(createPath('/rumors', {}, { highlight: id }));
     } catch (error) {
-      console.error('Failed to create rumor:', error);
+      console.error('Failed to create rumour:', error);
     }
   }, [addRumor, navigateToPage, createPath]);
 

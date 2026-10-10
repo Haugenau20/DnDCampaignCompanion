@@ -19,6 +19,13 @@ const renderHome = () =>
   );
 
 describe("SignedOutHome", () => {
+  // Strangers arrive here, so it is where the name is explained.
+  it("says where the name comes from", () => {
+    renderHome();
+    expect(screen.getByText("Muninn was Odin's raven of memory.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "About the name" })).toHaveAttribute("href", "/about");
+  });
+
   it("leads with what the product is, as the page's h1", () => {
     renderHome();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
@@ -128,7 +135,7 @@ describe("SignedOutHome", () => {
     // above, so unscoped queries would match several elements and throw.
     const lines = screen.getByTestId("product-lines");
     expect(lines).toHaveTextContent(/chapter log/i);
-    expect(lines).toHaveTextContent(/rumors/i);
+    expect(lines).toHaveTextContent(/rumours/i);
     // Was /private session notes/i. The line no longer leads with "private" --
     // a player assumes their own notes are their own -- and leads with the
     // extraction pitch instead; see "pitches the AI extraction" above.

@@ -39,7 +39,7 @@ export const getContentTypeLabel = (type: string): string => {
     case 'quest':
       return 'Quest';
     case 'rumor':
-      return 'Rumor';
+      return 'Rumour';
     case 'location':
       return 'Location';
     default:

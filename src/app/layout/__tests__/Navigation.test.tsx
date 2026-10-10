@@ -44,7 +44,7 @@ describe("Navigation", () => {
 
     test("should render all six navigation items", () => {
       render(<Navigation />);
-      const navLabels = ["Story", "Quests", "Rumors", "NPCs", "Locations", "Notes"];
+      const navLabels = ["Story", "Quests", "Rumours", "NPCs", "Locations", "Notes"];
       navLabels.forEach((label) => {
         // each label appears twice (desktop + mobile layout)
         const matches = screen.getAllByText(label);
@@ -102,7 +102,7 @@ describe("Navigation", () => {
       const user = userEvent.setup();
       render(<Navigation />);
 
-      const rumorBtns = screen.getAllByRole("button", { name: /rumors/i });
+      const rumorBtns = screen.getAllByRole("button", { name: /rumours/i });
       await user.click(rumorBtns[0]);
 
       expect(mockNavigateToPage).toHaveBeenCalledWith("/rumors");

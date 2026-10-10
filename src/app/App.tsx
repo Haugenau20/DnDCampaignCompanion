@@ -19,6 +19,7 @@ import Layout from 'app/layout/Layout';
 import EditRouteRedirect from 'app/EditRouteRedirect';
 import RecordRoute from 'app/RecordRoute';
 import RouteFallback from 'app/RouteFallback';
+import DocumentTitle from 'app/DocumentTitle';
 import { lazyPage, prefetchPages } from 'app/lazyPage';
 
 // Eager: the front door, which most visits open on, and the not-found page,
@@ -51,6 +52,7 @@ const NotesPage = lazyPage(() => import('pages/notes'), 'NotesPage');
 const NotePage = lazyPage(() => import('pages/notes'), 'NotePage');
 const PrivacyPolicyPage = lazyPage(() => import('pages/PrivacyPolicyPage'), 'default');
 const ContactPage = lazyPage(() => import('pages/ContactPage'), 'default');
+const AboutPage = lazyPage(() => import('pages/AboutPage'), 'default');
 const ProfilePage = lazyPage(() => import('pages/profile'), 'ProfilePage');
 const AdminLayout = lazyPage(
   () => import('features/user-management/admin/pages/AdminLayout'),
@@ -107,6 +109,7 @@ const App: React.FC = () => {
                               <Layout>
                                 <SessionTimeoutWarning />
                                 <PrivacyNotice />
+                                <DocumentTitle />
                                 {/* One boundary for every route, mounted
                                     once: a transition only holds the old
                                     page up for a boundary that is already
@@ -219,6 +222,7 @@ const App: React.FC = () => {
                                     />
                                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
                                     <Route path="/contact" element={<ContactPage />} />
+                                    <Route path="/about" element={<AboutPage />} />
                                     <Route path="/profile" element={<ProfilePage />} />
                                     {/* Admin and auth are places, not decisions
                                         taken about the page behind them, so they

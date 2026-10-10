@@ -145,6 +145,12 @@ jest.mock("app/layout/Layout", () => ({
   ),
 }));
 
+// Tested on its own (app/__tests__/DocumentTitle.test.tsx).
+jest.mock("app/DocumentTitle", () => ({
+  __esModule: true,
+  default: () => <div data-testid="document-title" />,
+}));
+
 jest.mock("@/features/user-management/auth/components/SessionTimeoutWarning", () => ({
   __esModule: true,
   default: () => <div data-testid="session-timeout-warning" />,
@@ -215,6 +221,11 @@ jest.mock("../pages/PrivacyPolicyPage", () => ({
 jest.mock("../pages/ContactPage", () => ({
   __esModule: true,
   default: () => <div data-testid="page-contact" />,
+}));
+
+jest.mock("../pages/AboutPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="page-about" />,
 }));
 
 jest.mock("../pages/NotFoundPage", () => ({
@@ -319,6 +330,7 @@ const EXPECTED_ROUTES = [
   "/notes/:noteId",
   "/privacy",
   "/contact",
+  "/about",
   "/profile",
   // Admin and auth are routes, not dialogs (design doc §1). `/admin` is the
   // layout route; its index redirects to `/admin/people` and declares no path.

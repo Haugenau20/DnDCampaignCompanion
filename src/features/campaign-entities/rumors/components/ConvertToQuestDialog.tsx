@@ -70,7 +70,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
       }
       
       // Create background from rumors
-      setBackground(`This quest was derived from rumors about:\n` + 
+      setBackground(`This quest was derived from rumours about:\n` + 
         selectedRumors.map(rumor => 
           `- ${rumorTitleText(rumor)} (from ${rumor.sourceName})`
         ).join('\n'));
@@ -80,7 +80,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
         setObjectives(
           selectedRumors.map(rumor => ({
             id: crypto.randomUUID(),
-            description: `Investigate the rumor about "${rumorTitleText(rumor)}"`,
+            description: `Investigate the rumour about "${rumorTitleText(rumor)}"`,
             completed: false
           }))
         );
@@ -113,7 +113,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
   // Handle form submission
   const handleSubmit = async () => {
     if (rumorIds.length === 0) {
-      setError('Please select at least one rumor to convert');
+      setError('Please select at least one rumour to convert');
       return;
     }
 
@@ -158,7 +158,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
       await onConvert(rumorIds, questData);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to convert rumors to quest');
+      setError(err instanceof Error ? err.message : 'Failed to convert rumours to quest');
     } finally {
       setIsSubmitting(false);
     }
@@ -180,7 +180,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
         {/* Selected Rumors */}
         <div>
           <Typography variant="h4" className="mb-3">
-            Source Rumors
+            Source Rumours
           </Typography>
           {selectedRumors.length > 0 ? (
             <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-lg card-content">
@@ -205,7 +205,7 @@ const ConvertToQuestDialog: React.FC<ConvertToQuestDialogProps> = ({
             </div>
           ) : (
             <Typography color="secondary">
-              No rumors selected. Please select at least one rumor to convert.
+              No rumours selected. Please select at least one rumour to convert.
             </Typography>
           )}
         </div>

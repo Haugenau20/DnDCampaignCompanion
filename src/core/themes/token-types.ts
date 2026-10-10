@@ -287,4 +287,17 @@ export interface ThemeTokens {
 
   /** The single ink every palette entry is legible against. */
   entityInk: string;
+
+  /**
+   * The site's mark (the rune ᛗ beside the name): a tile and the glyph on it.
+   *
+   * The same amber in both themes, because the mark always sits on near-black
+   * chrome (`surface.chrome`, `surface.band`), whatever the content around it.
+   * The glyph is the chrome colour of its own theme, so the rune reads as cut
+   * out of the tile.
+   */
+  logo: {
+    bg: string;
+    on: string;
+  };
 }

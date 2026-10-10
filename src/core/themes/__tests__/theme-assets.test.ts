@@ -38,9 +38,15 @@ describe("theme colours outside the stylesheets", () => {
     expect(manifest.background_color).toBe(light.surface.page.bg);
   });
 
-  it("draws the icon in the header's colour and the dark accent", () => {
+  it("draws the icon in the header's colour and the logo's amber", () => {
     const fills = [...svg.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
-    expect(fills).toEqual([light.surface.chrome.bg, dark.accent.fill]);
+    expect(fills).toEqual([light.surface.chrome.bg, light.logo.bg]);
+  });
+
+  // A near-black square vanishes into a dark tab bar without an edge.
+  it("rings the icon in the dark theme's card border", () => {
+    const strokes = [...svg.matchAll(/stroke="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
+    expect(strokes).toEqual([dark.surface.card.border]);
   });
 });
 
@@ -62,5 +68,41 @@ describe("the icons the page and manifest name", () => {
   // served as a web page rather than failing (`/favicon.ico` did, before T121).
   it.each(linked)("ships %s in public/", (file) => {
     expect(fs.existsSync(path.join(PUBLIC, file))).toBe(true);
+  });
+});
+
+describe("the link preview", () => {
+  const html = read(path.join(ROOT, "index.html"));
+  const meta = (property: string): string | undefined =>
+    html.match(new RegExp(`<meta property="${property}" content="([^"]*)"`))?.[1];
+
+  // A chat app fetches the image from the live site, so the tag names it
+  // there; the file it names must be one this repo ships.
+  it("names a 1200x630 image that ships in public/", () => {
+    const image = meta("og:image");
+    expect(image).toBe("https://muninn.quest/og-image.png");
+    expect(fs.existsSync(path.join(PUBLIC, new URL(image as string).pathname))).toBe(true);
+    expect([meta("og:image:width"), meta("og:image:height")]).toEqual(["1200", "630"]);
+
+    const png = fs.readFileSync(path.join(PUBLIC, "og-image.png"));
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630]);
+  });
+
+  // The PNG cannot read the theme, so its generator writes the chrome out.
+  it("is drawn in the header's colours", () => {
+    const script = read(path.join(ROOT, "scripts", "build-og-image.js"));
+    const chrome = script.match(/const CHROME = (\{[^}]*\});/)?.[1];
+    expect(chrome).toBeDefined();
+    const literals = Object.fromEntries(
+      [...(chrome as string).matchAll(/(\w+): "(#[0-9A-Fa-f]{6})"/g)].map((m) => [m[1], m[2]])
+    );
+    const { bg, on, onMuted, border } = light.surface.chrome;
+    expect(literals).toEqual({ bg, on, onMuted, border });
+  });
+
+  it("draws the mark in the logo's colours", () => {
+    const script = read(path.join(ROOT, "scripts", "build-og-image.js"));
+    const logo = script.match(/const LOGO = \{ bg: "(#[0-9A-Fa-f]{6})", on: "(#[0-9A-Fa-f]{6})" \};/);
+    expect(logo?.slice(1)).toEqual([light.logo.bg, light.logo.on]);
   });
 });

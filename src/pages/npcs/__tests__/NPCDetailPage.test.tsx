@@ -449,7 +449,7 @@ describe("NPCDetailPage", () => {
       expect(screen.getByText("Places")).toBeInTheDocument();
       expect(screen.getByText("Affiliations")).toBeInTheDocument();
       expect(screen.getByText("Quests")).toBeInTheDocument();
-      expect(screen.getByText("Rumors")).toBeInTheDocument();
+      expect(screen.getByText("Rumours")).toBeInTheDocument();
     });
 
     it("keeps the per-row line only where the heading cannot say it", () => {
@@ -475,7 +475,7 @@ describe("NPCDetailPage", () => {
     it("shows no heading for a kind this NPC has none of", () => {
       mockRumors = [];
       renderPage();
-      expect(screen.queryByText("Rumors")).not.toBeInTheDocument();
+      expect(screen.queryByText("Rumours")).not.toBeInTheDocument();
     });
 
     it("does not dress a free-text affiliation up as somewhere to click", () => {

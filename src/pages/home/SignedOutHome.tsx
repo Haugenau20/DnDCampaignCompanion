@@ -7,7 +7,7 @@ import { SIGNED_OUT_EXAMPLE } from "./signed-out-example";
 /** The three things the product does, said plainly. */
 const PRODUCT_LINES = [
   "A chapter log the whole group can add to, in play order",
-  "Quests with objectives, and rumors you can mark true or false",
+  "Quests with objectives, and rumours you can mark true or false",
   "Your own session notes — AI pulls out the NPCs, locations and quests it finds",
 ];
 
@@ -41,12 +41,12 @@ const SignedOutHome: React.FC = () => {
             className="mb-8"
             data-testid="home-blurb"
           >
-            Chapters, quests, NPCs, locations, rumors and your own notes —
+            Chapters, quests, NPCs, locations, rumours and your own notes —
             written by whoever is at the table, credited to the character they
             play. To get in, ask whoever set up your campaign for a join link.
           </Typography>
 
-          <div className="flex flex-wrap gap-3 mb-10">
+          <div className="flex flex-wrap gap-3 mb-6">
             <Link to="/signin" className={buttonClasses({ variant: "primary" })}>
               Sign in
             </Link>
@@ -54,6 +54,17 @@ const SignedOutHome: React.FC = () => {
               I have an invite link
             </Link>
           </div>
+
+          {/* The name, explained once, where strangers arrive. The serif
+              italic is the in-world voice; the link is the application's. */}
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-3.5 mb-10 border-t divider">
+            <span className="font-heading italic text-[15px] typography">
+              Muninn was Odin&apos;s raven of memory.
+            </span>
+            <Link to="/about" className="text-sm primary underline underline-offset-[3px]">
+              About the name
+            </Link>
+          </p>
 
           <ul className="space-y-2" data-testid="product-lines">
             {PRODUCT_LINES.map((line) => (

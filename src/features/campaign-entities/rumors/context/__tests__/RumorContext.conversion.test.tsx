@@ -162,9 +162,9 @@ describe('the marks are worked out from the rumours as the server holds them', (
     const [, , , { updates, notes }] = mockCommit.mock.calls[0];
     expect(updates[1].data).not.toHaveProperty('notes');
     expect(notes.map((n: { under: unknown; data: RumorNote }) => [n.under, n.data.content])).toEqual([
-      ['created', 'Combined from rumors: a, b'],
-      [{ updated: 'a' }, 'Combined into rumor: smoke-and-ash'],
-      [{ updated: 'b' }, 'Combined into rumor: smoke-and-ash'],
+      ['created', 'Combined from rumours: a, b'],
+      [{ updated: 'a' }, 'Combined into rumour: smoke-and-ash'],
+      [{ updated: 'b' }, 'Combined into rumour: smoke-and-ash'],
     ]);
   });
 
@@ -185,10 +185,10 @@ describe('the marks are worked out from the rumours as the server holds them', (
     await renderContext();
 
     await expect(context.convertToQuest(['a', 'b'], { title: 'Find the fire' })).rejects.toThrow(
-      'One or more rumors not found'
+      'One or more rumours not found'
     );
     await expect(context.combineRumors(['a', 'b'], { title: 'Smoke and ash', content: 'Both' })).rejects.toThrow(
-      'One or more rumors not found'
+      'One or more rumours not found'
     );
     expect(mockCommit).not.toHaveBeenCalled();
   });

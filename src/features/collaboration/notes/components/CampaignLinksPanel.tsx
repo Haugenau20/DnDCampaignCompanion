@@ -42,7 +42,7 @@ function getEntityTypeName(type: EntityType): string {
     case "quest":
       return "Quest";
     case "rumor":
-      return "Rumor";
+      return "Rumour";
     default:
       return type;
   }

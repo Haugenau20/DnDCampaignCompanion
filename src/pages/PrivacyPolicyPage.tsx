@@ -60,7 +60,7 @@ const PrivacyPolicyPage: React.FC = () => {
   return (
     <PageShell
       title="Privacy"
-      subtitle="What the Companion keeps about you, why, and how to get rid of it."
+      subtitle="What Muninn keeps about you, why, and how to get rid of it."
       actions={<PrivacyLastUpdated />}
       maxWidth="max-w-5xl"
     >
@@ -171,7 +171,7 @@ const PrivacyPolicyPage: React.FC = () => {
             </Typography>
             <Typography>
               Everything you write in a campaign — chapters, quests, NPCs,
-              locations, rumors and your own notes — along with who wrote it and
+              locations, rumours and your own notes — along with who wrote it and
               when. That is the app; there is no version of it that does not
               store what you type into it.
             </Typography>

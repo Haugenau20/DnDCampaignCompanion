@@ -31,7 +31,7 @@ const FILTERS: RosterFilterOption[] = [
   { value: 'quest', label: 'Quests' },
   { value: 'npc', label: 'NPCs' },
   { value: 'location', label: 'Locations' },
-  { value: 'rumor', label: 'Rumors' },
+  { value: 'rumor', label: 'Rumours' },
 ];
 
 /**

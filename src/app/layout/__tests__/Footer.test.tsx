@@ -40,6 +40,32 @@ describe("Footer", () => {
     jest.clearAllMocks();
     (useNavigation as jest.Mock).mockReturnValue({
       navigateToPage: mockNavigateToPage,
+      shouldHighlightPath: () => false,
+    });
+  });
+
+  describe("the About link", () => {
+    test("comes first, before the privacy policy and contact", () => {
+      render(<Footer />);
+      const names = screen.getAllByRole("link").map((link) => link.textContent);
+      expect(names).toEqual(["About", "Privacy Policy", "Contact Us"]);
+    });
+
+    test("navigates to /about", async () => {
+      render(<Footer />);
+      await userEvent.click(screen.getByRole("link", { name: "About" }));
+      expect(mockNavigateToPage).toHaveBeenCalledWith("/about");
+    });
+
+    // On /about, the footer says so, as the navigation does for its sections.
+    test("is marked as the current page on /about, and no other link is", () => {
+      (useNavigation as jest.Mock).mockReturnValue({
+        navigateToPage: mockNavigateToPage,
+        shouldHighlightPath: (path: string, exact?: boolean) => exact === true && path === "/about",
+      });
+      render(<Footer />);
+      expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("aria-current", "page");
+      expect(screen.getByRole("link", { name: "Privacy Policy" })).not.toHaveAttribute("aria-current");
     });
   });
 
@@ -63,6 +89,11 @@ describe("Footer", () => {
       expect(
         screen.getByText(/Muninn/i)
       ).toBeInTheDocument();
+    });
+
+    test("names the site's address after its name", () => {
+      render(<Footer />);
+      expect(screen.getByText(/© \d{4} Muninn · muninn\.quest/)).toBeInTheDocument();
     });
 
     test("should render a Privacy Policy link", () => {
