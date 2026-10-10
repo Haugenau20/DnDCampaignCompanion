@@ -145,6 +145,12 @@ jest.mock("app/layout/Layout", () => ({
   ),
 }));
 
+// Tested on its own (app/__tests__/DocumentTitle.test.tsx).
+jest.mock("app/DocumentTitle", () => ({
+  __esModule: true,
+  default: () => <div data-testid="document-title" />,
+}));
+
 jest.mock("@/features/user-management/auth/components/SessionTimeoutWarning", () => ({
   __esModule: true,
   default: () => <div data-testid="session-timeout-warning" />,

@@ -25,7 +25,7 @@ on the site is `high`, ahead of anything that would otherwise rank there.
 | low | T123 | Lord of the Rings screenshots in the README? | M | open | A question for the maintainer; the public home page's *Sunless Citadel* example raises the same question |
 | low | T137 | An operator page: founder links, extraction limits, metrics | L | open | The script and the console work meanwhile; design approved 2026-10-08 (`docs/architecture/operator/`), steps 1 to 3 of 8 done |
 | low | T122 | An "about" page | S | needs scoping | Waits on what it should say; may help T118's branding check |
-| low | T075 | A logo for the header; header crowded | M | needs scoping | Waits on the maintainer: whether a logo carries the name, and which truncation was meant |
+| low | T075 | The header is crowded | M | needs scoping | Waits on the maintainer: which truncation was meant, and how much room the header gets back |
 | low | T054 | Sign in with Discord | L | needs scoping | Kept for later, not now (2026-10-02); Firebase has no built-in provider |
 | low | T057 | Sign in with a code from the email | M | blocked | On hold by the maintainer; its sending domain exists now (`muninn.quest`); the current phone-approval flow works |
 | low | T055 | Opt-in second factor | M | needs scoping | Kept for later, not now (2026-10-02); prefer an authenticator app over SMS |
@@ -216,23 +216,22 @@ The same email can keep the magic link for signing in on the device that opens i
   any of this, so it stays the fallback.
 - **Source**: maintainer, 2026-09-24
 
-### T075 — A logo for the header, and uncrowd it
-**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-07
+### T075 — The header is crowded
+**Type** feature · **Size** M · **Status** needs scoping · **Verified** 2026-10-10
 
 The site is called **Muninn** (maintainer, 2026-10-07) and mentions D&D nowhere
 (decided 2026-10-03: "Dungeons & Dragons" and "D&D" are Wizards of the Coast
-trademarks, and the Fan Content Policy grants none). What is left is the
-crowded header the maintainer reported (busy, some text cut off), and whether
-a logo carries the name.
+trademarks, and the Fan Content Policy grants none). Its mark is the rune ᛗ
+beside the name (`public/mark.svg`, from `scripts/build-mark.js`). What is left
+is the crowded header the maintainer reported (busy, some text cut off).
 
-- **Where**: `src/app/layout/Header.tsx` — one row carries the name, the
-  context switcher, the inline nav (from `lg`), search and the account menu.
-  The name is one word at every width. The campaign/group name in the context
-  switcher truncates by design at `max-w-[9rem] md:max-w-[14rem]`
+- **Where**: `src/app/layout/Header.tsx` — one row carries the mark and the
+  name, the context switcher, the inline nav (from `lg`), search and the account
+  menu. Below 400px the mark stands without the name. The campaign/group name in
+  the context switcher truncates by design at `max-w-[9rem] md:max-w-[14rem]`
   (`ContextTrigger.tsx:51`). Which truncation the maintainer meant was **not**
   confirmed — that needs the running app.
-- **To decide** (maintainer): whether a logo carries the name, and how much
-  room the header gets back.
+- **To decide** (maintainer): how much room the header gets back.
 - **The name was checked** (maintainer, TMview, 2026-10-07): Muninn ApS, a
   Danish company, holds MUNINN in Denmark (`VA 2017 00834`, classes 9, 37, 42,
   45; `VA 2022 01645`, 9, 37, 42) and the EU (`018770043`, 9, 37, 42) for
@@ -244,10 +243,6 @@ a logo carries the name.
 - **Says D&D on purpose**: `entityExtraction.ts:454,499`, only in the prompt
   sent to OpenAI, which nobody sees. The "Dungeons" location filter
   (`LocationDirectory.tsx:54`) is the plain word, not the mark.
-- **Raised again** (todo.txt, 2026-10-08: "Create Logo for Muninn"). The
-  site's icon is a placeholder "M" until then (`public/favicon.svg`); the logo
-  replaces that SVG, and `scripts/build-icons.js` renders the PNGs and
-  `favicon.ico` from it.
 - **Source**: todo.txt, 2026-10-02; the trademark question was looked into and
   decided 2026-10-03; the name chosen 2026-10-07
 

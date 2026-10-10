@@ -15,6 +15,7 @@ import { useLocation } from 'react-router-dom';
 import ContextSwitcher from 'shared/components/context-switcher/ContextSwitcher';
 import UserMenu from 'shared/components/user-menu/UserMenu';
 import Button from 'core/components/Button';
+import { BrandMark } from 'core/components/RuneMark';
 import Navigation from './Navigation';
 
 /**
@@ -99,9 +100,14 @@ const Header: React.FC = () => {
               navigate('/');
               }}
               aria-label="Muninn, home"
-              className="shrink-0 whitespace-nowrap text-xl font-bold header-title"
+              className="shrink-0 inline-flex items-center gap-3 whitespace-nowrap text-xl font-bold header-title"
             >
-              Muninn
+              {/* The mark and the name are one link; the link's label is
+                  what a screen reader reads, the mark is hidden from it.
+                  Below 400px the mark stands alone: with the word as well,
+                  a 320px bar crushed the campaign chip to its chevron. */}
+              <BrandMark />
+              <span className="max-[399px]:hidden">Muninn</span>
             </Link>
 
             {/* Campaign context, and the door onto changing it. Previously a

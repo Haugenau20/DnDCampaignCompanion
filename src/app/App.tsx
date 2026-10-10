@@ -19,6 +19,7 @@ import Layout from 'app/layout/Layout';
 import EditRouteRedirect from 'app/EditRouteRedirect';
 import RecordRoute from 'app/RecordRoute';
 import RouteFallback from 'app/RouteFallback';
+import DocumentTitle from 'app/DocumentTitle';
 import { lazyPage, prefetchPages } from 'app/lazyPage';
 
 // Eager: the front door, which most visits open on, and the not-found page,
@@ -107,6 +108,7 @@ const App: React.FC = () => {
                               <Layout>
                                 <SessionTimeoutWarning />
                                 <PrivacyNotice />
+                                <DocumentTitle />
                                 {/* One boundary for every route, mounted
                                     once: a transition only holds the old
                                     page up for a boundary that is already

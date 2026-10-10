@@ -3,11 +3,13 @@
 //
 // Renders every raster icon from `public/favicon.svg` (T121): `icon-192.png` and
 // `icon-512.png` for the web manifest, a square `apple-touch-icon.png` (iOS
-// rounds its own corners) and a 16/32/48 px `favicon.ico`. Edit the SVG, then
-// run this and commit what it writes. It borrows the e2e package's Chromium:
+// rounds its own corners) and a 16/32/48 px `favicon.ico`. `scripts/build-mark.js`
+// writes the SVG; run that, then this, and commit what both write. It borrows
+// the e2e package's Chromium:
 //
 //   npm --prefix e2e ci            (once per machine)
 //   npx --prefix e2e playwright install chromium
+//   node scripts/build-mark.js
 //   node scripts/build-icons.js
 //
 // The SVG's colours are tokens written out; theme-assets.test.ts checks them.
@@ -20,7 +22,10 @@ const outDir = path.join(__dirname, "..", "public");
 const svgPath = path.join(outDir, "favicon.svg");
 (async () => {
   const svg = fs.readFileSync(svgPath, "utf8");
-  const square = svg.replace(/ rx="\d+"/, "");
+  // The ring keeps a tab-sized icon visible on a dark tab bar. A home-screen
+  // icon is drawn at 180 px and up, where the same ring is a thick grey frame.
+  const unringed = svg.replace(/\s*<rect [^>]*stroke=[^>]*\/>/, "");
+  const square = unringed.replace(/ rx="\d+"/, "");
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const render = async (source, size) => {
@@ -28,8 +33,8 @@ const svgPath = path.join(outDir, "favicon.svg");
     await page.setContent(`<html><body style="margin:0;background:transparent">${source.replace("<svg ", `<svg width="${size}" height="${size}" style="display:block" `)}</body></html>`);
     return page.screenshot({ omitBackground: true });
   };
-  fs.writeFileSync(path.join(outDir, "icon-192.png"), await render(svg, 192));
-  fs.writeFileSync(path.join(outDir, "icon-512.png"), await render(svg, 512));
+  fs.writeFileSync(path.join(outDir, "icon-192.png"), await render(unringed, 192));
+  fs.writeFileSync(path.join(outDir, "icon-512.png"), await render(unringed, 512));
   fs.writeFileSync(path.join(outDir, "apple-touch-icon.png"), await render(square, 180));
   // favicon.ico: PNG entries in an ICO container (Vista+ and every current browser).
   const sizes = [16, 32, 48];

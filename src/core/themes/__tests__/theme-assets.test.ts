@@ -42,6 +42,20 @@ describe("theme colours outside the stylesheets", () => {
     const fills = [...svg.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
     expect(fills).toEqual([light.surface.chrome.bg, dark.accent.fill]);
   });
+
+  // A near-black square vanishes into a dark tab bar without an edge.
+  it("rings the icon in the dark theme's card border", () => {
+    const strokes = [...svg.matchAll(/stroke="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
+    expect(strokes).toEqual([dark.surface.card.border]);
+  });
+
+  // The header's mark is amber in both themes: the bar is near-black in both,
+  // and the glyph is cut out of it, so the bar's own colour fills the rune.
+  it("draws the header's mark in the dark accent alone", () => {
+    const mark = read(path.join(PUBLIC, "mark.svg"));
+    const colours = [...mark.matchAll(/#[0-9A-Fa-f]{6}\b/g)].map((m) => m[0]);
+    expect(colours).toEqual([dark.accent.fill]);
+  });
 });
 
 describe("the icons the page and manifest name", () => {
