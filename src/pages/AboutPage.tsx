@@ -68,14 +68,14 @@ const AboutPage: React.FC = () => (
           <SectionTitle>Why it exists</SectionTitle>
           <Typography className={PROSE}>
             I play in a regular tabletop campaign, and between sessions we kept
-            losing things: who that innkeeper was, which rumor we&apos;d already ruled
+            losing things: who that innkeeper was, which rumour we&apos;d already ruled
             out, what we promised the duke. Each of us remembered a different piece
             of it.
           </Typography>
           <Typography className={PROSE}>
             Muninn started as a place to keep our session recaps. Then it grew, one
             need at a time, to hold everything a party runs into: people, places,
-            quests, rumors, and each player&apos;s own notes. All of it is written by
+            quests, rumours, and each player&apos;s own notes. All of it is written by
             whoever is at the table and credited to the character they play.
           </Typography>
         </section>
